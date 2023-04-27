@@ -14,5 +14,6 @@ The following resources are used
 - Nvidia Video Codec SDK 11.0.10
 - Nvidia NvApi R530
 - FFmpeg 6.0
+
 For the GUI
 - Qt 6.5.0
