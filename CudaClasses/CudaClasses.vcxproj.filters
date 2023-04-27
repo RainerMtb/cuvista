@@ -1,0 +1,36 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CudaCompile Include="cuDecompose.cu" />
+    <CudaCompile Include="cuDeshaker.cu" />
+    <CudaCompile Include="cuKernelCompute.cu" />
+    <CudaCompile Include="CoreData.cu" />
+    <CudaCompile Include="cuNPP.cu" />
+    <CudaCompile Include="cuUtil.cu">
+      <Filter>Util</Filter>
+    </CudaCompile>
+    <CudaCompile Include="cuTest.cu">
+      <Filter>Util</Filter>
+    </CudaCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="cuDecompose.cuh" />
+    <ClInclude Include="cuDeshaker.cuh" />
+    <ClInclude Include="CoreData.cuh" />
+    <ClInclude Include="cuNPP.cuh" />
+    <ClInclude Include="cuUtil.cuh">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="ErrorLogger.hpp">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="cuTest.cuh">
+      <Filter>Util</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Util">
+      <UniqueIdentifier>{7c61acbe-c22e-4b03-9c6b-b8508cf76a31}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

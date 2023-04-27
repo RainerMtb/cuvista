@@ -1,0 +1,140 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Writer">
+      <UniqueIdentifier>{1cbc62aa-b188-48d3-9a3f-0e930b68bb05}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Reader">
+      <UniqueIdentifier>{64542282-22e3-4559-a495-0abcc57f304c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Util">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Transformation">
+      <UniqueIdentifier>{84877083-2551-472a-8754-6351e48e1bb9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Main">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="ProgressDisplay.cpp">
+      <Filter>Main</Filter>
+    </ClCompile>
+    <ClCompile Include="MovieFrame.cpp">
+      <Filter>Main</Filter>
+    </ClCompile>
+    <ClCompile Include="MainData.cpp">
+      <Filter>Main</Filter>
+    </ClCompile>
+    <ClCompile Include="FFmpegWriter.cpp">
+      <Filter>Writer</Filter>
+    </ClCompile>
+    <ClCompile Include="MovieReader.cpp">
+      <Filter>Reader</Filter>
+    </ClCompile>
+    <ClCompile Include="NvEncoder.cpp">
+      <Filter>Writer</Filter>
+    </ClCompile>
+    <ClCompile Include="MovieWriter.cpp">
+      <Filter>Writer</Filter>
+    </ClCompile>
+    <ClCompile Include="AffineTransform.cpp">
+      <Filter>Transformation</Filter>
+    </ClCompile>
+    <ClCompile Include="Trajectory.cpp">
+      <Filter>Transformation</Filter>
+    </ClCompile>
+    <ClCompile Include="FFmpegUtil.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
+    <ClCompile Include="DeshakerLoop.cpp">
+      <Filter>Main</Filter>
+    </ClCompile>
+    <ClCompile Include="FrameResult.cpp">
+      <Filter>Transformation</Filter>
+    </ClCompile>
+    <ClCompile Include="Diagnostics.cpp">
+      <Filter>Main</Filter>
+    </ClCompile>
+    <ClCompile Include="RandomSource.cpp">
+      <Filter>Transformation</Filter>
+    </ClCompile>
+    <ClCompile Include="KeyboardInput.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
+    <ClCompile Include="Util.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
+    <ClCompile Include="ProgressDisplayConsole.cpp">
+      <Filter>Main</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="MovieReader.hpp">
+      <Filter>Reader</Filter>
+    </ClInclude>
+    <ClInclude Include="NvEncoder.hpp">
+      <Filter>Writer</Filter>
+    </ClInclude>
+    <ClInclude Include="DeshakerHelpText.hpp">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="AVException.hpp">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="AffineTransform.hpp">
+      <Filter>Transformation</Filter>
+    </ClInclude>
+    <ClInclude Include="Trajectory.hpp">
+      <Filter>Transformation</Filter>
+    </ClInclude>
+    <ClInclude Include="MainData.hpp">
+      <Filter>Main</Filter>
+    </ClInclude>
+    <ClInclude Include="MovieFrame.hpp">
+      <Filter>Main</Filter>
+    </ClInclude>
+    <ClInclude Include="NullStream.hpp">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="KeyboardInput.hpp">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="FrameResult.hpp">
+      <Filter>Transformation</Filter>
+    </ClInclude>
+    <ClInclude Include="Diagnostics.hpp">
+      <Filter>Main</Filter>
+    </ClInclude>
+    <ClInclude Include="Stats.hpp">
+      <Filter>Main</Filter>
+    </ClInclude>
+    <ClInclude Include="RandomSource.hpp">
+      <Filter>Transformation</Filter>
+    </ClInclude>
+    <ClInclude Include="MovieWriter.hpp">
+      <Filter>Writer</Filter>
+    </ClInclude>
+    <ClInclude Include="UserInput.hpp">
+      <Filter>Main</Filter>
+    </ClInclude>
+    <ClInclude Include="UserInputConsole.hpp">
+      <Filter>Main</Filter>
+    </ClInclude>
+    <ClInclude Include="ProgressDisplay.hpp">
+      <Filter>Main</Filter>
+    </ClInclude>
+    <ClInclude Include="Util.hpp">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="FFmpegUtil.hpp">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="ProgressDisplayConsole.hpp">
+      <Filter>Main</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

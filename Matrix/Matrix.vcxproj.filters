@@ -1,0 +1,79 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Decomposition">
+      <UniqueIdentifier>{6a2c4653-402e-4be1-9e43-512938a09353}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Main">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Image">
+      <UniqueIdentifier>{df1fb5f7-fc00-4d1d-9a6e-7c7064c67556}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Mat.h">
+      <Filter>Main</Filter>
+    </ClInclude>
+    <ClInclude Include="Affine2D.h">
+      <Filter>Main</Filter>
+    </ClInclude>
+    <ClInclude Include="MatIterator.h">
+      <Filter>Main</Filter>
+    </ClInclude>
+    <ClInclude Include="CholeskyDecompositor.h">
+      <Filter>Decomposition</Filter>
+    </ClInclude>
+    <ClInclude Include="Decompositor.h">
+      <Filter>Decomposition</Filter>
+    </ClInclude>
+    <ClInclude Include="LUDecompositor.h">
+      <Filter>Decomposition</Filter>
+    </ClInclude>
+    <ClInclude Include="QRDecompositor.h">
+      <Filter>Decomposition</Filter>
+    </ClInclude>
+    <ClInclude Include="QRDecompositorUD.h">
+      <Filter>Decomposition</Filter>
+    </ClInclude>
+    <ClInclude Include="SVDecompositor.h">
+      <Filter>Decomposition</Filter>
+    </ClInclude>
+    <ClInclude Include="SubMat.h">
+      <Filter>Main</Filter>
+    </ClInclude>
+    <ClInclude Include="ThreadPool.h">
+      <Filter>Main</Filter>
+    </ClInclude>
+    <ClInclude Include="CharMap.hpp">
+      <Filter>Image</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageUtil.hpp">
+      <Filter>Image</Filter>
+    </ClInclude>
+    <ClInclude Include="Image.hpp">
+      <Filter>Image</Filter>
+    </ClInclude>
+    <ClInclude Include="OutputLine.h">
+      <Filter>Main</Filter>
+    </ClInclude>
+    <ClInclude Include="CoreMat.h">
+      <Filter>Main</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Image.cpp">
+      <Filter>Image</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageSub.cpp">
+      <Filter>Image</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageUtil.cpp">
+      <Filter>Image</Filter>
+    </ClCompile>
+    <ClCompile Include="CoreMat.cpp">
+      <Filter>Main</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>
