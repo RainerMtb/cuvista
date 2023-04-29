@@ -37,7 +37,7 @@ cudaError_t npz_unsharp_32f(float* base, float* gauss, int srcStep, float* dest,
 
 cudaError_t npz_remap_downsize_32f(float* src, int srcStep, float* dest, int destStep, int wsrc, int hsrc);
 
-cudaError_t npz_filter_32f(float* src, float* dest, int stride, int w, int h, float* d_kernel, int kernelSize, FilterDim filterDim, cudaStream_t cs = 0);
+cudaError_t npz_filter_32f(float* src, float* dest, int srcStep, int w, int h, float* d_kernel, int kernelSize, FilterDim filterDim, cudaStream_t cs = 0);
 
 cudaError_t npz_uv_to_nv12(float* src, int srcStep, unsigned char* nvencPtr, int nvencPitch, int w, int h);
 

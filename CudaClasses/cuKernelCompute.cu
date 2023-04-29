@@ -24,27 +24,11 @@ __constant__ double wp0[] = { 1, 0, 0, 0, 1, 0, 0, 0, 1 };
 __constant__ double eta0[] = { 0, 0, 1, 0, 0, 1 };
 __constant__ CoreData d_core;
 
-//interpolate value for matrix given by pointer-pointer and w, h and return result in last parameter
-template <class T> __device__ void interp2(T** arr, int w, int h, double x, double y, double& out) {
-	if (x < 0.0 || x > w - 1.0 || y < 0.0 || y > h - 1.0) {
-		out = d_core.dnan;
-
-	} else {
-		double flx = floor(x), fly = floor(y);
-		double dx = x - flx, dy = y - fly;
-		int ix = (int) flx, iy = (int) fly;
-
-		double f00 = arr[iy][ix];
-		double f01 = dx == 0 ? f00 : arr[iy][ix + 1];
-		double f10 = dy == 0 ? f00 : arr[iy + 1][ix];
-		double f11 = dx == 0 || dy == 0 ? f00 : arr[iy + 1][ix + 1];
-		out = (1 - dx) * (1 - dy) * f00 + (1 - dx) * dy * f10 + dx * (1 - dy) * f01 + dx * dy * f11;
-	}
-}
+template<class T> __device__ T tex2D(cudaTextureObject_t tex, float x, float y);
 
 //compute displacement
 //one block works one point in the image
-__global__ void kernelCompute(DevicePointers devptr, PointResult* results, int64_t frameIdx, cu::DebugData debugData) {
+__global__ void kernelCompute(ComputeTextures tex, PointResult* results, int64_t frameIdx, cu::DebugData debugData) {
 	//size_t i = (blockIdx.y * gridDim.x + blockIdx.x) * timerCount; KERNEL_TIME(timestamps, i++);
 	int& ir = d_core.ir;
 	int& iw = d_core.iw;
@@ -84,6 +68,12 @@ __global__ void kernelCompute(DevicePointers devptr, PointResult* results, int64
 	PointResultType result = PointResultType::RUNNING;
 
 	int z = d_core.zMax;
+	int rowOffset = 0; //offset in rows to current pyramid level as texture spans one full pyramid
+	int hh = d_core.h;
+	for (int i = 0; i < z; i++) {
+		rowOffset += hh;
+		hh /= 2;
+	}
 	for (; z >= d_core.zMin && result >= PointResultType::RUNNING; z--) {
 		//dimensions for current pyramid level
 		int wz = d_core.w >> z;
@@ -92,11 +82,11 @@ __global__ void kernelCompute(DevicePointers devptr, PointResult* results, int64
 		if (r < iw) {
 			for (int c = ci; c < iw; c += cols) {
 				//copy area of interest from previous frame
-				im[r * iw + c] = devptr.Yprev[ym + rir][xm - ir + c];
+				im[r * iw + c] = tex2D<float>(tex.Yprev, xm - ir + c, rowOffset + ym + rir);
 
 				//build sd matrix [6 x iw*iw]
-				double x = devptr.DXprev[ym - ir + c][xm + rir];
-				double y = devptr.DYprev[ym - ir + c][xm + rir];
+				double x = tex2D<float>(tex.DXprev, xm + rir, rowOffset + ym - ir + c);
+				double y = tex2D<float>(tex.DYprev, xm + rir, rowOffset + ym - ir + c);
 				int idx = r * iw + c;
 				sd[idx] = x;				
 				idx += iw * iw;
@@ -152,7 +142,22 @@ __global__ void kernelCompute(DevicePointers devptr, PointResult* results, int64
 					int x = c - ir;
 					double ix = xm + x * wp[0] + rir * wp[3] + wp[2];
 					double iy = ym + x * wp[1] + rir * wp[4] + wp[5];
-					interp2(devptr.Ycur, wz, hz, ix, iy, jm[r * iw + c]);
+
+					if (ix < 0.0 || ix > wz - 1.0 || iy < 0.0 || iy > hz - 1.0) {
+						jm[r * iw + c] = d_core.dnan;
+
+					} else {
+						double flx = floor(ix), fly = floor(iy);
+						double dx = ix - flx, dy = iy - fly;
+						int x0 = (int) flx, y0 = (int) fly;
+
+						double f00 = tex2D<float>(tex.Ycur, x0, rowOffset + y0);
+						double f01 = tex2D<float>(tex.Ycur, x0 + 1, rowOffset + y0);
+						double f10 = tex2D<float>(tex.Ycur, x0, rowOffset + y0 + 1);
+						double f11 = tex2D<float>(tex.Ycur, x0 + 1, rowOffset + y0 + 1);
+						jm[r * iw + c] = (1.0 - dx) * (1.0 - dy) * f00 + (1.0 - dx) * dy * f10 + dx * (1.0 - dy) * f01 + dx * dy * f11;
+					}
+
 				}
 			}
 
@@ -212,17 +217,10 @@ __global__ void kernelCompute(DevicePointers devptr, PointResult* results, int64
 		xm *= 2;
 		ym *= 2;
 
-		//update pointers into pyramid for next higher level, move up the number of rows
-		int rowsToMove = d_core.h >> (z - 1);
-		devptr.movePosition(-rowsToMove);
-
-		//KERNEL_TIME(timestamps, i++);
+		//new texture row offset
+		int delta = d_core.h >> (z - 1);
+		rowOffset -= delta;
 	}
-	//for (int i = z; i >= d_core.zMin; i--) {
-	//	KERNEL_TIME(timestamps, i++);
-	//	KERNEL_TIME(timestamps, i++);
-	//	KERNEL_TIME(timestamps, i++);
-	//}
 
 	if (cu::firstThread()) {
 		//final displacement vector
@@ -236,12 +234,10 @@ __global__ void kernelCompute(DevicePointers devptr, PointResult* results, int64
 		//store results object
 		results[idx] = { idx, ix0, iy0, xm, ym, xm - d_core.w / 2, ym - d_core.h / 2, u, v, result };
 	}
-	//KERNEL_TIME(timestamps, i++);
-
 }
 
-void kernelComputeCall(kernelParam param, DevicePointers pointers, PointResult* d_results, int64_t frameIdx, cu::DebugData debugData) {
-	kernelCompute << <param.blk, param.thr, param.shdBytes, param.stream >> > (pointers, d_results, frameIdx, debugData);
+void kernelComputeCall(kernelParam param, ComputeTextures& tex, PointResult* d_results, int64_t frameIdx, cu::DebugData debugData) {
+	kernelCompute <<<param.blk, param.thr, param.shdBytes, param.stream>>> (tex, d_results, frameIdx, debugData);
 }
 
 void computeInit(const CoreData& core) {

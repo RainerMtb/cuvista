@@ -17,12 +17,14 @@
  */
 
 #include "cuNPP.cuh"
+#include "Util.hpp"
 #include <chrono>
 #include <iostream>
 
-using cuMatf = cu::Mat<float>;
-using cuMatc = cu::Mat<unsigned char>;
+using uchar = unsigned char;
 using uint = unsigned int;
+using cuMatf = cu::Mat<float>;
+using cuMatc = cu::Mat<uchar>;
 
 struct KernelContext {
 	cudaTextureObject_t texture;
@@ -91,10 +93,10 @@ template <class T> KernelContext prepareTexture(T* src, int srcStep, int texw, i
 
 //--------------- kernels
 
-__device__ void yuv_to_rgb_func(float yf, float uf, float vf, unsigned char* r, unsigned char* g, unsigned char* b) {
-	*r = (unsigned char) cu::clamp(yf + (1.370705f * (vf - 128.0f)), 0.0f, 255.0f);
-	*g = (unsigned char) cu::clamp(yf - (0.337633f * (uf - 128.0f)) - (0.698001f * (vf - 128.0f)), 0.0f, 255.0f);
-	*b = (unsigned char) cu::clamp(yf + (1.732446f * (uf - 128.0f)), 0.0f, 255.0f);
+__device__ void yuv_to_rgb_func(float yf, float uf, float vf, uchar* r, uchar* g, uchar* b) {
+	*r = (uchar) cu::clamp(yf + (1.370705f * (vf - 128.0f)), 0.0f, 255.0f);
+	*g = (uchar) cu::clamp(yf - (0.337633f * (uf - 128.0f)) - (0.698001f * (vf - 128.0f)), 0.0f, 255.0f);
+	*b = (uchar) cu::clamp(yf + (1.732446f * (uf - 128.0f)), 0.0f, 255.0f);
 }
 
 __device__ float tex2Dinterp(cudaTextureObject_t tex, float dx, float dy) {
@@ -113,7 +115,7 @@ __global__ void kernel_scale_8u32f(cudaTextureObject_t texObj, cuMatf dest) {
 	constexpr float f = 1.0f / 255.0f;
 
 	if (x < dest.w && y < dest.h) {
-		unsigned char val = tex2D<unsigned char>(texObj, x, y);
+		uchar val = tex2D<uchar>(texObj, x, y);
 		dest.at(y, x) = val * f;
 	}
 }
@@ -124,7 +126,7 @@ __global__ void kernel_scale_32f8u(cudaTextureObject_t texObj, cuMatc dest) {
 
 	if (x < dest.w && y < dest.h) {
 		float val = tex2D<float>(texObj, x, y);
-		dest.at(y, x) = (unsigned char) roundf(val * 255.0f);
+		dest.at(y, x) = (uchar) roundf(val * 255.0f);
 	}
 }
 
@@ -161,13 +163,13 @@ __global__ void kernel_remap_downsize(cudaTextureObject_t texObj, cuMatf dest, c
 	}
 }
 
-__global__ void kernel_uv_to_nv12(cudaTextureObject_t texObj, unsigned char* nvencPtr, int nvencPitch, int w, int h, uint z) {
+__global__ void kernel_uv_to_nv12(cudaTextureObject_t texObj, uchar* nvencPtr, int nvencPitch, int w, int h, uint z) {
 	uint x = blockIdx.x * blockDim.x + threadIdx.x;
 	uint y = blockIdx.y * blockDim.y + threadIdx.y;
 
 	if (x < w / 2 && y < h / 2) {
 		float val = tex2D<float>(texObj, x * 2 + 1, y * 2 + z * h + 1);
-		nvencPtr[nvencPitch * y + x * 2 + z] = (unsigned char) (val * 255.0f);
+		nvencPtr[nvencPitch * y + x * 2 + z] = (uchar) (val * 255.0f);
 	}
 }
 
@@ -199,20 +201,20 @@ __global__ void kernel_filter_vertical(cudaTextureObject_t texObj, cuMatf dest, 
 	}
 }
 
-__global__ void kernel_yuv8_to_rgb8(cudaTextureObject_t texObj, unsigned char* rgb, int w, int h) {
+__global__ void kernel_yuv8_to_rgb8(cudaTextureObject_t texObj, uchar* rgb, int w, int h) {
 	uint x = blockIdx.x * blockDim.x + threadIdx.x;
 	uint y = blockIdx.y * blockDim.y + threadIdx.y;
 
 	if (x < w && y < h) {
-		unsigned char colY = tex2D<unsigned char>(texObj, x, y);
-		unsigned char colU = tex2D<unsigned char>(texObj, x, y + h);
-		unsigned char colV = tex2D<unsigned char>(texObj, x, y + h + h);
-		unsigned char* dest = rgb + 3ull * (y * w + x);
+		uchar colY = tex2D<uchar>(texObj, x, y);
+		uchar colU = tex2D<uchar>(texObj, x, y + h);
+		uchar colV = tex2D<uchar>(texObj, x, y + h + h);
+		uchar* dest = rgb + 3ull * (y * w + x);
 		yuv_to_rgb_func(colY, colU, colV, dest, dest + 1, dest + 2);
 	}
 }
 
-__global__ void kernel_yuv32_to_rgb8(cudaTextureObject_t texObj, unsigned char* rgb, int w, int h) {
+__global__ void kernel_yuv32_to_rgb8(cudaTextureObject_t texObj, uchar* rgb, int w, int h) {
 	uint x = blockIdx.x * blockDim.x + threadIdx.x;
 	uint y = blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -220,14 +222,14 @@ __global__ void kernel_yuv32_to_rgb8(cudaTextureObject_t texObj, unsigned char* 
 		float colY = tex2D<float>(texObj, x, y);
 		float colU = tex2D<float>(texObj, x, y + h);
 		float colV = tex2D<float>(texObj, x, y + h + h);
-		unsigned char* dest = rgb + 3ull * (y * w + x);
+		uchar* dest = rgb + 3ull * (y * w + x);
 		yuv_to_rgb_func(colY * 255.0f, colU * 255.0f, colV * 255.0f, dest, dest + 1, dest + 2);
 	}
 }
 
 //----------- callers
 
-cudaError_t npz_scale_8u32f(unsigned char* src, int srcStep, float* dest, int destStep, int w, int h) {
+cudaError_t npz_scale_8u32f(uchar* src, int srcStep, float* dest, int destStep, int w, int h) {
 	KernelContext ki = prepareTexture(src, srcStep, w, h);
 	cuMatf destMat(dest, h, w, destStep);
 	kernel_scale_8u32f <<<ki.blocks, ki.threads>>> (ki.texture, destMat);
@@ -235,7 +237,7 @@ cudaError_t npz_scale_8u32f(unsigned char* src, int srcStep, float* dest, int de
 	return cudaGetLastError();
 }
 
-cudaError_t npz_scale_32f8u(float* src, int srcStep, unsigned char* dest, int destStep, int w, int h) {
+cudaError_t npz_scale_32f8u(float* src, int srcStep, uchar* dest, int destStep, int w, int h) {
 	KernelContext ki = prepareTexture(src, srcStep, w, h);
 	cuMatc destMat(dest, h, w, destStep);
 	kernel_scale_32f8u <<<ki.blocks, ki.threads>>> (ki.texture, destMat);
@@ -248,16 +250,16 @@ cudaError_t npz_copy_32f(float* src, int srcStep, float* dest, int destStep, int
 }
 
 cudaError_t npz_warp_back_32f(float* src, int srcStep, float* dest, int destStep, int w, int h, cu::Affine trf, cudaStream_t cs) {
-	KernelContext ki = prepareTexture(src, srcStep, w, h, w, h);
+	KernelContext ki = prepareTexture(src, srcStep, w, h);
 	cuMatf destMat(dest, h, w, destStep);
 	kernel_warp_back <<<ki.blocks, ki.threads, 0, cs>>> (ki.texture, destMat, trf);
 	cudaDestroyTextureObject(ki.texture);
 	return cudaGetLastError();
 }
 
-cudaError_t npz_filter_32f(float* src, float* dest, int stride, int w, int h, float* d_kernel, int kernelSize, FilterDim filterDim, cudaStream_t cs) {
-	KernelContext ki = prepareTexture(src, stride * sizeof(float), w, h);
-	cuMatf destMat(dest, h, w, stride);
+cudaError_t npz_filter_32f(float* src, float* dest, int srcStep, int w, int h, float* d_kernel, int kernelSize, FilterDim filterDim, cudaStream_t cs) {
+	KernelContext ki = prepareTexture(src, srcStep, w, h);
+	cuMatf destMat(dest, h, w, srcStep / sizeof(float));
 	if (filterDim == FilterDim::FILTER_HORIZONZAL) {
 		kernel_filter_horizontal <<<ki.blocks, ki.threads, 0, cs>>> (ki.texture, destMat, d_kernel, kernelSize);
 
@@ -289,7 +291,7 @@ cudaError_t npz_remap_downsize_32f(float* src, int srcStep, float* dest, int des
 	return cudaGetLastError();
 }
 
-cudaError_t npz_uv_to_nv12(float* src, int srcStep, unsigned char* nvencPtr, int nvencPitch, int w, int h) {
+cudaError_t npz_uv_to_nv12(float* src, int srcStep, uchar* nvencPtr, int nvencPitch, int w, int h) {
 	KernelContext ki = prepareTexture(src, srcStep, w, h * 2, w / 2, h / 2);
 	kernel_uv_to_nv12 <<<ki.blocks, ki.threads>>> (ki.texture, nvencPtr, nvencPitch, w, h, 0);
 	kernel_uv_to_nv12 <<<ki.blocks, ki.threads>>> (ki.texture, nvencPtr, nvencPitch, w, h, 1);
@@ -297,14 +299,14 @@ cudaError_t npz_uv_to_nv12(float* src, int srcStep, unsigned char* nvencPtr, int
 	return cudaGetLastError();
 }
 
-cudaError_t npz_yuv_to_rgb(unsigned char* src, int srcStep, unsigned char* dest, int destStep, int w, int h) {
+cudaError_t npz_yuv_to_rgb(uchar* src, int srcStep, uchar* dest, int destStep, int w, int h) {
 	KernelContext ki = prepareTexture(src, srcStep, w, 3 * h, w, h);
 	kernel_yuv8_to_rgb8 <<<ki.blocks, ki.threads>>> (ki.texture, dest, w, h);
 	cudaDestroyTextureObject(ki.texture);
 	return cudaGetLastError();
 }
 
-cudaError_t npz_yuv_to_rgb(float* src, int srcStep, unsigned char* dest, int destStep, int w, int h) {
+cudaError_t npz_yuv_to_rgb(float* src, int srcStep, uchar* dest, int destStep, int w, int h) {
 	KernelContext ki = prepareTexture(src, srcStep, w, 3 * h, w, h);
 	kernel_yuv32_to_rgb8 <<<ki.blocks, ki.threads>>> (ki.texture, dest, w, h);
 	cudaDestroyTextureObject(ki.texture);

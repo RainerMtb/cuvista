@@ -20,6 +20,8 @@
 
 #include <iostream>
 #include <chrono>
+#include <string>
+#include <vector>
 
 //misc stuff
 namespace util {

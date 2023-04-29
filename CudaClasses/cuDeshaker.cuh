@@ -25,19 +25,14 @@
 #include <fstream>
 #include <iostream>
 
+class ComputeTextures {
 
-//pointer to data for a frame
-struct DevicePointers {
-	float** Ycur;		//pointer to first row of Y data for current frame
-	float** Yprev;		//pointer to first row of Y data for previous frame
-	float** DXprev;		//DX data for previous frame
-	float** DYprev;		//DY data for previous frame
+public:
+	cudaTextureObject_t Ycur, Yprev, DXprev, DYprev;
 
-	//put memory locations from pyramid into this structure
-	__host__ DevicePointers(int64_t idx, int64_t idxPrev, const CoreData& core);
-	
-	//move each pointer by delta rows
-	__device__ void movePosition(int delta);
+	__host__ void create(int64_t idx, int64_t idxPrev, const CoreData& core);
+
+	__host__ void destroy();
 };
 
 //parameters for kernel launch
@@ -48,8 +43,7 @@ struct kernelParam {
 	cudaStream_t stream;
 };
 
-
-void kernelComputeCall(kernelParam param, DevicePointers pointers, PointResult* d_results, int64_t frameIdx, cu::DebugData debugData);
+void kernelComputeCall(kernelParam param, ComputeTextures& tex, PointResult* d_results, int64_t frameIdx, cu::DebugData debugData);
 
 void computeInit(const CoreData& core);
 

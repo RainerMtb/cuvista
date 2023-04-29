@@ -24,8 +24,8 @@ unsigned char* d_yuvData;			     //continuous array of all pixel values in yuv f
 unsigned char** d_yuvRows;			     //index into rows of pixels, allocated on device
 unsigned char*** d_yuvPlanes;		     //index into Y-U-V planes of frames, allocated on device 
 
-unsigned char* d_yuvOut;           //assemble data for encoding on host
-unsigned char* d_rgb;      //assemble data form progress update
+unsigned char* d_yuvOut;   //image data for encoding on host
+unsigned char* d_rgb;      //image data for progress update
 
 float* d_bufferData;
 std::vector<float*> bufferFrames; //index to one buffer frame, allocated on host
@@ -49,30 +49,8 @@ cu::DebugData debugData = {};
 //registered memory
 void* registeredMemPtr = nullptr;
 
-//start off pointers at lowest pyramid level
-__host__ DevicePointers::DevicePointers(int64_t idx, int64_t idxPrev, const CoreData& core) {
-	//number of rows in a pyramid summed up from tallest to shortest
-	int hh = core.h;
-	int rows = 0;
-	for (int z = 0; z < core.zMax; z++) {
-		rows += hh;
-		hh /= 2;
-	}
-
-	//set pointers to be used in compute kernel
-	Ycur = d_pyrRows + 3ull * core.pyramidRows * idx + rows;
-	Yprev = d_pyrRows + 3ull * core.pyramidRows * idxPrev + rows;
-	DXprev = Yprev + core.pyramidRows;
-	DYprev = Yprev + 2ull * core.pyramidRows;
-}
-
-//set pointers to next level
-__device__ void DevicePointers::movePosition(int delta) {
-	Ycur += delta;
-	Yprev += delta;
-	DXprev += delta;
-	DYprev += delta;
-}
+//textures used in compute kernel
+ComputeTextures compTex;
 
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------- HOST CODE ------------------------------------------------------
@@ -82,6 +60,44 @@ void handleStatus(cudaError_t status, std::string&& title) {
 	if (status != 0) {
 		errorLogger.logError(title + ": " + cudaGetErrorString(status));
 	}
+}
+
+cudaTextureObject_t prepareComputeTexture(float* src, int w, int h, int pitch) {
+	cudaResourceDesc resDesc {};
+	resDesc.resType = cudaResourceTypePitch2D;
+	resDesc.res.pitch2D.devPtr = src;
+	resDesc.res.pitch2D.width = w;
+	resDesc.res.pitch2D.height = h;
+	resDesc.res.pitch2D.pitchInBytes = pitch;
+	resDesc.res.pitch2D.desc = cudaCreateChannelDesc<float>();
+
+	// Specify texture object parameters
+	cudaTextureDesc texDesc {};
+	texDesc.addressMode[0] = cudaAddressModeClamp;
+	texDesc.addressMode[1] = cudaAddressModeClamp;
+	texDesc.filterMode = cudaFilterModePoint;
+
+	cudaTextureObject_t texObj;
+	handleStatus(cudaCreateTextureObject(&texObj, &resDesc, &texDesc, NULL), "error @compute 10");
+	return texObj;
+}
+
+void ComputeTextures::create(int64_t idx, int64_t idxPrev, const CoreData& core) {
+	size_t pyramidSize = 1ull * core.pyramidRows * core.strideCount; //size of one full pyramid in elements
+	float* ptr1 = d_pyrData + 3 * pyramidSize * idx;
+	Ycur = prepareComputeTexture(ptr1, core.w, core.pyramidRows, core.strideFloatBytes);
+
+	float* ptr2 = d_pyrData + 3 * pyramidSize * idxPrev;
+	Yprev = prepareComputeTexture(ptr2, core.w, core.pyramidRows, core.strideFloatBytes);
+	DXprev = prepareComputeTexture(ptr2 + pyramidSize, core.w, core.pyramidRows, core.strideFloatBytes);
+	DYprev = prepareComputeTexture(ptr2 + 2 * pyramidSize, core.w, core.pyramidRows, core.strideFloatBytes);
+}
+
+void ComputeTextures::destroy() {
+	cudaDestroyTextureObject(Ycur);
+	cudaDestroyTextureObject(Yprev);
+	cudaDestroyTextureObject(DXprev);
+	cudaDestroyTextureObject(DYprev);
 }
 
 //allocate cuda memory and store pointers
@@ -209,12 +225,12 @@ void cudaDeviceSetup(CoreData& core) {
 	size_t heapRequired = 0;
 	handleStatus(cudaDeviceGetLimit(&heap, cudaLimitMallocHeapSize), "error @init #10");
 
-	size_t frameSize8 = 3ull * core.pitch * h;				//bytes for yuv444 images
+	size_t frameSize8 = 3ull * core.pitch * h;			//bytes for yuv444 images
 	heapRequired += frameSize8 * core.bufferCount;		//yuv input storage
 	heapRequired += frameSize8 * 2;						//yuv out
 	heapRequired += 3ull * core.strideFloatBytes * h * (core.zMax + 1ull) * core.pyramidCount;		//pyramid mit Y, DX, DY
-	heapRequired += 1ull * core.strideFloatBytes * h * core.BUFFER_COUNT;						//output buffer in floats
-	heapRequired += sizeof(PointResult) * core.resultCount;										//array of results structure
+	heapRequired += 1ull * core.strideFloatBytes * h * core.BUFFER_COUNT;						    //output buffer in floats
+	heapRequired += sizeof(PointResult) * core.resultCount;										    //array of results structure
 	heapRequired += 10 * 1024 * 1024;
 
 	if (heapRequired < heap)
@@ -323,22 +339,22 @@ void cudaCreatePyramid(int64_t frameIdx, const CoreData& core) {
 	//Y data
 	npz_scale_8u32f(yuvStart, core.pitch, pyrStart, core.strideCount, w, h);
 	//DX data
-	npz_filter_32f(pyrStart, pyrStart + planeOffset, core.strideCount, w, h, filterKernelDifference, 3, FilterDim::FILTER_HORIZONZAL);
+	npz_filter_32f(pyrStart, pyrStart + planeOffset, core.strideFloatBytes, w, h, filterKernelDifference, 3, FilterDim::FILTER_HORIZONZAL);
 	//DY data
-	npz_filter_32f(pyrStart, pyrStart + planeOffset * 2, core.strideCount, w, h, filterKernelDifference, 3, FilterDim::FILTER_VERTICAL);
+	npz_filter_32f(pyrStart, pyrStart + planeOffset * 2, core.strideFloatBytes, w, h, filterKernelDifference, 3, FilterDim::FILTER_VERTICAL);
 
 	//lower levels
 	float* pyrNext = pyrStart + 1ull * core.strideCount * h;
 	for (int z = 1; z <= core.zMax; z++) {
-		npz_filter_32f(pyrStart, bufferFrames[13], core.strideCount, w, h, filterKernelGauss[0], filterKernelGaussSizes[0], FilterDim::FILTER_HORIZONZAL);
-		npz_filter_32f(bufferFrames[13], bufferFrames[12], core.strideCount, w, h, filterKernelGauss[0], filterKernelGaussSizes[0], FilterDim::FILTER_VERTICAL);
+		npz_filter_32f(pyrStart, bufferFrames[13], core.strideFloatBytes, w, h, filterKernelGauss[0], filterKernelGaussSizes[0], FilterDim::FILTER_HORIZONZAL);
+		npz_filter_32f(bufferFrames[13], bufferFrames[12], core.strideFloatBytes, w, h, filterKernelGauss[0], filterKernelGaussSizes[0], FilterDim::FILTER_VERTICAL);
 		npz_remap_downsize_32f(bufferFrames[12], core.strideFloatBytes, pyrNext, core.strideCount, w, h);
 		w /= 2;
 		h /= 2;
 		pyrStart = pyrNext;
 		pyrNext += 1ull * core.strideCount * h;
-		npz_filter_32f(pyrStart, pyrStart + planeOffset, core.strideCount, w, h, filterKernelDifference, 3, FilterDim::FILTER_HORIZONZAL);
-		npz_filter_32f(pyrStart, pyrStart + planeOffset * 2, core.strideCount, w, h, filterKernelDifference, 3, FilterDim::FILTER_VERTICAL);
+		npz_filter_32f(pyrStart, pyrStart + planeOffset, core.strideFloatBytes, w, h, filterKernelDifference, 3, FilterDim::FILTER_HORIZONZAL);
+		npz_filter_32f(pyrStart, pyrStart + planeOffset * 2, core.strideFloatBytes, w, h, filterKernelDifference, 3, FilterDim::FILTER_VERTICAL);
 	}
 
 	handleStatus(cudaGetLastError(), "error @pyramid");
@@ -353,18 +369,17 @@ void cudaCreatePyramid(int64_t frameIdx, const CoreData& core) {
 void cudaComputeStart(int64_t frameIdx, const CoreData& core) {
 	int64_t pyrIdx = frameIdx % core.pyramidCount;
 	dim3 blk(core.ixCount, core.iyCount); //one block for each point
+	size_t pyrIdxPrev = (pyrIdx == 0 ? core.pyramidCount : pyrIdx) - 1;
 
 	int rows = std::max(core.iw, 6);
 	int ws = core.cudaProps.warpSize;
 	dim3 thr(ws / rows, rows);
 
-	size_t pyrIdxPrev = (pyrIdx == 0 ? core.pyramidCount : pyrIdx) - 1;
-	DevicePointers pointers(pyrIdx, pyrIdxPrev, core);
-	//DebugData debugData { d_timestamps, KERNEL_TIMERS, d_debugData, maxSize };
+	assert(checkKernelParameters(thr, blk, core.computeSharedMemDoubles * sizeof(double), core) && "invalid kernel parameters");
+	compTex.create(pyrIdx, pyrIdxPrev, core);
+	kernelParam param = { blk, thr, core.computeSharedMemDoubles * sizeof(double), cs[0]};
+	kernelComputeCall(param, compTex, d_results, frameIdx, debugData);
 
-	assert(ws > 0 && "invalid warp size");
-	assert(checkKernelParameters(thr, blk, core.computeSharedMem, core) && "invalid kernel parameters");
-	kernelComputeCall(kernelParam { blk, thr, core.computeSharedMem, cs[0]}, pointers, d_results, frameIdx, debugData);
 	cudaStreamQuery(cs[0]);
 	handleStatus(cudaGetLastError(), "error @compute #50");
 }
@@ -372,6 +387,7 @@ void cudaComputeStart(int64_t frameIdx, const CoreData& core) {
 void cudaComputeTerminate(const CoreData& core, std::vector<PointResult>& results) {
 	//handleStatus(cudaMemcpyAsync(results.data(), d_results, sizeof(PointResult) * results.size(), cudaMemcpyDefault, cs1), "error @compute #40", err);
 	handleStatus(cudaMemcpy(results.data(), d_results, sizeof(PointResult) * results.size(), cudaMemcpyDefault), "error @compute #40");
+	compTex.destroy();
 	handleStatus(cudaGetLastError(), "error @compute #100");
 }
 
@@ -422,9 +438,9 @@ void cudaOutput(int64_t frameIdx, const CoreData& core, OutputContext outCtx, cu
 		//transform input on top of background
 		npz_warp_back_32f(in, core.strideFloatBytes, warped, core.strideCount, w, h, trf, cs[i]);
 		//first filter pass
-		npz_filter_32f(warped, temp, core.strideCount, w, h, filterKernelGauss[i], filterKernelGaussSizes[i], FilterDim::FILTER_HORIZONZAL, cs[i]);
+		npz_filter_32f(warped, temp, core.strideFloatBytes, w, h, filterKernelGauss[i], filterKernelGaussSizes[i], FilterDim::FILTER_HORIZONZAL, cs[i]);
 		//second filter pass
-		npz_filter_32f(temp, buffer, core.strideCount, w, h, filterKernelGauss[i], filterKernelGaussSizes[i], FilterDim::FILTER_VERTICAL, cs[i]);
+		npz_filter_32f(temp, buffer, core.strideFloatBytes, w, h, filterKernelGauss[i], filterKernelGaussSizes[i], FilterDim::FILTER_VERTICAL, cs[i]);
 		//combine unsharp mask
 		npz_unsharp_32f(warped, buffer, core.strideFloatBytes, out, core.strideCount, w, h, core.unsharp[i], cs[i]);
 

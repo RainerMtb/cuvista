@@ -350,16 +350,15 @@ void MainData::validate() {
 		size_t px = cudaProps.sharedMemPerBlock / sizeof(float);
 		if (px < maxPixel) maxPixel = px;
 
-		//shared memory for compute kernel
-		int mem = 0;			//number of doubles in shared memory
-		mem += iw * iw * 6;		//sd
-		mem += iw * iw * 3;		//im, jm, delta
-		mem += 6 * 6 * 2;		//S, g
-		mem += 6 * 1 * 2;		//Apiv
-		mem += 6 * 1 * 2;		//b, eta
-		mem += 3 * 3 * 2;		//wp, dwp;
-		mem *= sizeof(double);
-		this->computeSharedMem = mem;
+		//sum up required shared memory for compute kernel
+		computeSharedMemDoubles = 0
+			+ iw * iw * 6	//sd
+			+ iw * iw * 3	//im, jm, delta
+			+ 6 * 6 * 2		//S, g
+			+ 6 * 1 * 2		//Apiv
+			+ 6 * 1 * 2		//b, eta
+			+ 3 * 3 * 2		//wp, dwp;
+			;
 
 		cudaDeviceSetup(*this);
 		if (errorLogger.hasError()) throw AVException("cannot setup cuda: " + errorLogger.getErrorMessage());

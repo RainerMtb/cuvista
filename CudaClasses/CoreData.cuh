@@ -23,9 +23,6 @@
 #include "ErrorLogger.hpp"
 #include "cuUtil.cuh"
 
-//profiling cpu code
-#define PROFILING 0
-
 struct BlendInput {
 	double percent = 0.0;
 	int blendStart = 0;
@@ -112,7 +109,7 @@ public:
 	size_t cudaUsedMem = 0;
 	size_t maxPixel = cu::MAX_PIXEL;
 	cudaDeviceProp cudaProps = {};
-	size_t computeSharedMem = 0;
+	size_t computeSharedMemDoubles = 0;
 
 	size_t cudaMemTotal = 0;
 	size_t cudaMemUsed = 0;
