@@ -39,11 +39,10 @@ std::map<int64_t, TransformValues> MovieFrame::readTransforms() {
 
 //destruct cuda stuff and get debug data if present
 GpuFrame::~GpuFrame() {
-	std::vector<int64_t> timings;
-	std::vector<double> debugData;
-	cudaShutdown(mData, timings, debugData);
+	DebugData data = cudaShutdown(mData);
 
 	//retrieve debug data from device if present
+	std::vector<double>& debugData = data.debugData;
 	size_t siz = (size_t) debugData[0];
 	double* ptr = debugData.data() + 1;
 	double* ptrEnd = debugData.data() + siz + 1;
@@ -55,6 +54,8 @@ GpuFrame::~GpuFrame() {
 		Mat<double>::fromArray(h, w, ptr, false).toConsole("", 16);
 		ptr += h * w;
 	}
+
+	//data.kernelTimings.saveAsBMP("f:/kernel.bmp");
 }
 
 
