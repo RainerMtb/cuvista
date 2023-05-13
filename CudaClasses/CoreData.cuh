@@ -54,6 +54,11 @@ struct OutputContext {
 	int cudaPitch;
 };
 
+struct DebugData {
+	std::vector<double> debugData;
+	ImageBGR kernelTimings;
+};
+
 //how to deal with background when frame does not cover complete output canvas
 enum class BackgroundMode {
 	BLEND,
@@ -109,10 +114,13 @@ public:
 	size_t cudaUsedMem = 0;
 	size_t maxPixel = cu::MAX_PIXEL;
 	cudaDeviceProp cudaProps = {};
-	size_t computeSharedMemDoubles = 0;
+	size_t computeSharedMem = 0;
 
 	size_t cudaMemTotal = 0;
 	size_t cudaMemUsed = 0;
+
+	int3 computeBlocks = {};
+	int3 computeThreads = {};
 
 	//numeric constants used in compute kernel, will be initialized once
 	double dmin = 0.0, dmax = 0.0, deps = 0.0, dnan = 0.0;

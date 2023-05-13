@@ -25,13 +25,13 @@ struct ArrayIndex {
 };
 
 //map from thread index to S upper triangle
-__constant__ ArrayIndex sidx[] = { 
+__constant__ ArrayIndex sidx[] = {
 	{0,0}, {0,1}, {0,2}, {0,3}, {0,4}, {0,5},
 	{1,1}, {1,2}, {1,3}, {1,4}, {1,5},
 	{2,2}, {2,3}, {2,4}, {2,5},
 	{3,3}, {3,4}, {3,5},
 	{4,4}, {4,5},
-	{5,5} 
+	{5,5}
 };
 
 //initial values
@@ -52,12 +52,12 @@ __global__ void kernelCompute(ComputeTextures tex, PointResult* results, int64_t
 	uint blockIndex = iy0 * gridDim.x + ix0;
 	timestamps[blockIndex].start();
 
-		int fval = f[r / 2];
-		double tex = tex2D<float>(texObj, xm - d_core.ir + rr, rowOffset + ym - d_core.ir + cc);
-		return tex * fval;
-	}
-};
+	int& ir = d_core.ir;
+	int& iw = d_core.iw;
 
+	//allocate individual variables in shared memory
+	extern __shared__ double shd[];
+	double* ptr = shd;
 	double* sd = ptr;		ptr += 6 * iw * iw;  // 6 x iw*iw
 	double* s = ptr;		ptr += 36;           // 6 x 6
 	double* g = ptr;		ptr += 36;           // 6 x 6
@@ -67,35 +67,33 @@ __global__ void kernelCompute(ComputeTextures tex, PointResult* results, int64_t
 	double* b = ptr;        ptr += 6;            // 6 doubles
 	double* eta = ptr;      ptr += 6;            //eta 6 doubles
 	double* temp = ptr;     ptr += 6;            //temp 6 doubles
-		return tex * fval;
-	}
-};
+	//array of double pointers to get rows in LU decomposition
+	double** Apiv = (double**) (ptr);
+
 	const int ci = threadIdx.x;	    //column into image
 	const int cols = blockDim.x;	//columns that can be addressed in one warp
 	const int r = threadIdx.y;		//row into image
 	const int tidx = threadIdx.y * blockDim.x + threadIdx.x;
-	uint ix0 = blockIdx.x;
-	uint iy0 = blockIdx.y;
-	uint blockIndex = iy0 * gridDim.x + ix0;
-	timestamps[blockIndex].start();
 
-		int fval = f[r / 2];
-		double tex = tex2D<float>(texObj, xm - d_core.ir + rr, rowOffset + ym - d_core.ir + cc);
-		return tex * fval;
+	//init wp and dwp to identitiy
+	if (r < 3 && ci < 3) {
+		dwp[r * 3 + ci] = wp[r * 3 + ci] = wp0[r * 3 + ci];
 	}
-};
 
-//compute displacement, one cuda block works one point in the image
-__global__ void kernelCompute(ComputeTextures tex, PointResult* results, int64_t frameIdx, cu::DebugData debugData, KernelTimer* timestamps) {
-	uint ix0 = blockIdx.x;
-	uint iy0 = blockIdx.y;
+	//center point of image patch in this block
+	int ym = iy0 + ir;
+	int xm = ix0 + ir;
+	PointResultType result = PointResultType::RUNNING;
+
+	//pyramid level to start at
+	int z = d_core.zMax;
 	//offset in rows to current pyramid level as texture spans one full pyramid
 	int rowOffset = d_core.pyramidRows - (d_core.h >> z);
 
-	timestamps[blockIndex].start();
-
-	int& ir = d_core.ir;
-	int& iw = d_core.iw;
+	for (; z >= d_core.zMin && result >= PointResultType::RUNNING; z--) {
+		//dimensions for current pyramid level
+		int wz = d_core.w >> z;
+		int hz = d_core.h >> z;
 
 		//build sd matrix [6 x iw*iw]
 		if (r < iw) {
@@ -116,9 +114,9 @@ __global__ void kernelCompute(ComputeTextures tex, PointResult* results, int64_t
 				sd[idx] = y * (c - ir);
 			}
 		}
-	//init wp and dwp to identitiy
-	if (r < 3 && ci < 3) {
-		dwp[r * 3 + ci] = wp[r * 3 + ci] = wp0[r * 3 + ci];
+		//if (frameIdx == 1 && ix0 == 63 && iy0 == 1 && cu::firstThread()) cu::storeDebugData(debugData, 6, 49, sd);
+
+		//S = sd * sd' [6 x 6]
 		//compute upper triangle and mirror value to write all values for S
 		if (tidx < 21) {
 			ArrayIndex ai = sidx[tidx]; //the value to compute in S
@@ -128,47 +126,8 @@ __global__ void kernelCompute(ComputeTextures tex, PointResult* results, int64_t
 			}
 			//copy symmetric value
 			s[ai.c * 6 + ai.r] = s[ai.r * 6 + ai.c] = sval;
-		//		idx += iw * iw;
-		//if (frameIdx == 1 && ix0 == 20 && iy0 == 20 && cu::firstThread()) cu::storeDebugData(debugData, 6, 6, s);
-		//		idx += iw * iw;
-		//		sd[idx] = y * (r - ir);
-		//		idx += iw * iw;
-		//		sd[idx] = x * (c - ir);
-		//		idx += iw * iw;
-		//		sd[idx] = y * (c - ir);
-		//	}
-		//}
-		//if (frameIdx == 1 && ix0 == 63 && iy0 == 1 && cu::firstThread()) cu::storeDebugData(debugData, 6, 49, sd);
-
-		//S = sd * sd' [6 x 6]
-		if (r < 6) {
-			for (int c = r + ci; c < 6; c += cols) {
-				double sval = 0.0;
-				for (int rr = 0; rr < iw; rr++) {
-					for (int cc = 0; cc < iw; cc++) {
-						sval += sd.at(r, rr, cc, xm, ym, rowOffset) * sd.at(c, rr, cc, xm, ym, rowOffset);
-					}
-				}
-				//copy symmetric value
-				s[c * 6 + r] = s[r * 6 + c] = sval;
-
-
-				//int ridx = r % 2;
-				//int cidx = c % 2;
-
-				////compute only upper triangle
-				//double sval = 0.0;
-				//for (int rr = 0; rr < iw; rr++) {
-				//	for (int cc = 0; cc < iw; cc++) {
-				//		int f[] = { 1, rr - ir, cc - ir };
-				//		sval += sd[ridx * iw * iw + rr * iw + cc] * f[r / 2] * sd[cidx * iw * iw + rr * iw + cc] * f[c / 2];
-				//	}
-				//}
-				////copy symmetric value
-				//s[c * 6 + r] = s[r * 6 + c] = sval;
-			}
 		}
-		if (frameIdx == 1 && ix0 == 20 && iy0 == 20 && cu::firstThread()) cu::storeDebugData(debugData, 6, 6, s);
+		//if (frameIdx == 1 && ix0 == 20 && iy0 == 20 && cu::firstThread()) cu::storeDebugData(debugData, 6, 6, s);
 
 		//compute norm before starting inverse, s will be overwritten
 		double ns = norm1(s, 6, 6, temp);
@@ -179,21 +138,29 @@ __global__ void kernelCompute(ComputeTextures tex, PointResult* results, int64_t
 		double rcond = 1 / (ns * ng);
 		result = (isnan(rcond) || rcond < d_core.deps) ? PointResultType::FAIL_SINGULAR : PointResultType::RUNNING;
 
-		//if (frameIdx == 1 && ix0 == 63 && iy0 == 1 && cu::firstThread()) cu::storeDebugData(debugData, 6, 6, g); //----------------------------
-		//KERNEL_TIME(timestamps, i++);
+		//if (frameIdx == 1 && ix0 == 63 && iy0 == 1 && cu::firstThread()) cu::storeDebugData(debugData, 6, 6, g);
 
 		//init loop limit counter
 		int iter = 0;
 		//init error measure to stop loop
 		double bestErr = d_core.dmax;
-				double bval = 0.0;
-				//sd * delta_flat
-				for (double* sdptr = sd + r * iw * iw, *deltaptr = delta; deltaptr != delta + iw * iw; sdptr++, deltaptr++) {
-					bval += (*sdptr) * (*deltaptr);
-					double ix = xm + x * wp[0] + rir * wp[3] + wp[2];
-				b[r] = bval;
+		//main loop to find transformation of image patch
+		while (result == PointResultType::RUNNING) {
+			//interpolate image patch
+			if (r < iw) {
+				for (int c = ci; c < iw; c += cols) {
+					int x = c - ir;
+					double ix = xm + x * wp[0] + (r - ir) * wp[3] + wp[2];
+					double iy = ym + x * wp[1] + (r - ir) * wp[4] + wp[5];
+
+					//compute difference between image patches
+					//store delta in transposed order [c * iw + r]
+					if (ix < 0.0 || ix > wz - 1.0 || iy < 0.0 || iy > hz - 1.0) {
+						delta[c * iw + r] = d_core.dnan;
 
 					} else {
+						double im = tex2D<float>(tex.Yprev, xm - ir + c, rowOffset + ym + r - ir);
+
 						double flx = floor(ix), fly = floor(iy);
 						double dx = ix - flx, dy = iy - fly;
 						int x0 = (int) flx, y0 = (int) fly;
@@ -202,16 +169,10 @@ __global__ void kernelCompute(ComputeTextures tex, PointResult* results, int64_t
 						double f01 = tex2D<float>(tex.Ycur, x0 + 1, rowOffset + y0);
 						double f10 = tex2D<float>(tex.Ycur, x0, rowOffset + y0 + 1);
 						double f11 = tex2D<float>(tex.Ycur, x0 + 1, rowOffset + y0 + 1);
-						jm[r * iw + c] = (1.0 - dx) * (1.0 - dy) * f00 + (1.0 - dx) * dy * f10 + dx * (1.0 - dy) * f01 + dx * dy * f11;
+						double jm = (1.0 - dx) * (1.0 - dy) * f00 + (1.0 - dx) * dy * f10 + dx * (1.0 - dy) * f01 + dx * dy * f11;
+
+						delta[c * iw + r] = im - jm;
 					}
-
-				}
-			}
-
-			//compute difference between image patches
-			if (r < iw) {
-				for (int c = ci; c < iw; c += cols) {
-					delta[c * iw + r] = im[r * iw + c] - jm[r * iw + c]; //store delta in transposed order
 				}
 			}
 
@@ -222,14 +183,9 @@ __global__ void kernelCompute(ComputeTextures tex, PointResult* results, int64_t
 				//init b to [0 0 0 0 0 0]
 				double bval = 0.0;
 				//sd * delta_flat
-				for (int rr = 0; rr < iw; rr++) {
-					for (int cc = 0; cc < iw; cc++) {
-						bval += sd.at(r, rr, cc, xm, ym, rowOffset) * delta[rr * iw + cc];
-					}
+				for (double* sdptr = sd + r * iw * iw, *deltaptr = delta; deltaptr != delta + iw * iw; sdptr++, deltaptr++) {
+					bval += (*sdptr) * (*deltaptr);
 				}
-				//for (double* sdptr = sd + r * iw * iw, *deltaptr = delta; deltaptr != delta + iw * iw; sdptr++, deltaptr++) {
-				//	bval += (*sdptr) * (*deltaptr);
-				//}
 				b[r] = bval;
 				//g * (sd * delta)
 				for (double* gptr = g + r * 6, *bptr = b; bptr != b + 6; gptr++, bptr++) {
@@ -265,7 +221,7 @@ __global__ void kernelCompute(ComputeTextures tex, PointResult* results, int64_t
 		//displacement * 2 for next level
 		if (r == 0 && ci == 0) wp[2] *= 2.0;
 		if (r == 1 && ci == 0) wp[5] *= 2.0;
-		
+
 		//center of integration window on next level
 		xm *= 2;
 		ym *= 2;
@@ -287,10 +243,14 @@ __global__ void kernelCompute(ComputeTextures tex, PointResult* results, int64_t
 		//store results object
 		results[idx] = { idx, ix0, iy0, xm, ym, xm - d_core.w / 2, ym - d_core.h / 2, u, v, result };
 	}
+
+	timestamps[blockIndex].stop();
 }
 
-void kernelComputeCall(kernelParam param, ComputeTextures& tex, PointResult* d_results, int64_t frameIdx, cu::DebugData debugData) {
-	kernelCompute <<<param.blk, param.thr, param.shdBytes, param.stream>>> (tex, d_results, frameIdx, debugData);
+void kernelComputeCall(KernelParam param, ComputeTextures& tex, PointResult* d_results, int64_t frameIdx, cu::DebugData debugData, KernelTimer* d_timestamps) {
+	dim3 blk(param.blk.x, param.blk.y);
+	dim3 thr(param.thr.x, param.thr.y);
+	kernelCompute << <blk, thr, param.shdBytes, param.stream >> > (tex, d_results, frameIdx, debugData, d_timestamps);
 }
 
 void computeInit(const CoreData& core) {

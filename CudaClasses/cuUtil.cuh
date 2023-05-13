@@ -44,6 +44,9 @@ namespace cu {
 	//check if first thread is running
 	__device__ bool firstThread();
 
+	//get time from register
+	__device__ void globaltimer(int64_t* time);
+
 	//memory copy on device
 	__device__ void memcpy(void* dest, const void* src, size_t count);
 

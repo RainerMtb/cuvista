@@ -25,6 +25,8 @@
 #include <fstream>
 #include <iostream>
 
+
+ //textures per pyramid
 class ComputeTextures {
 
 public:
@@ -36,14 +38,28 @@ public:
 };
 
 //parameters for kernel launch
-struct kernelParam {
-	dim3 blk;
-	dim3 thr;
+struct KernelParam {
+	int3 blk;
+	int3 thr;
 	size_t shdBytes;
 	cudaStream_t stream;
 };
 
-void kernelComputeCall(kernelParam param, ComputeTextures& tex, PointResult* d_results, int64_t frameIdx, cu::DebugData debugData);
+//collect timestamps from kernel for each thread
+class KernelTimer {
+
+public:
+	dim3 block;
+	dim3 thread;
+	int64_t timeStart; //nanos
+	int64_t timeStop;  //nanos
+
+	__device__ void start();
+
+	__device__ void stop();
+};
+
+void kernelComputeCall(KernelParam param, ComputeTextures& tex, PointResult* d_results, int64_t frameIdx, cu::DebugData debugData, KernelTimer* d_timestamps);
 
 void computeInit(const CoreData& core);
 
@@ -110,7 +126,7 @@ void getNvData(std::vector<unsigned char>& nv12, OutputContext outReq);
 @brief shutdown cuda device
 @return timing values and debug data
 */
-void cudaShutdown(const CoreData& core, std::vector<int64_t>& timings, std::vector<double>& debugData);
+DebugData cudaShutdown(const CoreData& core);
 
 /*
 @brief get transformed float output for testing

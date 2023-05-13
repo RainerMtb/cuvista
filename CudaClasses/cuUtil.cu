@@ -18,6 +18,10 @@
 
 #include "cuUtil.cuh"
 
+__device__ void cu::globaltimer(int64_t* time) {
+	asm volatile ("mov.u64 %0, %%globaltimer;" : "=l"(*time));
+}
+
 __device__ bool cu::firstThread() {
 	return (threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0);
 }

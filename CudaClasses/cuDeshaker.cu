@@ -39,8 +39,10 @@ float* filterKernelGauss[3];
 int filterKernelGaussSizes[] = { 5, 3, 3 };
 float* filterKernelDifference;
 
+//results from compute kernel
 PointResult* d_results;
 
+//init cuda streams
 std::vector<cudaStream_t> cs(3);
 
 //data output from kernels for later analysis
@@ -51,6 +53,20 @@ void* registeredMemPtr = nullptr;
 
 //textures used in compute kernel
 ComputeTextures compTex;
+
+//array of time captures for compute kernel
+KernelTimer* d_kernelTimer = nullptr;
+
+__device__ void KernelTimer::start() {
+	block = blockIdx;
+	thread = threadIdx;
+	cu::globaltimer(&timeStart);
+}
+
+__device__ void KernelTimer::stop() {
+	cu::globaltimer(&timeStop);
+}
+
 
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------- HOST CODE ------------------------------------------------------
@@ -113,20 +129,20 @@ template <class T> void allocDeviceIndices(T*** indexArray, T* srcptr, size_t of
 	handleStatus(cudaMemcpy(*indexArray, idxarr.data(), siz, cudaMemcpyDefault), "error @init copy");
 }
 
-bool checkKernelParameters(dim3 threads, dim3 blocks, size_t shdsize, const CoreData& core) {
+bool checkKernelParameters(int3 threads, int3 blocks, size_t shdsize, const CoreData& core) {
 	bool out = true;
-	out &= (int) (threads.x) <= core.cudaProps.maxThreadsDim[0];
-	out &= (int) (threads.y) <= core.cudaProps.maxThreadsDim[1];
-	out &= (int) (threads.z) <= core.cudaProps.maxThreadsDim[2];
-	out &= (int) (blocks.x) <= core.cudaProps.maxGridSize[0];
-	out &= (int) (blocks.y) <= core.cudaProps.maxGridSize[1];
-	out &= (int) (blocks.z) <= core.cudaProps.maxGridSize[2];
+	out &= threads.x <= core.cudaProps.maxThreadsDim[0];
+	out &= threads.y <= core.cudaProps.maxThreadsDim[1];
+	out &= threads.z <= core.cudaProps.maxThreadsDim[2];
+	out &= blocks.x <= core.cudaProps.maxGridSize[0];
+	out &= blocks.y <= core.cudaProps.maxGridSize[1];
+	out &= blocks.z <= core.cudaProps.maxGridSize[2];
 	out &= shdsize <= core.cudaProps.sharedMemPerBlock;
-	out &= (int) (threads.x * threads.y * threads.z) <= core.cudaProps.maxThreadsPerBlock;
+	out &= threads.x * threads.y * threads.z <= core.cudaProps.maxThreadsPerBlock;
 	return out;
 }
 
-bool checkKernelParameters(dim3 threads, dim3 blocks, const CoreData& core) {
+bool checkKernelParameters(int3 threads, int3 blocks, const CoreData& core) {
 	return checkKernelParameters(threads, blocks, 0, core);
 }
 
@@ -234,13 +250,13 @@ void cudaDeviceSetup(CoreData& core) {
 	//get stride values for byte and float data
 	void* d_ptr = nullptr;
 	size_t val;
-	handleStatus(cudaMallocPitch(&d_ptr, &val, core.w, 1), "error probing pitch value");
+	handleStatus(cudaMallocPitch(&d_ptr, &val, core.w, 1), "error @init 6 probing pitch value");
 	core.pitch = (int) val;
-	handleStatus(cudaFree(d_ptr), "error freeing memory");
+	handleStatus(cudaFree(d_ptr), "error @init 7 freeing memory");
 
-	handleStatus(cudaMallocPitch(&d_ptr, &val, core.w * sizeof(float), 1), "error probing float stride value");
+	handleStatus(cudaMallocPitch(&d_ptr, &val, core.w * sizeof(float), 1), "error @init 8 probing float stride value");
 	core.strideFloatBytes = (int) val;
-	handleStatus(cudaFree(d_ptr), "error freeing memory");
+	handleStatus(cudaFree(d_ptr), "error @init 9 freeing memory");
 	core.strideCount = core.strideFloatBytes / sizeof(float);
 
 	//set memory limit
@@ -266,8 +282,6 @@ void cudaDeviceSetup(CoreData& core) {
 	//allocate debug storage
 	allocSafe(&debugData.d_data, debugData.maxSize);
 	handleStatus(cudaMemset(debugData.d_data, 0, debugData.maxSize), "error @init #32");
-	//allocate array for kernel timings
-	allocSafe(&debugData.d_timestamps, sizeof(int64_t) * debugData.n_timestamps);
 
 	//setup filter kernel pointers
 	float* constKernels;
@@ -315,7 +329,7 @@ void cudaDeviceSetup(CoreData& core) {
 	for (size_t i = 0; i < cs.size(); i++) {
 		handleStatus(cudaStreamCreate(&cs[i]), "error @init #70");
 	}
-	
+
 	//set up compute kernel
 	computeInit(core);
 
@@ -391,17 +405,12 @@ void cudaCreatePyramid(int64_t frameIdx, const CoreData& core) {
 
 void cudaComputeStart(int64_t frameIdx, const CoreData& core) {
 	int64_t pyrIdx = frameIdx % core.pyramidCount;
-	dim3 blk(core.ixCount, core.iyCount); //one block for each point
 	size_t pyrIdxPrev = (pyrIdx == 0 ? core.pyramidCount : pyrIdx) - 1;
 
-	int rows = std::max(core.iw, 6);
-	int ws = core.cudaProps.warpSize;
-	dim3 thr(ws / rows, rows);
-
-	assert(checkKernelParameters(thr, blk, core.computeSharedMemDoubles * sizeof(double), core) && "invalid kernel parameters");
+	assert(checkKernelParameters(core.computeThreads, core.computeBlocks, core.computeSharedMem, core) && "invalid kernel parameters");
 	compTex.create(pyrIdx, pyrIdxPrev, core);
-	kernelParam param = { blk, thr, core.computeSharedMemDoubles * sizeof(double), cs[0]};
-	kernelComputeCall(param, compTex, d_results, frameIdx, debugData);
+	KernelParam param = { core.computeBlocks, core.computeThreads, core.computeSharedMem, cs[0] };
+	kernelComputeCall(param, compTex, d_results, frameIdx, debugData, d_kernelTimer);
 
 	cudaStreamQuery(cs[0]);
 	handleStatus(cudaGetLastError(), "error @compute #50");
@@ -409,9 +418,9 @@ void cudaComputeStart(int64_t frameIdx, const CoreData& core) {
 
 void cudaComputeTerminate(const CoreData& core, std::vector<PointResult>& results) {
 	//handleStatus(cudaMemcpyAsync(results.data(), d_results, sizeof(PointResult) * results.size(), cudaMemcpyDefault, cs1), "error @compute #40", err);
-	handleStatus(cudaMemcpy(results.data(), d_results, sizeof(PointResult) * results.size(), cudaMemcpyDefault), "error @compute #40");
+	handleStatus(cudaMemcpy(results.data(), d_results, sizeof(PointResult) * results.size(), cudaMemcpyDefault), "error @compute #100");
 	compTex.destroy();
-	handleStatus(cudaGetLastError(), "error @compute #100");
+	handleStatus(cudaGetLastError(), "error @compute #150");
 }
 
 
@@ -443,7 +452,7 @@ void cudaOutput(int64_t frameIdx, const CoreData& core, OutputContext outCtx, cu
 
 	//handle three frames at once, convert input image from 8bit to float
 	npz_scale_8u32f(yuvSrc, core.pitch, bufferFrames[0], core.strideCount, w, h * 3);
-	
+
 	//handle individual frames
 	const BlendInput& bi = core.blendInput;
 	for (size_t i = 0; i < 3; i++) {
@@ -554,34 +563,37 @@ void cudaSynchronize() {
 //-------- SHUTDOWN
 //----------------------------------
 
-void cudaShutdown(const CoreData& core, std::vector<int64_t>& timestamps, std::vector<double>& outData) {
-	//get profiling values, store as double in microseconds
-	size_t siz = debugData.n_timestamps;
-	if (siz > 0) {
-		timestamps.resize(siz);
-		handleStatus(cudaMemcpy(timestamps.data(), debugData.d_timestamps, sizeof(int64_t) * siz, cudaMemcpyDefault), "error copy timings");
-		int rateKHZ = 0;
-		cudaDeviceGetAttribute(&rateKHZ, cudaDevAttrClockRate, 0);
-		int64_t tmin = timestamps[0];
-		int64_t tmax = timestamps[0];
-		for (size_t i = 1; i < siz; i++) {
-			if (timestamps[i] < tmin) tmin = timestamps[i];
-			if (timestamps[i] > tmax) tmax = timestamps[i];
-		}
-		for (size_t i = 0; i < siz; i++) {
-			timestamps[i] = (timestamps[i] - tmin) / rateKHZ;
+DebugData cudaShutdown(const CoreData& core) {
+	//get debug data
+	std::vector<double> outDebug(debugData.maxSize / sizeof(double));
+	handleStatus(cudaMemcpy(outDebug.data(), debugData.d_data, debugData.maxSize, cudaMemcpyDeviceToHost), "error @shutdown #5 copy debug data");
+
+	//get image of kernel timing values
+	int siz = core.computeBlocks.x * core.computeBlocks.y;
+	std::vector<KernelTimer> kernelTimer(siz);
+	handleStatus(cudaMemcpy(kernelTimer.data(), d_kernelTimer, sizeof(KernelTimer) * kernelTimer.size(), cudaMemcpyDefault), "error @shutdown #110");
+
+	auto fcnMin = [] (KernelTimer& kt1, KernelTimer& kt2) { return kt1.timeStart < kt2.timeStart; };
+	auto minTime = std::min_element(kernelTimer.begin(), kernelTimer.end(), fcnMin);
+	auto fcnMax = [] (KernelTimer& kt1, KernelTimer& kt2) { return kt1.timeStop < kt2.timeStop; };
+	auto maxTime = std::max_element(kernelTimer.begin(), kernelTimer.end(), fcnMax);
+	int ws = 10; //scale image horizontally down by 10 pixels per us
+	int h = (int) kernelTimer.size();
+	int w = (int) (maxTime->timeStop - minTime->timeStart) / 1000 / ws;
+	w = (w / 4 + 1) * 4;
+
+	ImageBGR kernelTimerImage(h, w);
+	for (int i = 0; i < core.computeBlocks.x * core.computeBlocks.y; i++) {
+		KernelTimer& kt = kernelTimer[i];
+		int us1 = (int) (kt.timeStart - minTime->timeStart) / 1000;
+		int us2 = (int) (kt.timeStop - minTime->timeStart) / 1000;
+		for (int k = us1 / ws; k <= us2 / ws; k++) {
+			kernelTimerImage.at(0, i, k) = 255;
 		}
 	}
 
-	//get debug data
-	outData.resize(debugData.maxSize / sizeof(double));
-	handleStatus(cudaMemcpy(outData.data(), debugData.d_data, debugData.maxSize, cudaMemcpyDeviceToHost), "error @shutdown #5 copy debug data");
-
 	//delete device memory
-	void* d_arr[] = { 
-		d_results, d_yuvOut, d_rgb, d_yuvData, d_yuvRows, 
-		d_yuvPlanes, d_bufferData, d_pyrData, d_pyrRows, debugData.d_timestamps, debugData.d_data 
-	};
+	void* d_arr[] = { d_results, d_yuvOut, d_rgb, d_yuvData, d_yuvRows, d_yuvPlanes, d_bufferData, d_pyrData, d_pyrRows, debugData.d_data, d_kernelTimer };
 	for (void* ptr : d_arr) {
 		handleStatus(cudaFree(ptr), "error @shutdown #10 shutting down memory");
 	}
@@ -594,4 +606,6 @@ void cudaShutdown(const CoreData& core, std::vector<int64_t>& timestamps, std::v
 	//do not reset device while nvenc is still active
 	//handleStatus(cudaDeviceReset(), "error @shutdown #90", errorList);
 	handleStatus(cudaGetLastError(), "error @shutdown #100");
+
+	return { outDebug, kernelTimerImage };
 }
