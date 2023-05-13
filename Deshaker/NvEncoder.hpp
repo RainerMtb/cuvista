@@ -33,7 +33,7 @@ struct NvPacket {
 class NvEncoder {
 
 private:
-	NV_ENC_BUFFER_FORMAT bufferFormat = NV_ENC_BUFFER_FORMAT_NV12;
+	NV_ENC_BUFFER_FORMAT mBufferFormat = NV_ENC_BUFFER_FORMAT_NV12;
 
 	int h, w;
 	void* encoder = nullptr;

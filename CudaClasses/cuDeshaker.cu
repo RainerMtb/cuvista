@@ -193,7 +193,7 @@ void cudaProbeRuntime(std::vector<cudaDeviceProp>& devicesList, CudaInfo& cudaIn
 			devicesList.push_back(devProp);
 		}
 
-		//query npp version numbers, this needs to load nvcuda.dll
+		//query npp version numbers, this loads nvcuda.dll
 		//const NppLibraryVersion* libVer = nppGetLibVersion(); //nppc.lib
 		//cudaInfo.nppMajor = libVer->major;
 		//cudaInfo.nppMinor = libVer->minor;
@@ -206,7 +206,30 @@ void cudaDeviceSetup(CoreData& core) {
 	const size_t w = core.w;
 
 	handleStatus(cudaSetDevice(core.deviceNum), "cannot set device");
-	cudaFree(0); //seems necessary in order to get a context later;
+	//cudaFree(0); //seems necessary in order to get a context later;
+
+	//sum up required shared memory for compute kernel
+	int doublesCount = 0
+		+ core.iw * core.iw * 6   //sd
+		+ core.iw * core.iw * 1	  //delta
+		+ 6 * 6		//S
+		+ 6 * 6     //g
+		+ 6 * 1		//Apiv
+		+ 6 * 1		//b
+		+ 6 * 1     //eta
+		+ 3 * 3  	//wp
+		+ 3 * 3     //dwp;
+		;
+	core.computeSharedMem = doublesCount * sizeof(double);
+
+	//compute kernel configuration
+	core.computeBlocks = { core.ixCount, core.iyCount };
+	int rows = std::max(core.iw, 6);
+	int ws = core.cudaProps.warpSize;
+	core.computeThreads = { ws / rows, rows };
+
+	//allocate storage for compute timings
+	handleStatus(cudaMalloc(&d_kernelTimer, sizeof(KernelTimer) * core.computeBlocks.x * core.computeBlocks.y), "error @int #5");
 
 	//get stride values for byte and float data
 	void* d_ptr = nullptr;

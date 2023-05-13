@@ -127,7 +127,7 @@ public:
 		int radiusMin = 1, radiusMax = 500;
 		int wMin = 100, hMin = 100;
 		int levelsMin = 1, levelsMax = 8;
-		int irMin = 0, irMax = 12;
+		int irMin = 0, irMax = 7;
 	} limits;
 
 	Stats status;

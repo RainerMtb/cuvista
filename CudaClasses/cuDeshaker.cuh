@@ -51,17 +51,20 @@ void computeInit(const CoreData& core);
 // interface to host callers
 //----------------------------------
 
-
+/*
+brief probe present cuda devices and capabilities
+*/
 void cudaProbeRuntime(std::vector<cudaDeviceProp>& devicesList, CudaInfo& cudaInfo);
 
+/*
+brief setup parameters, device memory etc.
+*/
 void cudaDeviceSetup(CoreData& core);
 
 /*
 @brief initialize cuda device
 @param core: CoreData structure
 @param yuvFrame: the object used later to transfer frame data
-@param info: info about gpu memory
-@param err: error info text stream
 */
 void cudaInit(const CoreData& core, ImageYuv& yuvFrame);
 
@@ -70,20 +73,16 @@ void cudaInit(const CoreData& core, ImageYuv& yuvFrame);
 @param frameIdx: frame index to read
 @param core: CoreData structure
 @param inputFrame: YUV pixel data to load into device for processing
-@param err: error info text stream
 */
 void cudaReadFrame(int64_t frameIdx, const CoreData& core, const ImageYuv& inputFrame);
 
 /*
-@breif create image pyramid
+@brief create image pyramid
 */
 void cudaCreatePyramid(int64_t frameIdx, const CoreData& core);
 
 /*
 @brief compute displacements between frame and previous frame in video, compute resulting affine transformation
-@param frameIdx: frame to compute transform for with respect to previous frame
-@param core: CoreData structure
-@param err: error info text stream
 */
 void cudaComputeStart(int64_t frameIdx, const CoreData& core);
 
@@ -94,13 +93,6 @@ void cudaComputeTerminate(const CoreData& core, std::vector<PointResult>& result
 
 /*
 @brief transform a frame and output pixel data to host and/or device memory
-@param frameIdx: frame to read from buffers
-@param core: CoreData+
-@param h_ptr: pointer to host frame for output
-@param nvencPtr: pointer to device memory to writer output
-@param nvencPitch: pitch value to use for encoding in cuda
-@param trf: six affine transformation parameters
-@param err: error info text stream
 */
 void cudaOutput(int64_t frameIdx, const CoreData& core, OutputContext outReq, cu::Affine trf);
 

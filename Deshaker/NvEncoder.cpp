@@ -40,7 +40,8 @@ void handleResult(CUresult result, std::string&& msg) {
 void NvEncoder::createEncoder(int fpsNum, int fpsDen, uint32_t gopLen, uint8_t crf, GUID guid, int deviceNum) {
 	CUcontext cuctx;
 	handleResult(cuCtxGetCurrent(&cuctx), "cannot get device context");
-	if (cuctx == NULL) handleResult(cuCtxCreate_v2(&cuctx, 0, deviceNum), "cannot create device context");
+	if (cuctx == NULL) 
+		handleResult(cuCtxCreate_v2(&cuctx, 0, deviceNum), "cannot create device context");
 	createEncoder(fpsNum, fpsDen, gopLen, crf, guid, cuctx);
 }
 
@@ -58,7 +59,8 @@ void NvEncoder::createEncoder(int fpsNum, int fpsDen, uint32_t gopLen, uint8_t c
 	//create instance
 	encFuncList = { NV_ENCODE_API_FUNCTION_LIST_VER };
 	handleResult(NvEncodeAPICreateInstance(&encFuncList), "cannot create api instance");
-	if (!encFuncList.nvEncOpenEncodeSession) throw AVException("error opening encode session");
+	if (!encFuncList.nvEncOpenEncodeSession) 
+		throw AVException("error opening encode session");
 
 	//open session
 	NV_ENC_OPEN_ENCODE_SESSION_EX_PARAMS encodeSessionExParams = { NV_ENC_OPEN_ENCODE_SESSION_EX_PARAMS_VER };
@@ -73,7 +75,7 @@ void NvEncoder::createEncoder(int fpsNum, int fpsDen, uint32_t gopLen, uint8_t c
 	uint32_t guidSupportCount;
 	std::vector<GUID> guids(guidCount);
 	handleResult(encFuncList.nvEncGetEncodeGUIDs(encoder, guids.data(), guidCount, &guidSupportCount), "cannot get guids");
-	handleResult(std::find(guids.cbegin(), guids.cend(), guid) == guids.end(), "cannot find guid");
+	handleResult(std::find(guids.cbegin(), guids.cend(), guid) == guids.end(), "guid not supported");
 
 	uint32_t fmtCount;
 	handleResult(encFuncList.nvEncGetInputFormatCount(encoder, guid, &fmtCount), "cannot get format count");
@@ -81,6 +83,7 @@ void NvEncoder::createEncoder(int fpsNum, int fpsDen, uint32_t gopLen, uint8_t c
 	uint32_t fmtSupportedCount;
 	std::vector<NV_ENC_BUFFER_FORMAT> fmts(fmtCount);
 	handleResult(encFuncList.nvEncGetInputFormats(encoder, guid, fmts.data(), fmtCount, &fmtSupportedCount), "cannot get formats");
+	handleResult(std::find(fmts.cbegin(), fmts.cend(), mBufferFormat) == fmts.end(), "input format not supported");
 
 	//set init parameters structure
 	NV_ENC_CONFIG encodeConfig = { NV_ENC_CONFIG_VER };
@@ -155,7 +158,7 @@ void NvEncoder::createEncoder(int fpsNum, int fpsDen, uint32_t gopLen, uint8_t c
 		registerResource.width = w;
 		registerResource.height = h;
 		registerResource.pitch = (int) pitch;
-		registerResource.bufferFormat = bufferFormat;
+		registerResource.bufferFormat = mBufferFormat;
 		registerResource.bufferUsage = NV_ENC_INPUT_IMAGE;
 		handleResult(encFuncList.nvEncRegisterResource(encoder, &registerResource), "cannot register resource");
 		NV_ENC_REGISTERED_PTR registeredPtr = registerResource.registeredResource;
@@ -213,7 +216,7 @@ void NvEncoder::encodeFrame(std::list<NvPacket>& nvPackets) {
 	NV_ENC_PIC_PARAMS picParams = { NV_ENC_PIC_PARAMS_VER };
 	picParams.pictureStruct = NV_ENC_PIC_STRUCT_FRAME;
 	picParams.inputBuffer = mappedInputBuffers[fridx];
-	picParams.bufferFmt = bufferFormat;
+	picParams.bufferFmt = mBufferFormat;
 	picParams.inputWidth = w;
 	picParams.inputHeight = h;
 	picParams.outputBitstream = bitstreamOutputBuffer[fridx];
@@ -255,7 +258,7 @@ NvPacket NvEncoder::getBufferedFrame() {
 
 
 void NvEncoder::destroyEncoder() {
-	CUresult res = cuCtxPushCurrent_v2(cuctx);
+	cuCtxPushCurrent_v2(cuctx);
 
 	for (size_t i = 0; i < mappedInputBuffers.size(); i++) {
 		if (mappedInputBuffers[i]) {
@@ -283,8 +286,7 @@ void NvEncoder::destroyEncoder() {
 	}
 	bitstreamOutputBuffer.clear();
 
-	if (encoder != nullptr)
+	if (encoder != nullptr) {
 		encFuncList.nvEncDestroyEncoder(encoder);
-
-	res = cuCtxPopCurrent_v2(nullptr);
+	}
 }

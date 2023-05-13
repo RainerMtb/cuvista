@@ -68,7 +68,7 @@ public:
 	size_t BUFFER_COUNT = 21;	//number of buffer buffer frames to do filtering and output
 	int MAX_POINTS_COUNT = 150;		//max number of points in x or y direction
 
-	int pyramidLevels = 4;			//number of pyramid levels, not necessary starting at level 0
+	int pyramidLevels = 3;			//number of pyramid levels, not necessary starting at level 0
 	int pitch = 0;					//alignment of image rows, will be overwritten in cuda setup
 	int strideCount = 0;		    //number of float values in a row including padding
 	int strideFloatBytes = 0;		//number of bytes in an image row including padding

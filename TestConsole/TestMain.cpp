@@ -20,6 +20,51 @@
 #include <chrono>
 #include <algorithm>
 
+void test() {
+	{
+		MainData data;
+		data.probeCudaDevices();
+		InputContext ctx = { 1080, 1920, 2, 1 };
+		data.validate(ctx);
+		NullReader reader;
+		NullWriter writer(data);
+		GpuFrame frame(data);
+
+		frame.inputFrame.readFromPGM("d:/VideoTest/v00.pgm");
+		frame.inputData(frame.inputFrame);
+		frame.createPyramid();
+		data.status.frameInputIndex++;
+
+		frame.inputFrame.readFromPGM("D:/VideoTest/v01.pgm");
+		frame.inputData(frame.inputFrame);
+		frame.createPyramid();
+		frame.computeStart();
+		frame.computeTerminate();
+		//frame.getTransformedOutput().saveAsBinary("f:/test.dat");
+		std::cout << cudaGetErrorString(cudaGetLastError()) << std::endl;
+	}
+
+	{
+		MainData data;
+		InputContext ctx = { 1080, 1920, 2, 1 };
+		data.validate(ctx);
+		NullReader reader;
+		NullWriter writer(data);
+		CpuFrame frame(data);
+
+		frame.inputFrame.readFromPGM("d:/VideoTest/v00.pgm");
+		frame.inputData(frame.inputFrame);
+		frame.createPyramid();
+		data.status.frameInputIndex++;
+
+		frame.inputFrame.readFromPGM("D:/VideoTest/v01.pgm");
+		frame.inputData(frame.inputFrame);
+		frame.createPyramid();
+		frame.computeStart();
+		frame.computeTerminate();
+	}
+}
+
 int main() {
 	std::cout << "----------------------------" << std::endl << "MatrixTestMain:" << std::endl;
 	//qrdec();
