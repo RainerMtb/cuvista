@@ -107,11 +107,7 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 
 		} else if (args.nextArg("pass", next)) {
 			int p = std::stoi(next);
-			if (p == 0) { pass = DeshakerPass::COMBINED; }
-			else if (p == 1) { pass = DeshakerPass::FIRST_PASS; }
-			else if (p == 2) { pass = DeshakerPass::SECOND_PASS; }
-			else if (p == 12) { pass = DeshakerPass::CONSECUTIVE; }
-			else throw AVException("invalid value for pass: " + next);
+			if (p == 0) { pass = DeshakerPass::COMBINED; } else if (p == 1) { pass = DeshakerPass::FIRST_PASS; } else if (p == 2) { pass = DeshakerPass::SECOND_PASS; } else if (p == 12) { pass = DeshakerPass::CONSECUTIVE; } else throw AVException("invalid value for pass: " + next);
 
 		} else if (args.nextArg("radius", next)) {
 			//temporal radius in seconds before and after current frame
@@ -196,7 +192,7 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 			auto item = codecMap.find(str_toupper(next));
 			if (item == codecMap.end())
 				throw AVException("invalid codec: " + next);
-			else 
+			else
 				videoCodec = item->second;
 
 		} else if (args.nextArg("encdev", next)) {
@@ -277,7 +273,7 @@ void MainData::validate() {
 
 	//no output to console if frame output through pipe
 	if (videoOutputType == OutputType::PIPE) progressType = ProgressType::NONE;
-	
+
 	//select device
 	if (devicesList.size() > 0) {
 		auto less = [] (const cudaDeviceProp& a, const cudaDeviceProp& b) { return a.major == b.major ? a.minor < b.minor : a.major < b.major; };
@@ -349,16 +345,6 @@ void MainData::validate() {
 		cudaProps = devicesList[deviceNum];
 		size_t px = cudaProps.sharedMemPerBlock / sizeof(float);
 		if (px < maxPixel) maxPixel = px;
-
-		//sum up required shared memory for compute kernel
-		computeSharedMemDoubles = 0
-			+ iw * iw * 6	//sd
-			+ iw * iw * 3	//im, jm, delta
-			+ 6 * 6 * 2		//S, g
-			+ 6 * 1 * 2		//Apiv
-			+ 6 * 1 * 2		//b, eta
-			+ 3 * 3 * 2		//wp, dwp;
-			;
 
 		cudaDeviceSetup(*this);
 		if (errorLogger.hasError()) throw AVException("cannot setup cuda: " + errorLogger.getErrorMessage());
