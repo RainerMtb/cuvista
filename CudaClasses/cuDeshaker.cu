@@ -194,19 +194,20 @@ void cudaInit(const CoreData& core, ImageYuv& yuvFrame) {
 }
 
 //check for cuda runtime installation, this only needs link to cudart_static.lib
-void cudaProbeRuntime(std::vector<cudaDeviceProp>& devicesList, CudaInfo& cudaInfo) {
+void cudaProbeRuntime(CudaInfo& cudaInfo) {
 	//do not check cudaError_t here, absence of cuda will report error "CUDA driver is insufficient for CUDA runtime version"
 	cudaRuntimeGetVersion(&cudaInfo.cudaRuntimeVersion);
 	cudaDriverGetVersion(&cudaInfo.cudaDriverVersion);
 
 	//if we found a proper cuda installation, ask for list of devices
+	cudaInfo.cudaProps.clear();
 	if (cudaInfo.cudaRuntimeVersion > 0) {
 		int devCount = 0;
 		handleStatus(cudaGetDeviceCount(&devCount), "error probing cuda devices");
 		for (int i = 0; i < devCount; i++) {
 			cudaDeviceProp devProp;
 			handleStatus(cudaGetDeviceProperties(&devProp, i), "error getting device properties");
-			devicesList.push_back(devProp);
+			cudaInfo.cudaProps.push_back(devProp);
 		}
 
 		//query npp version numbers, this loads nvcuda.dll

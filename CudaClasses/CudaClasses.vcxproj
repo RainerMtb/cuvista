@@ -119,6 +119,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="CoreData.cuh" />
+    <ClInclude Include="CudaInfo.hpp" />
     <ClInclude Include="cuNPP.cuh" />
     <ClInclude Include="cuTest.cuh" />
     <ClInclude Include="cuUtil.cuh" />

@@ -191,8 +191,3 @@ TCPWriter::~TCPWriter() {
 	closesocket(mSock);
 	WSACleanup();
 }
-
-//so GUID can be used as key in a map
-bool CudaFFmpegWriter::FunctorLess::operator () (const GUID& g1, const GUID& g2) const {
-	return std::tie(g1.Data1, g1.Data2, g1.Data3, *g1.Data4) < std::tie(g2.Data1, g2.Data2, g2.Data3, *g2.Data4);
-}

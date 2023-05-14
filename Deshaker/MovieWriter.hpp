@@ -75,7 +75,7 @@ private:
 
 public:
 	BmpImageWriter(MainData& data) : ImageWriter(data), image(data.h, data.w) {}
-	virtual void write() override;
+	void write() override;
 };
 
 
@@ -89,9 +89,9 @@ private:
 
 public:
 	JpegImageWriter(MainData& data) : ImageWriter(data) {}
-	virtual void open() override;
-	virtual void write() override;
-	virtual ~JpegImageWriter() override;
+	~JpegImageWriter() override;
+	void open() override;
+	void write() override;
 };
 
 
@@ -117,9 +117,9 @@ class PipeWriter : public RawWriter {
 
 public:
 	PipeWriter(MainData& data) : RawWriter(data) {}
-	virtual void open() override;
-	virtual ~PipeWriter() override;
-	virtual void write() override;
+	~PipeWriter() override;
+	void open() override;
+	void write() override;
 };
 
 
@@ -139,9 +139,9 @@ protected:
 
 public:
 	TCPWriter(MainData& data) : RawWriter(data) {}
-	virtual void open() override;
-	virtual ~TCPWriter() override;
-	virtual void write() override;
+	~TCPWriter() override;
+	void open() override;
+	void write() override;
 };
 
 
@@ -164,8 +164,8 @@ protected:
 	bool headerWritten = false;
 
 	FFmpegFormatWriter(MainData& data) : MovieWriter(data) {}
-	virtual void open() override;
-	virtual ~FFmpegFormatWriter() override;
+	~FFmpegFormatWriter() override;
+	void open() override;
 	void writePacket(AVPacket* packet);
 	void writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsIdx, bool terminate);
 };
@@ -190,44 +190,9 @@ private:
 
 public:
 	FFmpegWriter(MainData& data) : FFmpegFormatWriter(data) {}
-	virtual void open() override;
-	virtual ~FFmpegWriter() override;
-	virtual void write() override;
-	virtual bool terminate(bool init) override;
-};
-
-
-#include "NvEncoder.hpp"
-
-//-----------------------------------------------------------------------------------
-class CudaFFmpegWriter : public FFmpegFormatWriter {
-
-private:
-	std::map<OutputCodec, GUID> guidMap = {
-		{ OutputCodec::H264, NV_ENC_CODEC_H264_GUID },
-		{ OutputCodec::H265, NV_ENC_CODEC_HEVC_GUID },
-		{ OutputCodec::AUTO, NV_ENC_CODEC_HEVC_GUID },
-	};
-
-	class FunctorLess {
-	public:
-		bool operator () (const GUID& g1, const GUID& g2) const;
-	};
-	std::map<GUID, AVCodecID, FunctorLess> guidToCodecMap = {
-		{ NV_ENC_CODEC_H264_GUID, AV_CODEC_ID_H264 },
-		{ NV_ENC_CODEC_HEVC_GUID, AV_CODEC_ID_HEVC },
-	};
-
-	NvEncoder nvenc;
-	std::list<NvPacket> nvPackets; //encoded packets
-
-	void writePacketToFile(const NvPacket& nvpkt, bool terminate);
-
-public:
-	CudaFFmpegWriter(MainData& data) : FFmpegFormatWriter(data), nvenc { NvEncoder(data.w, data.h) } {}
-	virtual void open() override;
-	virtual ~CudaFFmpegWriter() override;
-	virtual OutputContext getOutputData();
+	~FFmpegWriter() override;
+	void open() override;
 	void write() override;
-	virtual bool terminate(bool init) override;
+	bool terminate(bool init) override;
 };
+

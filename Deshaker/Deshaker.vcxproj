@@ -159,11 +159,13 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="AffineTransform.cpp" />
+    <ClCompile Include="CudaWriter.cpp" />
     <ClCompile Include="DeshakerLoop.cpp" />
     <ClCompile Include="Diagnostics.cpp" />
     <ClCompile Include="FFmpegUtil.cpp" />
     <ClCompile Include="KeyboardInput.cpp" />
     <ClCompile Include="MainData.cpp" />
+    <ClCompile Include="NvidiaDriver.cpp" />
     <ClCompile Include="ProgressDisplayConsole.cpp" />
     <ClCompile Include="RandomSource.cpp" />
     <ClCompile Include="MovieFrame.cpp" />
@@ -179,12 +181,14 @@
   <ItemGroup>
     <ClInclude Include="AffineTransform.hpp" />
     <ClInclude Include="AVException.hpp" />
+    <ClInclude Include="CudaWriter.hpp" />
     <ClInclude Include="Diagnostics.hpp" />
     <ClInclude Include="FFmpegUtil.hpp" />
     <ClInclude Include="KeyboardInput.hpp" />
     <ClInclude Include="MainData.hpp" />
     <ClInclude Include="DeshakerHelpText.hpp" />
     <ClInclude Include="MovieWriter.hpp" />
+    <ClInclude Include="NvidiaDriver.hpp" />
     <ClInclude Include="ProgressDisplay.hpp" />
     <ClInclude Include="ProgressDisplayConsole.hpp" />
     <ClInclude Include="Stats.hpp" />

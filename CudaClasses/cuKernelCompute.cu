@@ -27,15 +27,16 @@ struct ArrayIndex {
 //map from thread index to S upper triangle
 __constant__ ArrayIndex sidx[] = {
 	{0,0}, {0,1}, {0,2}, {0,3}, {0,4}, {0,5},
-	{1,1}, {1,2}, {1,3}, {1,4}, {1,5},
-	{2,2}, {2,3}, {2,4}, {2,5},
-	{3,3}, {3,4}, {3,5},
-	{4,4}, {4,5},
-	{5,5}
+	       {1,1}, {1,2}, {1,3}, {1,4}, {1,5},
+	              {2,2}, {2,3}, {2,4}, {2,5},
+	                     {3,3}, {3,4}, {3,5},
+	                            {4,4}, {4,5},
+	                                   {5,5},
 };
 
-//initial values
+//initial values for wp
 __constant__ double wp0[] = { 1, 0, 0, 0, 1, 0, 0, 0, 1 };
+//initial values for eta
 __constant__ double eta0[] = { 0, 0, 1, 0, 0, 1 };
 
 //parameter structure

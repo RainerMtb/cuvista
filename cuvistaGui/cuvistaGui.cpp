@@ -47,7 +47,7 @@ cuvistaGui::cuvistaGui(QWidget *parent) : QMainWindow(parent) {
 
     //combo box for encoding settings
     encoderSettings.emplace_back("AUTO", EncodingDevice::AUTO, OutputCodec::AUTO);
-    if (mData.devicesList.size() > 0) {
+    if (mData.deviceProps.size() > 0) {
         encoderSettings.emplace_back("GPU - H265", EncodingDevice::GPU, OutputCodec::H265);
         encoderSettings.emplace_back("GPU - H264", EncodingDevice::GPU, OutputCodec::H264);
     }
@@ -60,8 +60,8 @@ cuvistaGui::cuvistaGui(QWidget *parent) : QMainWindow(parent) {
 
     //devices
     ui.comboDevice->addItem(QString("[CPU] use cpu only - %1 threads").arg(std::thread::hardware_concurrency()));
-    for (int i = 0; i < mData.devicesList.size(); i++) {
-        const cudaDeviceProp& prop = mData.devicesList[i];
+    for (int i = 0; i < mData.deviceProps.size(); i++) {
+        const cudaDeviceProp& prop = mData.deviceProps[i].cudaProps;
         ui.comboDevice->addItem(QString("[GPU %1] %2").arg(i).arg(prop.name));
     }
     ui.comboDevice->setCurrentIndex(ui.comboDevice->count() - 1);
@@ -308,13 +308,13 @@ void cuvistaGui::showInfo() {
     ss << "FFmpeg libavformat " << LIBAVFORMAT_VERSION_MAJOR << "." << LIBAVFORMAT_VERSION_MINOR << "." << LIBAVFORMAT_VERSION_MICRO << std::endl;
     ss << std::endl;
     ss << "List of Cuda Devices:" << std::endl;
-    for (int i = 0; i < mData.devicesList.size(); i++) {
-        const cudaDeviceProp& prop = mData.devicesList[i];
+    for (int i = 0; i < mData.deviceProps.size(); i++) {
+        const cudaDeviceProp& prop = mData.deviceProps[i].cudaProps;
         ss << "Device " << i << ": " << prop.name
             << " // " << prop.totalGlobalMem / 1024 / 1024 << " MB // Compute " << prop.major << "." << prop.minor
             << std::endl;
     }
-    if (mData.devicesList.empty()) {
+    if (mData.deviceProps.empty()) {
         ss << "No Applicable Cuda Devices Found" << std::endl;
     }
 

@@ -37,6 +37,54 @@ void handleResult(CUresult result, std::string&& msg) {
 }
 
 
+void NvEncoder::probeEncoding(CudaInfo& cudaInfo) {
+	//check supported encoder version on this system
+	cudaInfo.nvencVersionApi = (NVENCAPI_MAJOR_VERSION << 4) | NVENCAPI_MINOR_VERSION; //api version for the libraries
+	handleResult(NvEncodeAPIGetMaxSupportedVersion(&cudaInfo.nvencVersionDriver), "cannot get max supported version"); //max version supported by driver
+}
+
+
+void NvEncoder::probeSupportedCodecs(CudaInfo& cudaInfo) {
+	//create instance
+	NV_ENCODE_API_FUNCTION_LIST encFuncList = { NV_ENCODE_API_FUNCTION_LIST_VER };
+	handleResult(NvEncodeAPICreateInstance(&encFuncList), "cannot create api instance");
+	handleResult(encFuncList.nvEncOpenEncodeSession == NULL, "error opening encode session");
+
+	//check supported codecs for all devices
+	cudaInfo.supportedCodecs.clear();
+	for (int i = 0; i < cudaInfo.cudaProps.size(); i++) {
+		void* encoder = nullptr;
+
+		//create context per device
+		CUcontext cuctx;
+		handleResult(cuCtxCreate_v2(&cuctx, 0, i), "cannot create device context");
+
+		//open session
+		NV_ENC_OPEN_ENCODE_SESSION_EX_PARAMS encodeSessionExParams = { NV_ENC_OPEN_ENCODE_SESSION_EX_PARAMS_VER };
+		encodeSessionExParams.device = cuctx;
+		encodeSessionExParams.deviceType = NV_ENC_DEVICE_TYPE_CUDA;
+		encodeSessionExParams.apiVersion = NVENCAPI_VERSION;
+		handleResult(encFuncList.nvEncOpenEncodeSessionEx(&encodeSessionExParams, &encoder), "cannot open encoder session");
+
+		//check available guid
+		uint32_t guidCount;
+		handleResult(encFuncList.nvEncGetEncodeGUIDCount(encoder, &guidCount), "cannot get guid count");
+
+		uint32_t guidSupportCount;
+		std::vector<GUID> guids(guidCount);
+		handleResult(encFuncList.nvEncGetEncodeGUIDs(encoder, guids.data(), guidCount, &guidSupportCount), "cannot get guids");
+
+		//order by automatic selection
+		std::vector<OutputCodec> codecs;
+		if (std::find(guids.cbegin(), guids.cend(), NV_ENC_CODEC_HEVC_GUID) != guids.cend()) codecs.push_back(OutputCodec::H265);
+		if (std::find(guids.cbegin(), guids.cend(), NV_ENC_CODEC_H264_GUID) != guids.cend()) codecs.push_back(OutputCodec::H264);
+		cudaInfo.supportedCodecs.push_back(codecs);
+
+		handleResult(cuCtxDestroy_v2(cuctx), "cannot destroy context");
+	}
+}
+
+
 void NvEncoder::createEncoder(int fpsNum, int fpsDen, uint32_t gopLen, uint8_t crf, GUID guid, int deviceNum) {
 	CUcontext cuctx;
 	handleResult(cuCtxGetCurrent(&cuctx), "cannot get device context");
@@ -48,19 +96,8 @@ void NvEncoder::createEncoder(int fpsNum, int fpsDen, uint32_t gopLen, uint8_t c
 
 void NvEncoder::createEncoder(int fpsNum, int fpsDen, uint32_t gopLen, uint8_t crf, GUID guid, CUcontext cuctx) {
 	this->cuctx = cuctx;
-
-	//check supported version on this system
-	uint32_t apiVersion = (NVENCAPI_MAJOR_VERSION << 4) | NVENCAPI_MINOR_VERSION; //api version for the libraries
-	uint32_t driverVersion;
-	handleResult(NvEncodeAPIGetMaxSupportedVersion(&driverVersion), "cannot get max supported version"); //max version supported by driver
-	bool driverVersionError = apiVersion > driverVersion; //api version is higher than driver supports -> newer driver is needed
-	handleResult(driverVersionError, "present nvidia driver does not support this NvEncodeAPI version");
-
-	//create instance
-	encFuncList = { NV_ENCODE_API_FUNCTION_LIST_VER };
 	handleResult(NvEncodeAPICreateInstance(&encFuncList), "cannot create api instance");
-	if (!encFuncList.nvEncOpenEncodeSession) 
-		throw AVException("error opening encode session");
+	handleResult(encFuncList.nvEncOpenEncodeSession == NULL, "error opening encode session");
 
 	//open session
 	NV_ENC_OPEN_ENCODE_SESSION_EX_PARAMS encodeSessionExParams = { NV_ENC_OPEN_ENCODE_SESSION_EX_PARAMS_VER };
@@ -69,14 +106,16 @@ void NvEncoder::createEncoder(int fpsNum, int fpsDen, uint32_t gopLen, uint8_t c
 	encodeSessionExParams.apiVersion = NVENCAPI_VERSION;
 	handleResult(encFuncList.nvEncOpenEncodeSessionEx(&encodeSessionExParams, &encoder), "cannot open encoder session");
 
+	//check support for given guid
 	uint32_t guidCount;
 	handleResult(encFuncList.nvEncGetEncodeGUIDCount(encoder, &guidCount), "cannot get guid count");
 
 	uint32_t guidSupportCount;
 	std::vector<GUID> guids(guidCount);
 	handleResult(encFuncList.nvEncGetEncodeGUIDs(encoder, guids.data(), guidCount, &guidSupportCount), "cannot get guids");
-	handleResult(std::find(guids.cbegin(), guids.cend(), guid) == guids.end(), "guid not supported");
+	handleResult(std::find(guids.cbegin(), guids.cend(), guid) == guids.cend(), "guid is not supported");
 
+	//check if input format is supported
 	uint32_t fmtCount;
 	handleResult(encFuncList.nvEncGetInputFormatCount(encoder, guid, &fmtCount), "cannot get format count");
 

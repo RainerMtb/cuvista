@@ -71,6 +71,12 @@
     <ClCompile Include="ProgressDisplayConsole.cpp">
       <Filter>Main</Filter>
     </ClCompile>
+    <ClCompile Include="CudaWriter.cpp">
+      <Filter>Writer</Filter>
+    </ClCompile>
+    <ClCompile Include="NvidiaDriver.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MovieReader.hpp">
@@ -135,6 +141,12 @@
     </ClInclude>
     <ClInclude Include="ProgressDisplayConsole.hpp">
       <Filter>Main</Filter>
+    </ClInclude>
+    <ClInclude Include="CudaWriter.hpp">
+      <Filter>Writer</Filter>
+    </ClInclude>
+    <ClInclude Include="NvidiaDriver.hpp">
+      <Filter>Util</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

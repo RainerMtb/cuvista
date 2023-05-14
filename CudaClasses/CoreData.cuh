@@ -22,6 +22,7 @@
 #include "Image.hpp"
 #include "ErrorLogger.hpp"
 #include "cuUtil.cuh"
+#include "CudaInfo.hpp"
 
 struct BlendInput {
 	double percent = 0.0;
@@ -29,21 +30,6 @@ struct BlendInput {
 	int blendWidth = 0;
 	int separatorStart = 0;
 	int separatorWidth = 0;
-};
-
-//info about cuda devices
-struct CudaInfo {
-	int nvidiaDriverVersion = 0;
-	int cudaRuntimeVersion = 0;
-	int cudaDriverVersion = 0;
-
-	int nppMajor = 0;
-	int nppMinor = 0;
-	int nppBuild = 0;
-
-	std::string nvidiaDriver() const;
-	std::string cudaRuntime() const;
-	std::string cudaDriver() const;
 };
 
 struct OutputContext {

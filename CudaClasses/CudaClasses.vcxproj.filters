@@ -27,6 +27,9 @@
     <ClInclude Include="cuTest.cuh">
       <Filter>Util</Filter>
     </ClInclude>
+    <ClInclude Include="CudaInfo.hpp">
+      <Filter>Util</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Util">

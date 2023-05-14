@@ -19,16 +19,14 @@
 #include "MainData.hpp"
 #include "DeshakerHelpText.hpp"
 #include "KeyboardInput.hpp"
+#include "NvidiaDriver.hpp"
+#include "NvEncoder.hpp"
 
 #include <algorithm>
 #include <regex>
 #include <vector>
 #include <map>
 #include <filesystem>
-
-extern "C" {
-#include "nvapi\nvapi.h" //get nvidia driver version
-}
 
 void checkFileForWriting(const std::string& file, bool write) {
 	if (file.empty()) {
@@ -275,15 +273,17 @@ void MainData::validate() {
 	if (videoOutputType == OutputType::PIPE) progressType = ProgressType::NONE;
 
 	//select device
-	if (devicesList.size() > 0) {
-		auto less = [] (const cudaDeviceProp& a, const cudaDeviceProp& b) { return a.major == b.major ? a.minor < b.minor : a.major < b.major; };
-		auto it = std::max_element(devicesList.begin(), devicesList.end(), less);
-		deviceNumBest = (int) std::distance(devicesList.begin(), it);
+	if (deviceProps.size() > 0) {
+		auto less = [] (const DeviceProps& a, const DeviceProps& b) { 
+			return a.cudaProps.major == b.cudaProps.major ? a.cudaProps.minor < b.cudaProps.minor : a.cudaProps.major < b.cudaProps.major; 
+		};
+		auto it = std::max_element(deviceProps.begin(), deviceProps.end(), less);
+		deviceNumBest = (int) std::distance(deviceProps.begin(), it);
 	}
 	if (deviceRequested == false) {
 		deviceNum = deviceNumBest;
 	}
-	if (deviceNum >= (int) devicesList.size() || deviceNum < -2) {
+	if (deviceNum >= (int) deviceProps.size() || deviceNum < -2) {
 		throw AVException("invalid device number: " + std::to_string(deviceNum));
 	}
 
@@ -342,7 +342,7 @@ void MainData::validate() {
 	//init cuda if applicable
 	if (deviceNum >= 0) {
 		//when device should be used we need to setup cuda
-		cudaProps = devicesList[deviceNum];
+		cudaProps = deviceProps[deviceNum].cudaProps;
 		size_t px = cudaProps.sharedMemPerBlock / sizeof(float);
 		if (px < maxPixel) maxPixel = px;
 
@@ -422,11 +422,11 @@ void MainData::showDeviceInfo() const {
 	*console << "cuda runtime " << cudaInfo.cudaRuntime() << ", cuda driver " << cudaInfo.cudaDriver() << std::endl;
 	*console << "ffmpeg libavformat version " << LIBAVFORMAT_VERSION_MAJOR << "." << LIBAVFORMAT_VERSION_MINOR << "." << LIBAVFORMAT_VERSION_MICRO << std::endl;
 	*console << "List of Cuda Devices:" << std::endl;
-	for (int i = 0; i < devicesList.size(); i++) {
-		const cudaDeviceProp& prop = devicesList[i];
+	for (int i = 0; i < deviceProps.size(); i++) {
+		const cudaDeviceProp& prop = deviceProps[i].cudaProps;
 		*console << " #" << i << ": " << prop.name << ", Compute " << prop.major << "." << prop.minor << std::endl;
 	}
-	if (devicesList.empty()) {
+	if (deviceProps.empty()) {
 		*console << " no devices found" << std::endl;
 	}
 
@@ -466,31 +466,24 @@ bool MainData::Parameters::nextArg(std::string&& param, std::string& nextParam) 
 }
 
 void MainData::probeCudaDevices() {
-	//get nvidia driver version
-	NvAPI_Status status = NVAPI_OK;
-	NvAPI_ShortString str;
-
-	status = NvAPI_Initialize();
-	if (status == NVAPI_LIBRARY_NOT_FOUND) {
-		//in this case NvAPI_GetErrorMessage() will only return an empty string
-
-	} else if (status != NVAPI_OK) {
-		NvAPI_GetErrorMessage(status, str);
-		throw AVException("error initializing nvapi: " + std::string(str));
-
-	} else {
-		NvU32 version = 0;
-		NvAPI_ShortString branch;
-		status = NvAPI_SYS_GetDriverAndBranchVersion(&version, branch);
-		if (status != NVAPI_OK) {
-			NvAPI_GetErrorMessage(status, str);
-			throw AVException("error getting driver version: " + std::string(str));
-
-		} else {
-			//we have valid nvidia driver
-			cudaInfo.nvidiaDriverVersion = version;
-		}
+	//check Nvidia Driver
+	cudaInfo.nvidiaDriverVersion = probeNvidiaDriver();
+	//check present cuda devices
+	cudaProbeRuntime(cudaInfo);
+	//check if nvenc is present
+	NvEncoder::probeEncoding(cudaInfo);
+	//check supported codecs
+	if (cudaInfo.cudaProps.size() > 0 && cudaInfo.nvencVersionDriver >= cudaInfo.nvencVersionApi) {
+		NvEncoder::probeSupportedCodecs(cudaInfo);
 	}
 
-	cudaProbeRuntime(devicesList, cudaInfo);
+	//store in MainData
+	deviceProps.clear();
+	for (int i = 0; i < cudaInfo.cudaProps.size(); i++) {
+		deviceProps.emplace_back(cudaInfo.cudaProps[i], cudaInfo.supportedCodecs[i]);
+	}
+}
+
+bool MainData::canDeviceEncode() {
+	return deviceProps[deviceNum].codecs.size() > 0;
 }

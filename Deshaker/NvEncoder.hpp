@@ -19,11 +19,20 @@
 #pragma once
 
 #include "AVException.hpp"
+#include "CudaInfo.hpp"
 #include "nvEncodeAPI.h"
-#include <cuda.h>
+
+#undef min
+#undef max
 
 #include <vector>
 #include <list>
+#include <map>
+
+inline std::map<OutputCodec, GUID> guidMap = {
+	{ OutputCodec::H264, NV_ENC_CODEC_H264_GUID },
+	{ OutputCodec::H265, NV_ENC_CODEC_HEVC_GUID },
+};
 
 struct NvPacket {
 	std::vector<uint8_t> packet;
@@ -43,7 +52,7 @@ private:
 	int32_t frameToSend = 0;
 	int32_t frameGot = 0;
 
-	NV_ENCODE_API_FUNCTION_LIST encFuncList {};
+	NV_ENCODE_API_FUNCTION_LIST encFuncList = { NV_ENCODE_API_FUNCTION_LIST_VER };
 	std::vector<NV_ENC_INPUT_PTR> mappedInputBuffers;
 	std::vector<NV_ENC_OUTPUT_PTR> bitstreamOutputBuffer;
 	std::vector<NV_ENC_REGISTERED_PTR> registeredResources;
@@ -57,6 +66,8 @@ public:
 
 	NvEncoder(int w, int h) : h { h }, w { w } {}
 
+	static void probeEncoding(CudaInfo& cudaInfo);
+	static void probeSupportedCodecs(CudaInfo& cudaInfo);
 	void createEncoder(int fpsNum, int fpsDen, uint32_t gopLen, uint8_t crf, GUID guid, int deviceNum);
 	void createEncoder(int fpsNum, int fpsDen, uint32_t gopLen, uint8_t crf, GUID guid, CUcontext cuctx);
 	void destroyEncoder();

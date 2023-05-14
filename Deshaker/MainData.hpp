@@ -36,12 +36,6 @@ enum class DeshakerPass {
 	CONSECUTIVE
 };
 
-enum class OutputCodec {
-	AUTO,
-	H264,
-	H265,
-};
-
 enum class EncodingDevice {
 	AUTO,
 	GPU,
@@ -64,6 +58,10 @@ enum class ProgressType {
 	DETAILED,
 };
 
+struct DeviceProps {
+	cudaDeviceProp cudaProps;
+	std::vector<OutputCodec> codecs;
+};
 
 class MainData : public CoreData {
 
@@ -132,7 +130,7 @@ public:
 
 	Stats status;
 	CudaInfo cudaInfo;
-	std::vector<cudaDeviceProp> devicesList;
+	std::vector<DeviceProps> deviceProps;
 	bool deviceRequested = false;
 
 	InputContext inputCtx;
@@ -186,6 +184,8 @@ public:
 	ColorRgb bgcol_rgb { 0, 50, 0 };
 
 	void probeCudaDevices();
+
+	bool canDeviceEncode();
 
 	void probeInput(std::vector<std::string> args);
 

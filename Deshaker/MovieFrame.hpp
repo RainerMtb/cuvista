@@ -19,7 +19,7 @@
 #pragma once
 
 #include "MovieReader.hpp"
-#include "MovieWriter.hpp"
+#include "CudaWriter.hpp"
 #include "ThreadPool.h"
 #include "ProgressDisplay.hpp"
 #include "Diagnostics.hpp"

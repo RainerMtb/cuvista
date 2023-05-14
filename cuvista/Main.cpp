@@ -40,18 +40,28 @@ int main(size_t argsCount, const char** args) {
 		data.validate(ctx);
 
 		//----------- create appropriate MovieWriter
-		if (data.pass == DeshakerPass::FIRST_PASS) writer = std::make_unique<NullWriter>(data);
-		else if (data.videoOutputType == OutputType::PIPE) writer = std::make_unique<PipeWriter>(data);
-		else if (data.videoOutputType == OutputType::TCP) writer = std::make_unique<TCPWriter>(data);
-		else if (data.videoOutputType == OutputType::BMP) writer = std::make_unique<BmpImageWriter>(data);
-		else if (data.videoOutputType == OutputType::JPG) writer = std::make_unique<JpegImageWriter>(data);
+		if (data.pass == DeshakerPass::FIRST_PASS) 
+			writer = std::make_unique<NullWriter>(data);
+		else if (data.videoOutputType == OutputType::PIPE) 
+			writer = std::make_unique<PipeWriter>(data);
+		else if (data.videoOutputType == OutputType::TCP) 
+			writer = std::make_unique<TCPWriter>(data);
+		else if (data.videoOutputType == OutputType::BMP) 
+			writer = std::make_unique<BmpImageWriter>(data);
+		else if (data.videoOutputType == OutputType::JPG) 
+			writer = std::make_unique<JpegImageWriter>(data);
 		else if (data.videoOutputType == OutputType::VIDEO_FILE) {
-			if (data.deviceNum == -1 && data.encodingDevice == EncodingDevice::AUTO) writer = std::make_unique<FFmpegWriter>(data);
-			else if (data.encodingDevice == EncodingDevice::AUTO) writer = std::make_unique<CudaFFmpegWriter>(data);
-			else if (data.encodingDevice == EncodingDevice::GPU) writer = std::make_unique<CudaFFmpegWriter>(data);
-			else if (data.encodingDevice == EncodingDevice::CPU) writer = std::make_unique<FFmpegWriter>(data);
+			if (data.deviceNum == -1 && data.encodingDevice == EncodingDevice::AUTO) 
+				writer = std::make_unique<FFmpegWriter>(data);
+			else if (data.encodingDevice == EncodingDevice::AUTO && data.canDeviceEncode())
+				writer = std::make_unique<CudaFFmpegWriter>(data);
+			else if (data.encodingDevice == EncodingDevice::GPU) 
+				writer = std::make_unique<CudaFFmpegWriter>(data);
+			else 
+				writer = std::make_unique<FFmpegWriter>(data);
 		}
 		else writer = std::make_unique<NullWriter>(data);
+
 		writer->open();
 
 		//----------- create Frame Handler Class

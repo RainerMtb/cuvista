@@ -70,7 +70,7 @@ void computeInit(const CoreData& core);
 /*
 brief probe present cuda devices and capabilities
 */
-void cudaProbeRuntime(std::vector<cudaDeviceProp>& devicesList, CudaInfo& cudaInfo);
+void cudaProbeRuntime(CudaInfo& cudaInfo);
 
 /*
 brief setup parameters, device memory etc.
