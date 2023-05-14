@@ -107,7 +107,7 @@ int64_t multiplyFrameTime(int64_t timeValue, const AVRational& framerate, const 
 }
 
 int64_t rescaleTime(int64_t timeValue, const AVRational& src, const AVRational& dest) {
-    return timeValue * src.num * dest.den / src.den / src.num;
+    return timeValue * src.num * dest.den / src.den / dest.num;
 }
 
 //rescale packet and apply offset to base stream
@@ -154,6 +154,7 @@ void FFmpegFormatWriter::writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsI
 
         //compare dts value
         Timings timings = rescale_ts_and_offset(sidePacket, inStream->time_base, sc.stream->time_base, videoInputStream);
+        //std::cout << timings << std::endl;
 
         //write side packets before this video packet or when terminating the file
         if (timings.dtsTime < dtsTime || terminate) {
@@ -242,7 +243,7 @@ void FFmpegWriter::open() {
     else
         this->headerWritten = true; //store info for proper closing
 
-    //av_dump_format(fmt_ctx, 0, fmt_ctx->url, 1); //does not do anything??
+    //av_dump_format(fmt_ctx, 0, fmt_ctx->url, 1);
 
     videoPacket = av_packet_alloc();
     if (!videoPacket) 

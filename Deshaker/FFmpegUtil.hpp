@@ -45,6 +45,8 @@ struct VideoPacketContext {
 struct Timings {
 	int64_t pts, dts, duration;
 	double ptsTime, dtsTime;
+
+	friend std::ostream& operator << (std::ostream& ostream, const Timings& t);
 };
 
 struct StreamInfo {

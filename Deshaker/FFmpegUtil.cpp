@@ -86,3 +86,8 @@ void ffmpeg_log(void* avclass, int level, const char* fmt, va_list args) {
         errorLogger.logError(ffmpeg_logbuf);
     }
 };
+
+std::ostream& operator << (std::ostream& ostream, const Timings& t) {
+    ostream << "pts=" << t.pts << ", dts=" << t.dts << ", dur=" << t.duration;
+    return ostream;
+}
