@@ -273,17 +273,17 @@ void MainData::validate() {
 	if (videoOutputType == OutputType::PIPE) progressType = ProgressType::NONE;
 
 	//select device
-	if (deviceProps.size() > 0) {
-		auto less = [] (const DeviceProps& a, const DeviceProps& b) { 
-			return a.cudaProps.major == b.cudaProps.major ? a.cudaProps.minor < b.cudaProps.minor : a.cudaProps.major < b.cudaProps.major; 
+	if (this->cuda.deviceCount > 0) {
+		auto less = [] (const cudaDeviceProp& a, const cudaDeviceProp& b) { 
+			return a.major == b.major ? a.minor < b.minor : a.major < b.major; 
 		};
-		auto it = std::max_element(deviceProps.begin(), deviceProps.end(), less);
-		deviceNumBest = (int) std::distance(deviceProps.begin(), it);
+		auto it = std::max_element(cuda.cudaProps.begin(), cuda.cudaProps.end(), less);
+		deviceNumBest = (int) std::distance(cuda.cudaProps.begin(), it);
 	}
 	if (deviceRequested == false) {
 		deviceNum = deviceNumBest;
 	}
-	if (deviceNum >= (int) deviceProps.size() || deviceNum < -2) {
+	if (deviceNum >= cuda.deviceCount || deviceNum < -2) {
 		throw AVException("invalid device number: " + std::to_string(deviceNum));
 	}
 
@@ -342,10 +342,11 @@ void MainData::validate() {
 	//init cuda if applicable
 	if (deviceNum >= 0) {
 		//when device should be used we need to setup cuda
-		cudaProps = deviceProps[deviceNum].cudaProps;
+		this->cudaProps = this->cuda.cudaProps[deviceNum];
 		size_t px = cudaProps.sharedMemPerBlock / sizeof(float);
 		if (px < maxPixel) maxPixel = px;
 
+		//prepare device memory etc.
 		cudaDeviceSetup(*this);
 		if (errorLogger.hasError()) throw AVException("cannot setup cuda: " + errorLogger.getErrorMessage());
 
@@ -413,20 +414,20 @@ void MainData::showBasicInfo() const {
 
 //show info about system
 void MainData::showDeviceInfo() const {
-	if (cudaInfo.nvidiaDriverVersion > 0)
-		*console << "nvidia driver version " << cudaInfo.nvidiaDriver() << std::endl;
+	if (cuda.nvidiaDriverVersion > 0)
+		*console << "nvidia driver version " << cuda.nvidiaDriver() << std::endl;
 	else
 		*console << "nvidia driver not found" << std::endl;
 
 	//display cuda info
-	*console << "cuda runtime " << cudaInfo.cudaRuntime() << ", cuda driver " << cudaInfo.cudaDriver() << std::endl;
+	*console << "cuda runtime " << cuda.cudaRuntime() << ", cuda driver " << cuda.cudaDriver() << std::endl;
 	*console << "ffmpeg libavformat version " << LIBAVFORMAT_VERSION_MAJOR << "." << LIBAVFORMAT_VERSION_MINOR << "." << LIBAVFORMAT_VERSION_MICRO << std::endl;
 	*console << "List of Cuda Devices:" << std::endl;
-	for (int i = 0; i < deviceProps.size(); i++) {
-		const cudaDeviceProp& prop = deviceProps[i].cudaProps;
+	for (int i = 0; i < cuda.deviceCount; i++) {
+		const cudaDeviceProp& prop = cuda.cudaProps[i];
 		*console << " #" << i << ": " << prop.name << ", Compute " << prop.major << "." << prop.minor << std::endl;
 	}
-	if (deviceProps.empty()) {
+	if (cuda.cudaProps.empty()) {
 		*console << " no devices found" << std::endl;
 	}
 
@@ -466,24 +467,25 @@ bool MainData::Parameters::nextArg(std::string&& param, std::string& nextParam) 
 }
 
 void MainData::probeCudaDevices() {
+	CudaInfo cudaInfo;
+
 	//check Nvidia Driver
 	cudaInfo.nvidiaDriverVersion = probeNvidiaDriver();
 	//check present cuda devices
-	cudaProbeRuntime(cudaInfo);
-	//check if nvenc is present
-	NvEncoder::probeEncoding(cudaInfo);
-	//check supported codecs
-	if (cudaInfo.cudaProps.size() > 0 && cudaInfo.nvencVersionDriver >= cudaInfo.nvencVersionApi) {
-		NvEncoder::probeSupportedCodecs(cudaInfo);
+	int devCount = cudaProbeRuntime(cudaInfo);
+	if (devCount > 0) {
+		//check nvenc present
+		NvEncoder::probeEncoding(cudaInfo);
+		//check supported codecs
+		if (cudaInfo.nvencVersionDriver >= cudaInfo.nvencVersionApi) {
+			NvEncoder::probeSupportedCodecs(cudaInfo);
+		}
 	}
 
 	//store in MainData
-	deviceProps.clear();
-	for (int i = 0; i < cudaInfo.cudaProps.size(); i++) {
-		deviceProps.emplace_back(cudaInfo.cudaProps[i], cudaInfo.supportedCodecs[i]);
-	}
+	this->cuda = cudaInfo;
 }
 
 bool MainData::canDeviceEncode() {
-	return deviceProps[deviceNum].codecs.size() > 0;
+	return this->cuda.supportedCodecs[deviceNum].size() > 0;
 }

@@ -51,7 +51,6 @@ void NvEncoder::probeSupportedCodecs(CudaInfo& cudaInfo) {
 	handleResult(encFuncList.nvEncOpenEncodeSession == NULL, "error opening encode session");
 
 	//check supported codecs for all devices
-	cudaInfo.supportedCodecs.clear();
 	for (int i = 0; i < cudaInfo.cudaProps.size(); i++) {
 		void* encoder = nullptr;
 

@@ -58,11 +58,6 @@ enum class ProgressType {
 	DETAILED,
 };
 
-struct DeviceProps {
-	cudaDeviceProp cudaProps;
-	std::vector<OutputCodec> codecs;
-};
-
 class MainData : public CoreData {
 
 private:
@@ -129,8 +124,7 @@ public:
 	} limits;
 
 	Stats status;
-	CudaInfo cudaInfo;
-	std::vector<DeviceProps> deviceProps;
+	CudaInfo cuda;
 	bool deviceRequested = false;
 
 	InputContext inputCtx;

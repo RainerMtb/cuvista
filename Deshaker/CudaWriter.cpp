@@ -5,10 +5,15 @@ void CudaFFmpegWriter::open() {
     //init format
     FFmpegFormatWriter::open();
 
-    //select codec
+    //check device
     int deviceIndex = data.deviceNum == -1 ? data.deviceNumBest : data.deviceNum;
-    OutputCodec codec = data.videoCodec == OutputCodec::AUTO ? data.deviceProps[deviceIndex].codecs[0] : data.videoCodec;
+    if (deviceIndex == -1)
+        throw AVException("no gpu device present for encoding");
+
+    //select first codec from list
+    OutputCodec codec = data.videoCodec == OutputCodec::AUTO ? data.cuda.supportedCodecs[deviceIndex][0] : data.videoCodec;
     GUID guid = guidMap[codec];
+
     //setup nvenc class
     nvenc.createEncoder(data.inputCtx.fpsNum, data.inputCtx.fpsDen, GOP_SIZE, data.crf, guid, data.deviceNumBest);
 

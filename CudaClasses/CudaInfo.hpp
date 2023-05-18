@@ -22,6 +22,7 @@ struct CudaInfo {
 	int nppMinor = 0;
 	int nppBuild = 0;
 
+	int deviceCount = 0;
 	std::vector<cudaDeviceProp> cudaProps;
 	std::vector<std::vector<OutputCodec>> supportedCodecs;
 

@@ -194,17 +194,15 @@ void cudaInit(const CoreData& core, ImageYuv& yuvFrame) {
 }
 
 //check for cuda runtime installation, this only needs link to cudart_static.lib
-void cudaProbeRuntime(CudaInfo& cudaInfo) {
+int cudaProbeRuntime(CudaInfo& cudaInfo) {
 	//do not check cudaError_t here, absence of cuda will report error "CUDA driver is insufficient for CUDA runtime version"
 	cudaRuntimeGetVersion(&cudaInfo.cudaRuntimeVersion);
 	cudaDriverGetVersion(&cudaInfo.cudaDriverVersion);
 
 	//if we found a proper cuda installation, ask for list of devices
-	cudaInfo.cudaProps.clear();
 	if (cudaInfo.cudaRuntimeVersion > 0) {
-		int devCount = 0;
-		handleStatus(cudaGetDeviceCount(&devCount), "error probing cuda devices");
-		for (int i = 0; i < devCount; i++) {
+		handleStatus(cudaGetDeviceCount(&cudaInfo.deviceCount), "error probing cuda devices");
+		for (int i = 0; i < cudaInfo.deviceCount; i++) {
 			cudaDeviceProp devProp;
 			handleStatus(cudaGetDeviceProperties(&devProp, i), "error getting device properties");
 			cudaInfo.cudaProps.push_back(devProp);
@@ -216,6 +214,7 @@ void cudaProbeRuntime(CudaInfo& cudaInfo) {
 		//cudaInfo.nppMinor = libVer->minor;
 		//cudaInfo.nppBuild = libVer->build;
 	}
+	return cudaInfo.deviceCount;
 }
 
 void cudaDeviceSetup(CoreData& core) {
