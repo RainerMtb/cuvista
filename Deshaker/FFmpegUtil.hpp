@@ -64,6 +64,7 @@ public:
 	int64_t timeBaseNum = -1, timeBaseDen = -1;
 	int64_t frameCount = 0;
 	int64_t formatDuration = -1;
+	std::string_view source;
 
 	std::vector<AVStream*> inputStreams;
 	AVStream* videoStream = nullptr;

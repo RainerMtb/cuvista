@@ -36,5 +36,5 @@ public:
 	FrameResult(const MainData& data) : mFiniteResults(data.resultCount) {}
 
 	//compute resulting transformation for this frame
-	const AffineTransform& computeTransform(const std::vector<PointResult>& results, const MainData& core, ThreadPool& threadPool, RNGbase* rng);
+	const AffineTransform& computeTransform(const std::vector<PointResult>& results, const MainData& data, ThreadPool& threadPool, RNGbase* rng);
 };

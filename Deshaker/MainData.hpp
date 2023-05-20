@@ -149,14 +149,7 @@ public:
 	ProgressType progressType = ProgressType::REWRITE_LINE;
 
 	//parameters for computation of trajectory
-	double cSigmaParam = 1.0;			//at least 0.33, greater -> more stable camera
-
-	//parameters for computation of consensus
-	//size_t cMaxIterCount = 120;			//max number of iterations for consensus set
-	ptrdiff_t cMinConsensPoints = 8;	    //min numbers of points for consensus set
-	int cConsLoopCount = 8;			        //max number of loops when searching for consensus set
-	int cConsLoopPercent = 95;		        //percentage of points for next loop 0..100
-	double cConsensDistance = 1.5;          //max distance for a point to be in the consensus set
+	double cSigmaParam = 1.25;			//at least 0.33, greater -> more stable camera
 
 	//cpu threads to use in cpu-compute and computing transform parameters
 	size_t cpuThreads = std::max(1u, std::thread::hardware_concurrency() * 3 / 4); //leave room for other things

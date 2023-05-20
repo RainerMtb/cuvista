@@ -45,7 +45,7 @@ void MovieFrame::DeshakerLoopCombined::run(MovieFrame& mf, ProgressDisplay& prog
 		mf.inputData(mf.bufferFrame);
 		mf.createPyramid();
 		mf.computeStart();
-		mf.mFrameResult.computeTransform(mf.resultPointsOld, data, mf.mPool, data.rng.get());
+		mf.computeTransform(mf.resultPointsOld);
 		mf.mTrajectory.addTrajectoryTransform(mf.mFrameResult.mTransform, status.frameInputIndex - 1);
 		mf.runDiagnostics(status.frameInputIndex - 1);
 
@@ -77,7 +77,7 @@ void MovieFrame::DeshakerLoopCombined::run(MovieFrame& mf, ProgressDisplay& prog
 		mf.inputData(mf.inputFrame);
 		mf.createPyramid();
 		mf.computeStart();
-		mf.mFrameResult.computeTransform(mf.resultPointsOld, data, mf.mPool, data.rng.get());
+		mf.computeTransform(mf.resultPointsOld);
 		mf.mTrajectory.addTrajectoryTransform(mf.mFrameResult.mTransform, status.frameInputIndex - 1);
 		mf.runDiagnostics(status.frameInputIndex - 1);
 
@@ -103,7 +103,7 @@ void MovieFrame::DeshakerLoopCombined::run(MovieFrame& mf, ProgressDisplay& prog
 
 	//process last frame in buffer
 	if (errorLogger.hasNoError() && input.current <= UserInputEnum::END) {
-		mf.mFrameResult.computeTransform(mf.resultPointsOld, data, mf.mPool, data.rng.get());
+		mf.computeTransform(mf.resultPointsOld);
 		mf.mTrajectory.addTrajectoryTransform(mf.mFrameResult.mTransform, status.frameInputIndex - 1);
 		mf.runDiagnostics(status.frameInputIndex - 1);
 
@@ -156,7 +156,7 @@ void MovieFrame::DeshakerLoopFirst::run(MovieFrame& mf, ProgressDisplay& progres
 
 		mf.computeStart();
 		mf.computeTerminate();
-		mf.mFrameResult.computeTransform(mf.resultPoints, data, mf.mPool, data.rng.get());
+		mf.computeTransform(mf.resultPoints);
 		mf.runDiagnostics(status.frameInputIndex);
 
 		status.frameInputIndex++;
@@ -233,7 +233,7 @@ void MovieFrame::DeshakerLoopClassic::run(MovieFrame& mf, ProgressDisplay& progr
 
 		mf.computeStart();
 		mf.computeTerminate();
-		mf.mFrameResult.computeTransform(mf.resultPoints, data, mf.mPool, data.rng.get());
+		mf.computeTransform(mf.resultPoints);
 		mf.mTrajectory.addTrajectoryTransform(mf.mFrameResult.mTransform, status.frameInputIndex);
 		mf.runDiagnostics(status.frameInputIndex);
 

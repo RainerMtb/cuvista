@@ -46,10 +46,6 @@ __device__ __host__ bool PointResult::operator != (const PointResult& other) con
 	return !(*this == other);
 }
 
-__device__ __host__ bool PointResult::operator < (const PointResult& other) const {
-	return distance < other.distance;
-}
-
 __host__ std::ostream& operator << (std::ostream& out, const PointResult& res) {
 	out << "ix0=" << res.ix0 << ", iy0=" << res.iy0 << ", u=" << res.u << ", v=" << res.v;
 	return out;

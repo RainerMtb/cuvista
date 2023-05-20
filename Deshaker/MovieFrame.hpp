@@ -65,15 +65,15 @@ public:
 protected:
 	const MainData& mData;
 	Stats& mStatus;
-	FrameResult mFrameResult;
 	Trajectory mTrajectory;
 	std::list<std::unique_ptr<DiagnosticItem>> diagsList;
 
 public:
-	ThreadPool mPool;
+	FrameResult mFrameResult;
 	ImageYuv inputFrame;
 	ImageYuv bufferFrame;
 	std::vector<PointResult> resultPointsOld;
+	ThreadPool mPool;
 	std::vector<PointResult> resultPoints;
 
 	MovieFrame(const MovieFrame& other) = delete;
@@ -92,14 +92,9 @@ public:
 	virtual void outputData(const AffineTransform& trf, OutputContext outCtx) = 0;
 
 	/*
-	* read transforms from previous pass
+	call transform calculation
 	*/
-	std::map<int64_t, TransformValues> readTransforms();
-
-	/*
-	* run list of attached diagnostic methods
-	*/
-	void runDiagnostics(int64_t frameIndex);
+	const AffineTransform& computeTransform(std::vector<PointResult> resultPoints);
 
 	/*
 	* get transformed image as Mat<float> where YUV color planes are stacked vertically
@@ -128,17 +123,27 @@ public:
 	*/
 	virtual bool getCurrentOutputFrame(ImagePPM& image) { return false; }
 
+	/*
+	* read transforms from previous pass
+	*/
+	std::map<int64_t, TransformValues> readTransforms();
+
+	/*
+	* run list of attached diagnostic methods
+	*/
+	void runDiagnostics(int64_t frameIndex);
+
 protected:
 	//only constructor for Frame class
 	MovieFrame(MainData& data) :
 		mData { data }, 
 		mStatus { data.status },
-		mPool(data.cpuThreads), 
 		mFrameResult(data),
 		inputFrame(data.h, data.w, data.pitch),
 		bufferFrame(data.h, data.w, data.pitch),
 		resultPointsOld(data.resultCount), 
-		resultPoints(data.resultCount)
+		resultPoints(data.resultCount),
+		mPool(data.cpuThreads)
 	{
 		//open and attach sinks for diagnostics
 		if (data.pass == DeshakerPass::FIRST_PASS && data.trajectoryFile.empty() == false) {
@@ -249,23 +254,23 @@ protected:
 
 	public:
 		int64_t frameIndex = -1;
-		std::vector<Mat<float>> Y, DX, DY;
+		std::vector<Mat<float>> mY, mDX, mDY;
 
 		CpuFrameItem(MainData& data);
 	};
 
 	//frame input buffer, number of frames = frameBufferCount
-	std::vector<ImageYuv> YUV;
+	std::vector<ImageYuv> mYUV;
 
 	//holds image pyramids
-	std::vector<CpuFrameItem> pyr;
+	std::vector<CpuFrameItem> mPyr;
 
 	//buffers the last output frame, 3 mats, to be used to blend background of next frame
-	std::vector<Mat<float>> prevOut;
+	std::vector<Mat<float>> mPrevOut;
 
 	//buffer for generating output from input yuv and transformation
-	std::vector<Mat<float>> buffer;
-	Mat<float> yuv, filterBuffer, filterResult;
+	std::vector<Mat<float>> mBuffer;
+	Mat<float> mYuv, mFilterBuffer, mFilterResult;
 };
 
 

@@ -100,6 +100,7 @@ InputContext FFmpegReader::open(std::string_view source) {
     input.h = av_codec_ctx->height;
     input.w = av_codec_ctx->width;
     input.frameCount = av_stream->nb_frames;
+    input.source = source;
     //av_dump_format(av_format_ctx, av_stream->index, av_format_ctx->url, 0); //uses av_log
     return input;
 }

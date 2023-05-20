@@ -136,6 +136,8 @@ public:
 	double u, v;
 	PointResultType result;
 	double distance;
+	double length;
+	double distanceRelative;
 
 	//is valid when numeric stable result was found
 	__device__ __host__ bool isValid() const;
@@ -148,8 +150,6 @@ public:
 	__device__ __host__ bool operator == (const PointResult& other) const;
 
 	__device__ __host__ bool operator != (const PointResult& other) const;
-
-	__device__ __host__ bool operator < (const PointResult& other) const;
 
 	friend __host__ std::ostream& operator << (std::ostream& out, const PointResult& res);
 };

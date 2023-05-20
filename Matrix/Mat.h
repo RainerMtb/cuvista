@@ -704,6 +704,12 @@ public:
 		}
 	}
 
+	Mat<T>& filter1D(const std::vector<T>& kernel, Mat<T>& dest, Mat<T>& buffer, ThreadPoolBase& pool = defaultPool) {
+		filter1D(kernel.data(), kernel.size(), buffer, Direction::HORIZONTAL, pool);
+		buffer.filter1D(kernel.data(), kernel.size(), dest, Direction::VERTICAL, pool);
+		return dest;
+	}
+
 	//evaluate this mat at points given by x and y mats respective, put results into dest
 	template <class R> Mat<T>& resample(const Mat<R>& x, const Mat<R>& y, Mat<T>& dest) {
 		assert(x.rows() == y.rows() && x.cols() == y.cols() && "dimensions of x and y must be equal");

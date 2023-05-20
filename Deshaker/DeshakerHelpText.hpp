@@ -26,7 +26,7 @@ input/output options:
 -o pipe:0       output to pipe in raw YUV444P format
                 forward to other software, for example ffmpeg through
                 -f rawvideo -framerate n -pix_fmt yuv444p -video_size w:h
-                on windows only run in the command line, NOT in PowerShell
+                note: does not work on windows PowerShell, use cmd shell
 -o tcp://aa:p   output to tcp address in raw YUV444P format
                 example: -o tcp://100.101.102.103:1234
 -o null         do not write any output
@@ -94,8 +94,8 @@ quality and performance settings:
                 default: 22
 
 misc options:
--y              overwrite output file
--h, -help       display this help text
+-y              overwrite output file without asking
+-h, -help, -?   display help text
 -info           display information about software and hardware detected
 -copyframes     just copy input to output, do not stabilize
                 useful for testing decoding and encoding stuff
@@ -109,11 +109,11 @@ misc options:
 advanced computation parameters:
 -levels         number of pyramid levels
                 default: 3
--ir             integration radius, window is then 2*ir+1
-                default: 3
+-ir             integration radius
+                default: 3, maximum: 7
 
 keyboard input options at runtime:
 key [e]         stop reading input, write pending output, then terminate
-key [q]         stop reading and writing, flush output buffer
+key [q]         stop reading and writing, gracefully terminate output
 key [x]         stop reading and writing immediately
 )";
