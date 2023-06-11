@@ -19,6 +19,15 @@
 #include "MovieWriter.hpp"
 #include <filesystem>
 
+AVStream* FFmpegFormatWriter::newStream(AVFormatContext* fmt_ctx, AVStream* inStream) {
+    AVStream* st = avformat_new_stream(fmt_ctx, NULL); //docs say AVCodec parameter is not used
+    if (!st)
+        throw AVException("could not create stream");
+
+    st->time_base = inStream->time_base;
+    return st;
+}
+
 //setup output format
 void FFmpegFormatWriter::open() {
     //av_log_set_level(AV_LOG_ERROR);
@@ -32,40 +41,44 @@ void FFmpegFormatWriter::open() {
 
     //setup streams
     AVStream* videoIn = data.inputCtx.videoStream;
-    for (AVStream* inStream : data.inputCtx.inputStreams) {
-        //create a new stream
-        AVStream* outStream = avformat_new_stream(fmt_ctx, NULL); //docs say AVCodec is not used
-        if (!outStream)
-            throw AVException("could not create stream");
-    
-        //set timebase for output same as input
-        //timebase can change when actually writing header!!
-        outStream->time_base = inStream->time_base;
+    for (StreamContext& sc : status.inputStreams) {
+        AVStream* inStream = sc.inputStream;
+        int codecSupported = avformat_query_codec(fmt_ctx->oformat, inStream->codecpar->codec_id, FF_COMPLIANCE_NORMAL);
 
-        if (inStream->index == videoIn->index) { //the video stream to process
-            videoStream = outStream;
-            outStreams.emplace_back(-1, nullptr);
-            videoIdx = outStreams.size() - 1;
+        if (inStream->index == videoIn->index) {
+            if (codecSupported) {
+                videoStream = newStream(fmt_ctx, inStream);
+                sc.outputStream = videoStream;
+                sc.handling = StreamHandling::STREAM_STABILIZE;
 
-        } else { //side streams to copy from input
-            //what about https://stackoverflow.com/questions/68229878/ffmpeg-cannot-save-hls-stream-to-mkv ??
-            int retval = avcodec_parameters_copy(outStream->codecpar, inStream->codecpar);
-            if (retval < 0) 
-                throw AVException("cannot copy context for side stream");
+            } else {
+                throw AVException(std::format("cannot write codec '{}' to output", avcodec_get_name(inStream->codecpar->codec_id)));
+            }
 
-            //https://ffmpeg.org/doxygen/trunk/remuxing_8c-example.html
-            //setting tag to 0 seems to avoid "Tag xxxx incompatible with output codec id yyyy
-            outStream->codecpar->codec_tag = 0;
-            
-            outStreams.emplace_back(outStream->index, outStream);
+        } else {
+            if (codecSupported) {
+                sc.outputStream = newStream(fmt_ctx, inStream);
+                sc.handling = StreamHandling::STREAM_COPY;
+
+                int retval = avcodec_parameters_copy(sc.outputStream->codecpar, inStream->codecpar);
+                if (retval < 0)
+                    throw AVException("cannot copy context for stream");
+
+                //https://ffmpeg.org/doxygen/trunk/remuxing_8c-example.html
+                //setting tag to 0 seems to avoid "Tag xxxx incompatible with output codec id as shown in ffmpeg example
+                sc.outputStream->codecpar->codec_tag = 0;
+
+            } else if (inStream->codecpar->codec_type == AVMEDIA_TYPE_AUDIO) {
+                sc.outputStream = newStream(fmt_ctx, inStream);
+                sc.handling = StreamHandling::STREAM_TRANSCODE;
+
+                //set up audio transcoding
+
+            } else {
+                sc.handling = StreamHandling::STREAM_IGNORE;
+            }
         }
     }
-
-    //request side packets from reader
-    status.requestSidePackets = true;
-
-    //count side packets for debugging
-    status.packetsWrittenPerStream.resize(data.inputCtx.inputStreams.size());
 }
 
 //close ffmpeg format
@@ -95,7 +108,7 @@ FFmpegFormatWriter::~FFmpegFormatWriter() {
 void FFmpegFormatWriter::writePacket(AVPacket* packet) {
     int result = av_interleaved_write_frame(fmt_ctx, packet); //write_frame also does unref packet
     if (result == 0) {
-        status.packetsWrittenPerStream[packet->stream_index]++;
+        status.inputStreams[packet->stream_index].packetsWritten++;
 
     } else {
         errorLogger.logError(av_make_error(result, "error writing packet"));
@@ -144,36 +157,35 @@ void FFmpegFormatWriter::writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsI
     //rescale input timebase to output timebase
     av_packet_rescale_ts(pkt, videoInputStream->time_base, videoStream->time_base);
 
-    //write side packets
+    //process secondary streams
     double dtsTime = 1.0 * pkt->dts * videoStream->time_base.num / videoStream->time_base.den;
-    for (auto it = status.sidePackets.begin(); it != status.sidePackets.end(); ) {
-        AVPacket* sidePacket = *it;
-        int inStreamIdx = sidePacket->stream_index;
-        AVStream* inStream = data.inputCtx.inputStreams[inStreamIdx];
-        StreamsContext& sc = outStreams[inStreamIdx];
+    for (StreamContext& sc : status.inputStreams) {
+        for (auto it = sc.packets.begin(); it != sc.packets.end(); ) {
+            AVPacket* sidePacket = *it;
+            //compare dts value
+            Timings timings = rescale_ts_and_offset(sidePacket, sc.inputStream->time_base, sc.outputStream->time_base, videoInputStream);
+            //std::cout << timings << std::endl;
 
-        //compare dts value
-        Timings timings = rescale_ts_and_offset(sidePacket, inStream->time_base, sc.stream->time_base, videoInputStream);
-        //std::cout << timings << std::endl;
+            //write side packets before this video packet or when terminating the file
+            if (timings.dtsTime < dtsTime || terminate) {
+                if (sc.handling == StreamHandling::STREAM_COPY) { //copy packet directly to output stream
+                    sidePacket->stream_index = sc.outputStream->index;
+                    sidePacket->pts = timings.pts;
+                    sidePacket->dts = timings.dts;
+                    sidePacket->duration = timings.duration;
+                    writePacket(sidePacket);
 
-        //write side packets before this video packet or when terminating the file
-        if (timings.dtsTime < dtsTime || terminate) {
-            //if this stream is selected for output
-            if (sc.mapping >= 0) {
-                //write packet to matching output stream
-                sidePacket->stream_index = sc.mapping;
-                sidePacket->pts = timings.pts;
-                sidePacket->dts = timings.dts;
-                sidePacket->duration = timings.duration;
-                writePacket(sidePacket);
+                } else if (sc.handling == StreamHandling::STREAM_TRANSCODE) { //transcode audio
+
+                }
+
+                //remove packet from buffer
+                av_packet_free(&sidePacket);
+                it = sc.packets.erase(it);
+
+            } else {
+                it++;
             }
-
-            //remove packet from buffer
-            av_packet_free(&sidePacket);
-            it = status.sidePackets.erase(it);
-
-        } else {
-            it++;
         }
     }
 
@@ -203,6 +215,8 @@ void FFmpegFormatWriter::writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsI
 
 //construct ffmpeg encoder
 void FFmpegWriter::open() {
+    int result = 0;
+
     //init format
     FFmpegFormatWriter::open();
 
@@ -226,12 +240,16 @@ void FFmpegWriter::open() {
     av_opt_set(codec_ctx->priv_data, "x265-params", "log-level=none", 0);
     av_opt_set(codec_ctx->priv_data, "crf", std::to_string(data.crf).c_str(), 0); //?????
 
-    int result = avcodec_parameters_from_context(videoStream->codecpar, codec_ctx);
+    if (fmt_ctx->oformat->flags & AVFMT_GLOBALHEADER)
+        codec_ctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+
+    result = avcodec_open2(codec_ctx, codec, NULL);
+    if (result < 0) 
+        throw AVException(av_make_error(result, "error opening codec"));
+
+    result = avcodec_parameters_from_context(videoStream->codecpar, codec_ctx);
     if (result < 0) 
         throw AVException(av_make_error(result, "error setting codec parameters"));
-
-    //if (fmt_ctx->oformat->flags & AVFMT_GLOBALHEADER)
-    //    codec_ctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
 
     result = avio_open(&fmt_ctx->pb, fmt_ctx->url, AVIO_FLAG_WRITE);
     if (result < 0) 
@@ -248,10 +266,6 @@ void FFmpegWriter::open() {
     videoPacket = av_packet_alloc();
     if (!videoPacket) 
         throw AVException("Could not allocate encoder packet");
-
-    result = avcodec_open2(codec_ctx, codec, NULL);
-    if (result < 0) 
-        throw AVException(av_make_error(result, "error opening codec"));
 
     frame = av_frame_alloc();
     if (!frame) 

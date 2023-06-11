@@ -1,2 +1,2 @@
 [WarpWatch]
-Expressions=idx, c
+Expressions=r, c, ci, typeIndex, iter, b

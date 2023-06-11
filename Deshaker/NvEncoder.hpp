@@ -62,7 +62,9 @@ private:
 	NvPacket getEncodedPacket(std::vector<NV_ENC_OUTPUT_PTR>& outputBuffer);
 
 public:
-	size_t pitch = 0;
+	size_t mPitch = 0;
+	std::vector<uint8_t> mExtradata;
+	uint32_t mExtradataSize = 0;
 
 	NvEncoder(int w, int h) : h { h }, w { w } {}
 

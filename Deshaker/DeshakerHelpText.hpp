@@ -21,8 +21,7 @@ usage: cuvista [-i inputfile -o outputfile] [options...]
 
 input/output options:
 -i file         input file, anything that ffmpeg can read will do
--o file         output file, will contain only video data, 
-                other streams from input will be omitted
+-o file         output file, recommended formats are .MP4 and .MKV
 -o pipe:0       output to pipe in raw YUV444P format
                 forward to other software, for example ffmpeg through
                 -f rawvideo -framerate n -pix_fmt yuv444p -video_size w:h

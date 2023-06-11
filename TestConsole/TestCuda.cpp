@@ -60,7 +60,7 @@ void cudaInvPerformanceTest() {
 	double pi = std::numbers::pi;
 	std::cout << "----------------------------" << std::endl << "Cuda Inv Performance Test:" << std::endl;
 	for (size_t i = 0; i < 20; i++) {
-		std::chrono::microseconds time(0);
+		std::chrono::nanoseconds time(0);
 		size_t smax = 32;
 		bool loopok = true;
 		for (int s = 1; s <= smax; s++) {
@@ -70,11 +70,11 @@ void cudaInvPerformanceTest() {
 			auto t1 = std::chrono::high_resolution_clock::now();
 			bool isok = cutest::cudaInv(a.data(), ainv.data(), s);
 			auto t2 = std::chrono::high_resolution_clock::now();
-			time += std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1);
+			time += t2 - t1;
 			Matd check = ainv.times(a);
 			loopok &= isok && check.equalsIdentity();
 		}
-		std::cout << "loop result: " << (loopok ? "ok" : "fail") << ", runtime " << time.count() / 1000.0 << " ms" << std::endl;
+		std::cout << "loop " << i << " result: " << (loopok ? "ok" : "fail") << ", runtime " << time / 1'000'000.0 << " ms" << std::endl;
 	}
 }
 

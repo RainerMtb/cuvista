@@ -21,6 +21,7 @@
 #include "FFmpegUtil.hpp"
 #include "ErrorLogger.hpp"
 
+
 //status of progress, singleton class
 class Stats {
 
@@ -37,11 +38,9 @@ public:
 	int64_t encodedPts;
 	VideoPacketContext encodedFrame;
 
-	std::vector<int64_t> packetsWrittenPerStream;
 	std::list<VideoPacketContext> packetList;
-	std::list<AVPacket*> sidePackets;
-	bool requestSidePackets;
 	bool endOfInput;
+	std::vector<StreamContext> inputStreams;
 
 	//disable copies and assignments, moving is allowed
 	Stats(const Stats& other) = delete;
@@ -66,10 +65,12 @@ public:
 		encodedFrame = {};
 
 		packetList.clear();
-		sidePackets.clear();
-		packetsWrittenPerStream.clear();
-		requestSidePackets = false;
 		endOfInput = true;
+
+		for (StreamContext& sc : inputStreams) {
+			sc.packets.clear();
+			sc.packetsWritten = 0;
+		}
 	}
 
 	bool doContinue() const {

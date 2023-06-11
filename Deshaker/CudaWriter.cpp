@@ -2,6 +2,8 @@
 
 //cuda encoding contructor
 void CudaFFmpegWriter::open() {
+    int result;
+
     //init format
     FFmpegFormatWriter::open();
 
@@ -17,16 +19,23 @@ void CudaFFmpegWriter::open() {
     //setup nvenc class
     nvenc.createEncoder(data.inputCtx.fpsNum, data.inputCtx.fpsDen, GOP_SIZE, data.crf, guid, data.deviceNumBest);
 
-    //setup ffmpeg format output
+    //setup codec parameters for ffmpeg format output
     AVCodecParameters* params = videoStream->codecpar;
     params->codec_type = AVMEDIA_TYPE_VIDEO;
     params->codec_id = guidToCodecMap[guid];
     params->width = data.w;
     params->height = data.h;
+    params->extradata_size = nvenc.mExtradataSize;
+    params->extradata = (uint8_t*) av_mallocz(0ull + nvenc.mExtradataSize + AV_INPUT_BUFFER_PADDING_SIZE);
+    memcpy(params->extradata, nvenc.mExtradata.data(), nvenc.mExtradataSize);
 
-    int result = avio_open(&fmt_ctx->pb, fmt_ctx->url, AVIO_FLAG_WRITE);
+    result = avio_open(&fmt_ctx->pb, fmt_ctx->url, AVIO_FLAG_WRITE);
     if (result < 0)
         throw AVException("error opening file '" + data.fileOut + "'");
+    
+    result = avformat_init_output(fmt_ctx, NULL);
+    if (result < 0)
+        throw AVException(av_make_error(result, "error initializing output"));
 
     result = avformat_write_header(fmt_ctx, NULL);
     if (result < 0)
@@ -41,7 +50,7 @@ void CudaFFmpegWriter::open() {
 
 
 OutputContext CudaFFmpegWriter::getOutputData() {
-    return { false, true, &outputFrame, reinterpret_cast<unsigned char*>(nvenc.getNextInputFramePtr()), (int) nvenc.pitch };
+    return { false, true, &outputFrame, reinterpret_cast<unsigned char*>(nvenc.getNextInputFramePtr()), (int) nvenc.mPitch };
 }
 
 
@@ -53,7 +62,7 @@ void CudaFFmpegWriter::writePacketToFile(const NvPacket& nvpkt, bool terminate) 
     videoPacket->size = (int) byteData.size();
     videoPacket->stream_index = videoStream->index;
 
-    //static std::ofstream out("f:/test.video", std::ios::binary);
+    //static std::ofstream out("f:/test.hevc", std::ios::binary);
     //out.write(reinterpret_cast<char*>(byteData.data()), byteData.size());
 
     //copy timing from input assuming same timebase for input and output streams

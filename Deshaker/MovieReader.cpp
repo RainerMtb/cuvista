@@ -63,13 +63,16 @@ InputContext FFmpegReader::open(std::string_view source) {
     const AVCodec* av_codec = nullptr;
     for (size_t i = 0; i < av_format_ctx->nb_streams; i++) {
         AVStream* stream = av_format_ctx->streams[i];
+
         if (av_stream == nullptr && stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
-            //first video stream will be processed
+            //store first video stream
             av_codec = avcodec_find_decoder(stream->codecpar->codec_id);
             if (av_codec) {
                 input.videoStream = av_stream = stream;
             }
         }
+
+        //store every stream found in input
         input.inputStreams.push_back(stream);
     }
     //continue only when there is a video stream to decode
@@ -92,7 +95,7 @@ InputContext FFmpegReader::open(std::string_view source) {
         throw AVException("could not allocate AVPacket");
 
     //set values in InputContext object
-    input.formatDuration = av_format_ctx->duration;
+    input.avformatDuration = av_format_ctx->duration;
     input.fpsNum = av_stream->avg_frame_rate.num;
     input.fpsDen = av_stream->avg_frame_rate.den;
     input.timeBaseNum = av_stream->time_base.num;
@@ -113,7 +116,10 @@ void FFmpegReader::read(ImageYuv& frame, Stats& status) {
 
         int response = av_read_frame(av_format_ctx, av_packet); //read new packet from input format
         if (av_packet->size > 0) {
-            if (av_packet->stream_index == av_stream->index) {
+            int sidx = av_packet->stream_index;
+            StreamHandling sh = sidx < status.inputStreams.size() ? status.inputStreams[sidx].handling : StreamHandling::STREAM_IGNORE;
+
+            if (sidx == av_stream->index) {
                 //we have a video packet
                 response = avcodec_send_packet(av_codec_ctx, av_packet); //send packet to decoder
                 if (response < 0) {
@@ -134,9 +140,10 @@ void FFmpegReader::read(ImageYuv& frame, Stats& status) {
                     break;
                 }
 
-            } else if (status.requestSidePackets) {
-                //we should store a side stream packet for remuxing
-                status.sidePackets.push_back(av_packet_clone(av_packet));
+            } else if (sh == StreamHandling::STREAM_COPY || sh == StreamHandling::STREAM_TRANSCODE) {
+                //we should store a packet from a secondary stream for processing
+                AVPacket* pktcopy = av_packet_clone(av_packet);
+                status.inputStreams[sidx].packets.push_back(pktcopy);
             }
 
         } else { //nothing left in input format, terminate the process, dump frames from decoder buffer
@@ -159,7 +166,7 @@ void FFmpegReader::read(ImageYuv& frame, Stats& status) {
     if (!status.endOfInput) {
         //convert to YUV444 data
         int64_t idx = -1;
-        frame.frameIdx = idx; // av_frame->coded_picture_number; //not reliable, may even be 0
+        frame.frameIdx = -1; // av_frame->coded_picture_number; //deprecated
         frame.index = status.frameReadIndex;
         int w = av_codec_ctx->width;
         int h = av_codec_ctx->height;
@@ -169,7 +176,7 @@ void FFmpegReader::read(ImageYuv& frame, Stats& status) {
             sws_scaler_ctx = sws_getContext(w, h, av_codec_ctx->pix_fmt, w, h, AV_PIX_FMT_YUV444P, SWS_BILINEAR, NULL, NULL, NULL);
         }
         if (!sws_scaler_ctx) {
-            errorLogger.logError("Failed to initialize sw scaler");
+            errorLogger.logError("failed to initialize ffmpeg scaler");
         }
 
         //scale image data
@@ -191,7 +198,8 @@ void FFmpegReader::read(ImageYuv& frame, Stats& status) {
         }
 
         //stamp frame index into image
-        //frame.writeText(std::to_string(status.frameReadIndex), 100, 100, 3);
+        //frame.writeText(std::to_string(status.frameReadIndex), 100, 100, 3, 3, ColorYuv::WHITE, ColorYuv::GRAY);
+        //frame.saveAsColorBMP(std::format("c:/temp/im{:03d}.bmp", status.frameReadIndex));
     }
 }
 

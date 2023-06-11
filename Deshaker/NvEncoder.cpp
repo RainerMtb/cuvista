@@ -123,6 +123,14 @@ void NvEncoder::createEncoder(int fpsNum, int fpsDen, uint32_t gopLen, uint8_t c
 	handleResult(encFuncList.nvEncGetInputFormats(encoder, guid, fmts.data(), fmtCount, &fmtSupportedCount), "cannot get formats");
 	handleResult(std::find(fmts.cbegin(), fmts.cend(), mBufferFormat) == fmts.end(), "input format not supported");
 
+	NV_ENC_CAPS_PARAM capsParam = {};
+	capsParam.capsToQuery = NV_ENC_CAPS_SUPPORT_LOOKAHEAD;
+	int hasEnableLookahead;
+	handleResult(encFuncList.nvEncGetEncodeCaps(encoder, guid, &capsParam, &hasEnableLookahead), "cannot query lookahead");
+	capsParam.capsToQuery = NV_ENC_CAPS_SUPPORT_BFRAME_REF_MODE;
+	int hasBframesRefMode;
+	handleResult(encFuncList.nvEncGetEncodeCaps(encoder, guid, &capsParam, &hasBframesRefMode), "cannot query ref mode");
+
 	//set init parameters structure
 	NV_ENC_CONFIG encodeConfig = { NV_ENC_CONFIG_VER };
 	NV_ENC_INITIALIZE_PARAMS initParams = { NV_ENC_INITIALIZE_PARAMS_VER };
@@ -152,21 +160,32 @@ void NvEncoder::createEncoder(int fpsNum, int fpsDen, uint32_t gopLen, uint8_t c
 	encodeConfig.rcParams.targetQuality = crf;
 	encodeConfig.frameIntervalP = 1; //picture pattern
 	encodeConfig.rcParams.targetQuality = crf;
-	encodeConfig.rcParams.enableLookahead = 1;
+	encodeConfig.rcParams.enableLookahead = hasEnableLookahead;
 	encodeConfig.rcParams.lookaheadDepth = 8;
 
 	//encodeCodecConfig is a union
+	NV_ENC_BFRAME_REF_MODE refmode = hasBframesRefMode ? NV_ENC_BFRAME_REF_MODE_MIDDLE : NV_ENC_BFRAME_REF_MODE_DISABLED;
 	if (guid == NV_ENC_CODEC_HEVC_GUID) {
 		encodeConfig.encodeCodecConfig.hevcConfig.pixelBitDepthMinus8 = 0; //set to 0 for 8bit, set to 2 for 10bit input data
 		encodeConfig.encodeCodecConfig.hevcConfig.chromaFormatIDC = 1; //for yuv444 formats = 3
+		encodeConfig.encodeCodecConfig.hevcConfig.useBFramesAsRef = refmode;
 
 	} else if (guid == NV_ENC_CODEC_H264_GUID) {
 		encodeConfig.encodeCodecConfig.h264Config.chromaFormatIDC = 1;
+		encodeConfig.encodeCodecConfig.h264Config.useBFramesAsRef = refmode;
 	}
 
 	//initialize encoder
 	initParams.version = NV_ENC_INITIALIZE_PARAMS_VER;
 	handleResult(encFuncList.nvEncInitializeEncoder(encoder, &initParams), "cannot initialize encoder");
+
+	//get sequence parameters needed for extradata field in ffmpeg stream
+	NV_ENC_SEQUENCE_PARAM_PAYLOAD seq = { NV_ENC_SEQUENCE_PARAM_PAYLOAD_VER };
+	mExtradata.assign(NV_MAX_SEQ_HDR_LEN, 0);
+	seq.spsppsBuffer = mExtradata.data();
+	seq.inBufferSize = NV_MAX_SEQ_HDR_LEN;
+	seq.outSPSPPSPayloadSize = &mExtradataSize;
+	handleResult(encFuncList.nvEncGetSequenceParams(encoder, &seq), "cannot get sequence parameters");
 
 	//size of buffer vector
 	const int32_t extraDelay = 4; //taken from samples
@@ -184,7 +203,7 @@ void NvEncoder::createEncoder(int fpsNum, int fpsDen, uint32_t gopLen, uint8_t c
 	int h_image = h * 3 / 2; //for yuv444 formats h * 3
 	for (int i = 0; i < encBufferSize; i++) {
 		CUdeviceptr pDeviceFrame;
-		handleResult(cuMemAllocPitch_v2(&pDeviceFrame, &pitch, w, h_image, 16), "error allocating input buffers");
+		handleResult(cuMemAllocPitch_v2(&pDeviceFrame, &mPitch, w, h_image, 16), "error allocating input buffers");
 		inputFrames.push_back(pDeviceFrame);
 	}
 
@@ -195,7 +214,7 @@ void NvEncoder::createEncoder(int fpsNum, int fpsDen, uint32_t gopLen, uint8_t c
 		registerResource.resourceToRegister = (void*) inputFrames[i];
 		registerResource.width = w;
 		registerResource.height = h;
-		registerResource.pitch = (int) pitch;
+		registerResource.pitch = (int) mPitch;
 		registerResource.bufferFormat = mBufferFormat;
 		registerResource.bufferUsage = NV_ENC_INPUT_IMAGE;
 		handleResult(encFuncList.nvEncRegisterResource(encoder, &registerResource), "cannot register resource");

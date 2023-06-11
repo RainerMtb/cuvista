@@ -69,7 +69,6 @@
       <CodeGeneration>compute_35,sm_35;compute_50,sm_50;compute_60,sm_60;compute_70,sm_70;compute_80,sm_80;compute_90,sm_90</CodeGeneration>
       <Include>
       </Include>
-      <MaxRegCount>48</MaxRegCount>
       <AdditionalOptions>-fmad=false -std=c++17 -Wno-deprecated-gpu-targets</AdditionalOptions>
       <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
       <AdditionalDeps>
@@ -106,7 +105,6 @@
       <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
       <Include>
       </Include>
-      <MaxRegCount>48</MaxRegCount>
       <AdditionalOptions>-fmad=false -std=c++17 -Wno-deprecated-gpu-targets</AdditionalOptions>
       <AdditionalDeps>
       </AdditionalDeps>

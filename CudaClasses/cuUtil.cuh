@@ -31,6 +31,8 @@ long long int clock64();
 double fabs(double);
 float __saturatef(float);
 bool isnan(double);
+double max(const double a, const double b);
+double min(const double a, const double b);
 
 namespace cu {
 	const int THREAD_COUNT = 16;	//number of threads used in kernels to access textures

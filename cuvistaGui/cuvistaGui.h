@@ -59,6 +59,7 @@ private:
     QString mMovieDir;
     QString mInputDir;
     QString mOutputDir;
+    QString mOutputFilterSelected;
     QFileInfo mFileInput;
     QFileInfo mFileOutput;
 

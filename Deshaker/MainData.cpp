@@ -258,6 +258,10 @@ void MainData::validate(InputContext& input) {
 }
 
 void MainData::validate() {
+	status.inputStreams.clear();
+	for (AVStream* st : inputCtx.inputStreams) {
+		status.inputStreams.push_back({ st });
+	}
 	//get numeric limits
 	this->deps = std::numeric_limits<double>::epsilon();
 	this->dmax = std::numeric_limits<double>::max();
@@ -387,8 +391,8 @@ void MainData::showIntro() const {
 	*console << "FILE IN: " << fileIn << std::endl;
 
 	//streams in input
-	for (size_t i = 0; i < inputCtx.inputStreams.size(); i++) {
-		StreamInfo info = inputCtx.streamInfo(inputCtx.inputStreams[i]);
+	for (size_t i = 0; i < status.inputStreams.size(); i++) {
+		StreamInfo info = inputCtx.streamInfo(status.inputStreams[i].inputStream);
 		*console << "  Stream " << i << ": type: " << info.streamType << ", codec: " << info.codec << ", duration: " << info.durationString << std::endl;
 	}
 

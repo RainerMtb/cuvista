@@ -34,6 +34,15 @@ __constant__ ArrayIndex sidx[] = {
 	                                   {5,5},
 };
 
+//list of possible results of one compute iteration
+__constant__ PointResultType resultTypes[] = {
+	PointResultType::RUNNING, 
+	PointResultType::FAIL_ETA_NAN, 
+	PointResultType::SUCCESS_ABSOLUTE_ERR, 
+	PointResultType::SUCCESS_STABLE_ITER,
+	PointResultType::FAIL_ITERATIONS,
+};
+
 //initial values for wp
 __constant__ double wp0[] = { 1, 0, 0, 0, 1, 0, 0, 0, 1 };
 //initial values for eta
@@ -210,12 +219,20 @@ __global__ void kernelCompute(ComputeTextures tex, PointResult* results, int64_t
 
 			//analyse result, decide on continuing loop
 			double err = eta[0] * eta[0] + eta[1] * eta[1];
-			if (isnan(err)) result = PointResultType::FAIL_ETA_NAN; //leave loop with fail
-			if (err < d_core.compMaxTol) result = PointResultType::SUCCESS_ABSOLUTE_ERR; //leave loop with success
-			if (fabs(err - bestErr) / bestErr < d_core.compMaxTol * d_core.compMaxTol) result = PointResultType::SUCCESS_STABLE_ITER; //leave with success
-			if (err < bestErr) bestErr = err;
+			int typeIndex = 0;
+			typeIndex += (int) isnan(err) * 1; //leave loop with fail message FAIL_ETA_NAN
+			typeIndex += (int) (err < d_core.compMaxTol) * 2; //leave loop with success SUCCESS_ABSOLUTE_ERR
+			typeIndex += (int) (fabs(err - bestErr) / bestErr < d_core.compMaxTol * d_core.compMaxTol) * 3; //SUCCESS_STABLE_ITER
+			result = resultTypes[typeIndex];
+
+			bestErr = min(err, bestErr);
 			iter++;
-			if (iter == d_core.compMaxIter && result == PointResultType::RUNNING) result = PointResultType::FAIL_ITERATIONS; //leave with fail
+
+			//typeIndex = (int) (iter == d_core.compMaxIter && result == PointResultType::RUNNING) * 4; //FAIL_ITERATIONS
+			//result = resultTypes[typeIndex];
+			if (iter == d_core.compMaxIter && result == PointResultType::RUNNING) {
+				result = PointResultType::FAIL_ITERATIONS; //leave with fail
+			}
 		}
 		//if (frameIdx == 1 && ix0 == 63 && iy0 == 1 && cu::firstThread()) cu::storeDebugData(debugData, 6, 1, eta);
 

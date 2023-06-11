@@ -151,15 +151,8 @@ class FFmpegFormatWriter : public MovieWriter {
 protected:
 	uint32_t GOP_SIZE = 30; //interval of key frames
 
-	struct StreamsContext {
-		int mapping = 0;
-		AVStream* stream = nullptr;
-	};
-	std::vector<StreamsContext> outStreams;
-
 	AVFormatContext* fmt_ctx = nullptr;
 	AVStream* videoStream = nullptr;
-	size_t videoIdx = 0;
 	AVPacket* videoPacket = nullptr;
 	bool headerWritten = false;
 
@@ -168,6 +161,9 @@ protected:
 	void open() override;
 	void writePacket(AVPacket* packet);
 	void writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsIdx, bool terminate);
+
+private:
+	AVStream* newStream(AVFormatContext* fmt_ctx, AVStream* inStream);
 };
 
 

@@ -31,6 +31,29 @@ extern "C" {
 }
 
 
+//what to do with any input stream
+enum class StreamHandling {
+	STREAM_IGNORE,
+	STREAM_STABILIZE,
+	STREAM_COPY,
+	STREAM_TRANSCODE,
+};
+
+struct StreamInfo {
+	std::string streamType;
+	std::string codec;
+	std::string durationString;
+};
+
+//structure per stream in input file
+struct StreamContext {
+	AVStream* inputStream = nullptr;
+	AVStream* outputStream = nullptr;
+	StreamHandling handling;
+	std::list<AVPacket*> packets;
+	int64_t packetsWritten;
+};
+
 //timing values for input packets
 struct VideoPacketContext {
 	int64_t readIndex;
@@ -49,12 +72,6 @@ struct Timings {
 	friend std::ostream& operator << (std::ostream& ostream, const Timings& t);
 };
 
-struct StreamInfo {
-	std::string streamType;
-	std::string codec;
-	std::string durationString;
-};
-
 //parameters describing input
 class InputContext {
 
@@ -63,15 +80,15 @@ public:
 	int fpsNum = -1, fpsDen = -1;
 	int64_t timeBaseNum = -1, timeBaseDen = -1;
 	int64_t frameCount = 0;
-	int64_t formatDuration = -1;
+	int64_t avformatDuration = -1;
 	std::string_view source;
 
 	std::vector<AVStream*> inputStreams;
 	AVStream* videoStream = nullptr;
 
 	double fps() const;
-	StreamInfo streamInfo(AVStream* stream) const;
 	StreamInfo videoStreamInfo() const;
+	StreamInfo streamInfo(AVStream* stream) const;
 };
 
 std::string timeString(int64_t millis);

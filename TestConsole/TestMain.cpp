@@ -75,9 +75,10 @@ void check() {
 	InputContext ctx = reader.open("//READYNAS/Data/Documents/x.orig/bikini.1.1.avi");
 
 	std::cout << "using file " << ctx.source << std::endl;
+	data.probeCudaDevices();
 	data.validate(ctx);
 	NullWriter writer(data);
-	CpuFrame frame(data);
+	GpuFrame frame(data);
 	OutputContext oc = { true, false, &writer.outputFrame, nullptr, 0 };
 	ResultImage resim(data, {});
 
@@ -108,7 +109,7 @@ void check() {
 
 int main() {
 	std::cout << "----------------------------" << std::endl << "MatrixTestMain:" << std::endl;
-	check();
+	//check();
 	//qrdec();
 	//for (size_t i = 1; i <= 32; i++) cudaInvTest(i);
 	//text();
@@ -119,7 +120,7 @@ int main() {
 	//iteratorTest();
 	//similarTransformPerformance();
 	//cudaInvSimple();
-	//cudaInvPerformanceTest();
+	cudaInvPerformanceTest();
 	//cudaInvEqualityTest();
 	//cudaFMAD();
 	//cudaInvParallel();
