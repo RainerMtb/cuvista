@@ -104,6 +104,8 @@ misc options:
 -progress 2     graph indicator
 -progress 3     more detailed report
                 default: 1
+-noheader       do not display headlines at start
+-quiet          same as '-progress 0 -noheader'
 
 advanced computation parameters:
 -levels         number of pyramid levels

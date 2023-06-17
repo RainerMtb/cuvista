@@ -30,13 +30,13 @@ public:
 	ImageYuv outputFrame; //frame to write in YUV444 format
 
 protected:
-	Stats& status;
-	const MainData& data; //central metadata structure
+	Stats& mStatus;
+	const MainData& mData; //central metadata structure
 
 	MovieWriter(MainData& data) : 
 		outputFrame(data.h, data.w, data.pitch), 
-		status { data.status }, 
-		data { data } 
+		mStatus { data.status }, 
+		mData { data } 
 	{}
 
 public:
@@ -159,11 +159,13 @@ protected:
 	FFmpegFormatWriter(MainData& data) : MovieWriter(data) {}
 	~FFmpegFormatWriter() override;
 	void open() override;
-	void writePacket(AVPacket* packet);
+	int writePacket(AVPacket* packet);
 	void writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsIdx, bool terminate);
+	void transcodeAudio(AVPacket* pkt, StreamContext& sc, bool terminate);
 
 private:
 	AVStream* newStream(AVFormatContext* fmt_ctx, AVStream* inStream);
+	void rescaleAudioPacket(StreamContext& sc, AVPacket* pkt);
 };
 
 

@@ -75,6 +75,7 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 			} else if (str_toupper(next) == "PIPE:0") {
 				//activate pipe output
 				console = &nullStream;
+				showHeader = false;
 				videoOutputType = OutputType::PIPE;
 
 			} else if (str_toupper(next).ends_with(".BMP")) {
@@ -105,7 +106,11 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 
 		} else if (args.nextArg("pass", next)) {
 			int p = std::stoi(next);
-			if (p == 0) { pass = DeshakerPass::COMBINED; } else if (p == 1) { pass = DeshakerPass::FIRST_PASS; } else if (p == 2) { pass = DeshakerPass::SECOND_PASS; } else if (p == 12) { pass = DeshakerPass::CONSECUTIVE; } else throw AVException("invalid value for pass: " + next);
+			if (p == 0) { pass = DeshakerPass::COMBINED; } 
+			else if (p == 1) { pass = DeshakerPass::FIRST_PASS; } 
+			else if (p == 2) { pass = DeshakerPass::SECOND_PASS; } 
+			else if (p == 12) { pass = DeshakerPass::CONSECUTIVE; } 
+			else throw AVException("invalid value for pass: " + next);
 
 		} else if (args.nextArg("radius", next)) {
 			//temporal radius in seconds before and after current frame
@@ -178,6 +183,13 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 			else if (i == 3) progressType = ProgressType::DETAILED;
 			else throw AVException("invalid progress type: " + next);
 
+		} else if (args.nextArg("noheader")) {
+			showHeader = false;
+
+		} else if (args.nextArg("quiet")) {
+			showHeader = false;
+			progressType = ProgressType::NONE;
+
 		} else if (args.nextArg("levels", next)) {
 			pyramidLevels = std::stoi(next);
 
@@ -223,8 +235,10 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 	}
 
 	//show title
-	*console << "CUVISTA - Cuda Video Stabilizer, Version " << CUVISTA_VERSION << std::endl;
-	*console << "Copyright (c) 2023 Rainer Bitschi, Email: cuvista@a1.net" << std::endl;
+	if (showHeader) {
+		*console << "CUVISTA - Cuda Video Stabilizer, Version " << CUVISTA_VERSION << std::endl;
+		*console << "Copyright (c) 2023 Rainer Bitschi, Email: cuvista@a1.net" << std::endl;
+	}
 
 	if (args.empty()) {
 		showBasicInfo();
@@ -391,15 +405,28 @@ void MainData::showIntro() const {
 	*console << "FILE IN: " << fileIn << std::endl;
 
 	//streams in input
+	const std::map<StreamHandling, std::string> handlerMap = {
+		{StreamHandling::STREAM_COPY, "copy"},
+		{StreamHandling::STREAM_IGNORE, "ignore"},
+		{StreamHandling::STREAM_STABILIZE, "stabilize"},
+		{StreamHandling::STREAM_TRANSCODE, "transcode"},
+	};
 	for (size_t i = 0; i < status.inputStreams.size(); i++) {
-		StreamInfo info = inputCtx.streamInfo(status.inputStreams[i].inputStream);
-		*console << "  Stream " << i << ": type: " << info.streamType << ", codec: " << info.codec << ", duration: " << info.durationString << std::endl;
+		StreamContext sc = status.inputStreams[i];
+		StreamInfo info = inputCtx.streamInfo(sc.inputStream);
+		*console << "  Stream " << i 
+			<< ": type: " << info.streamType 
+			<< ", codec: " << info.codec 
+			<< ", duration: " << info.durationString 
+			<< " --> " << handlerMap.at(sc.handling)
+			<< std::endl;
 	}
 
 	//video info
 	*console << "  Video w=" << w << ", h=" << h
 		<< ", frames total=" << (frameCount == 0 ? "unknown" : std::to_string(frameCount))
-		<< ", fps=" << inputCtx.fps() << " (" << inputCtx.fpsNum << ":" << inputCtx.fpsDen << ")" << ", radius=" << radius
+		<< ", fps=" << inputCtx.fps() << " (" << inputCtx.fpsNum << ":" << inputCtx.fpsDen << ")" 
+		<< ", radius=" << radius
 		<< std::endl;
 
 	//output to be written

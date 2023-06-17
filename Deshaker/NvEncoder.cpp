@@ -19,12 +19,14 @@
 #include "NvEncoder.hpp"
 
 void handleResult(bool isError, std::string&& msg) {
-	if (isError) throw AVException(msg);
+	if (isError) 
+		throw AVException(msg);
 }
 
 
 void handleResult(NVENCSTATUS status, std::string&& msg) {
-	if (status != NV_ENC_SUCCESS) throw AVException("encoder error " + std::to_string(status) + ": " + msg);
+	if (status != NV_ENC_SUCCESS) 
+		throw AVException("encoder error " + std::to_string(status) + ": " + msg);
 }
 
 

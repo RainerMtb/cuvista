@@ -34,7 +34,7 @@ std::string ImageWriter::makeFilename(const std::string& pattern, int64_t index)
 }
 
 std::string ImageWriter::makeFilename() const {
-	return makeFilename(data.fileOut, status.frameWriteIndex);
+	return makeFilename(mData.fileOut, mStatus.frameWriteIndex);
 }
 
 //-----------------------------------------------------------------------------------
@@ -43,7 +43,7 @@ std::string ImageWriter::makeFilename() const {
 
 void BmpImageWriter::write() {
 	outputFrame.toBGR(image).saveAsBMP(makeFilename());
-	status.outputBytesWritten += image.dataSizeInBytes();
+	mStatus.outputBytesWritten += image.dataSizeInBytes();
 }
 
 //-----------------------------------------------------------------------------------
@@ -53,8 +53,8 @@ void BmpImageWriter::write() {
 void JpegImageWriter::open() {
 	const AVCodec* codec = avcodec_find_encoder(AV_CODEC_ID_MJPEG);
 	ctx = avcodec_alloc_context3(codec);
-	ctx->width = data.w;
-	ctx->height = data.h;
+	ctx->width = mData.w;
+	ctx->height = mData.h;
 	ctx->time_base = { 1, 1 };
 	ctx->framerate = { 1, 1 };
 	ctx->codec_type = AVMEDIA_TYPE_VIDEO;
@@ -66,8 +66,8 @@ void JpegImageWriter::open() {
 
 	frame = av_frame_alloc();
 	frame->format = ctx->pix_fmt;
-	frame->width = data.w;
-	frame->height = data.h;
+	frame->width = mData.w;
+	frame->height = mData.h;
 
 	frame->linesize[0] = outputFrame.stride;
 	frame->linesize[1] = outputFrame.stride;
@@ -80,7 +80,7 @@ void JpegImageWriter::open() {
 }
 
 void JpegImageWriter::write() {
-	frame->pts = status.frameWriteIndex;
+	frame->pts = mStatus.frameWriteIndex;
 	int result = avcodec_send_frame(ctx, frame);
 	if (result < 0)
 		errorLogger.logError(av_make_error(result, "error sending frame"));
@@ -93,7 +93,7 @@ void JpegImageWriter::write() {
 	std::ofstream file(fname, std::ios::binary);
 	file.write(reinterpret_cast<char*>(packet->data), packet->size);
 
-	status.outputBytesWritten += packet->size;
+	mStatus.outputBytesWritten += packet->size;
 	av_packet_unref(packet);
 }
 
@@ -134,7 +134,7 @@ void PipeWriter::write() {
 	if (siz != yuvPacked.size()) {
 		errorLogger.logError("Pipe: error writing data");
 	}
-	status.outputBytesWritten += siz;
+	mStatus.outputBytesWritten += siz;
 
 	//static std::ofstream out("f:/test.yuv", std::ios::binary);
 	//out.write(yuvPacked.data(), yuvPacked.size());
@@ -166,15 +166,15 @@ void TCPWriter::open() {
 	int addrSize = sizeof(sockAddr);
 	memset(&sockAddr, 0, addrSize);
 	sockAddr.sin_family = AF_INET;
-	inet_pton(AF_INET, data.tcp_address.c_str(), &sockAddr.sin_addr.s_addr);
-	sockAddr.sin_port = htons(data.tcp_port);
+	inet_pton(AF_INET, mData.tcp_address.c_str(), &sockAddr.sin_addr.s_addr);
+	sockAddr.sin_port = htons(mData.tcp_port);
 
 	bind(mSock, sockaddr_ptr, addrSize);
 	listen(mSock, 3);
-	*data.console << "listening for TCP connection at " << data.tcp_address << ":" << data.tcp_port << std::endl;
+	*mData.console << "listening for TCP connection at " << mData.tcp_address << ":" << mData.tcp_port << std::endl;
 	mConn = accept(mSock, sockaddr_ptr, &addrSize); //blocking call, wait for connecting client
 	if (mConn < 0) throw AVException("cannot connect");
-	*data.console << "established TCP connection" << std::endl;
+	*mData.console << "established TCP connection" << std::endl;
 }
 
 void TCPWriter::write() {
@@ -183,7 +183,7 @@ void TCPWriter::write() {
 	if (retval < 0 || retval != yuvPacked.size()) {
 		errorLogger.logError("error sending TCP data: " + WSAGetLastError());
 	}
-	status.outputBytesWritten += retval;
+	mStatus.outputBytesWritten += retval;
 }
 
 TCPWriter::~TCPWriter() {

@@ -200,7 +200,7 @@ void cuvistaGui::stabilize() {
 
     //get output file
     QFileDialog::Options op = ui.chkOverwrite->isChecked() ? QFileDialog::Option::DontConfirmOverwrite : QFileDialog::Options();
-    QString fileFilter("MP4 Files (*.mp4);;MKV Files (*.mkv);;All Files (*.*)");
+    QString fileFilter("Video Files (*.mp4; *.mkv);;All Files (*.*)");
     QString outFile = QFileDialog::getSaveFileName(this, QString("Select Video file to save"), mOutputDir, fileFilter, &mOutputFilterSelected, op);
     if (outFile.isEmpty()) {
         statusBar()->showMessage(mDefaultMessage);

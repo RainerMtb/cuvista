@@ -219,6 +219,7 @@ void FFmpegReader::rewind() {
 
 void FFmpegReader::close() {
     sws_freeContext(sws_scaler_ctx);
+    avcodec_close(av_codec_ctx);
     avcodec_free_context(&av_codec_ctx);
     av_packet_free(&av_packet);
     av_frame_free(&av_frame);

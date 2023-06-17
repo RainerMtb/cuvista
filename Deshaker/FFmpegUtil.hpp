@@ -30,7 +30,6 @@ extern "C" {
 #include <libswscale/swscale.h>
 }
 
-
 //what to do with any input stream
 enum class StreamHandling {
 	STREAM_IGNORE,
@@ -52,6 +51,14 @@ struct StreamContext {
 	StreamHandling handling;
 	std::list<AVPacket*> packets;
 	int64_t packetsWritten;
+
+	AVCodecContext* audioInCtx = nullptr;
+	AVCodecContext* audioOutCtx = nullptr;
+	const AVCodec* audioInCodec = nullptr;
+	const AVCodec* audioOutCodec = nullptr;
+	AVPacket* outpkt = nullptr;
+	AVFrame* frame = nullptr;
+	int64_t lastPts = AV_NOPTS_VALUE;
 };
 
 //timing values for input packets

@@ -8,30 +8,30 @@ void CudaFFmpegWriter::open() {
     FFmpegFormatWriter::open();
 
     //check device
-    int deviceIndex = data.deviceNum == -1 ? data.deviceNumBest : data.deviceNum;
+    int deviceIndex = mData.deviceNum == -1 ? mData.deviceNumBest : mData.deviceNum;
     if (deviceIndex == -1)
         throw AVException("no gpu device present for encoding");
 
     //select first codec from list
-    OutputCodec codec = data.videoCodec == OutputCodec::AUTO ? data.cuda.supportedCodecs[deviceIndex][0] : data.videoCodec;
+    OutputCodec codec = mData.videoCodec == OutputCodec::AUTO ? mData.cuda.supportedCodecs[deviceIndex][0] : mData.videoCodec;
     GUID guid = guidMap[codec];
 
     //setup nvenc class
-    nvenc.createEncoder(data.inputCtx.fpsNum, data.inputCtx.fpsDen, GOP_SIZE, data.crf, guid, data.deviceNumBest);
+    nvenc.createEncoder(mData.inputCtx.fpsNum, mData.inputCtx.fpsDen, GOP_SIZE, mData.crf, guid, mData.deviceNumBest);
 
     //setup codec parameters for ffmpeg format output
     AVCodecParameters* params = videoStream->codecpar;
     params->codec_type = AVMEDIA_TYPE_VIDEO;
     params->codec_id = guidToCodecMap[guid];
-    params->width = data.w;
-    params->height = data.h;
+    params->width = mData.w;
+    params->height = mData.h;
     params->extradata_size = nvenc.mExtradataSize;
     params->extradata = (uint8_t*) av_mallocz(0ull + nvenc.mExtradataSize + AV_INPUT_BUFFER_PADDING_SIZE);
     memcpy(params->extradata, nvenc.mExtradata.data(), nvenc.mExtradataSize);
 
     result = avio_open(&fmt_ctx->pb, fmt_ctx->url, AVIO_FLAG_WRITE);
     if (result < 0)
-        throw AVException("error opening file '" + data.fileOut + "'");
+        throw AVException("error opening file '" + mData.fileOut + "'");
     
     result = avformat_init_output(fmt_ctx, NULL);
     if (result < 0)

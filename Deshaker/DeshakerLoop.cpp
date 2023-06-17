@@ -25,7 +25,7 @@ void MovieFrame::DeshakerLoopCombined::run(MovieFrame& mf, ProgressDisplay& prog
 
 	//init
 	if (errorLogger.hasNoError()) reader.read(mf.bufferFrame, status);
-	if (errorLogger.hasNoError()) data.showIntro();
+	if (errorLogger.hasNoError() && data.showHeader) data.showIntro();
 	progress.init();
 	progress.update();
 
@@ -144,7 +144,7 @@ void MovieFrame::DeshakerLoopFirst::run(MovieFrame& mf, ProgressDisplay& progres
 
 	//init
 	if (errorLogger.hasNoError()) reader.read(mf.bufferFrame, status);
-	if (errorLogger.hasNoError()) data.showIntro();
+	if (errorLogger.hasNoError() && data.showHeader) data.showIntro();
 	progress.init();
 	progress.update();
 
@@ -179,7 +179,7 @@ void MovieFrame::DeshakerLoopSecond::run(MovieFrame& mf, ProgressDisplay& progre
 
 	//init
 	if (errorLogger.hasNoError()) reader.read(mf.bufferFrame, status);
-	if (errorLogger.hasNoError()) data.showIntro();
+	if (errorLogger.hasNoError() && data.showHeader) data.showIntro();
 	progress.init();
 	progress.update();
 
@@ -219,7 +219,7 @@ void MovieFrame::DeshakerLoopClassic::run(MovieFrame& mf, ProgressDisplay& progr
 
 	//init
 	if (errorLogger.hasNoError()) reader.read(mf.bufferFrame, status);
-	if (errorLogger.hasNoError()) data.showIntro();
+	if (errorLogger.hasNoError() && data.showHeader) data.showIntro();
 	progress.init();
 	progress.writeMessage("first pass - analyzing input\n");
 	progress.update();

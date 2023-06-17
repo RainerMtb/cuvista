@@ -77,6 +77,9 @@
     <ClCompile Include="NvidiaDriver.cpp">
       <Filter>Util</Filter>
     </ClCompile>
+    <ClCompile Include="FFmpegFormatWriter.cpp">
+      <Filter>Writer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MovieReader.hpp">

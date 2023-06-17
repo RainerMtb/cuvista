@@ -144,12 +144,12 @@ int main(size_t argsCount, const char** args) {
 		progress->update(true);
 		progress->terminate();
 
-		if (data.frameCount > 0 && data.frameCount != status.frameWriteIndex && inputHandler.doContinue()) {
+		if (data.frameCount > 0 && data.frameCount != status.frameWriteIndex && inputHandler.doContinue() && data.showHeader) {
 			*data.console << "warning: number of frames processed does not match expected frame count" << std::endl;
 		}
 	}
 
-	if (status.frameWriteIndex > 0) {
+	if (status.frameWriteIndex > 0 && data.showHeader) {
 		double fps = (status.frameInputIndex + status.frameWriteIndex) / 2.0 / secs;
 		std::string time = secs < 60.0 ? std::format("{:.1f} sec", secs) : std::format("{:.1f} min", secs / 60.0);
 		*data.console << status.frameEncodeIndex << " frames written in " << time << " at " << std::setprecision(1) << std::fixed << fps << " fps" << std::endl;

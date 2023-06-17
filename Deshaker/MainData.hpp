@@ -136,6 +136,8 @@ public:
 	OutputCodec videoCodec = OutputCodec::AUTO;
 	OutputType videoOutputType = OutputType::NONE;
 	bool overwriteOutput = false;
+	bool showHeader = true;
+
 	std::string fileIn;					//input file path
 	std::string fileOut;				//output file path
 	std::string trajectoryFile;			//file to read or write trajectory data
@@ -169,6 +171,10 @@ public:
 	std::unique_ptr<RNGbase> rng = std::make_unique<RNG<RandomSource>>();
 
 	ColorRgb bgcol_rgb { 0, 50, 0 };
+
+	//------------------------------------
+	// METHODS
+	//------------------------------------
 
 	void probeCudaDevices();
 

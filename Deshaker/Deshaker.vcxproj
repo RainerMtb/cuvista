@@ -162,6 +162,7 @@
     <ClCompile Include="CudaWriter.cpp" />
     <ClCompile Include="DeshakerLoop.cpp" />
     <ClCompile Include="Diagnostics.cpp" />
+    <ClCompile Include="FFmpegFormatWriter.cpp" />
     <ClCompile Include="FFmpegUtil.cpp" />
     <ClCompile Include="KeyboardInput.cpp" />
     <ClCompile Include="MainData.cpp" />
