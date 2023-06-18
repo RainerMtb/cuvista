@@ -122,7 +122,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <AdditionalLibraryDirectories>$(SolutionDir)lib\$(Platform);$(SolutionDir)bin\$(Platform)\$(Configuration);$(VCInstallDir)UnitTest\lib;$(CUDA_PATH)\lib\$(Platform);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>Matrix.lib;Deshaker.lib;CudaClasses.lib;cudart_static.lib;nvencodeapi.lib;cuda.lib;avcodec.lib;avformat.lib;avutil.lib;swscale.lib;ws2_32.lib;nppc.lib;nppig.lib;nppidei.lib;nppitc.lib;nppif.lib;nppial.lib;nvapi64.lib</AdditionalDependencies>
+      <AdditionalDependencies>Matrix.lib;Deshaker.lib;CudaClasses.lib;cudart_static.lib;nvencodeapi.lib;cuda.lib;avcodec.lib;avformat.lib;avutil.lib;swscale.lib;swresample.lib;ws2_32.lib;nppc.lib;nppig.lib;nppidei.lib;nppitc.lib;nppif.lib;nppial.lib;nvapi64.lib</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>libcmt.lib; msvcrt.lib; libcmtd.lib;</IgnoreSpecificDefaultLibraries>
       <IgnoreAllDefaultLibraries>
       </IgnoreAllDefaultLibraries>

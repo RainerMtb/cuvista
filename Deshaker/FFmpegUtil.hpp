@@ -28,6 +28,7 @@ extern "C" {
 #include <libavformat/avio.h>
 #include <libavutil/opt.h>
 #include <libswscale/swscale.h>
+#include <libswresample/swresample.h>
 }
 
 //what to do with any input stream
@@ -59,6 +60,7 @@ struct StreamContext {
 	AVPacket* outpkt = nullptr;
 	AVFrame* frame = nullptr;
 	int64_t lastPts = AV_NOPTS_VALUE;
+	SwrContext* resampleCtx;
 };
 
 //timing values for input packets

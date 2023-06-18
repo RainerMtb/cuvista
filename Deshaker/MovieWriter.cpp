@@ -19,8 +19,6 @@
 #include "MovieWriter.hpp"
 #include "Stats.hpp"
 
-#include <io.h>
-#include <fcntl.h>
 
 OutputContext MovieWriter::getOutputData() {
 	return { true, false, &outputFrame, nullptr, 0 };
@@ -103,7 +101,7 @@ JpegImageWriter::~JpegImageWriter() {
 }
 
 //-----------------------------------------------------------------------------------
-// YUV444 without stride
+// YUV444 packed without striding pixels
 //-----------------------------------------------------------------------------------
 
 void RawWriter::packYuv() {
@@ -115,79 +113,4 @@ void RawWriter::packYuv() {
 		yuv += outputFrame.stride;
 		dest += outputFrame.w;
 	}
-}
-
-//-----------------------------------------------------------------------------------
-// send to command line pipe
-//-----------------------------------------------------------------------------------
-
-void PipeWriter::open() {
-    //set stdout to binary mode
-    int result = _setmode(_fileno(stdout), _O_BINARY);
-    if (result < 0) 
-		throw AVException("Pipe: error setting stdout to binary");
-}
-
-void PipeWriter::write() {
-	packYuv();
-	size_t siz = fwrite(yuvPacked.data(), 1, yuvPacked.size(), stdout);
-	if (siz != yuvPacked.size()) {
-		errorLogger.logError("Pipe: error writing data");
-	}
-	mStatus.outputBytesWritten += siz;
-
-	//static std::ofstream out("f:/test.yuv", std::ios::binary);
-	//out.write(yuvPacked.data(), yuvPacked.size());
-}
-
-PipeWriter::~PipeWriter() {
-    int result = _setmode(_fileno(stdout), _O_TEXT);
-	if (result < 0) {
-		errorLogger.logError("Pipe: error setting stdout back to text");
-	}
-}
-
-//-----------------------------------------------------------------------------------
-// send to TCP address
-//-----------------------------------------------------------------------------------
-
-void TCPWriter::open() {
-	WSADATA wsaData {};
-	int retval = WSAStartup(MAKEWORD(2, 2), &wsaData);
-	if (retval < 0) 
-		throw AVException("cannot start TCP");
-
-	SOCKET mSock = socket(AF_INET, SOCK_STREAM, 0);
-	if (mSock < 0) 
-		throw AVException("cannot create TCP socket");
-
-	sockaddr_in sockAddr;
-	sockaddr* sockaddr_ptr = (sockaddr*) &sockAddr;
-	int addrSize = sizeof(sockAddr);
-	memset(&sockAddr, 0, addrSize);
-	sockAddr.sin_family = AF_INET;
-	inet_pton(AF_INET, mData.tcp_address.c_str(), &sockAddr.sin_addr.s_addr);
-	sockAddr.sin_port = htons(mData.tcp_port);
-
-	bind(mSock, sockaddr_ptr, addrSize);
-	listen(mSock, 3);
-	*mData.console << "listening for TCP connection at " << mData.tcp_address << ":" << mData.tcp_port << std::endl;
-	mConn = accept(mSock, sockaddr_ptr, &addrSize); //blocking call, wait for connecting client
-	if (mConn < 0) throw AVException("cannot connect");
-	*mData.console << "established TCP connection" << std::endl;
-}
-
-void TCPWriter::write() {
-	packYuv();
-	int retval = send(mConn, yuvPacked.data(), (int) yuvPacked.size(), 0);
-	if (retval < 0 || retval != yuvPacked.size()) {
-		errorLogger.logError("error sending TCP data: " + WSAGetLastError());
-	}
-	mStatus.outputBytesWritten += retval;
-}
-
-TCPWriter::~TCPWriter() {
-	closesocket(mConn);
-	closesocket(mSock);
-	WSACleanup();
 }

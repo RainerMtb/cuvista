@@ -58,6 +58,12 @@ enum class ProgressType {
 	DETAILED,
 };
 
+enum class DecideYNA {
+	YES,
+	NO,
+	ASK,
+};
+
 class MainData : public CoreData {
 
 private:
@@ -99,7 +105,9 @@ private:
 	};
 
 	//convert string to upper case
-	std::string str_toupper(const std::string& s);
+	std::string str_toupper(const std::string& s) const;
+
+	bool checkFileForWriting(const std::string& file, DecideYNA permission) const;
 
 public:
 
@@ -135,7 +143,7 @@ public:
 	EncodingDevice encodingDevice = EncodingDevice::AUTO;
 	OutputCodec videoCodec = OutputCodec::AUTO;
 	OutputType videoOutputType = OutputType::NONE;
-	bool overwriteOutput = false;
+	DecideYNA overwriteOutput = DecideYNA::ASK;
 	bool showHeader = true;
 
 	std::string fileIn;					//input file path

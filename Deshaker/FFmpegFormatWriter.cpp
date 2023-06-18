@@ -56,7 +56,7 @@ void FFmpegFormatWriter::open() {
             }
 
         } else {
-            //codecSupported = false; //force transcode for debugging
+            codecSupported = false; //force transcode for debugging <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
             if (codecSupported) {
                 sc.outputStream = newStream(fmt_ctx, inStream);
                 sc.handling = StreamHandling::STREAM_COPY;
@@ -111,6 +111,19 @@ void FFmpegFormatWriter::open() {
                 if (retval < 0)
                     throw AVException("cannot open audio encoder");
 
+                //init resampler
+                retval = swr_alloc_set_opts2(&sc.resampleCtx, 
+                    &sc.audioOutCtx->ch_layout, sc.audioOutCtx->sample_fmt, sc.audioOutCtx->sample_rate,
+                    &sc.audioInCtx->ch_layout, sc.audioInCtx->sample_fmt, sc.audioInCtx->sample_rate, 
+                    0, NULL);
+                if (retval < 0)
+                    throw AVException("cannot set resampler options");
+                retval = swr_init(sc.resampleCtx);
+                if (retval < 0)
+                    throw AVException(av_make_error(retval, "cannot init audio resampler"));
+
+                //av_samples_alloc_array_and_samples
+
                 //stream timebase
                 sc.outputStream->time_base.den = sc.audioInCtx->sample_rate;
                 sc.outputStream->time_base.num = 1;
@@ -164,6 +177,9 @@ FFmpegFormatWriter::~FFmpegFormatWriter() {
         }
         if (sc.frame) {
             av_frame_free(&sc.frame);
+        }
+        if (sc.resampleCtx) {
+            swr_free(&sc.resampleCtx);
         }
     }
 

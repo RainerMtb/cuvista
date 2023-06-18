@@ -25,7 +25,7 @@ int main(size_t argsCount, const char** args) {
 	//command line arguments for debugging
 	//std::vector<std::string> argsInput = { "-device", "0", "-frames", "10", "-i", "d:/VideoTest/02.mp4", "-y", "-resim", "d:/VideoTest/im/im%04d.bmp"};
 	std::vector<std::string> argsInput(args + 1, args + argsCount);
-
+	
 	//main program start
 	MainData data;
 	std::unique_ptr<MovieFrame> frame = std::make_unique<DefaultFrame>(data);

@@ -53,8 +53,13 @@ std::string util::concatStrings(std::vector<std::string> strings, std::string_vi
 	return out;
 }
 
-
-std::string util::byteSizeToString(size_t bytes) {
-	if (bytes < 1024ull * 1024ull) return std::format("{:.1f} kb", bytes / 1024.0);
-	else return std::format("{:.1f} Mb", bytes / 1048576.0);
+std::string util::byteSizeToString(int64_t bytes) {
+	if (bytes < 0)
+		return "N/A";
+	else if (bytes < 1024ull)
+		return std::format("{} bytes", bytes);
+	else if (bytes < 1024ull * 1024ull) 
+		return std::format("{:.1f} kb", bytes / 1024.0);
+	else 
+		return std::format("{:.1f} Mb", bytes / 1048576.0);
 }

@@ -18,6 +18,9 @@
       <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
       <Extensions>cpp;c;cc;cxx;c++;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
+    <Filter Include="Windows">
+      <UniqueIdentifier>{2278ac54-40d8-4ab9-ae67-c408b892321e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ProgressDisplay.cpp">
@@ -62,9 +65,6 @@
     <ClCompile Include="RandomSource.cpp">
       <Filter>Transformation</Filter>
     </ClCompile>
-    <ClCompile Include="KeyboardInput.cpp">
-      <Filter>Util</Filter>
-    </ClCompile>
     <ClCompile Include="Util.cpp">
       <Filter>Util</Filter>
     </ClCompile>
@@ -79,6 +79,15 @@
     </ClCompile>
     <ClCompile Include="FFmpegFormatWriter.cpp">
       <Filter>Writer</Filter>
+    </ClCompile>
+    <ClCompile Include="TCPWriter.cpp">
+      <Filter>Windows</Filter>
+    </ClCompile>
+    <ClCompile Include="PipeWriter.cpp">
+      <Filter>Windows</Filter>
+    </ClCompile>
+    <ClCompile Include="KeyboardInput.cpp">
+      <Filter>Windows</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

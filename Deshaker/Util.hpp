@@ -45,5 +45,5 @@ namespace util {
     std::string concatStrings(std::vector<std::string> strings, std::string_view delimiter, std::string_view prefix, std::string_view suffix);
 
     //convert a number of bytes into more readable magnitude kb, Mb
-    std::string byteSizeToString(size_t bytes);
+    std::string byteSizeToString(int64_t bytes);
 }

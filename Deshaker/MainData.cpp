@@ -28,11 +28,14 @@
 #include <map>
 #include <filesystem>
 
-void checkFileForWriting(const std::string& file, bool write) {
+bool MainData::checkFileForWriting(const std::string& file, DecideYNA permission) const {
 	if (file.empty()) {
 		throw AVException("output file missing");
 	}
-	if (write == false && static_cast<bool>(std::ifstream(file))) {
+	if (permission == DecideYNA::NO) {
+		throw CancelException("output file exists, aborting...");
+	}
+	if (permission == DecideYNA::ASK && static_cast<bool>(std::ifstream(file))) {
 		std::cout << "file '" << file << "' exists, overwrite [y/n] ";
 		while (true) {
 			std::optional<char> och = getKeyboardInput();
@@ -46,6 +49,7 @@ void checkFileForWriting(const std::string& file, bool write) {
 			}
 		}
 	}
+	return true;
 }
 
 void MainData::probeInput(std::vector<std::string> argsInput) {
@@ -162,11 +166,13 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 			bgmode = BackgroundMode::COLOR;
 
 		} else if (args.nextArg("crf", next)) {
-			//output encoder crf value
-			crf = std::stoi(next);
+			crf = std::stoi(next); //output encoder crf value
 
 		} else if (args.nextArg("y")) {
-			overwriteOutput = true;
+			overwriteOutput = DecideYNA::YES; //always overwrite
+
+		} else if (args.nextArg("n")) {
+			overwriteOutput = DecideYNA::NO; //never overwrite
 
 		} else if (args.nextArg("info")) {
 			showDeviceInfo();
@@ -423,14 +429,14 @@ void MainData::showIntro() const {
 	}
 
 	//video info
-	*console << "  Video w=" << w << ", h=" << h
+	*console << "VIDEO w=" << w << ", h=" << h
 		<< ", frames total=" << (frameCount == 0 ? "unknown" : std::to_string(frameCount))
 		<< ", fps=" << inputCtx.fps() << " (" << inputCtx.fpsNum << ":" << inputCtx.fpsDen << ")" 
 		<< ", radius=" << radius
 		<< std::endl;
 
 	//output to be written
-	if (pass != DeshakerPass::FIRST_PASS) *console << "FILE OUT: " << (fileOut.empty() ? "none" : fileOut) << std::endl;
+	if (videoOutputType == OutputType::VIDEO_FILE && pass != DeshakerPass::FIRST_PASS) *console << "FILE OUT: " << fileOut << std::endl;
 	if (trajectoryFile.empty() == false) *console << "TRAJECTORY FILE: " << trajectoryFile << std::endl;
 	if (resultsFile.empty() == false) *console << "CALCULATION DETAILS OUT: " << resultsFile << std::endl;
 	if (resultImageFile.empty() == false) *console << "CALCULATION DETAILS IMAGES: " << resultImageFile << std::endl;
@@ -466,7 +472,7 @@ void MainData::showDeviceInfo() const {
 	throw CancelException();
 }
 
-std::string MainData::str_toupper(const std::string& s) {
+std::string MainData::str_toupper(const std::string& s) const {
 	std::string out = s;
 	std::transform(out.begin(), out.end(), out.begin(), [] (unsigned char c) { return std::toupper(c); });
 	return out;

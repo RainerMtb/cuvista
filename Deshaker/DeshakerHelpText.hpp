@@ -94,6 +94,7 @@ quality and performance settings:
 
 misc options:
 -y              overwrite output file without asking
+-n              never overwrite output, quit application
 -h, -help, -?   display help text
 -info           display information about software and hardware detected
 -copyframes     just copy input to output, do not stabilize

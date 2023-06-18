@@ -167,6 +167,7 @@
     <ClCompile Include="KeyboardInput.cpp" />
     <ClCompile Include="MainData.cpp" />
     <ClCompile Include="NvidiaDriver.cpp" />
+    <ClCompile Include="PipeWriter.cpp" />
     <ClCompile Include="ProgressDisplayConsole.cpp" />
     <ClCompile Include="RandomSource.cpp" />
     <ClCompile Include="MovieFrame.cpp" />
@@ -176,6 +177,7 @@
     <ClCompile Include="NvEncoder.cpp" />
     <ClCompile Include="ProgressDisplay.cpp" />
     <ClCompile Include="MovieWriter.cpp" />
+    <ClCompile Include="TCPWriter.cpp" />
     <ClCompile Include="Trajectory.cpp" />
     <ClCompile Include="Util.cpp" />
   </ItemGroup>

@@ -123,22 +123,23 @@ public:
 };
 
 
-#include <ws2tcpip.h>
-#include <WinSock2.h>
-
-//undef conflicting macro
-#undef max
-#undef min
-
 //-----------------------------------------------------------------------------------
+
+//introduce custom structure in order to keep windows includes away
+struct Sockets;
+
+/*
+send raw YUV444P data to tcp address
+example to receive and encode via ffmpeg
+ffmpeg -f rawvideo -pix_fmt yuv444p -video_size www:hhh -i tcp://127.0.0.1:4444 out.mp4
+*/
 class TCPWriter : public RawWriter {
 
 protected:
-	SOCKET mSock {};
-	SOCKET mConn {};
+	std::unique_ptr<Sockets> sockets;
 
 public:
-	TCPWriter(MainData& data) : RawWriter(data) {}
+	TCPWriter(MainData& data);
 	~TCPWriter() override;
 	void open() override;
 	void write() override;
