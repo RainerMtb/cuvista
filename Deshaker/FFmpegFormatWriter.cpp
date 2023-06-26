@@ -232,14 +232,6 @@ int FFmpegFormatWriter::writePacket(AVPacket* packet) {
     return result;
 }
 
-void FFmpegFormatWriter::rescaleAudioPacket(StreamContext& sc, AVPacket* pkt) {
-    AVRational& tbin = sc.inputStream->time_base;
-    AVRational& tbout = sc.outputStream->time_base;
-    pkt->pts = av_rescale_delta(tbin, pkt->pts, tbin, (int) pkt->duration, &sc.lastPts, tbout);
-    pkt->dts = pkt->pts;
-    pkt->duration = 0;
-}
-
 //transcode pending audio packet and write to output
 void FFmpegFormatWriter::transcodeAudio(AVPacket* pkt, StreamContext& sc, bool terminate) {
     //send packet to decoder
@@ -383,7 +375,13 @@ void FFmpegFormatWriter::writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsI
             int comp = av_compare_ts(sidePacket->dts, sc.inputStream->time_base, vpc->dts, videoInputStream->time_base);
             if (comp < 0 || terminate) {
                 if (sc.handling == StreamHandling::STREAM_COPY) { //copy packet directly to output stream
-                    rescaleAudioPacket(sc, sidePacket);
+                    //rescale audio packet
+                    AVRational& tbin = sc.inputStream->time_base;
+                    AVRational& tbout = sc.outputStream->time_base;
+                    int64_t ts = sidePacket->pts - sc.inputStream->start_time;
+                    sidePacket->pts = av_rescale_delta(tbin, ts, tbin, (int) sidePacket->duration, &sc.lastPts, tbout);
+                    sidePacket->dts = sidePacket->pts;
+                    sidePacket->duration = 0;
                     writePacket(sidePacket);
 
                 } else if (sc.handling == StreamHandling::STREAM_TRANSCODE) { //transcode audio
@@ -398,8 +396,8 @@ void FFmpegFormatWriter::writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsI
                 it++;
             }
         }
-
-        if (terminate && sc.handling == StreamHandling::STREAM_TRANSCODE) {
+        
+        if (terminate && sc.handling == StreamHandling::STREAM_TRANSCODE) { //flush transcoding buffers
             transcodeAudio(nullptr, sc, true);
         }
     }

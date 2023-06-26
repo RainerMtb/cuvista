@@ -50,7 +50,6 @@ void NvEncoder::probeSupportedCodecs(CudaInfo& cudaInfo) {
 	//create instance
 	NV_ENCODE_API_FUNCTION_LIST encFuncList = { NV_ENCODE_API_FUNCTION_LIST_VER };
 	handleResult(NvEncodeAPICreateInstance(&encFuncList), "cannot create api instance");
-	handleResult(encFuncList.nvEncOpenEncodeSession == NULL, "error opening encode session");
 
 	//check supported codecs for all devices
 	for (int i = 0; i < cudaInfo.cudaProps.size(); i++) {

@@ -174,7 +174,6 @@ protected:
 
 private:
 	AVStream* newStream(AVFormatContext* fmt_ctx, AVStream* inStream);
-	void rescaleAudioPacket(StreamContext& sc, AVPacket* pkt);
 };
 
 

@@ -38,7 +38,7 @@ int main(size_t argsCount, const char** args) {
 		//create MovieReader
 		InputContext ctx = reader->open(data.fileIn);
 		data.validate(ctx);
-
+		
 		//----------- create appropriate MovieWriter
 		if (data.pass == DeshakerPass::FIRST_PASS) 
 			writer = std::make_unique<NullWriter>(data);
