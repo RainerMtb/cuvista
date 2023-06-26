@@ -26,9 +26,10 @@ extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <libavformat/avio.h>
-#include <libavutil/opt.h>
 #include <libswscale/swscale.h>
 #include <libswresample/swresample.h>
+#include <libavutil/opt.h>
+#include <libavutil/audio_fifo.h>
 }
 
 //what to do with any input stream
@@ -58,9 +59,12 @@ struct StreamContext {
 	const AVCodec* audioInCodec = nullptr;
 	const AVCodec* audioOutCodec = nullptr;
 	AVPacket* outpkt = nullptr;
-	AVFrame* frame = nullptr;
-	int64_t lastPts = AV_NOPTS_VALUE;
-	SwrContext* resampleCtx;
+	AVFrame* frameIn = nullptr;
+	AVFrame* frameOut = nullptr;
+	int64_t lastPts = 0;
+	int64_t pts = 0;
+	SwrContext* resampleCtx = nullptr;
+	AVAudioFifo* fifo = nullptr;
 };
 
 //timing values for input packets
@@ -103,5 +107,7 @@ public:
 std::string timeString(int64_t millis);
 
 std::string av_make_error(int errnum, const char* msg = "");
+
+void ffmpeg_log_error(int errnum, const char* msg = "");
 
 void ffmpeg_log(void* avclass, int level, const char* fmt, va_list args);

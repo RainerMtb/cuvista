@@ -88,6 +88,7 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 
 			} else if (str_toupper(next).ends_with(".JPG")) {
 				videoOutputType = OutputType::JPG;
+				videoCodec = OutputCodec::JPEG;
 				fileOut = next;
 
 			} else {

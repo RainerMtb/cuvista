@@ -67,6 +67,10 @@ std::string av_make_error(int errnum, const char* msg) {
     return info;
 }
 
+void ffmpeg_log_error(int errnum, const char* msg) {
+    errorLogger.logError(av_make_error(errnum, msg));
+}
+
 void ffmpeg_log(void* avclass, int level, const char* fmt, va_list args) {
     if (level <= AV_LOG_ERROR) {
         const size_t ffmpeg_bufsiz = 256;

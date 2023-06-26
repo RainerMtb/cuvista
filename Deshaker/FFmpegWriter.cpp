@@ -20,19 +20,19 @@
 #include <filesystem>
 
 //construct ffmpeg encoder
-void FFmpegWriter::open() {
+void FFmpegWriter::open(OutputCodec videoCodec) {
     int result = 0;
 
-    //init format
-    FFmpegFormatWriter::open();
-
-    const AVCodec* codec = avcodec_find_encoder(codecMap[mData.videoCodec]);
+    const AVCodec* codec = avcodec_find_encoder(codecMap[videoCodec]);
     if (!codec) 
         throw AVException("Could not find encoder");
 
     codec_ctx = avcodec_alloc_context3(codec);
     if (!codec_ctx) 
         throw AVException("Could not allocate encoder context");
+
+    //open container format
+    FFmpegFormatWriter::open(mData.videoCodec);
 
     codec_ctx->width = mData.w;
     codec_ctx->height = mData.h;
@@ -98,7 +98,7 @@ void FFmpegWriter::open() {
 int FFmpegWriter::sendFFmpegFrame(AVFrame* frame) {
     int result = avcodec_send_frame(codec_ctx, frame);
     if (result < 0)
-        errorLogger.logError(av_make_error(result, "error encoding #1"));
+        ffmpeg_log_error(result, "error encoding #1");
     return result;
 }
 
@@ -110,7 +110,7 @@ int FFmpegWriter::writeFFmpegPacket() {
 
     } else if (result < 0) { 
         //report error, something wrong
-        errorLogger.logError(av_make_error(result, "error encoding #2"));
+        ffmpeg_log_error(result, "error encoding #2");
 
     } else { 
         //write packet to output

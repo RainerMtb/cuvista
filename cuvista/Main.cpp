@@ -62,7 +62,7 @@ int main(size_t argsCount, const char** args) {
 		}
 		else writer = std::make_unique<NullWriter>(data);
 
-		writer->open();
+		writer->open(data.videoCodec);
 
 		//----------- create Frame Handler Class
 		if (data.dummyFrame) {

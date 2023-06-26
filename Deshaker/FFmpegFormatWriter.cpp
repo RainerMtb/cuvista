@@ -29,7 +29,7 @@ AVStream* FFmpegFormatWriter::newStream(AVFormatContext* fmt_ctx, AVStream* inSt
 }
 
 //setup output format
-void FFmpegFormatWriter::open() {
+void FFmpegFormatWriter::open(OutputCodec videoCodec) {
     //av_log_set_level(AV_LOG_ERROR);
     //custom callback to log ffmpeg errors
     av_log_set_callback(ffmpeg_log);
@@ -43,10 +43,10 @@ void FFmpegFormatWriter::open() {
     AVStream* videoIn = mData.inputCtx.videoStream;
     for (StreamContext& sc : mStatus.inputStreams) {
         AVStream* inStream = sc.inputStream;
-        int codecSupported = avformat_query_codec(fmt_ctx->oformat, inStream->codecpar->codec_id, FF_COMPLIANCE_NORMAL);
 
         if (inStream->index == videoIn->index) {
-            if (codecSupported) {
+            int codecSupported = avformat_query_codec(fmt_ctx->oformat, codecMap[videoCodec], FF_COMPLIANCE_STRICT);
+            if (codecSupported == 1) {
                 videoStream = newStream(fmt_ctx, inStream);
                 sc.outputStream = videoStream;
                 sc.handling = StreamHandling::STREAM_STABILIZE;
@@ -54,10 +54,11 @@ void FFmpegFormatWriter::open() {
             } else {
                 throw AVException(std::format("cannot write codec '{}' to output", avcodec_get_name(inStream->codecpar->codec_id)));
             }
-
+            
         } else {
-            codecSupported = false; //force transcode for debugging <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-            if (codecSupported) {
+            int codecSupported = avformat_query_codec(fmt_ctx->oformat, inStream->codecpar->codec_id, FF_COMPLIANCE_STRICT);
+            //codecSupported = false; //force transcode for debugging <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+            if (codecSupported == 1) {
                 sc.outputStream = newStream(fmt_ctx, inStream);
                 sc.handling = StreamHandling::STREAM_COPY;
 
@@ -90,7 +91,8 @@ void FFmpegFormatWriter::open() {
                 sc.audioInCtx->time_base = inStream->time_base;
 
                 //open writer
-                AVCodecID id = inStream->codecpar->codec_id;
+                //AVCodecID id = inStream->codecpar->codec_id;
+                AVCodecID id = fmt_ctx->oformat->audio_codec; //default codec for output format
                 sc.audioOutCodec = avcodec_find_encoder(id);
                 if (!sc.audioOutCodec)
                     throw AVException(std::format("cannot find audio encoder for '{}'", avcodec_get_name(id)));
@@ -100,9 +102,9 @@ void FFmpegFormatWriter::open() {
                 retval = av_channel_layout_copy(&sc.audioOutCtx->ch_layout, &sc.audioInCtx->ch_layout);
                 if (retval < 0)
                     throw AVException("cannot copy audio channel layout");
-                sc.audioOutCtx->sample_rate = sc.audioInCtx->sample_rate;
-                sc.audioOutCtx->sample_fmt = sc.audioInCtx->sample_fmt;
-                sc.audioOutCtx->bit_rate = sc.audioInCtx->bit_rate;
+                sc.audioOutCtx->sample_rate = sc.audioInCtx->sample_rate; //sample rate conversion does not work!
+                sc.audioOutCtx->sample_fmt = sc.audioOutCodec->sample_fmts[0];
+                sc.audioOutCtx->bit_rate = 48000LL * sc.audioOutCtx->ch_layout.nb_channels;
 
                 if (fmt_ctx->oformat->flags & AVFMT_GLOBALHEADER)
                     sc.audioOutCtx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
@@ -111,21 +113,8 @@ void FFmpegFormatWriter::open() {
                 if (retval < 0)
                     throw AVException("cannot open audio encoder");
 
-                //init resampler
-                retval = swr_alloc_set_opts2(&sc.resampleCtx, 
-                    &sc.audioOutCtx->ch_layout, sc.audioOutCtx->sample_fmt, sc.audioOutCtx->sample_rate,
-                    &sc.audioInCtx->ch_layout, sc.audioInCtx->sample_fmt, sc.audioInCtx->sample_rate, 
-                    0, NULL);
-                if (retval < 0)
-                    throw AVException("cannot set resampler options");
-                retval = swr_init(sc.resampleCtx);
-                if (retval < 0)
-                    throw AVException(av_make_error(retval, "cannot init audio resampler"));
-
-                //av_samples_alloc_array_and_samples
-
                 //stream timebase
-                sc.outputStream->time_base.den = sc.audioInCtx->sample_rate;
+                sc.outputStream->time_base.den = sc.audioOutCtx->sample_rate;
                 sc.outputStream->time_base.num = 1;
 
                 retval = avcodec_parameters_from_context(sc.outputStream->codecpar, sc.audioOutCtx);
@@ -135,12 +124,42 @@ void FFmpegFormatWriter::open() {
                 //allocate packet
                 sc.outpkt = av_packet_alloc();
                 if (!sc.outpkt)
-                    errorLogger.logError("cannot allocate audio packet");
+                    throw AVException("cannot allocate audio packet");
 
-                //allocate frame
-                sc.frame = av_frame_alloc();
-                if (!sc.frame)
-                    errorLogger.logError("cannot allocate audio frame");
+                //allocate input frame
+                sc.frameIn = av_frame_alloc();
+                if (!sc.frameIn)
+                    throw AVException("cannot allocate audio input frame");
+
+                //allocate output frame
+                sc.frameOut = av_frame_alloc();
+                if (!sc.frameOut)
+                    throw AVException("cannot allocate audio output frame");
+                retval = av_channel_layout_copy(&sc.frameOut->ch_layout, &sc.audioOutCtx->ch_layout);
+                if (retval < 0)
+                    throw AVException("cannot copy channel layout");
+                sc.frameOut->format = sc.audioOutCtx->sample_fmt;
+                sc.frameOut->nb_samples = sc.audioOutCtx->frame_size;
+                retval = av_frame_get_buffer(sc.frameOut, 0);
+                if (retval < 0)
+                    throw AVException(av_make_error(retval, "cannot allocate audio frame buffers"));
+
+                //resampler
+                retval = swr_alloc_set_opts2(&sc.resampleCtx, 
+                    &sc.audioOutCtx->ch_layout, sc.audioOutCtx->sample_fmt, sc.audioOutCtx->sample_rate,
+                    &sc.audioInCtx->ch_layout, sc.audioInCtx->sample_fmt, sc.audioInCtx->sample_rate, 
+                    0, NULL);
+                if (retval < 0)
+                    throw AVException("cannot set audio resampler options");
+                retval = swr_init(sc.resampleCtx);
+                if (retval < 0)
+                    throw AVException(av_make_error(retval, "cannot init audio resampler"));
+
+                //sample buffer
+                int n = std::max(sc.audioInCtx->frame_size, sc.audioOutCtx->frame_size) * 2;
+                sc.fifo = av_audio_fifo_alloc(sc.audioOutCtx->sample_fmt, sc.audioOutCtx->ch_layout.nb_channels, n);
+                if (!sc.fifo)
+                    throw AVException("cannot allocate fifo");
 
             } else {
                 sc.handling = StreamHandling::STREAM_IGNORE;
@@ -175,11 +194,17 @@ FFmpegFormatWriter::~FFmpegFormatWriter() {
         if (sc.outpkt) {
             av_packet_free(&sc.outpkt);
         }
-        if (sc.frame) {
-            av_frame_free(&sc.frame);
+        if (sc.frameIn) {
+            av_frame_free(&sc.frameIn);
+        }
+        if (sc.frameOut) {
+            av_frame_free(&sc.frameOut);
         }
         if (sc.resampleCtx) {
             swr_free(&sc.resampleCtx);
+        }
+        if (sc.fifo) {
+            av_audio_fifo_free(sc.fifo);
         }
     }
 
@@ -210,7 +235,7 @@ int FFmpegFormatWriter::writePacket(AVPacket* packet) {
 void FFmpegFormatWriter::rescaleAudioPacket(StreamContext& sc, AVPacket* pkt) {
     AVRational& tbin = sc.inputStream->time_base;
     AVRational& tbout = sc.outputStream->time_base;
-    pkt->pts = av_rescale_delta(tbin, pkt->pts - sc.inputStream->start_time, tbin, (int) pkt->duration, &sc.lastPts, tbout);
+    pkt->pts = av_rescale_delta(tbin, pkt->pts, tbin, (int) pkt->duration, &sc.lastPts, tbout);
     pkt->dts = pkt->pts;
     pkt->duration = 0;
 }
@@ -222,88 +247,132 @@ void FFmpegFormatWriter::transcodeAudio(AVPacket* pkt, StreamContext& sc, bool t
 
     retval = avcodec_send_packet(sc.audioInCtx, pkt);
     if (retval == AVERROR_EOF) {
-        //input packet was nullptr at least for the second time
+        //input packet was nullptr at least for the second time, ignore
 
     } else if (retval < 0) {
-        errorLogger.logError("cannot send audio packet to decoder");
+        ffmpeg_log_error(retval, "cannot send audio packet to decoder");
         return;
     }
 
-    //get frames from decoder
-    while (true) {
-        //receive frame from decoder
-        AVFrame* frameToEncode = sc.frame;
-        retval = avcodec_receive_frame(sc.audioInCtx, sc.frame);
-        if (retval == AVERROR(EAGAIN)) {
-            break;
+    bool doLoop = true;
+    while (doLoop) {
+        bool eof = false;
 
-        } else if (retval == AVERROR_EOF) {
-            frameToEncode = nullptr; //end of input, signal termination to encoder;
+        //decode and convert and store in buffer
+        while (av_audio_fifo_size(sc.fifo) < sc.audioOutCtx->frame_size) {
+            retval = avcodec_receive_frame(sc.audioInCtx, sc.frameIn);
+            if (retval == AVERROR(EAGAIN)) {
+                doLoop = false; //decoder needs more packets
+                break;
 
-        } else if (retval < 0) {
-            errorLogger.logError(av_make_error(retval, "error decoding audio packet"));
-            break;
+            } else if (retval == AVERROR_EOF) {
+                eof = true;
+                break;
 
-        } else {
-            //we retrieved a frame, now resample it
-            //static std::ofstream outfile("f:/audio.raw", std::ios::binary);
-            //outfile.write(reinterpret_cast<char*>(frameToEncode->data[0]), frameToEncode->linesize[0] / frameToEncode->ch_layout.nb_channels);
-        }
+            } else {
+                //static std::ofstream outfile("f:/audio.raw", std::ios::binary);
+                //outfile.write(reinterpret_cast<char*>(sc.frameIn->data[0]), sc.frameIn->linesize[0] / sc.frameIn->ch_layout.nb_channels);
+                int sampleCount = swr_get_out_samples(sc.resampleCtx, sc.frameIn->nb_samples);
+                uint8_t** samplesArray;
+                int linesize;
+                int ch = sc.audioOutCtx->ch_layout.nb_channels;
+                int bufsiz = av_samples_alloc_array_and_samples(&samplesArray, &linesize, ch, sampleCount, sc.audioOutCtx->sample_fmt, 0);
+                if (bufsiz < 0)
+                    ffmpeg_log_error(retval, "cannot allocate samples");
 
-        //send frame to encoder
-        retval = avcodec_send_frame(sc.audioOutCtx, frameToEncode);
-        if (retval == AVERROR_EOF) {
-            //flush signal was sent to encoder
+                const uint8_t** ptrs = (const uint8_t**) sc.frameIn->extended_data;
+                sampleCount = swr_convert(sc.resampleCtx, samplesArray, sampleCount, ptrs, sc.frameIn->nb_samples);
+                if (sampleCount < 0)
+                    ffmpeg_log_error(sampleCount, "cannot convert samples");
 
-        } else if (retval < 0) {
-            errorLogger.logError(av_make_error(retval, "cannot send audio frame to encoder"));
-            break;
-        }
+                retval = av_audio_fifo_realloc(sc.fifo, av_audio_fifo_size(sc.fifo) + sampleCount);
+                if (retval < 0)
+                    ffmpeg_log_error(retval, "cannot resize fifo");
 
-        //receive packet from encoder
-        retval = avcodec_receive_packet(sc.audioOutCtx, sc.outpkt);
-        if (retval == AVERROR(EAGAIN)) {
-            continue; //see if decoder has any more frames available
+                retval = av_audio_fifo_write(sc.fifo, (void**) samplesArray, sampleCount);
+                if (retval != sampleCount)
+                    ffmpeg_log_error(retval, "cannot write to fifo");
 
-        } else if (retval == AVERROR_EOF) {
-            break; //really the end of the stream
+                if (samplesArray) av_freep(samplesArray);
+                av_freep(&samplesArray);
+            }
+        } //decoder loop
 
-        } else if (retval < 0) {
-            errorLogger.logError(av_make_error(retval, "error encoding audio packet"));
-            break;
+        //encode from buffer
+        while (av_audio_fifo_size(sc.fifo) >= sc.audioOutCtx->frame_size || eof) {
+            void** ptrs = (void**) sc.frameOut->extended_data;
+            int sampleCount = av_audio_fifo_read(sc.fifo, ptrs, sc.audioOutCtx->frame_size);
+            AVFrame* frame = nullptr;
 
-        } else {
-            //write packet to output
-            rescaleAudioPacket(sc, sc.outpkt);
-            sc.outpkt->stream_index = sc.outputStream->index;
-            writePacket(sc.outpkt);
-        }
-    }
+            if (sampleCount < 0) {
+                ffmpeg_log_error(retval, "cannot read from fifo");
+
+            } else if (sampleCount > 0) {
+                sc.frameOut->pts = sc.pts;
+                sc.frameOut->pkt_dts = sc.pts;
+                sc.frameOut->duration = 0;
+                sc.pts += sampleCount;
+                frame = sc.frameOut;
+            }
+
+            retval = avcodec_send_frame(sc.audioOutCtx, frame); //send flush signal when no more samples to encode
+            if (retval == AVERROR_EOF) {
+                //flush signal was sent at least for the second time, ignore here
+
+            } else if (retval < 0) {
+                ffmpeg_log_error(retval, "cannot send audio frame to encoder");
+            }
+
+            retval = avcodec_receive_packet(sc.audioOutCtx, sc.outpkt);
+            if (retval == AVERROR(EAGAIN)) {
+                break;
+
+            } else if (retval == AVERROR_EOF) {
+                doLoop = false; //nothing more to do
+                break;
+
+            } else if (retval < 0) {
+                ffmpeg_log_error(retval, "cannot receive audio packet from encodeer");
+
+            } else {
+				//write packet to output
+				sc.outpkt->stream_index = sc.outputStream->index;
+				writePacket(sc.outpkt);
+            }
+        } //encoder loop
+    } //doLoop
 }
 
 //write packets to output
 void FFmpegFormatWriter::writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsIdx, bool terminate) {
     AVStream* videoInputStream = mData.inputCtx.videoStream;
+    
+    /*
+    overall plan:
+    lookup pts value from input for this frame index to use for output frame
+    then offset such that output will start at pts=0
+    then rescale from input stream to potentially different output timescale
+    */
 
-    // look up pts value for this frame in input, can be weird
-    // sometimes frames are not in pts order in input - what to do then? see MovieReader
-    // 
-    // overall plan:
-    // lookup pts from input to use for this output frame
-    // then offset such that output will start at pts=0
-    // then rescale to potentially different output timescale
+    //STEP 1: looking at input stream
+    //set pts and dts with respect to input timebase
     auto compareFunc = [&] (const VideoPacketContext& ctx) { return ctx.readIndex == ptsIdx; }; //sometimes wrong, check for increasing pts values
     auto vpc = std::find_if(mStatus.packetList.cbegin(), mStatus.packetList.cend(), compareFunc);
-    mStatus.encodedFrame = *vpc; //store for later analysis
+    mStatus.encodedFrame = *vpc; //store for debugging
 
-    //set pts and dts with respect to input timebase
-    uint64_t pts = vpc->pts - videoInputStream->start_time;
-    pkt->dts = pts - av_rescale_q(ptsIdx - dtsIdx, videoInputStream->avg_frame_rate, videoInputStream->time_base);
+    int64_t pts = vpc->pts - videoInputStream->start_time;
+    //offset pts to always start at 0
     pkt->pts = pts;
+    //calculate dts with offset to pts coming from current encoder
+    AVRational r1 = { videoInputStream->avg_frame_rate.den, videoInputStream->avg_frame_rate.num };
+    AVRational r2 = videoInputStream->time_base;
+    pkt->dts = pts - av_rescale_q(ptsIdx - dtsIdx, r1, r2);
+    //copy duration from input
     pkt->duration = vpc->duration;
     //std::printf("pktpts=%zd pktdts=%zd dur=%zd\n", pkt->pts, pkt->dts, pkt->duration);
 
-    //rescale input timebase to output timebase
+    //STEP 2: convert to output timebase
+    //rescale packet from input timebase to output timebase
     av_packet_rescale_ts(pkt, videoInputStream->time_base, videoStream->time_base);
 
     //process secondary streams

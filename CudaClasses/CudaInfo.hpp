@@ -10,6 +10,7 @@ enum class OutputCodec {
 	AUTO,
 	H264,
 	H265,
+	JPEG,
 };
 
 //info about cuda devices

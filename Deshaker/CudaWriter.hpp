@@ -25,7 +25,7 @@ public:
 	CudaFFmpegWriter(MainData& data) : FFmpegFormatWriter(data), nvenc { NvEncoder(data.w, data.h) } {}
 	virtual ~CudaFFmpegWriter() override;
 
-	void open() override;
+	void open(OutputCodec videoCodec) override;
 	OutputContext getOutputData() override;
 	void write() override;
 	bool terminate(bool init) override;

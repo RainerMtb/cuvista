@@ -48,8 +48,8 @@ void BmpImageWriter::write() {
 // JPG Images through ffmpeg
 //-----------------------------------------------------------------------------------
 
-void JpegImageWriter::open() {
-	const AVCodec* codec = avcodec_find_encoder(AV_CODEC_ID_MJPEG);
+void JpegImageWriter::open(OutputCodec videoCodec) {
+	const AVCodec* codec = avcodec_find_encoder(codecMap[videoCodec]);
 	ctx = avcodec_alloc_context3(codec);
 	ctx->width = mData.w;
 	ctx->height = mData.h;

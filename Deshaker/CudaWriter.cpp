@@ -1,20 +1,20 @@
 #include "CudaWriter.hpp"
 
 //cuda encoding contructor
-void CudaFFmpegWriter::open() {
+void CudaFFmpegWriter::open(OutputCodec videoCodec) {
     int result;
-
-    //init format
-    FFmpegFormatWriter::open();
 
     //check device
     int deviceIndex = mData.deviceNum == -1 ? mData.deviceNumBest : mData.deviceNum;
     if (deviceIndex == -1)
         throw AVException("no gpu device present for encoding");
 
-    //select first codec from list
-    OutputCodec codec = mData.videoCodec == OutputCodec::AUTO ? mData.cuda.supportedCodecs[deviceIndex][0] : mData.videoCodec;
+    //select codec
+    OutputCodec codec = videoCodec == OutputCodec::AUTO ? mData.cuda.supportedCodecs[deviceIndex][0] : videoCodec;
     GUID guid = guidMap[codec];
+
+    //open ffmpeg output format
+    FFmpegFormatWriter::open(codec);
 
     //setup nvenc class
     nvenc.createEncoder(mData.inputCtx.fpsNum, mData.inputCtx.fpsDen, GOP_SIZE, mData.crf, guid, mData.deviceNumBest);

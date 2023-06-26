@@ -30,6 +30,13 @@ public:
 	ImageYuv outputFrame; //frame to write in YUV444 format
 
 protected:
+	std::map<OutputCodec, AVCodecID> codecMap = {
+	{ OutputCodec::H264, AV_CODEC_ID_H264 },
+	{ OutputCodec::H265, AV_CODEC_ID_HEVC },
+	{ OutputCodec::JPEG, AV_CODEC_ID_MJPEG },
+	{ OutputCodec::AUTO, AV_CODEC_ID_H264 },
+	};
+
 	Stats& mStatus;
 	const MainData& mData; //central metadata structure
 
@@ -43,7 +50,7 @@ public:
 	virtual ~MovieWriter() = default;
 	virtual OutputContext getOutputData();
 	virtual void write() {}
-	virtual void open() {}
+	virtual void open(OutputCodec videoCodec) {}
 	virtual bool terminate(bool init = false) { return false; }
 };
 
@@ -90,7 +97,7 @@ private:
 public:
 	JpegImageWriter(MainData& data) : ImageWriter(data) {}
 	~JpegImageWriter() override;
-	void open() override;
+	void open(OutputCodec videoCodec) override;
 	void write() override;
 };
 
@@ -118,7 +125,7 @@ class PipeWriter : public RawWriter {
 public:
 	PipeWriter(MainData& data) : RawWriter(data) {}
 	~PipeWriter() override;
-	void open() override;
+	void open(OutputCodec videoCodec) override;
 	void write() override;
 };
 
@@ -141,7 +148,7 @@ protected:
 public:
 	TCPWriter(MainData& data);
 	~TCPWriter() override;
-	void open() override;
+	void open(OutputCodec videoCodec) override;
 	void write() override;
 };
 
@@ -159,10 +166,11 @@ protected:
 
 	FFmpegFormatWriter(MainData& data) : MovieWriter(data) {}
 	~FFmpegFormatWriter() override;
-	void open() override;
+	void open(OutputCodec videoCodec) override;
 	int writePacket(AVPacket* packet);
 	void writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsIdx, bool terminate);
 	void transcodeAudio(AVPacket* pkt, StreamContext& sc, bool terminate);
+	//void encodeAudioFrame(StreamContext& sc, AVFrame* frame);
 
 private:
 	AVStream* newStream(AVFormatContext* fmt_ctx, AVStream* inStream);
@@ -173,12 +181,6 @@ private:
 class FFmpegWriter : public FFmpegFormatWriter {
 
 private:
-	std::map<OutputCodec, AVCodecID> codecMap = {
-		{ OutputCodec::H264, AV_CODEC_ID_H264 },
-		{ OutputCodec::H265, AV_CODEC_ID_HEVC },
-		{ OutputCodec::AUTO, AV_CODEC_ID_H264 },
-	};
-
 	AVPixelFormat pixfmt = AV_PIX_FMT_YUV420P;
 	AVCodecContext* codec_ctx = nullptr;
 	AVFrame* frame = nullptr;
@@ -190,7 +192,7 @@ private:
 public:
 	FFmpegWriter(MainData& data) : FFmpegFormatWriter(data) {}
 	~FFmpegWriter() override;
-	void open() override;
+	void open(OutputCodec videoCodec) override;
 	void write() override;
 	bool terminate(bool init) override;
 };

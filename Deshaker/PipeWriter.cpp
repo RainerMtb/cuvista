@@ -20,7 +20,7 @@
 #include <io.h>
 #include <fcntl.h>
 
-void PipeWriter::open() {
+void PipeWriter::open(OutputCodec videoCodec) {
 	//set stdout to binary mode
 	int result = _setmode(_fileno(stdout), _O_BINARY);
 	if (result < 0)

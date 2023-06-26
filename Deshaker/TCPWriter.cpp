@@ -33,7 +33,7 @@ TCPWriter::TCPWriter(MainData& data) : RawWriter(data) {
 	sockets = std::make_unique<Sockets>();
 }
 
-void TCPWriter::open() {
+void TCPWriter::open(OutputCodec videoCodec) {
 	WSADATA wsaData {};
 	int retval = WSAStartup(MAKEWORD(2, 2), &wsaData);
 	if (retval < 0)

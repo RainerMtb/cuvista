@@ -47,7 +47,7 @@ void StabilizerThread::run() {
                 writer = std::make_unique<FFmpegWriter>(mData);
         }
 
-        writer->open();
+        writer->open(mData.videoCodec);
         MovieFrame::DeshakerLoopCombined loop;
         ProgressDisplayGui progress(mData, this, frame.get());
         loop.run(*frame, progress, mReader, *writer, inputHandler);
