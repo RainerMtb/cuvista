@@ -36,4 +36,9 @@
       <UniqueIdentifier>{7c61acbe-c22e-4b03-9c6b-b8508cf76a31}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="CudaInfo.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
+  </ItemGroup>
 </Project>

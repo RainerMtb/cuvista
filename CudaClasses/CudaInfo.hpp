@@ -33,4 +33,5 @@ struct CudaInfo {
 	std::string nvidiaDriver() const;
 	std::string cudaRuntime() const;
 	std::string cudaDriver() const;
+	bool isSupported(int device, OutputCodec codec) const;
 };

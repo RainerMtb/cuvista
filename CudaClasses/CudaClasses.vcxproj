@@ -134,6 +134,9 @@
     <ClInclude Include="cuDecompose.cuh" />
     <ClInclude Include="cuDeshaker.cuh" />
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="CudaInfo.cpp" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
     <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 12.1.targets" />

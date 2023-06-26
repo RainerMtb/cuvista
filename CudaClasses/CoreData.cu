@@ -50,15 +50,3 @@ __host__ std::ostream& operator << (std::ostream& out, const PointResult& res) {
 	out << "ix0=" << res.ix0 << ", iy0=" << res.iy0 << ", u=" << res.u << ", v=" << res.v;
 	return out;
 }
-
-std::string CudaInfo::nvidiaDriver() const {
-	return std::to_string(nvidiaDriverVersion / 100) + "." + std::to_string(nvidiaDriverVersion % 100);
-}
-
-std::string CudaInfo::cudaRuntime() const {
-	return std::to_string(cudaRuntimeVersion / 1000) + "." + std::to_string(cudaRuntimeVersion % 1000 / 10);
-}
-
-std::string CudaInfo::cudaDriver() const {
-	return std::to_string(cudaDriverVersion / 1000) + "." + std::to_string(cudaDriverVersion % 1000 / 10);
-}

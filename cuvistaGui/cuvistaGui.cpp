@@ -47,8 +47,10 @@ cuvistaGui::cuvistaGui(QWidget *parent) : QMainWindow(parent) {
 
     //combo box for encoding settings
     encoderSettings.emplace_back("AUTO", EncodingDevice::AUTO, OutputCodec::AUTO);
-    if (mData.cuda.deviceCount > 0) {
+    if (mData.cuda.deviceCount > 0 && mData.cuda.isSupported(0, OutputCodec::H265)) {
         encoderSettings.emplace_back("GPU - H265", EncodingDevice::GPU, OutputCodec::H265);
+    }
+    if (mData.cuda.deviceCount > 0 && mData.cuda.isSupported(0, OutputCodec::H264)) {
         encoderSettings.emplace_back("GPU - H264", EncodingDevice::GPU, OutputCodec::H264);
     }
     encoderSettings.emplace_back("CPU - H265", EncodingDevice::CPU, OutputCodec::H265);
