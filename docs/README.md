@@ -1,13 +1,12 @@
-# CUVISTA - Cuda Video Stabilizer
 A small and simple Application to stabilize shaky video footage using the Cuda platform when available.
 
-There is the option to only use CPU power to do the all the stabilizing computations, which will be significantly slower but produces the exact same outcome
+There also is the option to use CPU power only in order to do the all the stabilizing computations, which will be significantly slower but produces the exact same outcome.
 
-Have a look at some [sample video footage](https://youtu.be/kD84VqBurZc)
+Have a look at some [sample video footage](https://youtu.be/kD84VqBurZc) that shows original and stabilized video side by side for comparison
 
-## Getting started
+## Just using it
 Get the latest version from the [Releases](https://github.com/RainerMtb/cuvista/releases) page, download, unzip and run either ```cuvista.exe``` on the command line or ```cuvistaGui.exe``` for a windowed user interface
-## Building
+## Building the application yourself
 To work on the code yourself and build the application, get the source code and start by opening ```Deshaker.sln```. Use ```Build Solution``` to get everything compiled and built
 
 The following resources are used
