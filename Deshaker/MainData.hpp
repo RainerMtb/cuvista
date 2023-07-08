@@ -26,7 +26,7 @@
 #include "RandomSource.hpp"
 #include "cuDeshaker.cuh"
 
-inline std::string CUVISTA_VERSION = "0.9";
+inline std::string CUVISTA_VERSION = "0.9.5";
 
 enum class DeshakerPass {
 	NONE, 

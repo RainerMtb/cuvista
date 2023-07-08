@@ -16,10 +16,11 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
+#include "Deshaker.hpp"
 #include "cuvistaGui.h"
 #include <QtWidgets/QApplication>
 
-int main(int argc, char *argv[]) {
+int main(int argc, char** argv) {
     QApplication app(argc, argv);
     cuvistaGui window;
     window.show();

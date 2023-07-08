@@ -160,6 +160,7 @@
   <ItemGroup>
     <ClCompile Include="AffineTransform.cpp" />
     <ClCompile Include="CudaWriter.cpp" />
+    <ClCompile Include="Deshaker.cpp" />
     <ClCompile Include="DeshakerLoop.cpp" />
     <ClCompile Include="Diagnostics.cpp" />
     <ClCompile Include="FFmpegFormatWriter.cpp" />
@@ -185,6 +186,7 @@
     <ClInclude Include="AffineTransform.hpp" />
     <ClInclude Include="AVException.hpp" />
     <ClInclude Include="CudaWriter.hpp" />
+    <ClInclude Include="Deshaker.hpp" />
     <ClInclude Include="Diagnostics.hpp" />
     <ClInclude Include="FFmpegUtil.hpp" />
     <ClInclude Include="KeyboardInput.hpp" />

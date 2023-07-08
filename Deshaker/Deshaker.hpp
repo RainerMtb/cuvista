@@ -16,8 +16,6 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
-#include "Deshaker.hpp"
+#pragma once
 
-int main(int argsCount, char** args) {
-	return deshake(argsCount - 1, args + 1);
-}
+int deshake(int argsCount, char** args);

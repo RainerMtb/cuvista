@@ -89,6 +89,9 @@
     <ClCompile Include="KeyboardInput.cpp">
       <Filter>Windows</Filter>
     </ClCompile>
+    <ClCompile Include="Deshaker.cpp">
+      <Filter>Main</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MovieReader.hpp">
@@ -159,6 +162,9 @@
     </ClInclude>
     <ClInclude Include="NvidiaDriver.hpp">
       <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="Deshaker.hpp">
+      <Filter>Main</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

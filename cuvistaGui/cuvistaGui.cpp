@@ -114,10 +114,19 @@ cuvistaGui::cuvistaGui(QWidget *parent) : QMainWindow(parent) {
     //set window to minimal size
     resize(minimumSize());
 
-    //load file from command line argument
-    QStringList lst = QCoreApplication::arguments();
-    if (lst.size() > 1) {
-        setInputFile(lst.at(1));
+    //load files from command line argument
+    //preset input file
+    QStringList cmdArgs = QCoreApplication::arguments();
+    if (cmdArgs.size() > 1) {
+        QString inputFile = cmdArgs.at(1);
+        if (QFileInfo(inputFile).exists()) {
+            setInputFile(inputFile);
+        }
+    }
+    //preset output file
+    if (cmdArgs.size() > 2) {
+        mOutputDir = cmdArgs.at(2);
+        mOutputFilterSelected = "All Files (*.*)";
     }
 
     //label to show file link in status bar upon success
