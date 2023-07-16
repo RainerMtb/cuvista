@@ -21,7 +21,8 @@
         <div id="banner">
             <a id="download" 
                 href="https://github.com/RainerMtb/cuvista/releases/download/v0.9.5/cuvista-0.9.5.zip">
-                <strong>Download Latest Version</strong>
+                <span><strong>Download Latest Version</strong></span>
+                <span><img id="dlsymb" src="images/download-solid.svg"></span>
             </a>
             <img id="logo" src="images/favicon.ico">
         </div>
@@ -68,26 +69,27 @@
             </ul>
 
             <h2>Screenshots</h2>
-            <section class="screenshots">
+            <div class="screenshots">
                 <a href="images/screenshot_01.jpg"><img src="images/screenshot_01.jpg" alt="Screenshot 1"></a>
                 <a href="images/screenshot_02.jpg"><img src="images/screenshot_02.jpg" alt="Screenshot 2"></a>
-            </section>
+            </div>
 
             <h2>Options</h2>
             Some settings allow to change the process and outcome
             <ul>
-                <li>Overwrite: When checked, no confirmation dialog is displayed when overwriting an existing output file</li>
-                <li>Device: Select the device to do the heavy computing. Prefer a cuda capable device</li>
-                <li>Encoding: Select the device to do the video encoding. Can be different from the stabilization device</li>
-                <li>Temporal Radius: How many frames before and after shall be considered to smooth movements. 
+                <li><strong>Overwrite:</strong> When checked, 
+                    no confirmation dialog is displayed when overwriting an existing output file</li>
+                <li><strong>Device:</strong> Select the device to do the heavy computing. Prefer a cuda capable device</li>
+                <li><strong>Encoding:</strong> Select the device to do the video encoding. Can be different from the stabilization device</li>
+                <li><strong>Temporal Radius:</strong> How many frames before and after shall be considered to smooth movements. 
                     Higher value will generally provide smoother output</li>
-                <li>Zoom: Stabilization moves frames around, which reaveals the void at least on one side of the frame. 
+                <li><strong>Zoom:</strong> Stabilization moves frames around, which reaveals the void at least on one side of the frame. 
                     Zooming into the video by some amount will hide this moving effect</li>
-                <li>Background: Fill the void in the background either with a fixed color or preceding frames</li>
-                <li>Blend: Overlay part of the original video to display the stabilization result</li>
+                <li><strong>Background:</strong> Fill the void in the background either with a fixed color or preceding frames</li>
+                <li><strong>Blend:</strong> Overlay part of the original video to display the stabilization result</li>
             </ul>
-            Pro Tip: Set zoom to 0.9 and background to some fixed color to reveal how the frames are moved around to compensate
-            for the shakyness in the recording
+            If you want to see how exactly each frame is moved around to compensate for the shakyness in the recording, set zoom to 0.9 and 
+            background to some fixed color
 
             <h2>Command Line Version</h2>
             <p>There also is a command line version availabe which provides more advances options</p>
