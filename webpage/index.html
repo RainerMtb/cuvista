@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="keywords" content="video, stabilization, stabilize">
+    <title>CUVISTA - Cuda Video Stabilizer</title>
+    <link rel="shortcut icon" type="image/x-icon" href="images/favicon.ico">
+    <link rel="stylesheet" href="style.css">
+
+    <meta property="og:title" content="CUVISTA - Cuda Video Stabilizer"/>
+    <meta property="og:locale" content="en_US"/>
+</head>
+<body>
+    <div id="wrapper">
+        <header id="top">
+            <h1>CUVISTA - Cuda Video Stabilizer</h1>
+            <p>Stabilize shaky video on your PC quick and easy</p>
+        </header>
+        <div id="banner">
+            <a id="download" 
+                href="https://github.com/RainerMtb/cuvista/releases/download/v0.9.5/cuvista-0.9.5.zip">
+                <strong>Download Latest Version</strong>
+            </a>
+            <img id="logo" src="images/favicon.ico">
+        </div>
+
+        <div id="main">
+            <h1>Introduction</h1>
+            <p>
+                <span class="cuvista">Cuvista</span> stabilizes shaky video footage on your PC. Open a video file, 
+                save to a new filename, and watch the software do its job. Contrary to other software by default only one single pass over the input is made to analyse and 
+                generate the output.
+            </p>
+            <p>
+                The software will make use of the cuda platform present on Nvidia grahics cards if such a suitable device 
+                is detected, greatly accelerating the process in that way. No special driver or software is needed 
+                to make use of cuda capabilites.
+                Without a cuda device stabilization will still run on CPU power alone, which will provide the same result, 
+                although at a significantly lower speed.
+            </p>
+
+            <h2>Sample Footage</h2>
+            <p>
+                The following video shows side by side the original recording and the stabilized version 
+                using <span class="cuvista">Cuvista</span>
+            </p>
+            <div class="yt-div" >
+                <iframe class="yt-frame" 
+                    src="https://www.youtube.com/embed/kD84VqBurZc" 
+                    title="YouTube video player" 
+                    frameborder="0" 
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                    allowfullscreen>
+                </iframe>
+            </div>
+
+            <h2>Get Started</h2>
+            Get yourself the latest version of <span class="cuvista">Cuvista</span> and stabilize 
+            your videos by following the steps
+            <ul>
+                <li>Click the link at the <a href=#top>top of this page</a> to download the latest version</li>
+                <li>Unzip the downloaded file to any folder on your PC</li>
+                <li>Doubleclick <span class="cuvista">cuvistaGui.exe</span> in the folder you created</li>
+                <li>Open any video file by clicking the camera button</li>
+                <li>Click Stabilize to process and save the new video</li>
+            </ul>
+
+            <h2>Screenshots</h2>
+            <section class="screenshots">
+                <a href="images/screenshot_01.jpg"><img src="images/screenshot_01.jpg" alt="Screenshot 1"></a>
+                <a href="images/screenshot_02.jpg"><img src="images/screenshot_02.jpg" alt="Screenshot 2"></a>
+            </section>
+
+            <h2>Options</h2>
+            Some settings allow to change the process and outcome
+            <ul>
+                <li>Overwrite: When checked, no confirmation dialog is displayed when overwriting an existing output file</li>
+                <li>Device: Select the device to do the heavy computing. Prefer a cuda capable device</li>
+                <li>Encoding: Select the device to do the video encoding. Can be different from the stabilization device</li>
+                <li>Temporal Radius: How many frames before and after shall be considered to smooth movements. 
+                    Higher value will generally provide smoother output</li>
+                <li>Zoom: Stabilization moves frames around, which reaveals the void at least on one side of the frame. 
+                    Zooming into the video by some amount will hide this moving effect</li>
+                <li>Background: Fill the void in the background either with a fixed color or preceding frames</li>
+                <li>Blend: Overlay part of the original video to display the stabilization result</li>
+            </ul>
+            Pro Tip: Set zoom to 0.9 and background to some fixed color to reveal how the frames are moved around to compensate
+            for the shakyness in the recording
+
+            <h2>Command Line Version</h2>
+            <p>There also is a command line version availabe which provides more advances options</p>
+            <p>Open a command prompt, go to the folder containing the unzipped application files
+                and use the syntax <span class="cuvista">cuvista.exe -i infile -o outfile</span></p>
+            <p>Provide the option <span class="cuvista">-h</span> to get additional help</p>
+
+            <h2>GitHub</h2>
+            This project is hosted on GitHub, if you want to get the sources and build your own application
+            refer to the <a href="https://github.com/RainerMtb/cuvista">Cuvista GitHub Page</a>
+        </div>
+    </div>
+
+    <footer>
+        This GitHub project is maintained by <a href="https://github.com/RainerMtb">RainerMtb</a>
+        <br>
+        Theme for this page inspired by GitHub Pages Theme <a href="https://github.com/pages-themes/leap-day">Leap Day</a>
+        <br>
+        Return to <a href=#top>top of page</a>
+    </footer>
+</body>
+</html>

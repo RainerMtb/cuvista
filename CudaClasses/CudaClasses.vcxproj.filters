@@ -30,6 +30,7 @@
     <ClInclude Include="CudaInfo.hpp">
       <Filter>Util</Filter>
     </ClInclude>
+    <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Util">
@@ -40,5 +41,8 @@
     <ClCompile Include="CudaInfo.cpp">
       <Filter>Util</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="CudaClasses.rc" />
   </ItemGroup>
 </Project>

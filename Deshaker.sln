@@ -45,12 +45,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TestConsole", "TestConsole\
 		{C208270A-4A84-4159-B202-30E02C893A45} = {C208270A-4A84-4159-B202-30E02C893A45}
 	EndProjectSection
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{D0476181-5786-4335-8A38-42A8948EAE4F}"
-	ProjectSection(SolutionItems) = preProject
-		docs\README.md = docs\README.md
-		docs\_config.yml = docs\_config.yml
-	EndProjectSection
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
