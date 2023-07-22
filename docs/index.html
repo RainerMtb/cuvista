@@ -8,26 +8,31 @@
     <title>CUVISTA - Cuda Video Stabilizer</title>
     <link rel="shortcut icon" type="image/x-icon" href="images/favicon.ico">
     <link rel="stylesheet" href="style.css">
+    <script src="script.js"></script>
 
     <meta property="og:title" content="CUVISTA - Cuda Video Stabilizer"/>
     <meta property="og:locale" content="en_US"/>
+
+    <meta name="google-site-verification" content="hLB3LpUyRKBPBzCZ1fEMaujIDOfW05AigtVBAwT24hg" />
 </head>
+
 <body>
     <div id="wrapper">
-        <header id="top">
-            <h1>CUVISTA - Cuda Video Stabilizer</h1>
-            <p>Stabilize shaky video on your PC quick and easy</p>
+        <header>
+            <div class="main_margin">
+                <h1>CUVISTA - Cuda Video Stabilizer</h1>
+                <p>Stabilize shaky video on your PC quick and easy</p>
+                <div id="banner">
+                    <a id="download" href="https://github.com/RainerMtb/cuvista/releases/download/v0.9.5/cuvista-0.9.5.zip">
+                        <span><strong>Download Latest Version</strong></span>
+                        <span><img id="dlsymb" src="images/download-solid.svg"></span>
+                    </a>
+                    <img id="logo" src="images/favicon.ico">
+                </div>
+            </div>
         </header>
-        <div id="banner">
-            <a id="download" 
-                href="https://github.com/RainerMtb/cuvista/releases/download/v0.9.5/cuvista-0.9.5.zip">
-                <span><strong>Download Latest Version</strong></span>
-                <span><img id="dlsymb" src="images/download-solid.svg"></span>
-            </a>
-            <img id="logo" src="images/favicon.ico">
-        </div>
 
-        <div id="main">
+        <div id="main" class="main_margin">
             <h1>Introduction</h1>
             <p>
                 <span class="cuvista">Cuvista</span> stabilizes shaky video footage on your PC. Open a video file, 
@@ -88,8 +93,8 @@
                 <li><strong>Background:</strong> Fill the void in the background either with a fixed color or preceding frames</li>
                 <li><strong>Blend:</strong> Overlay part of the original video to display the stabilization result</li>
             </ul>
-            If you want to see how exactly each frame is moved around to compensate for the shakyness in the recording, set zoom to 0.9 and 
-            background to some fixed color
+            If you want to watch how exactly each frame is moved around to compensate for the shakyness in the recording, 
+            try to set zoom to 0.9 and background to some fixed color
 
             <h2>Command Line Version</h2>
             <p>There also is a command line version availabe which provides more advances options</p>
@@ -104,9 +109,12 @@
     </div>
 
     <footer>
-        <p>This GitHub project is maintained by <a href="https://github.com/RainerMtb">RainerMtb</a></p>
-        <p>Theme for this page inspired by GitHub Pages Theme <a href="https://github.com/pages-themes/leap-day">Leap Day</a></p>
-        <p>Return to <a href=#top>top of page</a></p>
+        <div class="main_margin">
+            <p>This GitHub project is maintained by <a href="https://github.com/RainerMtb">RainerMtb</a></p>
+            <p>Theme for this page inspired by GitHub Pages Theme <a href="https://github.com/pages-themes/leap-day">Leap
+                    Day</a></p>
+            <p>Return to <a href=#top>top of page</a></p>
+        </div>
     </footer>
 </body>
 </html>
