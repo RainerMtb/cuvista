@@ -51,11 +51,10 @@ public slots:
     void showInfo();
 
 private:
-    QPixmap mPixmapError = QPixmap(QString(":/cuvistaGui/res/signs-01.png"));
-    QPixmap mPixmapWorking = QPixmap(QString(":/cuvistaGui/res/signs-02.png"));
+    QPixmap mPixmapError = QPixmap(":/cuvistaGui/res/signs-01.png");
+    QPixmap mPixmapWorking = QPixmap(":/cuvistaGui/res/signs-02.png");
 
     Ui::cuvistaGuiClass ui;
-    QString version;
     QString mMovieDir;
     QString mInputDir;
     QString mOutputDir;

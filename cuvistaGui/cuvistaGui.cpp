@@ -35,11 +35,11 @@ void setColorIcon(QPushButton* btn, QColor& color) {
 
 cuvistaGui::cuvistaGui(QWidget *parent) : QMainWindow(parent) {
     ui.setupUi(this);
-    version = QString("Version %1").arg(CUVISTA_VERSION.c_str());
     mProgressWindow = new ProgressWindow(this); //destructs when parent destructs
     mMovieDir = QStandardPaths::locate(QStandardPaths::MoviesLocation, QString(), QStandardPaths::LocateDirectory);
     mInputDir = mMovieDir;
     mOutputDir = mMovieDir;
+    QString version = QString("Version %1").arg(CUVISTA_VERSION.c_str());
     ui.labelVersion->setText(version);
 
     mData.console = &nullStream; //suppress any console output
@@ -304,7 +304,8 @@ void cuvistaGui::showInfo() {
     msgBox.setIcon(QMessageBox::Information);
     QString author = "Copyright (c) 2023 Rainer Bitschi <a href='mailto:cuvista@a1.net'>Email: cuvista@a1.net</a>";
     QString license = "License GNU GPLv3+: GNU GPL version 3 or later";
-    msgBox.setText(QString("CUVISTA - Cuda Video Stabilizer, %1<br>%2<br>%3").arg(version).arg(author).arg(license));
+    QString version = QString::fromStdString(CUVISTA_VERSION);
+    msgBox.setText(QString("CUVISTA - Cuda Video Stabilizer, Version %1<br>%2<br>%3").arg(version).arg(author).arg(license));
     msgBox.setTextFormat(Qt::RichText);
 
     std::stringstream ss;

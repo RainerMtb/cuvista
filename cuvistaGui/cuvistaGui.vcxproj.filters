@@ -40,9 +40,6 @@
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="progress.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -58,6 +55,12 @@
     <ClCompile Include="ProgressDisplayGui.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Eula.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="ImageLabel.h">
@@ -69,9 +72,15 @@
     <QtMoc Include="StabilizerThread.hpp">
       <Filter>Header Files</Filter>
     </QtMoc>
+    <QtMoc Include="Eula.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
   </ItemGroup>
   <ItemGroup>
     <QtUic Include="progress.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="eula.ui">
       <Filter>Form Files</Filter>
     </QtUic>
   </ItemGroup>

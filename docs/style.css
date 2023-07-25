@@ -96,7 +96,7 @@ header p {
     border: 1px solid #dba500;
     background: linear-gradient(#ffe788, #ffce38);
     border-radius: 3px;
-    box-shadow: inset 0px 1px 0px rgba(255,255,255,0.4),0px 1px 1px rgba(0,0,0,0.1);
+    box-shadow: inset 0px 1px 0px rgba(255,255,255,0.4), 0px 1px 1px rgba(0,0,0,0.1);
     background-color:#FFE788;
     margin-left: 10px;
     padding: 5px 12px;

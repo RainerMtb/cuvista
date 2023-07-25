@@ -16,36 +16,22 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
-#include <QApplication>
-#include <QSplashScreen>
+#pragma once
 
-#include "Deshaker.hpp"
-#include "cuvistaGui.h"
-#include "Eula.h"
+#include "ui_eula.h"
+#include <QtWidgets/QMainWindow>
 
-int main(int argc, char** argv) {
-    QApplication app(argc, argv);
+class Eula : public QMainWindow {
+    Q_OBJECT
 
-    //load splash image
-    QPixmap splashImage(":/cuvistaGui/res/splash.png");
-    QSplashScreen splash(splashImage);
-    splash.show();
-    app.processEvents();
+signals:
+    void showMainWindow();
 
-    //load main application
-    cuvistaGui cuvista;
+private:
+    Ui::EulaWindow ui;
 
-    //present Eula once per version
-    Eula eulaWindow;
-    QObject::connect(&eulaWindow, &Eula::showMainWindow, &cuvista, &cuvistaGui::show);
-    if (eulaWindow.needToShowEula()) {
-        eulaWindow.show();
-        splash.finish(&eulaWindow);
+public:
+    Eula();
 
-    } else {
-        cuvista.show();
-        splash.finish(&cuvista);
-    }
-
-    return app.exec();
-}
+    static bool needToShowEula();
+};

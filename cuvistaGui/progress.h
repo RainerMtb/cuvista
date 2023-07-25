@@ -19,7 +19,6 @@
 #pragma once
 
 #include <QtWidgets/QMainWindow>
-
 #include "ui_progress.h"
 
 class ProgressWindow : public QMainWindow {

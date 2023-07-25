@@ -33,7 +33,7 @@
     <Import Project="$(QtMsBuild)\qt_defaults.props" />
   </ImportGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'" Label="QtSettings">
-    <QtInstall>6.5.0_msvc2019_64</QtInstall>
+    <QtInstall>6.5.2_msvc2019_64</QtInstall>
     <QtModules>core;gui;widgets</QtModules>
     <QtBuildConfig>debug</QtBuildConfig>
   </PropertyGroup>
@@ -118,6 +118,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Eula.cpp" />
     <ClCompile Include="progress.cpp" />
     <ClCompile Include="ProgressDisplayGui.cpp" />
     <ClCompile Include="StabilizerThread.cpp" />
@@ -131,8 +132,14 @@
       <DynamicSource Condition="'$(Configuration)|$(Platform)'=='Release|x64'">input</DynamicSource>
       <QtMocFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(Filename).moc</QtMocFileName>
     </ClCompile>
-    <ClCompile Include="main.cpp" />
+    <ClCompile Include="main.cpp">
+      <DynamicSource Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">input</DynamicSource>
+      <QtMocFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(Filename).moc</QtMocFileName>
+      <DynamicSource Condition="'$(Configuration)|$(Platform)'=='Release|x64'">input</DynamicSource>
+      <QtMocFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(Filename).moc</QtMocFileName>
+    </ClCompile>
     <None Include="cuvistaGui.ico" />
+    <QtUic Include="eula.ui" />
     <QtUic Include="progress.ui" />
     <ResourceCompile Include="cuvistaGui.rc" />
   </ItemGroup>
@@ -143,6 +150,7 @@
     <QtMoc Include="progress.h" />
   </ItemGroup>
   <ItemGroup>
+    <QtMoc Include="Eula.h" />
     <ClInclude Include="ProgressDisplayGui.hpp" />
     <QtMoc Include="StabilizerThread.hpp" />
     <ClInclude Include="UserInputGui.hpp" />

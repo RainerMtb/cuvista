@@ -1,11 +1,12 @@
 <RCC>
-  <qresource prefix="cuvistaGui">
-    <file>res/01_file-video-solid.png</file>
-    <file>res/02_floppy-disk-solid.png</file>
-    <file>res/03_info-circle.png</file>
-    <file>res/04_play-solid.png</file>
-    <file>res/05_stop-solid.png</file>
-    <file>res/signs-01.png</file>
-    <file>res/signs-02.png</file>
-  </qresource>
+    <qresource prefix="/cuvistaGui">
+        <file>res/01_file-video-solid.png</file>
+        <file>res/02_floppy-disk-solid.png</file>
+        <file>res/03_info-circle.png</file>
+        <file>res/04_play-solid.png</file>
+        <file>res/05_stop-solid.png</file>
+        <file>res/signs-01.png</file>
+        <file>res/signs-02.png</file>
+        <file>res/splash.png</file>
+    </qresource>
 </RCC>
