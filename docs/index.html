@@ -9,9 +9,9 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="keywords" content="video, stabilization, stabilize, cuda">
-    <meta property="og:title" content="CUVISTA - Cuda Video Stabilizer"/>
-    <meta property="og:locale" content="en_US"/>
-    <meta name="google-site-verification" content="hLB3LpUyRKBPBzCZ1fEMaujIDOfW05AigtVBAwT24hg" />
+    <meta property="og:title" content="CUVISTA - Cuda Video Stabilizer">
+    <meta property="og:locale" content="en_US">
+    <meta name="google-site-verification" content="hLB3LpUyRKBPBzCZ1fEMaujIDOfW05AigtVBAwT24hg">
     <meta name="description" content="cuvista, video stabilization, stabilize shaky video footage, cuda acceleration">
 </head>
 
@@ -22,7 +22,7 @@
                 <h1>CUVISTA - Cuda Video Stabilizer</h1>
                 <p>Stabilize shaky video on your PC quick and easy</p>
                 <div id="banner">
-                    <a id="download" href="https://github.com/RainerMtb/cuvista/releases/download/v0.9.5/cuvista-0.9.5.zip">
+                    <a id="download" href="https://github.com/RainerMtb/cuvista/releases/download/v0.9.6/cuvista-0.9.6.zip">
                         <span><strong>Download Latest Version</strong></span>
                         <span><img id="dlsymb" src="images/download-solid.svg"></span>
                     </a>
@@ -34,35 +34,35 @@
         <div id="main" class="main_margin">
             <h1>Introduction</h1>
             <p>
-                <span class="cuvista">Cuvista</span> stabilizes shaky video footage on your PC. Open a video file, 
-                save to a new filename, and watch the software do its job. Contrary to other software by default only one single pass over the input is made to analyse and 
+                <span class="cuvista">Cuvista</span> stabilizes shaky video footage on your PC. Open a video file,
+                save to a new filename, and watch the software do its job. Contrary to other software by default only one single pass over the input is made to analyse and
                 generate the output.
             </p>
             <p>
-                The software will make use of the cuda platform present on Nvidia grahics cards if such a suitable device 
-                is detected, greatly accelerating the process in that way. No special driver or software is needed 
+                The software will make use of the cuda platform present on Nvidia grahics cards if such a suitable device
+                is detected, greatly accelerating the process in that way. No special driver or software is needed
                 to make use of cuda capabilites.
-                Without a cuda device stabilization will still run on CPU power alone, which will provide the same result, 
+                Without a cuda device stabilization will still run on CPU power alone, which will provide the same result,
                 although at a significantly lower speed.
             </p>
 
             <h2>Sample Footage</h2>
             <p>
-                The following video shows side by side the original recording and the stabilized version 
+                The following video shows side by side the original recording and the stabilized version
                 using <span class="cuvista">Cuvista</span>
             </p>
             <div class="yt-div" >
-                <iframe class="yt-frame" 
-                    src="https://www.youtube.com/embed/kD84VqBurZc" 
-                    title="YouTube video player" 
-                    frameborder="0" 
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                <iframe class="yt-frame"
+                    src="https://www.youtube.com/embed/kD84VqBurZc"
+                    title="YouTube video player"
+                    frameborder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                     allowfullscreen>
                 </iframe>
             </div>
 
             <h2>Get Started</h2>
-            Get yourself the latest version of <span class="cuvista">Cuvista</span> and stabilize 
+            Get yourself the latest version of <span class="cuvista">Cuvista</span> and stabilize
             your videos by following the steps
             <ul>
                 <li>Click the link at the <a href=#top>top of this page</a> to download the latest version</li>
@@ -81,18 +81,18 @@
             <h2>Options</h2>
             Some settings allow to change the process and outcome
             <ul>
-                <li><strong>Overwrite:</strong> When checked, 
+                <li><strong>Overwrite:</strong> When checked,
                     no confirmation dialog is displayed when overwriting an existing output file</li>
                 <li><strong>Device:</strong> Select the device to do the heavy computing. Prefer a cuda capable device</li>
                 <li><strong>Encoding:</strong> Select the device to do the video encoding. Can be different from the stabilization device</li>
-                <li><strong>Temporal Radius:</strong> How many frames before and after shall be considered to smooth movements. 
+                <li><strong>Temporal Radius:</strong> How many frames before and after shall be considered to smooth movements.
                     Higher value will generally provide smoother output</li>
-                <li><strong>Zoom:</strong> Stabilization moves frames around, which reaveals the void at least on one side of the frame. 
+                <li><strong>Zoom:</strong> Stabilization moves frames around, which reaveals the void at least on one side of the frame.
                     Zooming into the video by some amount will hide this moving effect</li>
                 <li><strong>Background:</strong> Fill the void in the background either with a fixed color or preceding frames</li>
                 <li><strong>Blend:</strong> Overlay part of the original video to display the stabilization result</li>
             </ul>
-            If you want to watch how exactly each frame is moved around to compensate for the shakyness in the recording, 
+            If you want to watch how exactly each frame is moved around to compensate for the shakyness in the recording,
             try to set zoom to 0.9 and background to some fixed color
 
             <h2>Command Line Version</h2>
