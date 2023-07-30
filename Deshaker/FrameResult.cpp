@@ -17,6 +17,7 @@
  */
 
 #include "FrameResult.hpp"
+#include "Util.hpp"
 
 const AffineTransform& FrameResult::computeTransform(const std::vector<PointResult>& results, const MainData& data, ThreadPool& threadPool, RNGbase* rng) {
 	const ptrdiff_t cMinConsensPoints = 8;	     //min numbers of points for consensus set
@@ -27,7 +28,7 @@ const AffineTransform& FrameResult::computeTransform(const std::vector<PointResu
 	auto sortAbs = [] (const PointResult& pr1, const PointResult& pr2) { return pr1.distance < pr2.distance; };
 	auto sortRel = [] (const PointResult& pr1, const PointResult& pr2) { return pr1.distanceRelative < pr2.distanceRelative; };
 
-	//ConsoleTimer ic("transform");
+	//util::ConsoleTimer ic("transform");
 	mTransform.reset();
 	mTransformsList.clear();
 	mCountConsens = 0;

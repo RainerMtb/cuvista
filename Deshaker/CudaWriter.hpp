@@ -20,6 +20,7 @@ private:
 	std::list<NvPacket> nvPackets; //encoded packets
 
 	void writePacketToFile(const NvPacket& nvpkt, bool terminate);
+	void encodePackets();
 
 public:
 	CudaFFmpegWriter(MainData& data) : FFmpegFormatWriter(data), nvenc { NvEncoder(data.w, data.h) } {}
@@ -28,5 +29,6 @@ public:
 	void open(OutputCodec videoCodec) override;
 	OutputContext getOutputData() override;
 	void write() override;
+	std::future<void> writeAsync() override;
 	bool terminate(bool init) override;
 };

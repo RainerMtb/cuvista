@@ -25,9 +25,14 @@ enum class FilterDim {
 	FILTER_VERTICAL = 1,
 };
 
-cudaError_t npz_scale_8u32f(unsigned char* src, int srcStep, float* dest, int destStep, int w, int h);
+using uchar = unsigned char;
+using uint = unsigned int;
+using cuMatf = cu::Mat<float>;
+using cuMatc = cu::Mat<uchar>;
 
-cudaError_t npz_scale_32f8u(float* src, int srcStep, unsigned char* dest, int destStep, int w, int h);
+cudaError_t npz_scale_8u32f(uchar* src, int srcStep, float* dest, int destStep, int w, int h);
+
+cudaError_t npz_scale_32f8u(float* src, int srcStep, uchar* dest, int destStep, int w, int h);
 
 cudaError_t npz_copy_32f(float* src, int srcStep, float* dest, int destStep, int w, int h);
 
@@ -39,8 +44,8 @@ cudaError_t npz_remap_downsize_32f(float* src, int srcStep, float* dest, int des
 
 cudaError_t npz_filter_32f(float* src, float* dest, int srcStep, int w, int h, float* d_kernel, int kernelSize, FilterDim filterDim, cudaStream_t cs = 0);
 
-cudaError_t npz_uv_to_nv12(float* src, int srcStep, unsigned char* nvencPtr, int nvencPitch, int w, int h);
+cudaError_t npz_uv_to_nv12(float* src, int srcStep, uchar* nvencPtr, int cudaPitch, int w, int h);
 
-cudaError_t npz_yuv_to_rgb(unsigned char* src, int srcStep, unsigned char* dest, int destStep, int w, int h);
+cudaError_t npz_yuv_to_rgb(uchar* src, int srcStep, uchar* dest, int destStep, int w, int h);
 
-cudaError_t npz_yuv_to_rgb(float* src, int srcStep, unsigned char* dest, int destStep, int w, int h);
+cudaError_t npz_yuv_to_rgb(float* src, int srcStep, uchar* dest, int destStep, int w, int h);

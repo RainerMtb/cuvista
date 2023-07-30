@@ -441,8 +441,6 @@ void MainData::showIntro() const {
 	if (trajectoryFile.empty() == false) *console << "TRAJECTORY FILE: " << trajectoryFile << std::endl;
 	if (resultsFile.empty() == false) *console << "CALCULATION DETAILS OUT: " << resultsFile << std::endl;
 	if (resultImageFile.empty() == false) *console << "CALCULATION DETAILS IMAGES: " << resultImageFile << std::endl;
-
-	*console << std::endl;
 }
 
 //default output when no arguments are given

@@ -21,11 +21,6 @@
 #include <chrono>
 #include <iostream>
 
-using uchar = unsigned char;
-using uint = unsigned int;
-using cuMatf = cu::Mat<float>;
-using cuMatc = cu::Mat<uchar>;
-
 struct KernelContext {
 	cudaTextureObject_t texture;
 	dim3 blocks;
@@ -163,13 +158,17 @@ __global__ void kernel_remap_downsize(cudaTextureObject_t texObj, cuMatf dest, c
 	}
 }
 
-__global__ void kernel_uv_to_nv12(cudaTextureObject_t texObj, uchar* nvencPtr, int nvencPitch, int w, int h, uint z) {
+__global__ void kernel_uv_to_nv12(cudaTextureObject_t texObj, uchar* nvencPtr, int cudaPitch, int w, int h) {
 	uint x = blockIdx.x * blockDim.x + threadIdx.x;
 	uint y = blockIdx.y * blockDim.y + threadIdx.y;
 
 	if (x < w / 2 && y < h / 2) {
-		float val = tex2D<float>(texObj, x * 2 + 1, y * 2 + z * h + 1);
-		nvencPtr[nvencPitch * y + x * 2 + z] = (uchar) (val * 255.0f);
+		//u
+		float val = tex2D<float>(texObj, x * 2 + 1, y * 2 + 1);
+		nvencPtr[cudaPitch * y + x * 2] = (uchar) (val * 255.0f);
+		//v
+		val = tex2D<float>(texObj, x * 2 + 1, y * 2 + h + 1);
+		nvencPtr[cudaPitch * y + x * 2 + 1] = (uchar) (val * 255.0f);
 	}
 }
 
@@ -291,10 +290,9 @@ cudaError_t npz_remap_downsize_32f(float* src, int srcStep, float* dest, int des
 	return cudaGetLastError();
 }
 
-cudaError_t npz_uv_to_nv12(float* src, int srcStep, uchar* nvencPtr, int nvencPitch, int w, int h) {
+cudaError_t npz_uv_to_nv12(float* src, int srcStep, uchar* nvencPtr, int cudaPitch, int w, int h) {
 	KernelContext ki = prepareTexture(src, srcStep, w, h * 2, w / 2, h / 2);
-	kernel_uv_to_nv12 <<<ki.blocks, ki.threads>>> (ki.texture, nvencPtr, nvencPitch, w, h, 0);
-	kernel_uv_to_nv12 <<<ki.blocks, ki.threads>>> (ki.texture, nvencPtr, nvencPitch, w, h, 1);
+	kernel_uv_to_nv12 <<<ki.blocks, ki.threads>>> (ki.texture, nvencPtr, cudaPitch, w, h);
 	cudaDestroyTextureObject(ki.texture);
 	return cudaGetLastError();
 }

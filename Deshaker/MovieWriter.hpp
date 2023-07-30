@@ -50,6 +50,7 @@ public:
 	virtual ~MovieWriter() = default;
 	virtual OutputContext getOutputData();
 	virtual void write() {}
+	virtual std::future<void> writeAsync();
 	virtual void open(OutputCodec videoCodec) {}
 	virtual bool terminate(bool init = false) { return false; }
 };

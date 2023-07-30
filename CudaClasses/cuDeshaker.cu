@@ -508,12 +508,12 @@ void cudaOutput(int64_t frameIdx, const CoreData& core, OutputContext outCtx, cu
 	handleStatus(cudaGetLastError(), "error @output #100");
 }
 
-void encodeNvData(std::vector<unsigned char>& nv12, unsigned char* nvencPtr) {
+void encodeNvData(const std::vector<unsigned char>& nv12, unsigned char* nvencPtr) {
 	handleStatus(cudaMemcpy(nvencPtr, nv12.data(), nv12.size(), cudaMemcpyHostToDevice), "error @simple encode #1 cannot copy to device");
 }
 
-void getNvData(std::vector<unsigned char>& nv12, OutputContext outReq) {
-	handleStatus(cudaMemcpy(nv12.data(), outReq.cudaNv12ptr, nv12.size(), cudaMemcpyDeviceToHost), "error getting nv12 data");
+void getNvData(std::vector<unsigned char>& nv12, OutputContext outCtx) {
+	handleStatus(cudaMemcpy(nv12.data(), outCtx.cudaNv12ptr, nv12.size(), cudaMemcpyDeviceToHost), "error getting nv12 data");
 }
 
 

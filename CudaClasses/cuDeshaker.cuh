@@ -110,17 +110,17 @@ void cudaComputeTerminate(const CoreData& core, std::vector<PointResult>& result
 /*
 @brief transform a frame and output pixel data to host and/or device memory
 */
-void cudaOutput(int64_t frameIdx, const CoreData& core, OutputContext outReq, cu::Affine trf);
+void cudaOutput(int64_t frameIdx, const CoreData& core, OutputContext outCtx, cu::Affine trf);
 
 /*
 @brief only encode given nv12 data
 */
-void encodeNvData(std::vector<unsigned char>& nv12, unsigned char* nvencPtr);
+void encodeNvData(const std::vector<unsigned char>& nv12, unsigned char* nvencPtr);
 
 /*
 @brief get NV12 data prepared for cuda encoding
 */
-void getNvData(std::vector<unsigned char>& nv12, OutputContext outReq);
+void getNvData(std::vector<unsigned char>& nv12, OutputContext outCtx);
 
 /*
 @brief shutdown cuda device

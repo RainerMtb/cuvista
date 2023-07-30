@@ -189,8 +189,11 @@ public:
 
 	ImageYuv() : ImageYuv(0, 0, 0) {}
 
-	//simple downsampling and copy of pixeldata to given array in nv12 format
+	//downsample and copy pixeldata to given array in nv12 format
 	void toNV12(std::vector<unsigned char>& nv12, size_t strideNV12) const;
+
+	//downsample and copy pixeldata
+	std::vector<unsigned char> toNV12(size_t strideNV12) const;
 
 	//convert NV12 array into YuvFrame
 	ImageYuv& fromNV12(const std::vector<unsigned char>& nv12, size_t strideNV12);

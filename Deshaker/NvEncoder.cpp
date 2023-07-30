@@ -17,6 +17,7 @@
  */
 
 #include "NvEncoder.hpp"
+#include "Util.hpp"
 
 void handleResult(bool isError, std::string&& msg) {
 	if (isError) 
@@ -137,7 +138,7 @@ void NvEncoder::createEncoder(int fpsNum, int fpsDen, uint32_t gopLen, uint8_t c
 	NV_ENC_INITIALIZE_PARAMS initParams = { NV_ENC_INITIALIZE_PARAMS_VER };
 	initParams.encodeConfig = &encodeConfig;
 	initParams.encodeGUID = guid;
-	initParams.presetGUID = NV_ENC_PRESET_P3_GUID;
+	initParams.presetGUID = NV_ENC_PRESET_P5_GUID;
 	initParams.encodeWidth = w;
 	initParams.encodeHeight = h;
 	initParams.darWidth = w;
@@ -192,36 +193,32 @@ void NvEncoder::createEncoder(int fpsNum, int fpsDen, uint32_t gopLen, uint8_t c
 	const int32_t extraDelay = 4; //taken from samples
 	encBufferSize = encodeConfig.frameIntervalP + encodeConfig.rcParams.lookaheadDepth + extraDelay;
 	outputDelay = encBufferSize - 1;
-	mappedInputBuffers.resize(encBufferSize, nullptr);
 
+	size_t pitch;
+	size_t h_image = h * 3 / 2; //for yuv444 formats h * 3
 	for (size_t i = 0; i < encBufferSize; i++) {
+		//output buffers
 		NV_ENC_CREATE_BITSTREAM_BUFFER createBitstreamBuffer = { NV_ENC_CREATE_BITSTREAM_BUFFER_VER };
 		handleResult(encFuncList.nvEncCreateBitstreamBuffer(encoder, &createBitstreamBuffer), "cannot create bitstream buffer");
 		bitstreamOutputBuffer.push_back(createBitstreamBuffer.bitstreamBuffer);
-	}
 
-	//allocate input buffers on device through driver api
-	int h_image = h * 3 / 2; //for yuv444 formats h * 3
-	for (int i = 0; i < encBufferSize; i++) {
 		CUdeviceptr pDeviceFrame;
-		handleResult(cuMemAllocPitch_v2(&pDeviceFrame, &mPitch, w, h_image, 16), "error allocating input buffers");
+		handleResult(cuMemAllocPitch_v2(&pDeviceFrame, &pitch, w, h_image, 16), "error allocating input buffers");
 		inputFrames.push_back(pDeviceFrame);
-	}
 
-	//register input resources
-	for (size_t i = 0; i < inputFrames.size(); i++) {
 		NV_ENC_REGISTER_RESOURCE registerResource = { NV_ENC_REGISTER_RESOURCE_VER };
 		registerResource.resourceType = NV_ENC_INPUT_RESOURCE_TYPE_CUDADEVICEPTR;
-		registerResource.resourceToRegister = (void*) inputFrames[i];
+		registerResource.resourceToRegister = (void*) pDeviceFrame;
 		registerResource.width = w;
 		registerResource.height = h;
-		registerResource.pitch = (int) mPitch;
+		registerResource.pitch = (int) pitch;
 		registerResource.bufferFormat = mBufferFormat;
 		registerResource.bufferUsage = NV_ENC_INPUT_IMAGE;
 		handleResult(encFuncList.nvEncRegisterResource(encoder, &registerResource), "cannot register resource");
 		NV_ENC_REGISTERED_PTR registeredPtr = registerResource.registeredResource;
 		registeredResources.push_back(registeredPtr);
 	}
+	cudaPitch = (int) pitch;
 }
 
 CUdeviceptr NvEncoder::getNextInputFramePtr() {
@@ -243,10 +240,6 @@ NvPacket NvEncoder::getEncodedPacket(std::vector<NV_ENC_OUTPUT_PTR>& outputBuffe
 	data.insert(data.end(), pData, pData + pkg.bitstreamData.bitstreamSizeInBytes);
 	handleResult(encFuncList.nvEncUnlockBitstream(encoder, pkg.bitstreamData.outputBitstream), "cannot unlock bitstream");
 
-	if (mappedInputBuffers[fridx]) {
-		handleResult(encFuncList.nvEncUnmapInputResource(encoder, mappedInputBuffers[fridx]), "cannot unmap resource");
-		mappedInputBuffers[fridx] = nullptr;
-	}
 	return pkg;
 }
 
@@ -263,33 +256,34 @@ void NvEncoder::getEncodedPackets(std::vector<NV_ENC_OUTPUT_PTR>& outputBuffer, 
 
 
 void NvEncoder::encodeFrame(std::list<NvPacket>& nvPackets) {
-	int32_t fridx = frameToSend % encBufferSize;
+	int32_t i = frameToSend % encBufferSize;
 	cuCtxPushCurrent_v2(cuctx);
 
+	//util::ConsoleTimer ct("encode");
 	NV_ENC_MAP_INPUT_RESOURCE mapInputResource = { NV_ENC_MAP_INPUT_RESOURCE_VER };
-	mapInputResource.registeredResource = registeredResources[fridx];
+	mapInputResource.registeredResource = registeredResources[i];
 	handleResult(encFuncList.nvEncMapInputResource(encoder, &mapInputResource), "cannot map input resource");
-	mappedInputBuffers[fridx] = mapInputResource.mappedResource;
 
 	NV_ENC_PIC_PARAMS picParams = { NV_ENC_PIC_PARAMS_VER };
 	picParams.pictureStruct = NV_ENC_PIC_STRUCT_FRAME;
-	picParams.inputBuffer = mappedInputBuffers[fridx];
+	picParams.inputBuffer = mapInputResource.mappedResource;
 	picParams.bufferFmt = mBufferFormat;
 	picParams.inputWidth = w;
 	picParams.inputHeight = h;
-	picParams.outputBitstream = bitstreamOutputBuffer[fridx];
+	picParams.outputBitstream = bitstreamOutputBuffer[i];
 	picParams.completionEvent = nullptr; //do not use events, do it synchronous
 
-	NVENCSTATUS nvStatus = encFuncList.nvEncEncodePicture(encoder, &picParams);
-	if (nvStatus == NV_ENC_ERR_NEED_MORE_INPUT) {
+	NVENCSTATUS stat;
+	stat = encFuncList.nvEncEncodePicture(encoder, &picParams);
+	if (stat == NV_ENC_ERR_NEED_MORE_INPUT) {
 		frameToSend++;
 
-	} else if (nvStatus == NV_ENC_SUCCESS) {
+	} else if (stat == NV_ENC_SUCCESS) {
 		frameToSend++;
 		getEncodedPackets(bitstreamOutputBuffer, nvPackets, true);
 
 	} else {
-		throw AVException("cannot encode frame, status=" + std::to_string(nvStatus));
+		throw AVException("cannot encode frame, status=" + std::to_string(stat));
 	}
 	cuCtxPopCurrent_v2(nullptr);
 }
@@ -318,13 +312,7 @@ NvPacket NvEncoder::getBufferedFrame() {
 void NvEncoder::destroyEncoder() {
 	cuCtxPushCurrent_v2(cuctx);
 
-	for (size_t i = 0; i < mappedInputBuffers.size(); i++) {
-		if (mappedInputBuffers[i]) {
-			encFuncList.nvEncUnmapInputResource(encoder, mappedInputBuffers[i]);
-		}
-	}
-	mappedInputBuffers.clear();
-
+	//clear input buffers
 	for (size_t i = 0; i < registeredResources.size(); i++) {
 		if (registeredResources[i]) {
 			encFuncList.nvEncUnregisterResource(encoder, registeredResources[i]);
@@ -333,10 +321,13 @@ void NvEncoder::destroyEncoder() {
 	registeredResources.clear();
 
 	for (size_t i = 0; i < inputFrames.size(); i++) {
-		if (inputFrames[i]) cuMemFree_v2(inputFrames[i]);
+		if (inputFrames[i]) {
+			cuMemFree_v2(inputFrames[i]);
+		}
 	}
 	inputFrames.clear();
 
+	//clear output buffers
 	for (size_t i = 0; i < bitstreamOutputBuffer.size(); i++) {
 		if (bitstreamOutputBuffer[i]) {
 			encFuncList.nvEncDestroyBitstreamBuffer(encoder, bitstreamOutputBuffer[i]);
@@ -344,6 +335,7 @@ void NvEncoder::destroyEncoder() {
 	}
 	bitstreamOutputBuffer.clear();
 
+	//destroy encoder
 	if (encoder != nullptr) {
 		encFuncList.nvEncDestroyEncoder(encoder);
 	}

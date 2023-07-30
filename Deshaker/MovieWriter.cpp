@@ -21,7 +21,11 @@
 
 
 OutputContext MovieWriter::getOutputData() {
-	return { true, false, &outputFrame, nullptr, 0 };
+	return { true, false, &outputFrame, nullptr };
+}
+
+std::future<void> MovieWriter::writeAsync() {
+	return std::async(std::launch::async, [&] () { write(); });
 }
 
 std::string ImageWriter::makeFilename(const std::string& pattern, int64_t index) {

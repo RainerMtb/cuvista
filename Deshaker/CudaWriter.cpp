@@ -1,4 +1,5 @@
 #include "CudaWriter.hpp"
+#include "Util.hpp"
 
 //cuda encoding contructor
 void CudaFFmpegWriter::open(OutputCodec videoCodec) {
@@ -50,7 +51,7 @@ void CudaFFmpegWriter::open(OutputCodec videoCodec) {
 
 
 OutputContext CudaFFmpegWriter::getOutputData() {
-    return { false, true, &outputFrame, reinterpret_cast<unsigned char*>(nvenc.getNextInputFramePtr()), (int) nvenc.mPitch };
+    return { false, true, &outputFrame, reinterpret_cast<unsigned char*>(nvenc.getNextInputFramePtr()), nvenc.cudaPitch };
 }
 
 
@@ -73,16 +74,35 @@ void CudaFFmpegWriter::writePacketToFile(const NvPacket& nvpkt, bool terminate) 
     writePacket(videoPacket, info.frameIdx, info.frameIdx, terminate);
 }
 
-void CudaFFmpegWriter::write() {
+
+void CudaFFmpegWriter::encodePackets() {
     try {
         nvenc.encodeFrame(nvPackets);
-        for (NvPacket& nvpkt : nvPackets) {
-            writePacketToFile(nvpkt, false);
-        }
 
     } catch (const AVException& e) {
         errorLogger.logError("error writing: " + std::string(e.what()));
     }
+}
+
+
+void CudaFFmpegWriter::write() {
+    encodePackets();
+
+    for (NvPacket& nvpkt : nvPackets) {
+        writePacketToFile(nvpkt, false);
+    }
+}
+
+
+std::future<void> CudaFFmpegWriter::writeAsync() {
+    encodePackets();
+
+    auto fcn = [&] () {
+        for (NvPacket& nvpkt : nvPackets) {
+            writePacketToFile(nvpkt, false);
+        }
+    };
+    return std::async(std::launch::async, fcn);
 }
 
 

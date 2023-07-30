@@ -21,4 +21,4 @@ The following resources are used
 - FFmpeg 6.0
 
 For the GUI
-- Qt 6.5.0
+- Qt 6.5.2

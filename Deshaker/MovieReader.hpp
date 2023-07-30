@@ -29,6 +29,7 @@ public:
 
 	virtual InputContext open(std::string_view source) = 0;
 	virtual void read(ImageYuv& inputFrame, Stats& status) = 0;
+	virtual std::future<void> readAsync(ImageYuv& inputFrame, Stats& status);
 	virtual void close() {}
 	virtual void rewind() {}
 	virtual void seek(double fraction) {}

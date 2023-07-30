@@ -53,16 +53,15 @@ private:
 	int32_t frameGot = 0;
 
 	NV_ENCODE_API_FUNCTION_LIST encFuncList = { NV_ENCODE_API_FUNCTION_LIST_VER };
-	std::vector<NV_ENC_INPUT_PTR> mappedInputBuffers;
-	std::vector<NV_ENC_OUTPUT_PTR> bitstreamOutputBuffer;
-	std::vector<NV_ENC_REGISTERED_PTR> registeredResources;
 	std::vector<CUdeviceptr> inputFrames;
+	std::vector<NV_ENC_REGISTERED_PTR> registeredResources;
+	std::vector<NV_ENC_OUTPUT_PTR> bitstreamOutputBuffer;
 
 	void getEncodedPackets(std::vector<NV_ENC_OUTPUT_PTR>& outputBuffer, std::list<NvPacket>& nvPackets, bool outputDelay);
 	NvPacket getEncodedPacket(std::vector<NV_ENC_OUTPUT_PTR>& outputBuffer);
 
 public:
-	size_t mPitch = 0;
+	int cudaPitch = 0;
 	std::vector<uint8_t> mExtradata;
 	uint32_t mExtradataSize = 0;
 

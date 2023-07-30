@@ -218,6 +218,12 @@ void ImageYuv::toNV12(std::vector<unsigned char>& nv12, size_t strideNV12) const
 	}
 }
 
+std::vector<unsigned char> ImageYuv::toNV12(size_t strideNV12) const {
+	std::vector<unsigned char> data(strideNV12 * h * 3 / 2);
+	toNV12(data, strideNV12);
+	return data;
+}
+
 ImageRGB& ImageYuv::toRGB(ImageRGB& dest) const {
 	convert8(dest, 0, 1, 2);
 	return dest;

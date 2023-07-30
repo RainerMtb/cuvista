@@ -21,6 +21,10 @@
 #include <fstream>
 #include <iostream>
 
+std::future<void> MovieReader::readAsync(ImageYuv& inputFrame, Stats& status) {
+    return std::async(std::launch::async, [&] () { read(inputFrame, status); });
+}
+
 
 //placeholder class NullReader, does nothing
 InputContext NullReader::open(std::string_view source) {

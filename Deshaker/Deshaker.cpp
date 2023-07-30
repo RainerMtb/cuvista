@@ -67,7 +67,7 @@ int deshake(int argsCount, char** args) {
 		//----------- create Frame Handler Class
 		if (data.dummyFrame) {
 			//skip stabilizing stuff to test decoding and encoding
-			frame = std::make_unique<DummyFrame>(data, writer->getOutputData().cudaPitch);
+			frame = std::make_unique<DummyFrame>(data);
 
 		} else if (data.deviceNum == -1) {
 			//only on CPU

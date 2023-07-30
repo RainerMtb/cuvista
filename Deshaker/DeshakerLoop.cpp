@@ -17,6 +17,7 @@
  */
 
 #include "MovieFrame.hpp"
+#include "Util.hpp"
 
 //combined loop to read and write
 void MovieFrame::DeshakerLoopCombined::run(MovieFrame& mf, ProgressDisplay& progress, MovieReader& reader, MovieWriter& writer, UserInput& input) {
@@ -64,31 +65,27 @@ void MovieFrame::DeshakerLoopCombined::run(MovieFrame& mf, ProgressDisplay& prog
 	//main loop
 	//read data and compute frame results
 	while (status.doContinue() && input.doContinue() && status.frameReadIndex < data.maxFrames) {
-		TIMER("frame");
+		assert(status.frameInputIndex % data.bufferCount != status.frameWriteIndex % data.bufferCount && "accessing the same buffer for read and write");
+		//util::ConsoleTimer t_fr("frame");
 		std::vector<std::future<void>> futures;
 		std::swap(mf.bufferFrame, mf.inputFrame);
-		auto funcRead = [&] { 
-			TIMER("read"); 
-			status.frameReadIndex++;
-			reader.read(mf.bufferFrame, status); 
-		};
-		futures.push_back(std::async(std::launch::async, funcRead));
+		status.frameReadIndex++;
+		futures.push_back(reader.readAsync(mf.bufferFrame, status));
 
 		mf.inputData(mf.inputFrame);
 		mf.createPyramid();
-		mf.computeStart();
-		mf.computeTransform(mf.resultPointsOld);
-		mf.mTrajectory.addTrajectoryTransform(mf.mFrameResult.mTransform, status.frameInputIndex - 1);
-		mf.runDiagnostics(status.frameInputIndex - 1);
 
-		assert(status.frameInputIndex % data.bufferCount != status.frameWriteIndex % data.bufferCount && "accessing the same buffer for read and write");
+		{
+			//util::ConsoleTimer t_w("timer");
+			mf.computeTransform(mf.resultPointsOld);
+			mf.mTrajectory.addTrajectoryTransform(mf.mFrameResult.mTransform, status.frameInputIndex - 1);
+			mf.runDiagnostics(status.frameInputIndex - 1);
+		}
+
 		const AffineTransform finalTransform = mf.mTrajectory.computeTransformForFrame(data, status.frameWriteIndex);
 		mf.outputData(finalTransform, writer.getOutputData());
-		auto funcWrite = [&] { 
-			TIMER("write");
-			writer.write(); 
-		};
-		futures.push_back(std::async(std::launch::async, funcWrite));
+		futures.push_back(writer.writeAsync());
+		mf.computeStart();
 		mf.computeTerminate();
 
 		futures.clear(); //wait for futures to terminate

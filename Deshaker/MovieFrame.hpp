@@ -282,13 +282,11 @@ class DummyFrame : public MovieFrame {
 
 private:
 	std::vector<ImageYuv> frames;
-	std::vector<unsigned char> nv12;
 
 public:
-	DummyFrame(MainData& data, size_t nv12pitch) :
+	DummyFrame(MainData& data) :
 		MovieFrame(data), 
-		frames(data.bufferCount, { data.h, data.w, data.pitch }), 
-		nv12(nv12pitch * data.h * 3 / 2)
+		frames(data.bufferCount, { data.h, data.w, data.w })
 	{}
 
 	void inputData(ImageYuv& frame) override;

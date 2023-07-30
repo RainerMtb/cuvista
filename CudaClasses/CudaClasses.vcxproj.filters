@@ -30,7 +30,6 @@
     <ClInclude Include="CudaInfo.hpp">
       <Filter>Util</Filter>
     </ClInclude>
-    <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Util">

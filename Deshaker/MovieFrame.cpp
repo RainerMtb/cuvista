@@ -340,8 +340,8 @@ void CpuFrame::outputData(const AffineTransform& trf, OutputContext outCtx) {
 
 	//when encoding on gpu is selected
 	if (outCtx.encodeGpu) {
-		static std::vector<unsigned char> nv12(outCtx.cudaPitch * mData.h * 3 / 2);
-		outCtx.outputFrame->toNV12(nv12, outCtx.cudaPitch);
+		static std::vector<unsigned char> nv12(mData.w * mData.h * 3 / 2);
+		outCtx.outputFrame->toNV12(nv12, mData.w);
 		encodeNvData(nv12, outCtx.cudaNv12ptr);
 	}
 }
@@ -396,18 +396,15 @@ void DummyFrame::inputData(ImageYuv& frame) {
 	frames[idx] = frame;
 }
 
-void DummyFrame::outputData(const AffineTransform& trf, OutputContext od) {
+void DummyFrame::outputData(const AffineTransform& trf, OutputContext outCtx) {
 	ImageYuv& frameToEncode = frames[mStatus.frameWriteIndex % frames.size()];
 
-	ImageYuv* ptr1 = od.outputFrame;
-	if (ptr1) {
-		*ptr1 = frameToEncode;
+	if (outCtx.encodeCpu) {
+		*outCtx.outputFrame = frameToEncode;
 	}
 
-	unsigned char* ptr2 = od.cudaNv12ptr;
-	if (ptr2) {
-		frameToEncode.toNV12(nv12, od.cudaPitch);
-		encodeNvData(nv12, ptr2);
+	if (outCtx.encodeGpu) {
+		encodeNvData(frameToEncode.toNV12(outCtx.cudaPitch), outCtx.cudaNv12ptr);
 	}
 }
 

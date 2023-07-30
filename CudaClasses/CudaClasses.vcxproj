@@ -122,7 +122,6 @@
     <ClInclude Include="cuTest.cuh" />
     <ClInclude Include="cuUtil.cuh" />
     <ClInclude Include="ErrorLogger.hpp" />
-    <ClInclude Include="resource.h" />
     <CudaCompile Include="cuNPP.cu" />
     <CudaCompile Include="cuTest.cu" />
     <CudaCompile Include="cuUtil.cu" />
