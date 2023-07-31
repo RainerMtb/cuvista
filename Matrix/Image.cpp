@@ -28,6 +28,7 @@ template <class T> ImageBase<T>::ImageBase(int h, int w, int stride, int numPlan
 	numPlanes { numPlanes }, 
 	array(arraySize) 
 {
+	assert(h >= 0 && w >= 0 && "invalid dimensions");
 	assert(stride >= w && "stride must be equal or greater to width");
 }
 
@@ -38,6 +39,7 @@ template <class T> ImageBase<T>::ImageBase(int h, int w, int stride, int numPlan
 	numPlanes { numPlanes },
 	array(1ull * h * stride * numPlanes) 
 {
+	assert(h >= 0 && w >= 0 && "invalid dimensions");
 	assert(stride >= w && "stride must be equal or greater to width");
 }
 

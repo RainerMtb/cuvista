@@ -75,7 +75,7 @@ int deshake(int argsCount, char** args) {
 
 		} else {
 			//use CUDA GPU
-			frame = std::make_unique<GpuFrame>(data);
+			frame = std::make_unique<CudaFrame>(data);
 		}
 
 	} catch (const CancelException& ce) {

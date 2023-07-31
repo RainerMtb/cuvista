@@ -28,7 +28,7 @@ void compare() {
 		data.validate(ctx);
 		NullReader reader;
 		NullWriter writer(data);
-		GpuFrame frame(data);
+		CudaFrame frame(data);
 
 		frame.inputFrame.readFromPGM("d:/VideoTest/v00.pgm");
 		frame.inputData(frame.inputFrame);
@@ -38,7 +38,8 @@ void compare() {
 		frame.inputFrame.readFromPGM("D:/VideoTest/v01.pgm");
 		frame.inputData(frame.inputFrame);
 		frame.createPyramid();
-		frame.computeStart();
+		frame.computePartOne();
+		frame.computePartTwo();
 		frame.computeTerminate();
 		//frame.getTransformedOutput().saveAsBinary("f:/test.dat");
 		std::cout << cudaGetErrorString(cudaGetLastError()) << std::endl;
@@ -60,7 +61,8 @@ void compare() {
 		frame.inputFrame.readFromPGM("D:/VideoTest/v01.pgm");
 		frame.inputData(frame.inputFrame);
 		frame.createPyramid();
-		frame.computeStart();
+		frame.computePartOne();
+		frame.computePartTwo();
 		frame.computeTerminate();
 	}
 }
@@ -78,7 +80,7 @@ void check() {
 	data.probeCudaDevices();
 	data.validate(ctx);
 	NullWriter writer(data);
-	GpuFrame frame(data);
+	CudaFrame frame(data);
 	OutputContext oc = { true, false, &writer.outputFrame, nullptr, 0 };
 	ResultImage resim(data, {});
 
@@ -97,7 +99,8 @@ void check() {
 		reader.read(frame.inputFrame, data.status);
 		frame.inputData(frame.inputFrame);
 		frame.createPyramid();
-		frame.computeStart();
+		frame.computePartOne();
+		frame.computePartTwo();
 		frame.computeTerminate();
 		const AffineTransform& trf = frame.computeTransform(frame.resultPoints);
 		std::string fname = std::format("c:/temp/im{:03d}.bmp", i);

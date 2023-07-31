@@ -37,14 +37,6 @@ public:
 	__host__ void destroy();
 };
 
-//parameters for kernel launch
-struct KernelParam {
-	int3 blk;
-	int3 thr;
-	size_t shdBytes;
-	cudaStream_t stream;
-};
-
 //collect timestamps from kernel for each thread
 class KernelTimer {
 
@@ -59,7 +51,20 @@ public:
 	__device__ void stop();
 };
 
-void kernelComputeCall(KernelParam param, ComputeTextures& tex, PointResult* d_results, int64_t frameIdx, cu::DebugData debugData, KernelTimer* d_timestamps);
+//parameters for kernel launch
+struct KernelParam {
+	int3 blk;
+	int3 thr;
+	size_t shdBytes;
+	cudaStream_t stream;
+};
+
+struct ComputeKernelParam : KernelParam {
+	cu::DebugData* debugData;
+	KernelTimer* kernelTimestamps;
+};
+
+void kernelComputeCall(ComputeKernelParam param, ComputeTextures& tex, PointResult* d_results, int64_t frameIdx);
 
 void computeInit(const CoreData& core);
 
@@ -98,9 +103,14 @@ void cudaReadFrame(int64_t frameIdx, const CoreData& core, const ImageYuv& input
 void cudaCreatePyramid(int64_t frameIdx, const CoreData& core);
 
 /*
-@brief compute displacements between frame and previous frame in video, compute resulting affine transformation
+@brief compute displacements between frame and previous frame in video for part of a frame
 */
-void cudaComputeStart(int64_t frameIdx, const CoreData& core);
+void cudaCompute1(int64_t frameIdx, const CoreData& core);
+
+/*
+@brief compute second part of frame
+*/
+void cudaCompute2(int64_t frameIdx, const CoreData& core);
 
 /*
 @brief return vector of results from async computation

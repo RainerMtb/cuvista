@@ -45,7 +45,8 @@ void MovieFrame::DeshakerLoopCombined::run(MovieFrame& mf, ProgressDisplay& prog
 	while (status.doContinue() && input.doContinue() && status.frameReadIndex < data.maxFrames && status.frameInputIndex + 1 < data.bufferCount) {
 		mf.inputData(mf.bufferFrame);
 		mf.createPyramid();
-		mf.computeStart();
+		mf.computePartOne();
+		mf.computePartTwo();
 		mf.computeTransform(mf.resultPointsOld);
 		mf.mTrajectory.addTrajectoryTransform(mf.mFrameResult.mTransform, status.frameInputIndex - 1);
 		mf.runDiagnostics(status.frameInputIndex - 1);
@@ -74,18 +75,15 @@ void MovieFrame::DeshakerLoopCombined::run(MovieFrame& mf, ProgressDisplay& prog
 
 		mf.inputData(mf.inputFrame);
 		mf.createPyramid();
-
-		{
-			//util::ConsoleTimer t_w("timer");
-			mf.computeTransform(mf.resultPointsOld);
-			mf.mTrajectory.addTrajectoryTransform(mf.mFrameResult.mTransform, status.frameInputIndex - 1);
-			mf.runDiagnostics(status.frameInputIndex - 1);
-		}
-
-		const AffineTransform finalTransform = mf.mTrajectory.computeTransformForFrame(data, status.frameWriteIndex);
+		mf.computePartOne();
+		mf.computeTransform(mf.resultPointsOld);
+		mf.mTrajectory.addTrajectoryTransform(mf.mFrameResult.mTransform, status.frameInputIndex - 1);
+		mf.runDiagnostics(status.frameInputIndex - 1);
+		const AffineTransform& finalTransform = mf.mTrajectory.computeTransformForFrame(data, status.frameWriteIndex);
 		mf.outputData(finalTransform, writer.getOutputData());
 		futures.push_back(writer.writeAsync());
-		mf.computeStart();
+
+		mf.computePartTwo();
 		mf.computeTerminate();
 
 		futures.clear(); //wait for futures to terminate
@@ -105,7 +103,7 @@ void MovieFrame::DeshakerLoopCombined::run(MovieFrame& mf, ProgressDisplay& prog
 		mf.runDiagnostics(status.frameInputIndex - 1);
 
 		assert(status.frameInputIndex % data.bufferCount != status.frameWriteIndex % data.bufferCount && "accessing the same buffer for read and write");
-		const AffineTransform finalTransform = mf.mTrajectory.computeTransformForFrame(data, status.frameWriteIndex);
+		const AffineTransform& finalTransform = mf.mTrajectory.computeTransformForFrame(data, status.frameWriteIndex);
 		mf.outputData(finalTransform, writer.getOutputData());
 		writer.write();
 		status.frameWriteIndex++;
@@ -115,7 +113,7 @@ void MovieFrame::DeshakerLoopCombined::run(MovieFrame& mf, ProgressDisplay& prog
 	//write remaining frames
 	while (errorLogger.hasNoError() && status.frameWriteIndex < status.frameInputIndex && input.current <= UserInputEnum::END) {
 		assert(status.frameInputIndex % data.bufferCount != status.frameWriteIndex % data.bufferCount && "accessing the same buffer for read and write");
-		const AffineTransform tf = mf.mTrajectory.computeTransformForFrame(data, status.frameWriteIndex);
+		const AffineTransform& tf = mf.mTrajectory.computeTransformForFrame(data, status.frameWriteIndex);
 		mf.outputData(tf, writer.getOutputData());
 		writer.write();
 		status.frameWriteIndex++;
@@ -151,7 +149,8 @@ void MovieFrame::DeshakerLoopFirst::run(MovieFrame& mf, ProgressDisplay& progres
 		status.frameReadIndex++;
 		reader.read(mf.bufferFrame, status); 
 
-		mf.computeStart();
+		mf.computePartOne();
+		mf.computePartTwo();
 		mf.computeTerminate();
 		mf.computeTransform(mf.resultPoints);
 		mf.runDiagnostics(status.frameInputIndex);
@@ -187,7 +186,7 @@ void MovieFrame::DeshakerLoopSecond::run(MovieFrame& mf, ProgressDisplay& progre
 		status.frameInputIndex++;
 		reader.read(mf.bufferFrame, status);
 
-		const AffineTransform tf = mf.mTrajectory.computeTransformForFrame(data, status.frameWriteIndex);
+		const AffineTransform& tf = mf.mTrajectory.computeTransformForFrame(data, status.frameWriteIndex);
 		mf.outputData(tf, writer.getOutputData());
 		writer.write();
 
@@ -228,7 +227,8 @@ void MovieFrame::DeshakerLoopClassic::run(MovieFrame& mf, ProgressDisplay& progr
 		status.frameReadIndex++;
 		reader.read(mf.bufferFrame, status);
 
-		mf.computeStart();
+		mf.computePartOne();
+		mf.computePartTwo();
 		mf.computeTerminate();
 		mf.computeTransform(mf.resultPoints);
 		mf.mTrajectory.addTrajectoryTransform(mf.mFrameResult.mTransform, status.frameInputIndex);
@@ -256,7 +256,7 @@ void MovieFrame::DeshakerLoopClassic::run(MovieFrame& mf, ProgressDisplay& progr
 		status.frameInputIndex++;
 		reader.read(mf.bufferFrame, status);
 
-		const AffineTransform tf = mf.mTrajectory.computeTransformForFrame(data, status.frameWriteIndex);
+		const AffineTransform& tf = mf.mTrajectory.computeTransformForFrame(data, status.frameWriteIndex);
 		mf.outputData(tf, writer.getOutputData());
 		writer.write();
 

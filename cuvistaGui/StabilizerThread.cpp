@@ -40,7 +40,7 @@ void StabilizerThread::run() {
                 writer = std::make_unique<CudaFFmpegWriter>(mData);
 
         } else {
-            frame = std::make_unique<GpuFrame>(mData);
+            frame = std::make_unique<CudaFrame>(mData);
             if (mData.encodingDevice == EncodingDevice::AUTO || mData.encodingDevice == EncodingDevice::GPU)
                 writer = std::make_unique<CudaFFmpegWriter>(mData);
             else

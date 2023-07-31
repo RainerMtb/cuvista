@@ -49,7 +49,8 @@ private:
 		frame->inputData(frame->bufferFrame);
 		frame->createPyramid();
 
-		frame->computeStart();
+		frame->computePartOne();
+		frame->computePartTwo();
 		frame->computeTerminate();
 		frame->outputData(trf, writer->getOutputData());
 	}
@@ -67,7 +68,7 @@ public:
 			InputContext ctx = reader.open(file);
 			dataGpu.validate(ctx);
 			NullWriter writer(dataGpu);
-			gpu = std::make_unique<GpuFrame>(dataGpu);
+			gpu = std::make_unique<CudaFrame>(dataGpu);
 			runInit(dataGpu, gpu, trf, &reader, &writer);
 		}
 		{

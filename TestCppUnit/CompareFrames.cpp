@@ -93,7 +93,8 @@ private:
 		frame.createPyramid();
 
 		//compute
-		frame.computeStart();
+		frame.computePartOne();
+		frame.computePartTwo();
 		frame.computeTerminate();
 		Assert::IsTrue(errorLogger.hasNoError());
 		return frame.resultPoints;
@@ -129,7 +130,7 @@ public:
 			InputContext ctx = reader.open("");
 			data.validate(ctx);
 			TestWriter writer(data);
-			GpuFrame frame(data);
+			CudaFrame frame(data);
 			reader.read(frame.bufferFrame, data.status);
 			MovieFrame::DeshakerLoopCombined loop;
 			loop.run(frame, progress, reader, writer, input);
@@ -173,7 +174,7 @@ public:
 			FFmpegReader reader;
 			InputContext ctx = reader.open(file);
 			data.validate(ctx);
-			GpuFrame frame(data);
+			CudaFrame frame(data);
 
 			resGpu = run(frame, data, reader);
 			pyramids.push_back(frame.getPyramid(0));
@@ -218,7 +219,7 @@ public:
 			data.validate(ctx);
 			NullReader reader;
 			NullWriter writer(data);
-			GpuFrame frame(data);
+			CudaFrame frame(data);
 
 			frame.inputFrame.readFromPGM("d:/VideoTest/v00.pgm");
 			frame.inputData(frame.inputFrame);
@@ -229,7 +230,8 @@ public:
 			frame.inputData(frame.inputFrame);
 			frame.createPyramid();
 			pyrGpu = frame.getPyramid(0);
-			frame.computeStart();
+			frame.computePartOne();
+			frame.computePartTwo();
 			frame.computeTerminate();
 			frame.outputData(trf, writer.getOutputData());
 			outGpu = frame.getTransformedOutput();
@@ -260,7 +262,8 @@ public:
 			frame.inputData(frame.inputFrame);
 			frame.createPyramid();
 			pyrCpu = frame.getPyramid(0);
-			frame.computeStart();
+			frame.computePartOne();
+			frame.computePartTwo();
 			frame.computeTerminate();
 			frame.outputData(trf, writer.getOutputData());
 			outCpu = frame.getTransformedOutput();

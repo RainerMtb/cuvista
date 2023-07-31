@@ -74,7 +74,7 @@ void readAndWriteOneFrame() {
 		status.reset();
 		NullReader reader;
 		NullWriter writer(data);
-		GpuFrame frame(data);
+		CudaFrame frame(data);
 
 		frame.inputFrame.readFromPGM("d:/VideoTest/v00.pgm");
 		frame.inputData(frame.inputFrame);
@@ -84,7 +84,8 @@ void readAndWriteOneFrame() {
 		frame.inputFrame.readFromPGM("D:/VideoTest/v01.pgm");
 		frame.inputData(frame.inputFrame);
 		frame.createPyramid();
-		frame.computeStart();
+		frame.computePartOne();
+		frame.computePartTwo();
 		frame.computeTerminate();
 
 		AffineTransform trf;

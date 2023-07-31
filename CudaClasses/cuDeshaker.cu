@@ -403,17 +403,21 @@ void cudaCreatePyramid(int64_t frameIdx, const CoreData& core) {
 //----------------------------------
 
 
-void cudaComputeStart(int64_t frameIdx, const CoreData& core) {
+void cudaCompute1(int64_t frameIdx, const CoreData& core) {
 	int64_t pyrIdx = frameIdx % core.pyramidCount;
 	size_t pyrIdxPrev = (pyrIdx == 0 ? core.pyramidCount : pyrIdx) - 1;
 
 	assert(checkKernelParameters(core.computeThreads, core.computeBlocks, core.computeSharedMem, core) && "invalid kernel parameters");
 	compTex.create(pyrIdx, pyrIdxPrev, core);
-	KernelParam param = { core.computeBlocks, core.computeThreads, core.computeSharedMem, cs[0] };
-	kernelComputeCall(param, compTex, d_results, frameIdx, debugData, d_kernelTimer);
+	ComputeKernelParam param = { core.computeBlocks, core.computeThreads, core.computeSharedMem, cs[0], &debugData, d_kernelTimer };
+	kernelComputeCall(param, compTex, d_results, frameIdx);
 
 	cudaStreamQuery(cs[0]);
 	handleStatus(cudaGetLastError(), "error @compute #50");
+}
+
+void cudaCompute2(int64_t frameIdx, const CoreData& core) {
+	//TODO
 }
 
 void cudaComputeTerminate(const CoreData& core, std::vector<PointResult>& results) {

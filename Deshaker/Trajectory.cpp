@@ -22,19 +22,21 @@
 
 //create new item and append to list, transformation u, v, a
 TrajectoryItem::TrajectoryItem(double u, double v, double a) {
-	values = Mat<double>::fromRow({u, v, a});
-	currentSum += values;	//sum to this point
-	sum = currentSum;		//store sum for this point
+	values.set(0, 0, u);
+	values.set(0, 1, v);
+	values.set(0, 2, a);
+	currentSum += values;	   //sum to this point
+	sum.setData(currentSum);   //store sum for this point
 	isDuplicateFrame = std::abs(u) < 0.5 && std::abs(v) < 0.5 && std::abs(a) < 0.001;
 }
 
-TrajectoryItem Trajectory::addTrajectoryTransform(double dx, double dy, double da) {
-	return trajectory.emplace_back(dx, dy, da);
+void Trajectory::addTrajectoryTransform(double dx, double dy, double da) {
+	trajectory.emplace_back(dx, dy, da);
 }
 
 //append new result to list
-TrajectoryItem Trajectory::addTrajectoryTransform(const Affine2D& transform, int64_t frameIdx) {
-	return addTrajectoryTransform(transform.dX(), transform.dY(), transform.rot());
+void Trajectory::addTrajectoryTransform(const Affine2D& transform, int64_t frameIdx) {
+	addTrajectoryTransform(transform.dX(), transform.dY(), transform.rot());
 }
 
 int64_t Trajectory::getTrajectorySize() {
@@ -47,36 +49,39 @@ int64_t clamp(int64_t val, int64_t lo, int64_t hi) {
 	return val;
 }
 
-AffineTransform Trajectory::computeTransformForFrame(const MainData& data, int64_t frameWriteIndex) {
+const AffineTransform& Trajectory::computeTransformForFrame(const MainData& data, int64_t frameWriteIndex) {
 	//compute average movements over current window
 	double sig = data.radius * data.cSigmaParam;
-	double sumW = 0.0;
-	Mat avg = Mat<double>::zeros(1, 3);
+	double sumWeight = 0.0;
+	tempAvg.setValues(0.0);
 	for (int64_t i = -data.radius; i <= data.radius; i++) {
 		double w = std::exp(-0.5 * i * i / (sig * sig));
 		int64_t idx = clamp(frameWriteIndex + i, 0, trajectory.size() - 1);
-		avg += trajectory[idx].sum * w;
-		sumW += w;
+		tempSum.setValues(trajectory[idx].sum);
+		tempSum *= w;
+		tempAvg += tempSum;
+		sumWeight += w;
 	}
-	avg /= sumW;
+	tempAvg /= sumWeight;
 	TrajectoryItem& ti = trajectory[frameWriteIndex];
 
 	if (ti.isDuplicateFrame) {
-		//start with usual image transformation
-		Mat deltaMax = ti.sum - avg;
-		//then take midpoint between transformation of previous frame and calculated transform
-		delta = (delta + deltaMax) / 2;
+		//take midpoint between transformation of previous frame and calculated transform
+		tempDelta += ti.sum;
+		tempDelta -= tempAvg;
+		tempDelta /= 2.0;
 
 	} else {
 		//normal procedure
-		delta = ti.sum - avg;
+		tempDelta.setValues(ti.sum);
+		tempDelta -= tempAvg;
 	}
 
 	//get transform to apply to image
-	AffineTransform out; //default null transform
-	out.addTranslation(data.w / 2.0, data.h / 2.0)			//translate to origin
-		.addRotation(delta[0][2])							//rotation
-		.addTranslation(delta[0][0], delta[0][1])			//computed translation to stabilize
+	out.reset()
+		.addTranslation(data.w / 2.0, data.h / 2.0)			//translate to origin
+		.addRotation(tempDelta[0][2])						//rotation
+		.addTranslation(tempDelta[0][0], tempDelta[0][1])	//computed translation to stabilize
 		.addZoom(data.imZoom)								//zoom as set
 		.addTranslation(data.w / -2.0, data.h / -2.0)		//translate back to center
 		;

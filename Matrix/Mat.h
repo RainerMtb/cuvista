@@ -624,6 +624,10 @@ public:
 
 	Mat<T>& operator /= (T b) { return setValues([&] (size_t row, size_t col) { return at(row, col) / b; }); }
 
+	Mat<T>& operator *= (const Mat<T>& b) { return setValues([&] (size_t row, size_t col) { return at(row, col) * b.at(row, col); }); }
+
+	Mat<T>& operator *= (T b) { return setValues([&] (size_t row, size_t col) { return at(row, col) * b; }); }
+
 	virtual MatRow<T> operator [] (size_t row) {
 		assert(row < rows() && "row index out of bounds");
 		return MatRow<T>(array + row * cols(), cols());

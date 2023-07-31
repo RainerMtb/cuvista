@@ -37,31 +37,6 @@ std::map<int64_t, TransformValues> MovieFrame::readTransforms() {
 	return tf.readTransformMap();
 }
 
-//---------------------------------------------------------------------
-//---------- GPU FRAME ------------------------------------------------
-//---------------------------------------------------------------------
-
-//destruct cuda stuff and get debug data if present
-GpuFrame::~GpuFrame() {
-	DebugData data = cudaShutdown(mData);
-
-	//retrieve debug data from device if present
-	std::vector<double>& debugData = data.debugData;
-	size_t siz = (size_t) debugData[0];
-	double* ptr = debugData.data() + 1;
-	double* ptrEnd = debugData.data() + siz + 1;
-	while (ptr != ptrEnd) {
-		size_t h = (size_t) *ptr++;
-		size_t w = (size_t) *ptr++;
-		std::cout << std::endl << "Debug Data found, mat [" << h << " x " << w << "]" << std::endl;
-		//Mat<double>::fromArray(h, w, ptr).saveAsCSV("f:/gpu.txt", true);
-		Mat<double>::fromArray(h, w, ptr, false).toConsole("", 16);
-		ptr += h * w;
-	}
-
-	//data.kernelTimings.saveAsBMP("f:/kernel.bmp");
-}
-
 
 //---------------------------------------------------------------------
 //---------- CPU FRAME ------------------------------------------------

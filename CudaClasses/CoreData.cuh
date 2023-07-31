@@ -80,8 +80,8 @@ public:
 	int zMax = -1;				//pyramid steps used for actual computing
 	int div = -1;
 
-	int w = -1;                 //frame width
-	int h = -1;					//frame height
+	int w = 0;                  //frame width
+	int h = 0;					//frame height
 	int64_t frameCount = -1;
 
 	int pyramidRows = -1;		//number of rows for one pyramid, for example all the rows of Y data

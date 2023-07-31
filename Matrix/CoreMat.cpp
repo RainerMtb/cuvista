@@ -18,6 +18,40 @@
 
 #include "CoreMat.h"
 #include <cmath>
+#include <iostream>
+
+ //default constructor produces invalid mat
+template <class T> CoreMat<T>::CoreMat() :
+	CoreMat<T>(nullptr, 0, 0, true) {}
+
+//copy constructor
+template <class T> CoreMat<T>::CoreMat(const CoreMat<T>& other) : CoreMat<T>(nullptr, other.h, other.w, true) {
+	//std::cout << "!! 1 copy constructor" << std::endl;
+	//when template type is const, need to allocate a non const array to be able to write to it
+	using TT = std::remove_const_t<T>;
+	size_t numel = other.h * other.w;
+
+	TT* newArray = new TT[numel];
+	std::copy(other.array, other.array + numel, newArray);
+	array = newArray;
+}
+
+//move constructor
+template <class T> CoreMat<T>::CoreMat(CoreMat<T>&& other) noexcept : CoreMat<T>(other.array, other.h, other.w, other.ownData) {
+	//std::cout << "!! 2 move constructor" << std::endl;
+	other.array = nullptr;
+	other.h = 0;
+	other.w = 0;
+	other.ownData = true;
+}
+
+//virtual destructor
+template <class T>  CoreMat<T>::~CoreMat() {
+	//std::cout << "!! destructor " << &array << " " << h << ", " << w << std::endl;
+	if (ownData) {
+		delete[] array;
+	}
+}
 
 //copy assignment
 template <class T> CoreMat<T>& CoreMat<T>::operator = (const CoreMat<T>& other) {

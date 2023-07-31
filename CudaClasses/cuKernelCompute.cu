@@ -265,10 +265,10 @@ __global__ void kernelCompute(ComputeTextures tex, PointResult* results, int64_t
 	timestamps[blockIndex].stop();
 }
 
-void kernelComputeCall(KernelParam param, ComputeTextures& tex, PointResult* d_results, int64_t frameIdx, cu::DebugData debugData, KernelTimer* d_timestamps) {
+void kernelComputeCall(ComputeKernelParam param, ComputeTextures& tex, PointResult* d_results, int64_t frameIdx) {
 	dim3 blk(param.blk.x, param.blk.y);
 	dim3 thr(param.thr.x, param.thr.y);
-	kernelCompute << <blk, thr, param.shdBytes, param.stream >> > (tex, d_results, frameIdx, debugData, d_timestamps);
+	kernelCompute<<<blk, thr, param.shdBytes, param.stream>>> (tex, d_results, frameIdx, *param.debugData, param.kernelTimestamps);
 }
 
 void computeInit(const CoreData& core) {

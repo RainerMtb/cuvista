@@ -84,8 +84,10 @@ public:
 	virtual void inputData(ImageYuv& frame) = 0;
 	//set up image pyramid
 	virtual void createPyramid() = 0;
-	//start computation asynchronously
-	virtual void computeStart() = 0;
+	//start computation asynchronously for some part of a frame
+	virtual void computePartOne() = 0;
+	//start computation asynchronously for second part
+	virtual void computePartTwo() = 0;
 	//return displacement for each point
 	virtual void computeTerminate() = 0;
 	//prepare data for output to writer
@@ -160,18 +162,35 @@ protected:
 
 
 //---------------------------------------------------------------------
-//---------- GPU FRAME ------------------------------------------------
+//---------- CUDA FRAME -----------------------------------------------
 //---------------------------------------------------------------------
 
 
-class GpuFrame : public MovieFrame {
+class CudaFrame : public MovieFrame {
 
 public:
-	GpuFrame(MainData& data) : MovieFrame(data) {
+	CudaFrame(MainData& data) : MovieFrame(data) {
 		cudaInit(data, inputFrame);
 	}
 
-	~GpuFrame();
+	~CudaFrame() {
+		//retrieve debug data from device
+		DebugData data = cudaShutdown(mData);
+		std::vector<double>& debugData = data.debugData;
+		size_t siz = (size_t) debugData[0];
+		double* ptr = debugData.data() + 1;
+		double* ptrEnd = debugData.data() + siz + 1;
+		while (ptr != ptrEnd) {
+			size_t h = (size_t) *ptr++;
+			size_t w = (size_t) *ptr++;
+			std::cout << std::endl << "Debug Data found, mat [" << h << " x " << w << "]" << std::endl;
+			//Mat<double>::fromArray(h, w, ptr).saveAsCSV("f:/gpu.txt", true);
+			Mat<double>::fromArray(h, w, ptr, false).toConsole("", 16);
+			ptr += h * w;
+		}
+
+		//data.kernelTimings.saveAsBMP("f:/kernel.bmp");
+	}
 
 	void inputData(ImageYuv& frame) override {
 		cudaReadFrame(mStatus.frameInputIndex, mData, frame);
@@ -181,8 +200,12 @@ public:
 		cudaCreatePyramid(mStatus.frameInputIndex, mData);
 	}
 
-	void computeStart() override {
-		cudaComputeStart(mStatus.frameInputIndex, mData);
+	void computePartOne() override {
+		cudaCompute1(mStatus.frameInputIndex, mData);
+	}
+
+	void computePartTwo() override {
+		cudaCompute2(mStatus.frameInputIndex, mData);
 	}
 
 	void computeTerminate() override {
@@ -239,7 +262,8 @@ public:
 
 	void inputData(ImageYuv& frame) override;
 	void createPyramid() override;
-	void computeStart() override {}
+	void computePartOne() override {}
+	void computePartTwo() override {}
 	void computeTerminate() override;
 	void outputData(const AffineTransform& trf, OutputContext outCtx) override;
 	Mat<float> getTransformedOutput() const override;
@@ -291,7 +315,8 @@ public:
 
 	void inputData(ImageYuv& frame) override;
 	void createPyramid() override {}
-	void computeStart() override {}
+	void computePartOne() override {}
+	void computePartTwo() override {}
 	void computeTerminate() override {}
 	void outputData(const AffineTransform& trf, OutputContext outCtx) override;
 	ImageYuv getInput(int64_t index) const override;
@@ -307,7 +332,8 @@ public:
 	DefaultFrame(MainData& data) : MovieFrame(data) {}
 	void inputData(ImageYuv& frame) {}
 	void createPyramid() {}
-	void computeStart() {}
+	void computePartOne() {}
+	void computePartTwo() {}
 	void computeTerminate() {}
 	void outputData(const AffineTransform& trf, OutputContext outCtx) {};
 };

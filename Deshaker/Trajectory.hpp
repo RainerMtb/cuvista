@@ -28,9 +28,9 @@ struct TrajectoryItem {
 	//accumulated values up to most recent frame
 	inline static Mat currentSum = Mat<double>::zeros(1, 3);
 	//values calculated from previous frame to this frame
-	Mat<double> values;
+	Mat<double> values = Mat<double>::zeros(1, 3);
 	//accumulated values up to this frame
-	Mat<double> sum;
+	Mat<double> sum = Mat<double>::zeros(1, 3);
 	//frame is identical to previous frame
 	bool isDuplicateFrame;
 
@@ -42,15 +42,19 @@ class Trajectory {
 private:
 	//holds all trajectory items, grows with each frame
 	std::vector<TrajectoryItem> trajectory;
-	//final averaged values for this frame, but still without additional zoom
-	Mat<double> delta = Mat<double>::zeros(1, 3);
+	//temporary mats
+	Matd tempDelta = Matd::zeros(1, 3);
+	Matd tempAvg = Matd::zeros(1, 3);
+	Matd tempSum = Matd::zeros(1, 3);
+	//current output
+	AffineTransform out;
 
 public:
-	TrajectoryItem addTrajectoryTransform(double dx, double dy, double da);
-	TrajectoryItem addTrajectoryTransform(const Affine2D& transform, int64_t frameIdx);
+	void addTrajectoryTransform(double dx, double dy, double da);
+	void addTrajectoryTransform(const Affine2D& transform, int64_t frameIdx);
 
 	//create affine transformation
-	AffineTransform computeTransformForFrame(const MainData& data, int64_t frameWriteIndex);
+	const AffineTransform& computeTransformForFrame(const MainData& data, int64_t frameWriteIndex);
 
 	//read transforms
 	void readTransforms(std::map<int64_t, TransformValues> transformsMap);
