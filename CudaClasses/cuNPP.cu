@@ -228,27 +228,27 @@ __global__ void kernel_yuv32_to_rgb8(cudaTextureObject_t texObj, uchar* rgb, int
 
 //----------- callers
 
-cudaError_t npz_scale_8u32f(uchar* src, int srcStep, float* dest, int destStep, int w, int h) {
+cudaError_t cu::scale_8u32f(uchar* src, int srcStep, float* dest, int destStep, int w, int h, cudaStream_t cs) {
 	KernelContext ki = prepareTexture(src, srcStep, w, h);
 	cuMatf destMat(dest, h, w, destStep);
-	kernel_scale_8u32f <<<ki.blocks, ki.threads>>> (ki.texture, destMat);
+	kernel_scale_8u32f <<<ki.blocks, ki.threads, 0, cs>>> (ki.texture, destMat);
 	cudaDestroyTextureObject(ki.texture);
 	return cudaGetLastError();
 }
 
-cudaError_t npz_scale_32f8u(float* src, int srcStep, uchar* dest, int destStep, int w, int h) {
+cudaError_t cu::scale_32f8u(float* src, int srcStep, uchar* dest, int destStep, int w, int h, cudaStream_t cs) {
 	KernelContext ki = prepareTexture(src, srcStep, w, h);
 	cuMatc destMat(dest, h, w, destStep);
-	kernel_scale_32f8u <<<ki.blocks, ki.threads>>> (ki.texture, destMat);
+	kernel_scale_32f8u <<<ki.blocks, ki.threads, 0, cs>>> (ki.texture, destMat);
 	cudaDestroyTextureObject(ki.texture);
 	return cudaGetLastError();
 }
 
-cudaError_t npz_copy_32f(float* src, int srcStep, float* dest, int destStep, int w, int h) {
+cudaError_t cu::copy_32f(float* src, int srcStep, float* dest, int destStep, int w, int h) {
 	return cudaMemcpy2D(dest, destStep * sizeof(float), src, srcStep, w * sizeof(float), h, cudaMemcpyDeviceToDevice);
 }
 
-cudaError_t npz_warp_back_32f(float* src, int srcStep, float* dest, int destStep, int w, int h, cu::Affine trf, cudaStream_t cs) {
+cudaError_t cu::warp_back_32f(float* src, int srcStep, float* dest, int destStep, int w, int h, cu::Affine trf, cudaStream_t cs) {
 	KernelContext ki = prepareTexture(src, srcStep, w, h);
 	cuMatf destMat(dest, h, w, destStep);
 	kernel_warp_back <<<ki.blocks, ki.threads, 0, cs>>> (ki.texture, destMat, trf);
@@ -256,7 +256,7 @@ cudaError_t npz_warp_back_32f(float* src, int srcStep, float* dest, int destStep
 	return cudaGetLastError();
 }
 
-cudaError_t npz_filter_32f(float* src, float* dest, int srcStep, int w, int h, float* d_kernel, int kernelSize, FilterDim filterDim, cudaStream_t cs) {
+cudaError_t cu::filter_32f(float* src, float* dest, int srcStep, int w, int h, float* d_kernel, int kernelSize, FilterDim filterDim, cudaStream_t cs) {
 	KernelContext ki = prepareTexture(src, srcStep, w, h);
 	cuMatf destMat(dest, h, w, srcStep / sizeof(float));
 	if (filterDim == FilterDim::FILTER_HORIZONZAL) {
@@ -269,7 +269,7 @@ cudaError_t npz_filter_32f(float* src, float* dest, int srcStep, int w, int h, f
 	return cudaGetLastError();
 }
 
-cudaError_t npz_unsharp_32f(float* base, float* gauss, int srcStep, float* dest, int destStep, int w, int h, float factor, cudaStream_t cs) {
+cudaError_t cu::unsharp_32f(float* base, float* gauss, int srcStep, float* dest, int destStep, int w, int h, float factor, cudaStream_t cs) {
 	KernelContext kiBase = prepareTexture(base, srcStep, w, h);
 	KernelContext kiGauss = prepareTexture(gauss, srcStep, w, h);
 	cuMatf destMat(dest, h, w, destStep);
@@ -279,7 +279,7 @@ cudaError_t npz_unsharp_32f(float* base, float* gauss, int srcStep, float* dest,
 	return cudaGetLastError();
 }
 
-cudaError_t npz_remap_downsize_32f(float* src, int srcStep, float* dest, int destStep, int wsrc, int hsrc) {
+cudaError_t cu::remap_downsize_32f(float* src, int srcStep, float* dest, int destStep, int wsrc, int hsrc) {
 	int wdest = wsrc / 2;
 	int hdest = hsrc / 2;
 	KernelContext ki = prepareTexture(src, srcStep, wsrc, hsrc, wdest, hdest);
@@ -290,21 +290,21 @@ cudaError_t npz_remap_downsize_32f(float* src, int srcStep, float* dest, int des
 	return cudaGetLastError();
 }
 
-cudaError_t npz_uv_to_nv12(float* src, int srcStep, uchar* nvencPtr, int cudaPitch, int w, int h) {
+cudaError_t cu::uv_to_nv12(float* src, int srcStep, uchar* nvencPtr, int cudaPitch, int w, int h, cudaStream_t cs) {
 	KernelContext ki = prepareTexture(src, srcStep, w, h * 2, w / 2, h / 2);
-	kernel_uv_to_nv12 <<<ki.blocks, ki.threads>>> (ki.texture, nvencPtr, cudaPitch, w, h);
+	kernel_uv_to_nv12 <<<ki.blocks, ki.threads, 0, cs>>> (ki.texture, nvencPtr, cudaPitch, w, h);
 	cudaDestroyTextureObject(ki.texture);
 	return cudaGetLastError();
 }
 
-cudaError_t npz_yuv_to_rgb(uchar* src, int srcStep, uchar* dest, int destStep, int w, int h) {
+cudaError_t cu::yuv_to_rgb(uchar* src, int srcStep, uchar* dest, int destStep, int w, int h) {
 	KernelContext ki = prepareTexture(src, srcStep, w, 3 * h, w, h);
 	kernel_yuv8_to_rgb8 <<<ki.blocks, ki.threads>>> (ki.texture, dest, w, h);
 	cudaDestroyTextureObject(ki.texture);
 	return cudaGetLastError();
 }
 
-cudaError_t npz_yuv_to_rgb(float* src, int srcStep, uchar* dest, int destStep, int w, int h) {
+cudaError_t cu::yuv_to_rgb(float* src, int srcStep, uchar* dest, int destStep, int w, int h) {
 	KernelContext ki = prepareTexture(src, srcStep, w, 3 * h, w, h);
 	kernel_yuv32_to_rgb8 <<<ki.blocks, ki.threads>>> (ki.texture, dest, w, h);
 	cudaDestroyTextureObject(ki.texture);

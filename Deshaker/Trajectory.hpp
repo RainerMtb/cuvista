@@ -50,8 +50,8 @@ private:
 	AffineTransform out;
 
 public:
-	void addTrajectoryTransform(double dx, double dy, double da);
-	void addTrajectoryTransform(const Affine2D& transform, int64_t frameIdx);
+	const TrajectoryItem& addTrajectoryTransform(double dx, double dy, double da);
+	const TrajectoryItem& addTrajectoryTransform(const Affine2D& transform, int64_t frameIdx);
 
 	//create affine transformation
 	const AffineTransform& computeTransformForFrame(const MainData& data, int64_t frameWriteIndex);

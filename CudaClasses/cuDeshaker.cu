@@ -43,7 +43,7 @@ float* filterKernelDifference;
 PointResult* d_results;
 
 //init cuda streams
-std::vector<cudaStream_t> cs(3);
+std::vector<cudaStream_t> cs(2);
 
 //data output from kernels for later analysis
 cu::DebugData debugData = {};
@@ -56,6 +56,11 @@ ComputeTextures compTex;
 
 //array of time captures for compute kernel
 KernelTimer* d_kernelTimer = nullptr;
+
+//signal to interrupt compute kernel
+char* d_interrupt;
+//array to keep track of already computed blocks
+char* d_computed;
 
 __device__ void KernelTimer::start() {
 	block = blockIdx;
@@ -332,6 +337,8 @@ void cudaDeviceSetup(CoreData& core) {
 
 	//set up compute kernel
 	computeInit(core);
+	allocSafe(&d_interrupt, 1);
+	allocSafe(&d_computed, 1ll * core.ixCount * core.iyCount);
 
 	//memory statistics
 	handleStatus(cudaMemGetInfo(&memfree2, &memtotal), "error @init #80");
@@ -374,24 +381,24 @@ void cudaCreatePyramid(int64_t frameIdx, const CoreData& core) {
 
 	//first level of pyramid
 	//Y data
-	npz_scale_8u32f(yuvStart, core.pitch, pyrStart, core.strideCount, w, h);
+	cu::scale_8u32f(yuvStart, core.pitch, pyrStart, core.strideCount, w, h);
 	//DX data
-	npz_filter_32f(pyrStart, pyrStart + planeOffset, core.strideFloatBytes, w, h, filterKernelDifference, 3, FilterDim::FILTER_HORIZONZAL);
+	cu::filter_32f(pyrStart, pyrStart + planeOffset, core.strideFloatBytes, w, h, filterKernelDifference, 3, cu::FilterDim::FILTER_HORIZONZAL);
 	//DY data
-	npz_filter_32f(pyrStart, pyrStart + planeOffset * 2, core.strideFloatBytes, w, h, filterKernelDifference, 3, FilterDim::FILTER_VERTICAL);
+	cu::filter_32f(pyrStart, pyrStart + planeOffset * 2, core.strideFloatBytes, w, h, filterKernelDifference, 3, cu::FilterDim::FILTER_VERTICAL);
 
 	//lower levels
 	float* pyrNext = pyrStart + 1ull * core.strideCount * h;
 	for (int z = 1; z <= core.zMax; z++) {
-		npz_filter_32f(pyrStart, bufferFrames[13], core.strideFloatBytes, w, h, filterKernelGauss[0], filterKernelGaussSizes[0], FilterDim::FILTER_HORIZONZAL);
-		npz_filter_32f(bufferFrames[13], bufferFrames[12], core.strideFloatBytes, w, h, filterKernelGauss[0], filterKernelGaussSizes[0], FilterDim::FILTER_VERTICAL);
-		npz_remap_downsize_32f(bufferFrames[12], core.strideFloatBytes, pyrNext, core.strideCount, w, h);
+		cu::filter_32f(pyrStart, bufferFrames[13], core.strideFloatBytes, w, h, filterKernelGauss[0], filterKernelGaussSizes[0], cu::FilterDim::FILTER_HORIZONZAL);
+		cu::filter_32f(bufferFrames[13], bufferFrames[12], core.strideFloatBytes, w, h, filterKernelGauss[0], filterKernelGaussSizes[0], cu::FilterDim::FILTER_VERTICAL);
+		cu::remap_downsize_32f(bufferFrames[12], core.strideFloatBytes, pyrNext, core.strideCount, w, h);
 		w /= 2;
 		h /= 2;
 		pyrStart = pyrNext;
 		pyrNext += 1ull * core.strideCount * h;
-		npz_filter_32f(pyrStart, pyrStart + planeOffset, core.strideFloatBytes, w, h, filterKernelDifference, 3, FilterDim::FILTER_HORIZONZAL);
-		npz_filter_32f(pyrStart, pyrStart + planeOffset * 2, core.strideFloatBytes, w, h, filterKernelDifference, 3, FilterDim::FILTER_VERTICAL);
+		cu::filter_32f(pyrStart, pyrStart + planeOffset, core.strideFloatBytes, w, h, filterKernelDifference, 3, cu::FilterDim::FILTER_HORIZONZAL);
+		cu::filter_32f(pyrStart, pyrStart + planeOffset * 2, core.strideFloatBytes, w, h, filterKernelDifference, 3, cu::FilterDim::FILTER_VERTICAL);
 	}
 
 	handleStatus(cudaGetLastError(), "error @pyramid");
@@ -409,22 +416,48 @@ void cudaCompute1(int64_t frameIdx, const CoreData& core) {
 
 	assert(checkKernelParameters(core.computeThreads, core.computeBlocks, core.computeSharedMem, core) && "invalid kernel parameters");
 	compTex.create(pyrIdx, pyrIdxPrev, core);
-	ComputeKernelParam param = { core.computeBlocks, core.computeThreads, core.computeSharedMem, cs[0], &debugData, d_kernelTimer };
-	kernelComputeCall(param, compTex, d_results, frameIdx);
+	handleStatus(cudaMemsetAsync(d_computed, 0, 1ll * core.ixCount * core.iyCount, cs[0]), "error @compute #20");
+	ComputeKernelParam param = { 
+		core.computeBlocks, 
+		core.computeThreads, 
+		core.computeSharedMem, 
+		cs[0], 
+		&debugData, 
+		d_kernelTimer, 
+		frameIdx, 
+		d_interrupt, 
+		d_computed 
+	};
+	kernelComputeCall(param, compTex, d_results);
 
-	cudaStreamQuery(cs[0]);
-	handleStatus(cudaGetLastError(), "error @compute #50");
+	//cudaStreamQuery(cs[0]);
+	handleStatus(cudaGetLastError(), "error @compute #20");
 }
 
 void cudaCompute2(int64_t frameIdx, const CoreData& core) {
-	//TODO
+	//reset interrupt signal
+	handleStatus(cudaMemsetAsync(d_interrupt, 0, sizeof(char), cs[1]), "error @compute #50");
+	//restart kernel
+	ComputeKernelParam param = {
+		core.computeBlocks,
+		core.computeThreads,
+		core.computeSharedMem,
+		cs[0],
+		&debugData,
+		d_kernelTimer,
+		frameIdx,
+		d_interrupt,
+		d_computed
+	};
+	kernelComputeCall(param, compTex, d_results);
+	handleStatus(cudaGetLastError(), "error @compute #30");
 }
 
 void cudaComputeTerminate(const CoreData& core, std::vector<PointResult>& results) {
 	//handleStatus(cudaMemcpyAsync(results.data(), d_results, sizeof(PointResult) * results.size(), cudaMemcpyDefault, cs1), "error @compute #40", err);
 	handleStatus(cudaMemcpy(results.data(), d_results, sizeof(PointResult) * results.size(), cudaMemcpyDefault), "error @compute #100");
 	compTex.destroy();
-	handleStatus(cudaGetLastError(), "error @compute #150");
+	handleStatus(cudaGetLastError(), "error @compute #100");
 }
 
 
@@ -445,6 +478,9 @@ buffer frames usage, each frame holds one plane Y, U, V in float format
 	18, 19, 20: output to encoder
 */
 void cudaOutput(int64_t frameIdx, const CoreData& core, OutputContext outCtx, cu::Affine trf) {
+	//interrupt compute kernel
+	handleStatus(cudaMemsetAsync(d_interrupt, 1, sizeof(char), cs[1]), "error @output #10 memset");
+
 	int h = core.h;
 	int w = core.w;
 	int64_t fr = frameIdx % core.bufferCount;
@@ -455,7 +491,7 @@ void cudaOutput(int64_t frameIdx, const CoreData& core, OutputContext outCtx, cu
 	unsigned char* yuvSrc = d_yuvData + fr * frameSize8;
 
 	//handle three frames at once, convert input image from 8bit to float
-	npz_scale_8u32f(yuvSrc, core.pitch, bufferFrames[0], core.strideCount, w, h * 3);
+	cu::scale_8u32f(yuvSrc, core.pitch, bufferFrames[0], core.strideCount, w, h * 3, cs[1]);
 
 	//handle individual frames
 	const BlendInput& bi = core.blendInput;
@@ -469,21 +505,21 @@ void cudaOutput(int64_t frameIdx, const CoreData& core, OutputContext outCtx, cu
 
 		//reset background with static color if requested
 		if (core.bgmode == BackgroundMode::COLOR) {
-			npz_copy_32f(bg, core.strideFloatBytes, warped, core.strideCount, w, h);
+			cu::copy_32f(bg, core.strideFloatBytes, warped, core.strideCount, w, h);
 		}
 		//transform input on top of background
-		npz_warp_back_32f(in, core.strideFloatBytes, warped, core.strideCount, w, h, trf, cs[i]);
+		cu::warp_back_32f(in, core.strideFloatBytes, warped, core.strideCount, w, h, trf, cs[1]);
 		//first filter pass
-		npz_filter_32f(warped, temp, core.strideFloatBytes, w, h, filterKernelGauss[i], filterKernelGaussSizes[i], FilterDim::FILTER_HORIZONZAL, cs[i]);
+		cu::filter_32f(warped, temp, core.strideFloatBytes, w, h, filterKernelGauss[i], filterKernelGaussSizes[i], cu::FilterDim::FILTER_HORIZONZAL, cs[1]);
 		//second filter pass
-		npz_filter_32f(temp, buffer, core.strideFloatBytes, w, h, filterKernelGauss[i], filterKernelGaussSizes[i], FilterDim::FILTER_VERTICAL, cs[i]);
+		cu::filter_32f(temp, buffer, core.strideFloatBytes, w, h, filterKernelGauss[i], filterKernelGaussSizes[i], cu::FilterDim::FILTER_VERTICAL, cs[1]);
 		//combine unsharp mask
-		npz_unsharp_32f(warped, buffer, core.strideFloatBytes, out, core.strideCount, w, h, core.unsharp[i], cs[i]);
+		cu::unsharp_32f(warped, buffer, core.strideFloatBytes, out, core.strideCount, w, h, core.unsharp[i], cs[1]);
 
 		//blend input frame on top of output when requested
 		if (bi.blendWidth > 0) {
-			npz_copy_32f(in + bi.blendStart, core.strideFloatBytes, out + bi.blendStart, core.strideCount, bi.blendWidth, h);
-			npz_copy_32f(bg + bi.separatorStart, core.strideFloatBytes, out + bi.separatorStart, core.strideCount, bi.separatorWidth, h);
+			cu::copy_32f(in + bi.blendStart, core.strideFloatBytes, out + bi.blendStart, core.strideCount, bi.blendWidth, h);
+			cu::copy_32f(bg + bi.separatorStart, core.strideFloatBytes, out + bi.separatorStart, core.strideCount, bi.separatorWidth, h);
 		}
 	}
 
@@ -497,18 +533,19 @@ void cudaOutput(int64_t frameIdx, const CoreData& core, OutputContext outCtx, cu
 	//output to nvenc buffer
 	if (outCtx.encodeGpu) {
 		//convert Y plane
-		npz_scale_32f8u(bufferFrames[18], core.strideFloatBytes, outCtx.cudaNv12ptr, outCtx.cudaPitch, w, h);
+		cu::scale_32f8u(bufferFrames[18], core.strideFloatBytes, outCtx.cudaNv12ptr, outCtx.cudaPitch, w, h, cs[1]);
 		//convert and interleave U and V plane
-		npz_uv_to_nv12(bufferFrames[19], core.strideFloatBytes, outCtx.cudaNv12ptr + 1ull * outCtx.cudaPitch * h, outCtx.cudaPitch, w, h);
+		cu::uv_to_nv12(bufferFrames[19], core.strideFloatBytes, outCtx.cudaNv12ptr + 1ull * outCtx.cudaPitch * h, outCtx.cudaPitch, w, h, cs[1]);
 	}
 
 	//output to host
 	if (outCtx.encodeCpu) {
-		npz_scale_32f8u(bufferFrames[18], core.strideFloatBytes, d_yuvOut, core.pitch, w, h * 3);
-		handleStatus(cudaMemcpy(outCtx.outputFrame->data(), d_yuvOut, outCtx.outputFrame->dataSizeInBytes(), cudaMemcpyDeviceToHost), "error #50 memcopy");
+		cu::scale_32f8u(bufferFrames[18], core.strideFloatBytes, d_yuvOut, core.pitch, w, h * 3, cs[1]);
+		handleStatus(cudaMemcpy(outCtx.outputFrame->data(), d_yuvOut, outCtx.outputFrame->dataSizeInBytes(), cudaMemcpyDeviceToHost), "error @output #50 memcopy");
 		outCtx.outputFrame->frameIdx = frameIdx;
 	}
 
+	handleStatus(cudaStreamSynchronize(cs[1]), "error @output #99");
 	handleStatus(cudaGetLastError(), "error @output #100");
 }
 
@@ -545,12 +582,12 @@ ImageYuv cudaGetInput(int64_t index, const CoreData& core) {
 
 void cudaGetCurrentInputFrame(ImagePPM& image, const CoreData& core, int idx) {
 	unsigned char* yuvSrc = d_yuvData + idx * 3ll * core.h * core.pitch;
-	npz_yuv_to_rgb(yuvSrc, core.pitch, d_rgb, core.strideCount, core.w, core.h);
+	cu::yuv_to_rgb(yuvSrc, core.pitch, d_rgb, core.strideCount, core.w, core.h);
 	cudaMemcpy(image.data(), d_rgb, 3ull * core.w * core.h, cudaMemcpyDefault);
 }
 
 void cudaGetCurrentOutputFrame(ImagePPM& image, const CoreData& core) {
-	npz_yuv_to_rgb(bufferFrames[9], core.strideFloatBytes, d_rgb, core.strideCount, core.w, core.h);
+	cu::yuv_to_rgb(bufferFrames[9], core.strideFloatBytes, d_rgb, core.strideCount, core.w, core.h);
 	cudaMemcpy(image.data(), d_rgb, 3ll * core.w * core.h, cudaMemcpyDefault);
 }
 
@@ -581,30 +618,34 @@ DebugData cudaShutdown(const CoreData& core) {
 	auto minTime = std::min_element(kernelTimer.begin(), kernelTimer.end(), fcnMin);
 	auto fcnMax = [] (KernelTimer& kt1, KernelTimer& kt2) { return kt1.timeStop < kt2.timeStop; };
 	auto maxTime = std::max_element(kernelTimer.begin(), kernelTimer.end(), fcnMax);
-	int ws = 10; //scale image horizontally down by 10 pixels per us
 	int h = (int) kernelTimer.size();
-	int w = (int) (maxTime->timeStop - minTime->timeStart) / 1000 / ws;
-	w = (w / 4 + 1) * 4;
+	int w = 8'000;
+	double f = (maxTime->timeStop - minTime->timeStart) / (w - 1.0);
 
 	ImageBGR kernelTimerImage(h, w);
 	for (int i = 0; i < core.computeBlocks.x * core.computeBlocks.y; i++) {
 		KernelTimer& kt = kernelTimer[i];
-		int us1 = (int) (kt.timeStart - minTime->timeStart) / 1000;
-		int us2 = (int) (kt.timeStop - minTime->timeStart) / 1000;
-		for (int k = us1 / ws; k <= us2 / ws; k++) {
+		int t1 = int((kt.timeStart - minTime->timeStart) / f);
+		int t2 = int((kt.timeStop - minTime->timeStart) / f);
+		for (int k = t1; k <= t2; k++) {
 			kernelTimerImage.at(0, i, k) = 255;
 		}
 	}
 
 	//delete device memory
-	void* d_arr[] = { d_results, d_yuvOut, d_rgb, d_yuvData, d_yuvRows, d_yuvPlanes, d_bufferData, d_pyrData, d_pyrRows, debugData.d_data, d_kernelTimer };
+	void* d_arr[] = { d_results, d_yuvOut, d_rgb, d_yuvData, d_yuvRows, d_yuvPlanes, 
+		d_bufferData, d_pyrData, d_pyrRows, debugData.d_data, d_kernelTimer, d_interrupt, d_computed };
+
 	for (void* ptr : d_arr) {
 		handleStatus(cudaFree(ptr), "error @shutdown #10 shutting down memory");
 	}
+
+	//delete streams
 	for (int i = 0; i < cs.size(); i++) {
 		handleStatus(cudaStreamDestroy(cs[i]), "error @shutdown #20 shutting down streams");
 	}
 
+	//unregister memory
 	handleStatus(cudaHostUnregister(registeredMemPtr), "error @shutdown #30 unregister");
 
 	//do not reset device while nvenc is still active

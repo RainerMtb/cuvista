@@ -56,11 +56,12 @@ template<class T> __device__ T tex2D(cudaTextureObject_t tex, float x, float y);
 
 //compute displacement
 //one cuda block works one point in the image using one warp
-__global__ void kernelCompute(ComputeTextures tex, PointResult* results, int64_t frameIdx, cu::DebugData debugData, KernelTimer* timestamps) {
+__global__ void kernelCompute(ComputeTextures tex, PointResult* results, ComputeKernelParam param) {
 	uint ix0 = blockIdx.x;
 	uint iy0 = blockIdx.y;
 	uint blockIndex = iy0 * gridDim.x + ix0;
-	timestamps[blockIndex].start();
+	if (*param.d_interrupt || param.d_computed[blockIndex]) return;
+	param.kernelTimestamps[blockIndex].start();
 
 	int& ir = d_core.ir;
 	int& iw = d_core.iw;
@@ -262,13 +263,14 @@ __global__ void kernelCompute(ComputeTextures tex, PointResult* results, int64_t
 		results[idx] = { idx, ix0, iy0, xm, ym, xm - d_core.w / 2, ym - d_core.h / 2, u, v, result };
 	}
 
-	timestamps[blockIndex].stop();
+	param.kernelTimestamps[blockIndex].stop();
+	param.d_computed[blockIndex] = 1;
 }
 
-void kernelComputeCall(ComputeKernelParam param, ComputeTextures& tex, PointResult* d_results, int64_t frameIdx) {
+void kernelComputeCall(ComputeKernelParam param, ComputeTextures& tex, PointResult* d_results) {
 	dim3 blk(param.blk.x, param.blk.y);
 	dim3 thr(param.thr.x, param.thr.y);
-	kernelCompute<<<blk, thr, param.shdBytes, param.stream>>> (tex, d_results, frameIdx, *param.debugData, param.kernelTimestamps);
+	kernelCompute<<<blk, thr, param.shdBytes, param.stream>>> (tex, d_results, param);
 }
 
 void computeInit(const CoreData& core) {

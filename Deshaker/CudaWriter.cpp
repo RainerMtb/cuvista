@@ -95,6 +95,7 @@ void CudaFFmpegWriter::write() {
 
 
 std::future<void> CudaFFmpegWriter::writeAsync() {
+    //util::ConsoleTimer ct("write");
     encodePackets();
 
     auto fcn = [&] () {

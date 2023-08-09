@@ -30,13 +30,13 @@ TrajectoryItem::TrajectoryItem(double u, double v, double a) {
 	isDuplicateFrame = std::abs(u) < 0.5 && std::abs(v) < 0.5 && std::abs(a) < 0.001;
 }
 
-void Trajectory::addTrajectoryTransform(double dx, double dy, double da) {
-	trajectory.emplace_back(dx, dy, da);
+const TrajectoryItem& Trajectory::addTrajectoryTransform(double dx, double dy, double da) {
+	return trajectory.emplace_back(dx, dy, da);
 }
 
 //append new result to list
-void Trajectory::addTrajectoryTransform(const Affine2D& transform, int64_t frameIdx) {
-	addTrajectoryTransform(transform.dX(), transform.dY(), transform.rot());
+const TrajectoryItem& Trajectory::addTrajectoryTransform(const Affine2D& transform, int64_t frameIdx) {
+	return addTrajectoryTransform(transform.dX(), transform.dY(), transform.rot());
 }
 
 int64_t Trajectory::getTrajectorySize() {

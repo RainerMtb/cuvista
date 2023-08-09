@@ -62,9 +62,12 @@ struct KernelParam {
 struct ComputeKernelParam : KernelParam {
 	cu::DebugData* debugData;
 	KernelTimer* kernelTimestamps;
+	int64_t frameIdx;
+	volatile char* d_interrupt;
+	char* d_computed;
 };
 
-void kernelComputeCall(ComputeKernelParam param, ComputeTextures& tex, PointResult* d_results, int64_t frameIdx);
+void kernelComputeCall(ComputeKernelParam param, ComputeTextures& tex, PointResult* d_results);
 
 void computeInit(const CoreData& core);
 
