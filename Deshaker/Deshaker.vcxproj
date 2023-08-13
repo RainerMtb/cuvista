@@ -159,6 +159,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="AffineTransform.cpp" />
+    <ClCompile Include="clMain.cpp" />
+    <ClCompile Include="clTest.cpp" />
     <ClCompile Include="CudaWriter.cpp" />
     <ClCompile Include="Deshaker.cpp" />
     <ClCompile Include="DeshakerLoop.cpp" />
@@ -185,6 +187,9 @@
   <ItemGroup>
     <ClInclude Include="AffineTransform.hpp" />
     <ClInclude Include="AVException.hpp" />
+    <ClInclude Include="clKernels.hpp" />
+    <ClInclude Include="clMain.hpp" />
+    <ClInclude Include="clTest.hpp" />
     <ClInclude Include="CudaWriter.hpp" />
     <ClInclude Include="Deshaker.hpp" />
     <ClInclude Include="Diagnostics.hpp" />

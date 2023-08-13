@@ -16,34 +16,4 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
-#pragma once
-
-#include <numbers>
-
-#include "Mat.h"
-#include "MovieFrame.hpp"
-#include "FrameResult.hpp"
-#include "cuTest.cuh"
-
-void matTest();
-void qrdec();
-void subMat();
-void matPerf();
-
-void iteratorTest();
-void similarTransformPerformance();
-void readAndWriteOneFrame();
-void checkVersions();
-
-void transform();
-void text();
-void filterCompare();
-
-void cudaInvSimple();
-void cudaInvPerformanceTest();
-void cudaInvEqualityTest();
-void cudaInvParallel();
-void cudaFMAD();
-
-void cudaInvTest(size_t s1, size_t s2);
-void openClInvTest(size_t s1, size_t s2);
+#include "clMain.hpp"

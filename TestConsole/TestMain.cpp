@@ -114,7 +114,6 @@ int main() {
 	std::cout << "----------------------------" << std::endl << "MatrixTestMain:" << std::endl;
 	//check();
 	//qrdec();
-	//for (size_t i = 1; i <= 32; i++) cudaInvTest(i);
 	//text();
 	//filterCompare();
 	//matPerf();
@@ -123,11 +122,14 @@ int main() {
 	//iteratorTest();
 	//similarTransformPerformance();
 	//cudaInvSimple();
-	cudaInvPerformanceTest();
+	//cudaInvPerformanceTest();
 	//cudaInvEqualityTest();
 	//cudaFMAD();
 	//cudaInvParallel();
 	//readAndWriteOneFrame();
 	//checkVersions();
 	//transform();
+
+	cudaInvTest(1, 32);
+	openClInvTest(1, 32);
 }

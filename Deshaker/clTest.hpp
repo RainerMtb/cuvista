@@ -18,32 +18,21 @@
 
 #pragma once
 
-#include <numbers>
+#include "clKernels.hpp"
+#include "clMain.hpp"
 
-#include "Mat.h"
-#include "MovieFrame.hpp"
-#include "FrameResult.hpp"
-#include "cuTest.cuh"
+struct LoadResult {
+	cl_int status;
+	cl::Context context;
+	cl::CommandQueue queue;
+	cl::Kernel kernel;
+};
 
-void matTest();
-void qrdec();
-void subMat();
-void matPerf();
+namespace cltest {
 
-void iteratorTest();
-void similarTransformPerformance();
-void readAndWriteOneFrame();
-void checkVersions();
+	LoadResult loadKernels(std::initializer_list<std::string> kernelNames);
 
-void transform();
-void text();
-void filterCompare();
+	bool cl_inv(LoadResult& res, double* input, double* invOut, size_t s);
 
-void cudaInvSimple();
-void cudaInvPerformanceTest();
-void cudaInvEqualityTest();
-void cudaInvParallel();
-void cudaFMAD();
-
-void cudaInvTest(size_t s1, size_t s2);
-void openClInvTest(size_t s1, size_t s2);
+	double cl_norm1(double* input, size_t s, int threads);
+}

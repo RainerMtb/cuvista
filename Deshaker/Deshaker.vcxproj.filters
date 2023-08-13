@@ -21,6 +21,9 @@
     <Filter Include="Windows">
       <UniqueIdentifier>{2278ac54-40d8-4ab9-ae67-c408b892321e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="OpenCl">
+      <UniqueIdentifier>{59937616-6b83-49c5-8d11-783acb855396}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ProgressDisplay.cpp">
@@ -91,6 +94,12 @@
     </ClCompile>
     <ClCompile Include="Deshaker.cpp">
       <Filter>Main</Filter>
+    </ClCompile>
+    <ClCompile Include="clTest.cpp">
+      <Filter>OpenCl</Filter>
+    </ClCompile>
+    <ClCompile Include="clMain.cpp">
+      <Filter>OpenCl</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -165,6 +174,15 @@
     </ClInclude>
     <ClInclude Include="Deshaker.hpp">
       <Filter>Main</Filter>
+    </ClInclude>
+    <ClInclude Include="clTest.hpp">
+      <Filter>OpenCl</Filter>
+    </ClInclude>
+    <ClInclude Include="clKernels.hpp">
+      <Filter>OpenCl</Filter>
+    </ClInclude>
+    <ClInclude Include="clMain.hpp">
+      <Filter>OpenCl</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

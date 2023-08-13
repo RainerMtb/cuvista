@@ -18,29 +18,30 @@
 
 #include "TestMain.hpp"
 
-void cudaInvTest(size_t s) {
-	Matd a = Matd::rand(s, s, -20, 50);
+void cudaInvTest(size_t s1, size_t s2) {
+	for (size_t s = s1; s <= s2; s++) {
+		Matd a = Matd::rand(s, s, -20, 50);
+		Matd ainv = Matd::allocate(s, s);
+		bool isOK = cutest::cudaInv(a.data(), ainv.data(), s);
+		Matd b = ainv.times(a);
 
-	Matd ainv = Matd::allocate(s, s);
-	bool isOK = cutest::cudaInv(a.data(), ainv.data(), s);
-	Matd b = ainv.times(a);
+		std::cout << "Cuda inv test, dim=" << s << "; ";
+		if (!b.equalsIdentity()) {
+			Matd cpuinv = a.inv().value();
+			Matd cpub = cpuinv.times(a);
+			if (!cpub.equalsIdentity()) {
+				std::cout << "FAIL IDENTITIY TEST also on CPU" << std::endl;
 
-	std::cout << "inv test, dim=" << s << "; ";
-	if (!b.equalsIdentity()) {
-		Matd cpuinv = a.inv().value();
-		Matd cpub = cpuinv.times(a);
-		if (!cpub.equalsIdentity()) {
-			std::cout << "FAIL IDENTITIY TEST also on CPU" << std::endl;
+			} else {
+				std::cout << "FAIL IDENTITIY TEST" << std::endl;
+				if (s > 10) printf("MAX absolute value %f\n", b.abs().max());
+				else b.toConsole("I");
+				//a.saveAsCSV("c:/video/fail.csv");
+			}
 
 		} else {
-			std::cout << "FAIL IDENTITIY TEST" << std::endl;
-			if (s > 10) printf("MAX absolute value %f\n", b.abs().max());
-			else b.toConsole("ID");
-			//a.saveAsCSV("c:/video/fail.csv");
+			std::cout << "OK" << std::endl;
 		}
-
-	} else {
-		std::cout << "OK" << std::endl;
 	}
 }
 

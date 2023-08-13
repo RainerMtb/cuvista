@@ -17,6 +17,7 @@
     <ClCompile Include="TestMatrix.cpp" />
     <ClCompile Include="TestMain.cpp" />
     <ClCompile Include="TestMisc.cpp" />
+    <ClCompile Include="TestOpenCl.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="TestMain.hpp" />
@@ -147,7 +148,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(SolutionDir)lib\$(Platform);$(SolutionDir)bin\$(Platform)\$(Configuration);$(CUDA_PATH)\lib\$(Platform)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>CudaClasses.lib;Matrix.lib;Deshaker.lib;cudart_static.lib;nvencodeapi.lib;cuda.lib;avcodec.lib;avformat.lib;avutil.lib;swscale.lib;swresample.lib;ws2_32.lib;nvapi64.lib</AdditionalDependencies>
+      <AdditionalDependencies>OpenCl.lib;CudaClasses.lib;Matrix.lib;Deshaker.lib;cudart_static.lib;nvencodeapi.lib;cuda.lib;avcodec.lib;avformat.lib;avutil.lib;swscale.lib;swresample.lib;ws2_32.lib;nvapi64.lib</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>libcmt.lib; msvcrt.lib; libcmtd.lib</IgnoreSpecificDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>
@@ -169,7 +170,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(SolutionDir)lib\$(Platform);$(SolutionDir)bin\$(Platform)\$(Configuration);$(CUDA_PATH)\lib\$(Platform)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>CudaClasses.lib;Matrix.lib;Deshaker.lib;cudart_static.lib;nvencodeapi.lib;cuda.lib;avcodec.lib;avformat.lib;avutil.lib;swscale.lib;swresample.lib;ws2_32.lib;nvapi64.lib</AdditionalDependencies>
+      <AdditionalDependencies>OpenCl.lib;CudaClasses.lib;Matrix.lib;Deshaker.lib;cudart_static.lib;nvencodeapi.lib;cuda.lib;avcodec.lib;avformat.lib;avutil.lib;swscale.lib;swresample.lib;ws2_32.lib;nvapi64.lib</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>libcmt.lib</IgnoreSpecificDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>
