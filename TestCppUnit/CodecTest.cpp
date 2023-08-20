@@ -40,14 +40,9 @@ private:
 	//encode sample image through cuda
 	//decode and compare with original image
 	void runEncoder(int w, int h, uint8_t y, uint8_t u, uint8_t v, const std::string& msg) {
-		//set up cuda encoder
 		CUresult res;
-		res = cuInit(0);
-		Assert::IsTrue(res == CUDA_SUCCESS);
 
-		CUcontext cuctx;
-		res = cuCtxCreate_v2(&cuctx, CU_CTX_SCHED_AUTO, 0);
-		Assert::IsTrue(res == CUDA_SUCCESS, toWString(res).c_str());
+		//set up cuda encoder
 		NvEncoder nvenc(w, h);
 
 		uint8_t crf = 10;
@@ -117,7 +112,6 @@ private:
 
 		//tear down encoder and decoder
 		nvenc.destroyEncoder();
-		cuCtxDestroy_v2(cuctx);
 		sws_freeContext(scaler);
 		avcodec_free_context(&ctx);
 		av_frame_free(&frame);
@@ -126,6 +120,10 @@ private:
 
 public:
 	TEST_METHOD(cuEncodeDecode) {
+		CUresult res;
+		res = cuInit(0);
+		Assert::IsTrue(res == CUDA_SUCCESS);
+
 		runEncoder(1920, 1080, 130, 130, 80, "A");
 		runEncoder(1920, 1080, 40, 75, 100, "B");
 		runEncoder(600, 400, 130, 130, 130, "C");

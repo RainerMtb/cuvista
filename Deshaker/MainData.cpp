@@ -88,7 +88,6 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 
 			} else if (str_toupper(next).ends_with(".JPG")) {
 				videoOutputType = OutputType::JPG;
-				videoCodec = OutputCodec::JPEG;
 				fileOut = next;
 
 			} else {
@@ -127,7 +126,7 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 
 		} else if (args.nextArg("device", next)) {
 			deviceRequested = true;
-			deviceNum = next == "cpu" ? -1 : std::stoi(next);
+			deviceSelected = next == "cpu" ? 0 : std::stoi(next);
 
 		} else if (args.nextArg("bgmode", next)) {
 			//background either blend previous frames or use defined color
@@ -206,18 +205,18 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 			iw = ir * 2 + 1;
 
 		} else if (args.nextArg("codec", next)) {
-			auto item = codecMap.find(str_toupper(next));
-			if (item == codecMap.end())
+			auto item = mapStringToCodec.find(str_toupper(next));
+			if (item == mapStringToCodec.end())
 				throw AVException("invalid codec: " + next);
 			else
-				videoCodec = item->second;
+				requestedEncoding.codec = item->second;
 
-		} else if (args.nextArg("encdev", next)) {
-			auto item = encodingDeviceMap.find(str_toupper(next));
-			if (item == encodingDeviceMap.end())
+		} else if (args.nextArg("encoder", next)) {
+			auto item = mapStringToDevice.find(str_toupper(next));
+			if (item == mapStringToDevice.end())
 				throw AVException("invalid encoding device: " + next);
 			else
-				encodingDevice = item->second;
+				requestedEncoding.device = item->second;
 
 		} else if (args.nextArg("frames", next)) {
 			maxFrames = std::stoll(next);
@@ -273,12 +272,58 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 	}
 }
 
+void MainData::collectDeviceInfo() {
+	//sort cuda devices by compute
+	auto less = [] (const DeviceInfoCuda& a, const DeviceInfoCuda& b) {
+		return a.props.major == b.props.major ? a.props.minor < b.props.minor : a.props.major < b.props.major;
+	};
+	std::sort(deviceListCuda.begin(), deviceListCuda.end(), less);
+
+	//cpu encoders
+	std::vector<EncodingOption> cpuEncoders = {
+		{EncodingDevice::CPU, Codec::AV1},
+		{EncodingDevice::CPU, Codec::H265},
+		{EncodingDevice::CPU, Codec::H264}
+	};
+
+	//CPU device
+	deviceInfoCpu = DeviceInfoCpu(DeviceType::CPU, 0, 8192);
+	deviceInfoCpu.encodingOptions = cpuEncoders;
+	if (deviceListCuda.size() > 0) {
+		DeviceInfoCuda& dic = deviceListCuda[0];
+		std::copy(dic.encodingOptions.begin(), dic.encodingOptions.end(), std::back_inserter(deviceInfoCpu.encodingOptions));
+	}
+	deviceList.push_back(&deviceInfoCpu);
+
+	//cuda devices
+	for (DeviceInfoCuda& cu : deviceListCuda) {
+		std::copy(cpuEncoders.begin(), cpuEncoders.end(), std::back_inserter(cu.encodingOptions));
+		deviceList.push_back(&cu);
+	}
+
+	//choose device
+	if (deviceSelected >= deviceList.size()) {
+		throw AVException("invalid device number: " + std::to_string(deviceRequested));
+	}
+	if (deviceRequested == false) {
+		deviceSelected = deviceList.size() - 1;
+	}
+	if (requestedEncoding.device == EncodingDevice::AUTO) {
+		if (deviceList[deviceSelected]->type == DeviceType::CUDA) selectedEncoding.device = EncodingDevice::NVENC;
+		else selectedEncoding.device = EncodingDevice::CPU;
+	} else {
+		selectedEncoding.device = requestedEncoding.device;
+	}
+}
+
 void MainData::validate(InputContext& input) {
 	inputCtx = input;
 	validate();
 }
 
 void MainData::validate() {
+	collectDeviceInfo();
+
 	status.inputStreams.clear();
 	for (AVStream* st : inputCtx.inputStreams) {
 		status.inputStreams.push_back({ st });
@@ -296,21 +341,6 @@ void MainData::validate() {
 
 	//no output to console if frame output through pipe
 	if (videoOutputType == OutputType::PIPE) progressType = ProgressType::NONE;
-
-	//select device
-	if (this->cuda.deviceCount > 0) {
-		auto less = [] (const cudaDeviceProp& a, const cudaDeviceProp& b) { 
-			return a.major == b.major ? a.minor < b.minor : a.major < b.major; 
-		};
-		auto it = std::max_element(cuda.cudaProps.begin(), cuda.cudaProps.end(), less);
-		deviceNumBest = (int) std::distance(cuda.cudaProps.begin(), it);
-	}
-	if (deviceRequested == false) {
-		deviceNum = deviceNumBest;
-	}
-	if (deviceNum >= cuda.deviceCount || deviceNum < -2) {
-		throw AVException("invalid device number: " + std::to_string(deviceNum));
-	}
 
 	//number of frames to buffer
 	this->radius = (int) std::round(radsec * inputCtx.fpsNum / inputCtx.fpsDen);
@@ -364,22 +394,8 @@ void MainData::validate() {
 	//set background yuv
 	bgcol_yuv = bgcol_rgb.toNormalized();
 
-	//init cuda if applicable
-	if (deviceNum >= 0) {
-		//when device should be used we need to setup cuda
-		this->cudaProps = this->cuda.cudaProps[deviceNum];
-		size_t px = cudaProps.sharedMemPerBlock / sizeof(float);
-		if (px < maxPixel) maxPixel = px;
-
-		//prepare device memory etc.
-		cudaDeviceSetup(*this);
-		if (errorLogger.hasError()) throw AVException("cannot setup cuda: " + errorLogger.getErrorMessage());
-
-	} else {
-		//set pitch for cpu code
-		int pitchBase = 256;
-		pitch = (w + pitchBase - 1) / pitchBase * pitchBase;
-	}
+	int pitchBase = 256;
+	cpupitch = (w + pitchBase - 1) / pitchBase * pitchBase;
 
 	//set required buffers
 	if (pass == DeshakerPass::FIRST_PASS) {
@@ -398,8 +414,9 @@ void MainData::validate() {
 	if (radius < limits.radiusMin || radius > limits.radiusMax) throw AVException("invalid image radius: " + std::to_string(radius));
 	if (w < limits.wMin) throw AVException("invalid input video width: " + std::to_string(w));
 	if (h < limits.hMin) throw AVException("invalid input video height: " + std::to_string(h));
-	if (w > maxPixel) throw AVException("frame width exceeds maximum of " + std::to_string(maxPixel) + " px");
-	if (h > maxPixel) throw AVException("frame height exceeds maximum of " + std::to_string(maxPixel) + " px");
+	size_t mp = deviceList[deviceSelected]->maxPixel;
+	if (w > mp) throw AVException("frame width exceeds maximum of " + std::to_string(mp) + " px");
+	if (h > mp) throw AVException("frame height exceeds maximum of " + std::to_string(mp) + " px");
 	if (w % 2 != 0 || h % 2 != 0) throw AVException("width and height must be factors of two");
 
 	if (pyramidLevels < limits.levelsMin || pyramidLevels > limits.levelsMax) throw AVException("invalid pyramid levels:" + std::to_string(pyramidLevels));
@@ -449,22 +466,33 @@ void MainData::showBasicInfo() const {
 }
 
 //show info about system
-void MainData::showDeviceInfo() const {
-	if (cuda.nvidiaDriverVersion > 0)
-		*console << "nvidia driver version " << cuda.nvidiaDriver() << std::endl;
-	else
-		*console << "nvidia driver not found" << std::endl;
+void MainData::showDeviceInfo() {
+	collectDeviceInfo();
+
+	//ffmpeg
+	*console << "ffmpeg libavformat version " << LIBAVFORMAT_VERSION_MAJOR << "." << LIBAVFORMAT_VERSION_MINOR << "." << LIBAVFORMAT_VERSION_MICRO << std::endl;
+
+	//display nvidia info
+	if (cudaInfo.nvidiaDriverVersion > 0) {
+		*console << "Nvidia driver version " << cudaInfo.nvidiaDriverToString() << ", ";
+
+	} else {
+		*console << "Nvidia driver not found" << ", ";
+	}
 
 	//display cuda info
-	*console << "cuda runtime " << cuda.cudaRuntime() << ", cuda driver " << cuda.cudaDriver() << std::endl;
-	*console << "ffmpeg libavformat version " << LIBAVFORMAT_VERSION_MAJOR << "." << LIBAVFORMAT_VERSION_MINOR << "." << LIBAVFORMAT_VERSION_MICRO << std::endl;
-	*console << "List of Cuda Devices:" << std::endl;
-	for (int i = 0; i < cuda.deviceCount; i++) {
-		const cudaDeviceProp& prop = cuda.cudaProps[i];
-		*console << " #" << i << ": " << prop.name << ", Compute " << prop.major << "." << prop.minor << std::endl;
+	if (deviceCountCuda() > 0) {
+		*console << "Cuda runtime " << cudaInfo.cudaRuntimeToString() << ", Cuda driver " << cudaInfo.cudaDriverToString();
+
+	} else {
+		*console << "No cuda devices found";
 	}
-	if (cuda.cudaProps.empty()) {
-		*console << " no devices found" << std::endl;
+	*console << std::endl;
+
+	//display all devices
+	*console << "Devices found on this system:" << std::endl;
+	for (int i = 0; i < deviceList.size(); i++) {
+		*console << " #" << i << ": " << deviceList[i]->getName() << std::endl;
 	}
 
 	//force cancellation
@@ -502,26 +530,34 @@ bool MainData::Parameters::nextArg(std::string&& param, std::string& nextParam) 
 	return ok;
 }
 
-void MainData::probeCudaDevices() {
-	CudaInfo cudaInfo;
-
+void MainData::probeCuda() {
 	//check Nvidia Driver
 	cudaInfo.nvidiaDriverVersion = probeNvidiaDriver();
 	//check present cuda devices
-	int devCount = cudaProbeRuntime(cudaInfo);
-	if (devCount > 0) {
+	std::vector<cudaDeviceProp> props = cudaProbeRuntime(cudaInfo);
+	if (props.size() > 0) {
 		//check nvenc present
 		NvEncoder::probeEncoding(cudaInfo);
 		//check supported codecs
 		if (cudaInfo.nvencVersionDriver >= cudaInfo.nvencVersionApi) {
-			NvEncoder::probeSupportedCodecs(cudaInfo);
+			for (int i = 0; i < props.size(); i++) {
+				cudaDeviceProp& prop = props[i];
+				DeviceInfoCuda cuda(DeviceType::CUDA, i, prop.sharedMemPerBlock / sizeof(float), prop);
+				NvEncoder::probeSupportedCodecs(cuda);
+				deviceListCuda.push_back(cuda);
+			}
 		}
 	}
-
-	//store in MainData
-	this->cuda = cudaInfo;
 }
 
-bool MainData::canDeviceEncode() {
-	return this->cuda.supportedCodecs[deviceNum].size() > 0;
+void MainData::probeOpenCl() {
+	this->clinfo = cl::probeRuntime();
+}
+
+size_t MainData::deviceCountCuda() const {
+	return deviceListCuda.size();
+}
+
+size_t MainData::deviceCountOpenCl() const {
+	return cl::deviceCount();
 }

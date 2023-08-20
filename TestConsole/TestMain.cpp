@@ -23,7 +23,7 @@
 void compare() {
 	{
 		MainData data;
-		data.probeCudaDevices();
+		data.probeCuda();
 		InputContext ctx = { 1080, 1920, 2, 1 };
 		data.validate(ctx);
 		NullReader reader;
@@ -77,7 +77,7 @@ void check() {
 	InputContext ctx = reader.open("//READYNAS/Data/Documents/x.orig/bikini.1.1.avi");
 
 	std::cout << "using file " << ctx.source << std::endl;
-	data.probeCudaDevices();
+	data.probeCuda();
 	data.validate(ctx);
 	NullWriter writer(data);
 	CudaFrame frame(data);

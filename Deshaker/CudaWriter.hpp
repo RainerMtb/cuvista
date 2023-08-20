@@ -26,7 +26,7 @@ public:
 	CudaFFmpegWriter(MainData& data) : FFmpegFormatWriter(data), nvenc { NvEncoder(data.w, data.h) } {}
 	virtual ~CudaFFmpegWriter() override;
 
-	void open(OutputCodec videoCodec) override;
+	void open(EncodingOption videoCodec) override;
 	OutputContext getOutputData() override;
 	void write() override;
 	std::future<void> writeAsync() override;

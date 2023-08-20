@@ -52,8 +52,8 @@ void BmpImageWriter::write() {
 // JPG Images through ffmpeg
 //-----------------------------------------------------------------------------------
 
-void JpegImageWriter::open(OutputCodec videoCodec) {
-	const AVCodec* codec = avcodec_find_encoder(codecMap[videoCodec]);
+void JpegImageWriter::open(EncodingOption videoCodec) {
+	const AVCodec* codec = avcodec_find_encoder(AV_CODEC_ID_MJPEG);
 	ctx = avcodec_alloc_context3(codec);
 	ctx->width = mData.w;
 	ctx->height = mData.h;
@@ -93,7 +93,10 @@ void JpegImageWriter::write() {
 
 	std::string fname = makeFilename();
 	std::ofstream file(fname, std::ios::binary);
-	file.write(reinterpret_cast<char*>(packet->data), packet->size);
+	if (file)
+		file.write(reinterpret_cast<char*>(packet->data), packet->size);
+	else
+		errorLogger.logError("error opening file '" + fname + "'");
 
 	mStatus.outputBytesWritten += packet->size;
 	av_packet_unref(packet);

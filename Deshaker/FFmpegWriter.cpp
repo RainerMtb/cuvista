@@ -20,10 +20,11 @@
 #include <filesystem>
 
 //construct ffmpeg encoder
-void FFmpegWriter::open(OutputCodec videoCodec) {
+void FFmpegWriter::open(EncodingOption videoCodec) {
     int result = 0;
 
-    const AVCodec* codec = avcodec_find_encoder(codecMap[videoCodec]);
+    const AVCodec* codec = avcodec_find_encoder(codecMap[videoCodec.codec]);
+    //const AVCodec* codec = avcodec_find_encoder_by_name("libsvtav1");
     if (!codec) 
         throw AVException("Could not find encoder");
 
@@ -32,7 +33,7 @@ void FFmpegWriter::open(OutputCodec videoCodec) {
         throw AVException("Could not allocate encoder context");
 
     //open container format
-    FFmpegFormatWriter::open(mData.videoCodec);
+    FFmpegFormatWriter::open(videoCodec);
 
     codec_ctx->width = mData.w;
     codec_ctx->height = mData.h;
@@ -43,7 +44,7 @@ void FFmpegWriter::open(OutputCodec videoCodec) {
     codec_ctx->max_b_frames = 4;
     av_opt_set(codec_ctx->priv_data, "preset", "slow", 0);
     av_opt_set(codec_ctx->priv_data, "profile", "main", 0);
-    av_opt_set(codec_ctx->priv_data, "x265-params", "log-level=none", 0);
+    av_opt_set(codec_ctx->priv_data, "x265-params", "log-level=error", 0);
     av_opt_set(codec_ctx->priv_data, "crf", std::to_string(mData.crf).c_str(), 0); //?????
 
     if (fmt_ctx->oformat->flags & AVFMT_GLOBALHEADER)

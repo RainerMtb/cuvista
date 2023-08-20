@@ -32,22 +32,22 @@ void StabilizerThread::run() {
         //check input parameters
         mData.validate();
 
-        if (mData.deviceNum == -1) {
+        if (mData.deviceList[mData.deviceSelected]->type == DeviceType::CPU) {
             frame = std::make_unique<CpuFrame>(mData);
-            if (mData.encodingDevice == EncodingDevice::AUTO || mData.encodingDevice == EncodingDevice::CPU)
-                writer = std::make_unique<FFmpegWriter>(mData);
-            else
+            if (mData.requestedEncoding.device == EncodingDevice::NVENC)
                 writer = std::make_unique<CudaFFmpegWriter>(mData);
+            else
+                writer = std::make_unique<FFmpegWriter>(mData);
 
-        } else {
+        } else if (mData.deviceList[mData.deviceSelected]->type == DeviceType::CUDA) {
             frame = std::make_unique<CudaFrame>(mData);
-            if (mData.encodingDevice == EncodingDevice::AUTO || mData.encodingDevice == EncodingDevice::GPU)
+            if (mData.requestedEncoding.device == EncodingDevice::NVENC)
                 writer = std::make_unique<CudaFFmpegWriter>(mData);
             else
                 writer = std::make_unique<FFmpegWriter>(mData);
         }
 
-        writer->open(mData.videoCodec);
+        writer->open(mData.requestedEncoding);
         MovieFrame::DeshakerLoopCombined loop;
         ProgressDisplayGui progress(mData, this, frame.get());
         loop.run(*frame, progress, mReader, *writer, inputHandler);

@@ -36,7 +36,6 @@ double min(const double a, const double b);
 
 namespace cu {
 	const int THREAD_COUNT = 16;	//number of threads used in kernels to access textures
-	const int MAX_PIXEL = 8192;
 
 	//parameters of Affine Transform in struct so it can be used as an argument to a cuda kernel
 	struct Affine {

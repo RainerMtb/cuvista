@@ -34,7 +34,8 @@ int deshake(int argsCount, char** args) {
 	std::unique_ptr<MovieWriter> writer = std::make_unique<NullWriter>(data);
 
 	try {
-		data.probeCudaDevices();
+		data.probeOpenCl();
+		data.probeCuda();
 		data.probeInput(argsInput);
 		//create MovieReader
 		InputContext ctx = reader->open(data.fileIn);
@@ -51,31 +52,27 @@ int deshake(int argsCount, char** args) {
 			writer = std::make_unique<BmpImageWriter>(data);
 		else if (data.videoOutputType == OutputType::JPG)
 			writer = std::make_unique<JpegImageWriter>(data);
-		else if (data.videoOutputType == OutputType::VIDEO_FILE) {
-			if (data.deviceNum == -1 && data.encodingDevice == EncodingDevice::AUTO)
-				writer = std::make_unique<FFmpegWriter>(data);
-			else if (data.encodingDevice == EncodingDevice::AUTO && data.canDeviceEncode())
-				writer = std::make_unique<CudaFFmpegWriter>(data);
-			else if (data.encodingDevice == EncodingDevice::GPU)
-				writer = std::make_unique<CudaFFmpegWriter>(data);
-			else
-				writer = std::make_unique<FFmpegWriter>(data);
-		} else writer = std::make_unique<NullWriter>(data);
+		else if (data.videoOutputType == OutputType::VIDEO_FILE && data.selectedEncoding.device == EncodingDevice::CPU)
+			writer = std::make_unique<FFmpegWriter>(data);
+		else if (data.videoOutputType == OutputType::VIDEO_FILE && data.selectedEncoding.device == EncodingDevice::NVENC)
+			writer = std::make_unique<CudaFFmpegWriter>(data);
+		else writer = std::make_unique<NullWriter>(data);
 
-		writer->open(data.videoCodec);
+		writer->open(data.requestedEncoding);
 
 		//----------- create Frame Handler Class
 		if (data.dummyFrame) {
 			//skip stabilizing stuff to test decoding and encoding
 			frame = std::make_unique<DummyFrame>(data);
 
-		} else if (data.deviceNum == -1) {
+		} else if (data.deviceList[data.deviceSelected]->type == DeviceType::CPU) {
 			//only on CPU
 			frame = std::make_unique<CpuFrame>(data);
 
-		} else {
+		} else if (data.deviceList[data.deviceSelected]->type == DeviceType::CUDA) {
 			//use CUDA GPU
 			frame = std::make_unique<CudaFrame>(data);
+			if (errorLogger.hasError()) throw AVException("cannot setup cuda: " + errorLogger.getErrorMessage());
 		}
 
 	} catch (const CancelException& ce) {

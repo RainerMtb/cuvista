@@ -125,7 +125,7 @@ public:
 			//gpu test run
 			MainData data;
 			ProgressDisplayNone progress(data);
-			data.probeCudaDevices();
+			data.probeCuda();
 			TestReader reader;
 			InputContext ctx = reader.open("");
 			data.validate(ctx);
@@ -139,12 +139,12 @@ public:
 		}
 
 		Assert::AreEqual(cpuImages.size(), gpuImages.size());
-		//cpu[0].saveAsBMP("f:/cpu0.bmp");
-		//gpu[0].saveAsBMP("f:/gpu0.bmp");
 
 		for (size_t i = 0; i < cpuImages.size(); i++) {
 			ImageYuv gpu = gpuImages[i];
 			ImageYuv cpu = cpuImages[i];
+			//cpu.saveAsBMP("f:/cpu.bmp");
+			//gpu.saveAsBMP("f:/gpu.bmp");
 			Assert::IsTrue(gpu == cpu, L"cpu and gpu frames not identical");
 		}
 	}
@@ -169,7 +169,7 @@ public:
 
 		{
 			MainData data;
-			data.probeCudaDevices();
+			data.probeCuda();
 			data.fileIn = file;
 			FFmpegReader reader;
 			InputContext ctx = reader.open(file);
@@ -214,7 +214,7 @@ public:
 		ImageYuv imGpu;
 		{
 			MainData data;
-			data.probeCudaDevices();
+			data.probeCuda();
 			InputContext ctx = { 1080, 1920, 2, 1 };
 			data.validate(ctx);
 			NullReader reader;

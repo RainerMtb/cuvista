@@ -78,19 +78,14 @@ void computeInit(const CoreData& core);
 /*
 brief probe present cuda devices and capabilities
 */
-int cudaProbeRuntime(CudaInfo& cudaInfo);
-
-/*
-brief setup parameters, device memory etc.
-*/
-void cudaDeviceSetup(CoreData& core);
+std::vector<cudaDeviceProp> cudaProbeRuntime(CudaInfo& cudaInfo);
 
 /*
 @brief initialize cuda device
 @param core: CoreData structure
 @param yuvFrame: the object used later to transfer frame data
 */
-void cudaInit(const CoreData& core, ImageYuv& yuvFrame);
+void cudaInit(CoreData& core, int devIdx, const cudaDeviceProp& prop, ImageYuv& yuvFrame);
 
 /*
 @brief read a frame into device memory
@@ -108,7 +103,7 @@ void cudaCreatePyramid(int64_t frameIdx, const CoreData& core);
 /*
 @brief compute displacements between frame and previous frame in video for part of a frame
 */
-void cudaCompute1(int64_t frameIdx, const CoreData& core);
+void cudaCompute1(int64_t frameIdx, const CoreData& core, const cudaDeviceProp& props);
 
 /*
 @brief compute second part of frame

@@ -66,7 +66,7 @@ void similarTransformPerformance() {
 
 void readAndWriteOneFrame() {
 	MainData data;
-	data.probeCudaDevices();
+	data.probeCuda();
 	InputContext ctx = { 1080, 1920, 2, 1 };
 	data.validate(ctx);
 	Stats& status = data.status;
@@ -102,7 +102,7 @@ void readAndWriteOneFrame() {
 void checkVersions() {
 	std::cout << "check cuda devices" << std::endl;
 	MainData data;
-	data.probeCudaDevices();
+	data.probeCuda();
 	data.showDeviceInfo();
 }
 

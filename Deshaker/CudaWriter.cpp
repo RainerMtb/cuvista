@@ -2,23 +2,20 @@
 #include "Util.hpp"
 
 //cuda encoding contructor
-void CudaFFmpegWriter::open(OutputCodec videoCodec) {
+void CudaFFmpegWriter::open(EncodingOption videoCodec) {
     int result;
 
-    //check device
-    int deviceIndex = mData.deviceNum == -1 ? mData.deviceNumBest : mData.deviceNum;
-    if (deviceIndex == -1)
-        throw AVException("no gpu device present for encoding");
-
     //select codec
-    OutputCodec codec = videoCodec == OutputCodec::AUTO ? mData.cuda.supportedCodecs[deviceIndex][0] : videoCodec;
-    GUID guid = guidMap[codec];
+    int deviceIndex = mData.deviceList[mData.deviceSelected]->type == DeviceType::CUDA ? mData.deviceList[mData.deviceSelected]->targetIndex : 0;
+    const DeviceInfoCuda& dic = mData.deviceListCuda[deviceIndex];
+    if (videoCodec.codec == Codec::AUTO) videoCodec.codec = dic.encodingOptions[0].codec;
+    GUID guid = guidMap[videoCodec.codec];
 
     //open ffmpeg output format
-    FFmpegFormatWriter::open(codec);
+    FFmpegFormatWriter::open(videoCodec);
 
     //setup nvenc class
-    nvenc.createEncoder(mData.inputCtx.fpsNum, mData.inputCtx.fpsDen, GOP_SIZE, mData.crf, guid, mData.deviceNumBest);
+    nvenc.createEncoder(mData.inputCtx.fpsNum, mData.inputCtx.fpsDen, GOP_SIZE, mData.crf, guid, deviceIndex);
 
     //setup codec parameters for ffmpeg format output
     AVCodecParameters* params = videoStream->codecpar;

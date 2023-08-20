@@ -64,7 +64,7 @@ void filterCompare() {
 
 	{
 		//GPU
-		dataGpu.probeCudaDevices();
+		dataGpu.probeCuda();
 		dataGpu.fileIn = file;
 		FFmpegReader reader;
 		InputContext ctx = reader.open(file);

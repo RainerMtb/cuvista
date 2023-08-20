@@ -28,10 +28,9 @@
 #include "ProgressDisplayGui.hpp"
 #include "StabilizerThread.hpp"
 
-struct EncoderSettings {
+struct EncoderSetting {
     QString text;
-    EncodingDevice device;
-    OutputCodec codec;
+    EncodingOption encoder;
 };
 
 //main window
@@ -77,7 +76,7 @@ private:
     bool mInputReady = false;
     bool mOutputReady = false;
 
-    std::vector<EncoderSettings> encoderSettings;
+    std::vector<EncoderSetting> encoderSettings;
 
     void updateInputImage();
     void setInputFile(const QString& filename);

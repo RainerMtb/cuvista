@@ -78,7 +78,7 @@ __device__ void KernelTimer::stop() {
 //-------------------------------------------------------------------------------------------------------------------
 
 void handleStatus(cudaError_t status, std::string&& title) {
-	if (status != 0) {
+	if (status != cudaSuccess) {
 		errorLogger.logError(title + ": " + cudaGetErrorString(status));
 	}
 }
@@ -134,21 +134,25 @@ template <class T> void allocDeviceIndices(T*** indexArray, T* srcptr, size_t of
 	handleStatus(cudaMemcpy(*indexArray, idxarr.data(), siz, cudaMemcpyDefault), "error @init copy");
 }
 
-bool checkKernelParameters(int3 threads, int3 blocks, size_t shdsize, const CoreData& core) {
+bool checkKernelParameters(int3 threads, int3 blocks, size_t shdsize, const cudaDeviceProp& cudaProps) {
 	bool out = true;
-	out &= threads.x <= core.cudaProps.maxThreadsDim[0];
-	out &= threads.y <= core.cudaProps.maxThreadsDim[1];
-	out &= threads.z <= core.cudaProps.maxThreadsDim[2];
-	out &= blocks.x <= core.cudaProps.maxGridSize[0];
-	out &= blocks.y <= core.cudaProps.maxGridSize[1];
-	out &= blocks.z <= core.cudaProps.maxGridSize[2];
-	out &= shdsize <= core.cudaProps.sharedMemPerBlock;
-	out &= threads.x * threads.y * threads.z <= core.cudaProps.maxThreadsPerBlock;
+	out &= threads.x <= cudaProps.maxThreadsDim[0];
+	out &= threads.y <= cudaProps.maxThreadsDim[1];
+	out &= threads.z <= cudaProps.maxThreadsDim[2];
+	out &= blocks.x <= cudaProps.maxGridSize[0];
+	out &= blocks.y <= cudaProps.maxGridSize[1];
+	out &= blocks.z <= cudaProps.maxGridSize[2];
+	out &= shdsize <= cudaProps.sharedMemPerBlock;
+	out &= threads.x * threads.y * threads.z <= cudaProps.maxThreadsPerBlock;
 	return out;
 }
 
-bool checkKernelParameters(int3 threads, int3 blocks, const CoreData& core) {
-	return checkKernelParameters(threads, blocks, 0, core);
+bool checkKernelParameters(int3 threads, int3 blocks, const cudaDeviceProp& cudaProps) {
+	return checkKernelParameters(threads, blocks, 0, cudaProps);
+}
+
+bool checkKernelParameters(const CoreData& core, const cudaDeviceProp& cudaProps) {
+	return checkKernelParameters(core.computeThreads, core.computeBlocks, core.computeSharedMem, cudaProps);
 }
 
 //write data from device pointer to file for debugging
@@ -188,29 +192,26 @@ void writeText(const std::string& text, int x0, int y0, int scaleX, int scaleY, 
 	}
 }
 
+
 //----------------------------------
 //-------- INIT
 //----------------------------------
 
-void cudaInit(const CoreData& core, ImageYuv& yuvFrame) {
-	//pin memory of transfer object
-	registeredMemPtr = yuvFrame.data();
-	handleStatus(cudaHostRegister(registeredMemPtr, yuvFrame.dataSizeInBytes(), cudaHostRegisterDefault), "error @init #93");
-}
-
 //check for cuda runtime installation, this only needs link to cudart_static.lib
-int cudaProbeRuntime(CudaInfo& cudaInfo) {
+std::vector<cudaDeviceProp> cudaProbeRuntime(CudaInfo& cudaInfo) {
 	//do not check cudaError_t here, absence of cuda will report error "CUDA driver is insufficient for CUDA runtime version"
 	cudaRuntimeGetVersion(&cudaInfo.cudaRuntimeVersion);
 	cudaDriverGetVersion(&cudaInfo.cudaDriverVersion);
 
 	//if we found a proper cuda installation, ask for list of devices
+	int deviceCount = 0;
+	std::vector<cudaDeviceProp> props;
 	if (cudaInfo.cudaRuntimeVersion > 0) {
-		handleStatus(cudaGetDeviceCount(&cudaInfo.deviceCount), "error probing cuda devices");
-		for (int i = 0; i < cudaInfo.deviceCount; i++) {
+		handleStatus(cudaGetDeviceCount(&deviceCount), "error probing cuda devices");
+		for (int i = 0; i < deviceCount; i++) {
 			cudaDeviceProp devProp;
 			handleStatus(cudaGetDeviceProperties(&devProp, i), "error getting device properties");
-			cudaInfo.cudaProps.push_back(devProp);
+			props.push_back(devProp);
 		}
 
 		//query npp version numbers, this loads nvcuda.dll
@@ -219,14 +220,18 @@ int cudaProbeRuntime(CudaInfo& cudaInfo) {
 		//cudaInfo.nppMinor = libVer->minor;
 		//cudaInfo.nppBuild = libVer->build;
 	}
-	return cudaInfo.deviceCount;
+	return props;
 }
 
-void cudaDeviceSetup(CoreData& core) {
+void cudaInit(CoreData& core, int devIdx, const cudaDeviceProp& prop, ImageYuv& yuvFrame) {
+	//pin memory of transfer object
+	registeredMemPtr = yuvFrame.data();
+	handleStatus(cudaHostRegister(registeredMemPtr, yuvFrame.dataSizeInBytes(), cudaHostRegisterDefault), "error @init #2");
+
 	const size_t h = core.h;
 	const size_t w = core.w;
 
-	handleStatus(cudaSetDevice(core.deviceNum), "cannot set device");
+	handleStatus(cudaSetDevice(devIdx), "cannot set device");
 	//cudaFree(0); //seems necessary in order to get a context later;
 
 	//sum up required shared memory for compute kernel
@@ -246,7 +251,7 @@ void cudaDeviceSetup(CoreData& core) {
 	//compute kernel configuration
 	core.computeBlocks = { core.ixCount, core.iyCount };
 	int rows = std::max(core.iw, 6);
-	int ws = core.cudaProps.warpSize;
+	int ws = prop.warpSize;
 	core.computeThreads = { ws / rows, rows };
 
 	//allocate storage for compute timings
@@ -254,22 +259,22 @@ void cudaDeviceSetup(CoreData& core) {
 
 	//get stride values for byte and float data
 	void* d_ptr = nullptr;
-	size_t val;
-	handleStatus(cudaMallocPitch(&d_ptr, &val, core.w, 1), "error @init 6 probing pitch value");
-	core.pitch = (int) val;
+	size_t pitchval;
+	handleStatus(cudaMallocPitch(&d_ptr, &pitchval, core.w, 1), "error @init 6 probing pitch value");
 	handleStatus(cudaFree(d_ptr), "error @init 7 freeing memory");
 
-	handleStatus(cudaMallocPitch(&d_ptr, &val, core.w * sizeof(float), 1), "error @init 8 probing float stride value");
-	core.strideFloatBytes = (int) val;
+	handleStatus(cudaMallocPitch(&d_ptr, &pitchval, core.w * sizeof(float), 1), "error @init 8 probing float stride value");
+	core.strideFloatBytes = (int) pitchval;
 	handleStatus(cudaFree(d_ptr), "error @init 9 freeing memory");
 	core.strideCount = core.strideFloatBytes / sizeof(float);
+	core.cudapitch = (int) pitchval;
 
 	//set memory limit
 	size_t heap = 0;
 	size_t heapRequired = 0;
 	handleStatus(cudaDeviceGetLimit(&heap, cudaLimitMallocHeapSize), "error @init #10");
 
-	size_t frameSize8 = 3ull * core.pitch * h;			//bytes for yuv444 images
+	size_t frameSize8 = 3ull * core.cudapitch * h;			//bytes for yuv444 images
 	heapRequired += frameSize8 * core.bufferCount;		//yuv input storage
 	heapRequired += frameSize8 * 2;						//yuv out
 	heapRequired += 3ull * core.strideFloatBytes * h * (core.zMax + 1ull) * core.pyramidCount;		//pyramid mit Y, DX, DY
@@ -305,7 +310,7 @@ void cudaDeviceSetup(CoreData& core) {
 
 	//allocate memory for yuv input data in char format [0..255]
 	allocSafe(&d_yuvData, frameSize8 * core.bufferCount);
-	allocDeviceIndices(&d_yuvRows, d_yuvData, core.pitch, yuvRowCount);
+	allocDeviceIndices(&d_yuvRows, d_yuvData, core.cudapitch, yuvRowCount);
 	allocDeviceIndices(&d_yuvPlanes, d_yuvRows, h, core.bufferCount * 3ull);
 
 	//allocate several buffers in float [0..1]
@@ -358,11 +363,12 @@ void cudaDeviceSetup(CoreData& core) {
 //copy yuv input to device
 void cudaReadFrame(int64_t frameIdx, const CoreData& core, const ImageYuv& inputFrame) {
 	int64_t fr = frameIdx % core.bufferCount;
-	size_t frameSizeBytes = 3ull * core.pitch * core.h;
+	size_t frameSizeBytes = 3ull * core.cudapitch * core.h;
 	unsigned char* d_frame = d_yuvData + fr * frameSizeBytes;
-	handleStatus(cudaMemcpy(d_frame, inputFrame.data(), frameSizeBytes, cudaMemcpyDefault), "error @read copy");
+	handleStatus(cudaMemcpy2D(d_frame, core.cudapitch, inputFrame.data(), inputFrame.stride, core.w, 3ull * core.h, cudaMemcpyDefault), "error @read copy");
 	handleStatus(cudaGetLastError(), "error @read unspecified");
 }
+
 
 //----------------------------------
 //-------- PYRAMID
@@ -373,7 +379,7 @@ void cudaCreatePyramid(int64_t frameIdx, const CoreData& core) {
 	int w = core.w;
 	int h = core.h;
 	int64_t frIdx = frameIdx % core.bufferCount;
-	unsigned char* yuvStart = d_yuvData + frIdx * core.pitch * h * 3; //get to the start of this yuv image
+	unsigned char* yuvStart = d_yuvData + frIdx * core.cudapitch * h * 3; //get to the start of this yuv image
 
 	int64_t pyrIdx = frameIdx % core.pyramidCount;
 	float* pyrStart = d_pyrData + pyrIdx * core.pyramidRows * 3 * core.strideCount; //get to the start of this pyramid
@@ -381,7 +387,7 @@ void cudaCreatePyramid(int64_t frameIdx, const CoreData& core) {
 
 	//first level of pyramid
 	//Y data
-	cu::scale_8u32f(yuvStart, core.pitch, pyrStart, core.strideCount, w, h);
+	cu::scale_8u32f(yuvStart, core.cudapitch, pyrStart, core.strideCount, w, h);
 	//DX data
 	cu::filter_32f(pyrStart, pyrStart + planeOffset, core.strideFloatBytes, w, h, filterKernelDifference, 3, cu::FilterDim::FILTER_HORIZONZAL);
 	//DY data
@@ -409,12 +415,11 @@ void cudaCreatePyramid(int64_t frameIdx, const CoreData& core) {
 //-------- COMPUTE
 //----------------------------------
 
-
-void cudaCompute1(int64_t frameIdx, const CoreData& core) {
+void cudaCompute1(int64_t frameIdx, const CoreData& core, const cudaDeviceProp& props) {
 	int64_t pyrIdx = frameIdx % core.pyramidCount;
 	size_t pyrIdxPrev = (pyrIdx == 0 ? core.pyramidCount : pyrIdx) - 1;
 
-	assert(checkKernelParameters(core.computeThreads, core.computeBlocks, core.computeSharedMem, core) && "invalid kernel parameters");
+	assert(checkKernelParameters(core, props) && "invalid kernel parameters");
 	compTex.create(pyrIdx, pyrIdxPrev, core);
 	handleStatus(cudaMemsetAsync(d_computed, 0, 1ll * core.ixCount * core.iyCount, cs[0]), "error @compute #20");
 	ComputeKernelParam param = { 
@@ -465,8 +470,6 @@ void cudaComputeTerminate(const CoreData& core, std::vector<PointResult>& result
 //-------- OUTPUT
 //----------------------------------
 
-
-
 /*
 buffer frames usage, each frame holds one plane Y, U, V in float format
 	0,  1,  2: input converted from yuv
@@ -486,12 +489,12 @@ void cudaOutput(int64_t frameIdx, const CoreData& core, OutputContext outCtx, cu
 	int64_t fr = frameIdx % core.bufferCount;
 
 	//size of all pixel data in bytes in yuv including padding
-	size_t frameSize8 = 3ull * core.pitch * h;
+	size_t frameSize8 = 3ull * core.cudapitch * h;
 	//start of input yuv data
 	unsigned char* yuvSrc = d_yuvData + fr * frameSize8;
 
 	//handle three frames at once, convert input image from 8bit to float
-	cu::scale_8u32f(yuvSrc, core.pitch, bufferFrames[0], core.strideCount, w, h * 3, cs[1]);
+	cu::scale_8u32f(yuvSrc, core.cudapitch, bufferFrames[0], core.strideCount, w, h * 3, cs[1]);
 
 	//handle individual frames
 	const BlendInput& bi = core.blendInput;
@@ -531,7 +534,7 @@ void cudaOutput(int64_t frameIdx, const CoreData& core, OutputContext outCtx, cu
 	//writeText(std::to_string(frameIdx), 10, 10, 2, 3, bufferFrames[18], core);
 
 	//output to nvenc buffer
-	if (outCtx.encodeGpu) {
+	if (outCtx.encodeCuda) {
 		//convert Y plane
 		cu::scale_32f8u(bufferFrames[18], core.strideFloatBytes, outCtx.cudaNv12ptr, outCtx.cudaPitch, w, h, cs[1]);
 		//convert and interleave U and V plane
@@ -540,8 +543,9 @@ void cudaOutput(int64_t frameIdx, const CoreData& core, OutputContext outCtx, cu
 
 	//output to host
 	if (outCtx.encodeCpu) {
-		cu::scale_32f8u(bufferFrames[18], core.strideFloatBytes, d_yuvOut, core.pitch, w, h * 3, cs[1]);
-		handleStatus(cudaMemcpy(outCtx.outputFrame->data(), d_yuvOut, outCtx.outputFrame->dataSizeInBytes(), cudaMemcpyDeviceToHost), "error @output #50 memcopy");
+		cu::scale_32f8u(bufferFrames[18], core.strideFloatBytes, d_yuvOut, core.cudapitch, w, h * 3, cs[1]);
+		ImageYuv* im = outCtx.outputFrame;
+		handleStatus(cudaMemcpy2D(im->data(), im->stride, d_yuvOut, core.cudapitch, w, 3ull * h, cudaMemcpyDeviceToHost), "error @output #50 memcopy");
 		outCtx.outputFrame->frameIdx = frameIdx;
 	}
 
@@ -574,22 +578,23 @@ ImageYuv cudaGetInput(int64_t index, const CoreData& core) {
 	ImageYuv out(core.h, core.w, core.w);
 	int64_t fr = index % core.bufferCount;
 	//start of input yuv data
-	unsigned char* yuvSrc = d_yuvData + fr * 3 * core.h * core.pitch;
+	unsigned char* yuvSrc = d_yuvData + fr * 3 * core.h * core.cudapitch;
 	//copy 2D data without stride
-	cudaMemcpy2D(out.data(), out.w, yuvSrc, core.pitch, out.w, 3ll * out.h, cudaMemcpyDefault);
+	cudaMemcpy2D(out.data(), out.w, yuvSrc, core.cudapitch, out.w, 3ll * out.h, cudaMemcpyDefault);
 	return out;
 }
 
 void cudaGetCurrentInputFrame(ImagePPM& image, const CoreData& core, int idx) {
-	unsigned char* yuvSrc = d_yuvData + idx * 3ll * core.h * core.pitch;
-	cu::yuv_to_rgb(yuvSrc, core.pitch, d_rgb, core.strideCount, core.w, core.h);
-	cudaMemcpy(image.data(), d_rgb, 3ull * core.w * core.h, cudaMemcpyDefault);
+	unsigned char* yuvSrc = d_yuvData + idx * 3ll * core.h * core.cudapitch;
+	cu::yuv_to_rgb(yuvSrc, core.cudapitch, d_rgb, core.strideCount, core.w, core.h);
+	cudaMemcpy2D(image.data(), image.w, d_rgb, core.cudapitch, core.w, 3ull * core.h, cudaMemcpyDefault);
 }
 
 void cudaGetCurrentOutputFrame(ImagePPM& image, const CoreData& core) {
 	cu::yuv_to_rgb(bufferFrames[9], core.strideFloatBytes, d_rgb, core.strideCount, core.w, core.h);
-	cudaMemcpy(image.data(), d_rgb, 3ll * core.w * core.h, cudaMemcpyDefault);
+	cudaMemcpy2D(image.data(), image.w, d_rgb, core.cudapitch, core.w, 3ull * core.h, cudaMemcpyDefault);
 }
+
 
 //----------------------------------
 //-------- SYNCHRONIZE
@@ -599,6 +604,7 @@ void cudaSynchronize() {
 	handleStatus(cudaDeviceSynchronize(), "error @synchronize #10");
 	handleStatus(cudaGetLastError(), "error @synchronize #20");
 }
+
 
 //----------------------------------
 //-------- SHUTDOWN
@@ -612,17 +618,18 @@ DebugData cudaShutdown(const CoreData& core) {
 	//get image of kernel timing values
 	int siz = core.computeBlocks.x * core.computeBlocks.y;
 	std::vector<KernelTimer> kernelTimer(siz);
+	int h = (int) kernelTimer.size();
+	int w = 8'000;
+	ImageBGR kernelTimerImage(h, w);
+	
 	handleStatus(cudaMemcpy(kernelTimer.data(), d_kernelTimer, sizeof(KernelTimer) * kernelTimer.size(), cudaMemcpyDefault), "error @shutdown #110");
 
 	auto fcnMin = [] (KernelTimer& kt1, KernelTimer& kt2) { return kt1.timeStart < kt2.timeStart; };
 	auto minTime = std::min_element(kernelTimer.begin(), kernelTimer.end(), fcnMin);
 	auto fcnMax = [] (KernelTimer& kt1, KernelTimer& kt2) { return kt1.timeStop < kt2.timeStop; };
 	auto maxTime = std::max_element(kernelTimer.begin(), kernelTimer.end(), fcnMax);
-	int h = (int) kernelTimer.size();
-	int w = 8'000;
 	double f = (maxTime->timeStop - minTime->timeStart) / (w - 1.0);
 
-	ImageBGR kernelTimerImage(h, w);
 	for (int i = 0; i < core.computeBlocks.x * core.computeBlocks.y; i++) {
 		KernelTimer& kt = kernelTimer[i];
 		int t1 = int((kt.timeStart - minTime->timeStart) / f);
@@ -631,7 +638,7 @@ DebugData cudaShutdown(const CoreData& core) {
 			kernelTimerImage.at(0, i, k) = 255;
 		}
 	}
-
+	
 	//delete device memory
 	void* d_arr[] = { d_results, d_yuvOut, d_rgb, d_yuvData, d_yuvRows, d_yuvPlanes, 
 		d_bufferData, d_pyrData, d_pyrRows, debugData.d_data, d_kernelTimer, d_interrupt, d_computed };

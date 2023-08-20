@@ -25,6 +25,8 @@
 #include "NullStream.hpp"
 #include "RandomSource.hpp"
 #include "cuDeshaker.cuh"
+#include "clMain.hpp"
+#include "DeviceInfo.hpp"
 
 inline std::string CUVISTA_VERSION = "0.9.7";
 
@@ -34,12 +36,6 @@ enum class DeshakerPass {
 	FIRST_PASS, 
 	SECOND_PASS, 
 	CONSECUTIVE
-};
-
-enum class EncodingDevice {
-	AUTO,
-	GPU,
-	CPU,
 };
 
 enum class OutputType {
@@ -111,15 +107,27 @@ private:
 
 public:
 
-	std::map<std::string, OutputCodec> codecMap = {
-		{"AUTO", OutputCodec::AUTO},
-		{"H264", OutputCodec::H264},
-		{"H265", OutputCodec::H265},
+	std::map<std::string, Codec> mapStringToCodec = {
+		{"AUTO", Codec::AUTO},
+		{"H264", Codec::H264},
+		{"H265", Codec::H265},
+		{"AV1", Codec::AV1},
 	};
-	std::map<std::string, EncodingDevice> encodingDeviceMap = {
+	std::map<Codec, std::string> mapCodecToString = {
+		{Codec::AUTO, "AUTO"},
+		{Codec::H264, "H264"},
+		{Codec::H265, "H265"},
+		{Codec::AV1, "AV1"},
+	};
+	std::map<std::string, EncodingDevice> mapStringToDevice = {
 		{"AUTO", EncodingDevice::AUTO},
-		{"GPU", EncodingDevice::GPU},
+		{"NVENC", EncodingDevice::NVENC},
 		{"CPU", EncodingDevice::CPU},
+	};
+	std::map<EncodingDevice, std::string> mapDeviceToString = {
+		{EncodingDevice::AUTO, "AUTO"},
+		{EncodingDevice::NVENC, "NVENC"},
+		{EncodingDevice::CPU, "CPU"},
 	};
 
 	struct ValueLimits {
@@ -132,18 +140,24 @@ public:
 	} limits;
 
 	Stats status;
-	CudaInfo cuda;
+	DeviceInfoCpu deviceInfoCpu;
+	std::vector<DeviceInfo*> deviceList;
+	std::vector<DeviceInfoCuda> deviceListCuda;
+	CudaInfo cudaInfo;
+	OpenClInfo clinfo;
 	bool deviceRequested = false;
+	size_t deviceSelected = 0;
 
 	InputContext inputCtx;
 	DeshakerPass pass = DeshakerPass::COMBINED;
 
 	//output related
+	EncodingOption requestedEncoding = { EncodingDevice::AUTO, Codec::AUTO };
+	EncodingOption selectedEncoding = { EncodingDevice::AUTO, Codec::AUTO };
 	std::ostream* console = &std::cout;
-	EncodingDevice encodingDevice = EncodingDevice::AUTO;
-	OutputCodec videoCodec = OutputCodec::AUTO;
 	OutputType videoOutputType = OutputType::NONE;
 	DecideYNA overwriteOutput = DecideYNA::ASK;
+
 	bool showHeader = true;
 
 	std::string fileIn;					//input file path
@@ -158,11 +172,11 @@ public:
 	bool dummyFrame = false;
 	ProgressType progressType = ProgressType::REWRITE_LINE;
 
-	//parameters for computation of trajectory
-	double cSigmaParam = 1.25;			//at least 0.33, greater -> more stable camera
+	//parameters for computation of trajectory, at least 0.33, greater -> more stable camera
+	double cSigmaParam = 1.25;
 
-	//cpu threads to use in cpu-compute and computing transform parameters
-	size_t cpuThreads = std::max(1u, std::thread::hardware_concurrency() * 3 / 4); //leave room for other things
+	//cpu threads to use in cpu-compute and computing transform parameters, leave room for other things
+	size_t cpuThreads = std::max(1u, std::thread::hardware_concurrency() * 3 / 4);
 
 	//filter for unsharp masking output
 	const std::vector<std::vector<float>> kernelFilter = {
@@ -174,7 +188,7 @@ public:
 	//filter for differences in x and y when reading
 	const std::vector<float> filterKernel = { -0.5f, 0.0f, 0.5f };
 
-	int64_t maxFrames = std::numeric_limits<int64_t>::max();
+	int64_t maxFrames = std::numeric_limits<int32_t>::max();
 
 	std::unique_ptr<RNGbase> rng = std::make_unique<RNG<RandomSource>>();
 
@@ -184,19 +198,25 @@ public:
 	// METHODS
 	//------------------------------------
 
-	void probeCudaDevices();
-
-	bool canDeviceEncode();
-
 	void probeInput(std::vector<std::string> args);
+
+	void probeCuda();
+
+	void probeOpenCl();
+
+	void collectDeviceInfo();
 
 	void validate(InputContext& input);
 
 	void validate();
 
-	void showIntro() const ;
+	void showIntro() const;
 
-	void showBasicInfo() const ;
+	void showBasicInfo() const;
 
-	void showDeviceInfo() const;
+	void showDeviceInfo();
+
+	size_t deviceCountCuda() const;
+
+	size_t deviceCountOpenCl() const;
 };

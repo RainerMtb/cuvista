@@ -41,9 +41,8 @@ computing options:
                 default: highest index available
 -device cpu     compute everything on the cpu, do not use cuda devices
                 this will be comparatively very slow
--device -1      same as -device cpu
--encdev xxx     device to use for video encoding
-                options: auto, gpu, cpu
+-encoder xxx    device to use for video encoding
+                options: auto, nvenc, cpu
                 default: auto; which is selected based on computing device
 -codec xxx      video codec to use for encoding
                 options: auto, h264, h265

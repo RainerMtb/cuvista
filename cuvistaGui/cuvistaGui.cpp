@@ -43,28 +43,29 @@ cuvistaGui::cuvistaGui(QWidget *parent) : QMainWindow(parent) {
     ui.labelVersion->setText(version);
 
     mData.console = &nullStream; //suppress any console output
-    mData.probeCudaDevices();
+    mData.probeCuda();
+    mData.probeOpenCl();
+    mData.collectDeviceInfo();
 
-    //combo box for encoding settings
-    encoderSettings.emplace_back("AUTO", EncodingDevice::AUTO, OutputCodec::AUTO);
-    if (mData.cuda.deviceCount > 0 && mData.cuda.isSupported(0, OutputCodec::H265)) {
-        encoderSettings.emplace_back("GPU - H265", EncodingDevice::GPU, OutputCodec::H265);
-    }
-    if (mData.cuda.deviceCount > 0 && mData.cuda.isSupported(0, OutputCodec::H264)) {
-        encoderSettings.emplace_back("GPU - H264", EncodingDevice::GPU, OutputCodec::H264);
-    }
-    encoderSettings.emplace_back("CPU - H265", EncodingDevice::CPU, OutputCodec::H265);
-    encoderSettings.emplace_back("CPU - H264", EncodingDevice::CPU, OutputCodec::H264);
+    //combo box for encoding options for selected device
+    auto fcnEncoding = [&] (int index) {
+        encoderSettings.clear();
+        ui.comboEncoding->clear();
 
-    for (auto& setting : encoderSettings) {
-        ui.comboEncoding->addItem(setting.text);
-    }
+        std::vector<EncodingOption>& options = mData.deviceList[index]->encodingOptions;
+        for (EncodingOption e : options) {
+            std::string str = std::format("{} - {}", mData.mapDeviceToString[e.device], mData.mapCodecToString[e.codec]);
+            QString qs = QString::fromStdString(str);
+
+            encoderSettings.emplace_back(qs, e);
+            ui.comboEncoding->addItem(qs);
+        }
+    };
+    connect(ui.comboDevice, &QComboBox::currentIndexChanged, this, fcnEncoding);
 
     //devices
-    ui.comboDevice->addItem(QString("[CPU] use cpu only - %1 threads").arg(std::thread::hardware_concurrency()));
-    for (int i = 0; i < mData.cuda.deviceCount; i++) {
-        const cudaDeviceProp& prop = mData.cuda.cudaProps[i];
-        ui.comboDevice->addItem(QString("[GPU %1] %2").arg(i).arg(prop.name));
+    for (int i = 0; i < mData.deviceList.size(); i++) {
+        ui.comboDevice->addItem(QString::fromStdString(mData.deviceList[i]->getName()));
     }
     ui.comboDevice->setCurrentIndex(ui.comboDevice->count() - 1);
 
@@ -232,10 +233,9 @@ void cuvistaGui::stabilize() {
     mData.inputCtx = mInputCtx;
     mData.fileOut = outFile.toStdString();
     mData.deviceRequested = true;
-    mData.deviceNum = ui.comboDevice->currentIndex() - 1;
-    EncoderSettings settings = encoderSettings[ui.comboEncoding->currentIndex()];
-    mData.encodingDevice = settings.device;
-    mData.videoCodec = settings.codec;
+    mData.deviceSelected = ui.comboDevice->currentIndex() - 1;
+    EncoderSetting settings = encoderSettings[ui.comboEncoding->currentIndex()];
+    mData.requestedEncoding = settings.encoder;
     mData.radsec = ui.spinRadius->value();
     mData.imZoom = ui.spinZoom->value();
     mData.bgmode = ui.radioBlend->isChecked() ? BackgroundMode::BLEND : BackgroundMode::COLOR;
@@ -309,9 +309,9 @@ void cuvistaGui::showInfo() {
     msgBox.setTextFormat(Qt::RichText);
 
     std::stringstream ss;
-    if (mData.cuda.nvidiaDriverVersion > 0) {
-        ss << "Nvidia Driver " << mData.cuda.nvidiaDriver() << std::endl;
-        ss << "Cuda Runtime " << mData.cuda.cudaRuntime() << ", Cuda Driver " << mData.cuda.cudaDriver() << std::endl;
+    if (mData.cudaInfo.nvidiaDriverVersion > 0) {
+        ss << "Nvidia Driver " << mData.cudaInfo.nvidiaDriverToString() << std::endl;
+        ss << "Cuda Runtime " << mData.cudaInfo.cudaRuntimeToString() << ", Cuda Driver " << mData.cudaInfo.cudaDriverToString() << std::endl;
 
     } else {
         ss << "Nvidia Driver Not Found" << std::endl;
@@ -319,15 +319,10 @@ void cuvistaGui::showInfo() {
 
     ss << "FFmpeg libavformat " << LIBAVFORMAT_VERSION_MAJOR << "." << LIBAVFORMAT_VERSION_MINOR << "." << LIBAVFORMAT_VERSION_MICRO << std::endl;
     ss << std::endl;
-    ss << "List of Cuda Devices:" << std::endl;
-    for (int i = 0; i < mData.cuda.deviceCount; i++) {
-        const cudaDeviceProp& prop = mData.cuda.cudaProps[i];
-        ss << "Device " << i << ": " << prop.name
-            << " // " << prop.totalGlobalMem / 1024 / 1024 << " MB // Compute " << prop.major << "." << prop.minor
-            << std::endl;
-    }
-    if (mData.cuda.deviceCount == 0) {
-        ss << "No Applicable Cuda Devices Found" << std::endl;
+
+    ss << "Devices found on this system:" << std::endl;
+    for (int i = 0; i < mData.deviceList.size(); i++) {
+        ss << "# " << i << ": " << mData.deviceList[i]->getName() << std::endl;
     }
 
     QPlainTextEdit* textBox = new QPlainTextEdit(this);

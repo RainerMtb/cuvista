@@ -19,7 +19,6 @@
 #pragma once
 
 #include "Image.hpp"
-#include "Image.hpp"
 #include "ErrorLogger.hpp"
 #include "cuUtil.cuh"
 #include "CudaInfo.hpp"
@@ -34,7 +33,7 @@ struct BlendInput {
 
 struct OutputContext {
 	bool encodeCpu;
-	bool encodeGpu;
+	bool encodeCuda;
 	ImageYuv* outputFrame;
 	unsigned char* cudaNv12ptr;
 	int cudaPitch;
@@ -60,7 +59,8 @@ public:
 	int MAX_POINTS_COUNT = 150;		//max number of points in x or y direction
 
 	int pyramidLevels = 3;			//number of pyramid levels, not necessary starting at level 0
-	int pitch = 0;					//alignment of image rows, will be overwritten in cuda setup
+	int cudapitch = 0;				//alignment of rows in cuda device memory
+	int cpupitch = 0;
 	int strideCount = 0;		    //number of float values in a row including padding
 	int strideFloatBytes = 0;		//number of bytes in an image row including padding
 	int compMaxIter = 20;			//max loop iterations
@@ -95,11 +95,7 @@ public:
 	uint8_t crf = 22;
 	char fileDelimiter = ';';
 
-	int deviceNum = -1;
-	int deviceNumBest = -1;
 	size_t cudaUsedMem = 0;
-	size_t maxPixel = cu::MAX_PIXEL;
-	cudaDeviceProp cudaProps = {};
 	size_t computeSharedMem = 0;
 
 	size_t cudaMemTotal = 0;

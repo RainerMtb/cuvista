@@ -19,7 +19,7 @@
 #pragma once
 
 #include "AVException.hpp"
-#include "CudaInfo.hpp"
+#include "DeviceInfo.hpp"
 #include "nvEncodeAPI.h"
 
 #undef min
@@ -29,9 +29,9 @@
 #include <list>
 #include <map>
 
-inline std::map<OutputCodec, GUID> guidMap = {
-	{ OutputCodec::H264, NV_ENC_CODEC_H264_GUID },
-	{ OutputCodec::H265, NV_ENC_CODEC_HEVC_GUID },
+inline std::map<Codec, GUID> guidMap = {
+	{ Codec::H264, NV_ENC_CODEC_H264_GUID },
+	{ Codec::H265, NV_ENC_CODEC_HEVC_GUID },
 };
 
 struct NvPacket {
@@ -68,7 +68,7 @@ public:
 	NvEncoder(int w, int h) : h { h }, w { w } {}
 
 	static void probeEncoding(CudaInfo& cudaInfo);
-	static void probeSupportedCodecs(CudaInfo& cudaInfo);
+	static void probeSupportedCodecs(DeviceInfoCuda& deviceInfoCuda);
 	void createEncoder(int fpsNum, int fpsDen, uint32_t gopLen, uint8_t crf, GUID guid, int deviceNum);
 	void createEncoder(int fpsNum, int fpsDen, uint32_t gopLen, uint8_t crf, GUID guid, CUcontext cuctx);
 	void destroyEncoder();

@@ -18,11 +18,34 @@
 
 #pragma once
 
-#include <CL/cl.hpp>
+#include "AffineTransform.hpp"
+#include "CoreData.cuh"
+#include "Image.hpp"
 
-inline const char* clErrorStrings[] =
-{
-	// Error Codes
+struct OpenClInfo {
+
+};
+
+namespace cl {
+	void init(CoreData& data, ImageYuv& inputFrame); //called from constructor of MovieFrame
+	void inputData(ImageYuv& frame);
+	void createPyramid();
+	void computePartOne();
+	void computePartTwo();
+	void computeTerminate();
+	void outputData(const AffineTransform& trf, OutputContext outCtx);
+	ImageYuv getInput(int64_t idx);
+	Matf getTransformedOutput();
+	Matf getPyramid(std::size_t idx);
+	bool getCurrentInputFrame(ImagePPM& image);
+	bool getCurrentOutputFrame(ImagePPM& image);
+
+	OpenClInfo probeRuntime(); //called on startup
+	std::size_t deviceCount();
+}
+
+//OpenCL Error Codes
+inline const char* clErrorStrings[] = {
 	  "CL_SUCCESS"                                  //   0
 	, "CL_DEVICE_NOT_FOUND"                         //  -1
 	, "CL_DEVICE_NOT_AVAILABLE"                     //  -2

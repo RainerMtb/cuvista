@@ -47,42 +47,41 @@ void NvEncoder::probeEncoding(CudaInfo& cudaInfo) {
 }
 
 
-void NvEncoder::probeSupportedCodecs(CudaInfo& cudaInfo) {
+void NvEncoder::probeSupportedCodecs(DeviceInfoCuda& deviceInfoCuda) {
 	//create instance
 	NV_ENCODE_API_FUNCTION_LIST encFuncList = { NV_ENCODE_API_FUNCTION_LIST_VER };
 	handleResult(NvEncodeAPICreateInstance(&encFuncList), "cannot create api instance");
 
-	//check supported codecs for all devices
-	for (int i = 0; i < cudaInfo.cudaProps.size(); i++) {
-		void* encoder = nullptr;
+	void* encoder = nullptr;
 
-		//create context per device
-		CUcontext cuctx;
-		handleResult(cuCtxCreate_v2(&cuctx, 0, i), "cannot create device context");
+	//create context per device
+	CUcontext cuctx;
+	CUdevice dev;
+	handleResult(cuDeviceGet(&dev, deviceInfoCuda.targetIndex), "cannot get device");
+	handleResult(cuCtxCreate_v2(&cuctx, 0, dev), "cannot create device context");
 
-		//open session
-		NV_ENC_OPEN_ENCODE_SESSION_EX_PARAMS encodeSessionExParams = { NV_ENC_OPEN_ENCODE_SESSION_EX_PARAMS_VER };
-		encodeSessionExParams.device = cuctx;
-		encodeSessionExParams.deviceType = NV_ENC_DEVICE_TYPE_CUDA;
-		encodeSessionExParams.apiVersion = NVENCAPI_VERSION;
-		handleResult(encFuncList.nvEncOpenEncodeSessionEx(&encodeSessionExParams, &encoder), "cannot open encoder session");
+	//open session
+	NV_ENC_OPEN_ENCODE_SESSION_EX_PARAMS encodeSessionExParams = { NV_ENC_OPEN_ENCODE_SESSION_EX_PARAMS_VER };
+	encodeSessionExParams.device = cuctx;
+	encodeSessionExParams.deviceType = NV_ENC_DEVICE_TYPE_CUDA;
+	encodeSessionExParams.apiVersion = NVENCAPI_VERSION;
+	handleResult(encFuncList.nvEncOpenEncodeSessionEx(&encodeSessionExParams, &encoder), "cannot open encoder session");
 
-		//check available guid
-		uint32_t guidCount;
-		handleResult(encFuncList.nvEncGetEncodeGUIDCount(encoder, &guidCount), "cannot get guid count");
+	//check available guid
+	uint32_t guidCount;
+	handleResult(encFuncList.nvEncGetEncodeGUIDCount(encoder, &guidCount), "cannot get guid count");
 
-		uint32_t guidSupportCount;
-		std::vector<GUID> guids(guidCount);
-		handleResult(encFuncList.nvEncGetEncodeGUIDs(encoder, guids.data(), guidCount, &guidSupportCount), "cannot get guids");
+	uint32_t guidSupportCount;
+	std::vector<GUID> guids(guidCount);
+	handleResult(encFuncList.nvEncGetEncodeGUIDs(encoder, guids.data(), guidCount, &guidSupportCount), "cannot get guids");
 
-		//order by automatic selection
-		std::vector<OutputCodec> codecs;
-		if (std::find(guids.cbegin(), guids.cend(), NV_ENC_CODEC_HEVC_GUID) != guids.cend()) codecs.push_back(OutputCodec::H265);
-		if (std::find(guids.cbegin(), guids.cend(), NV_ENC_CODEC_H264_GUID) != guids.cend()) codecs.push_back(OutputCodec::H264);
-		cudaInfo.supportedCodecs.push_back(codecs);
+	//order best codec first
+	if (std::find(guids.cbegin(), guids.cend(), NV_ENC_CODEC_HEVC_GUID) != guids.cend())
+		deviceInfoCuda.encodingOptions.emplace_back(EncodingDevice::NVENC, Codec::H265);
+	if (std::find(guids.cbegin(), guids.cend(), NV_ENC_CODEC_H264_GUID) != guids.cend())
+		deviceInfoCuda.encodingOptions.emplace_back(EncodingDevice::NVENC, Codec::H264);
 
-		handleResult(cuCtxDestroy_v2(cuctx), "cannot destroy context");
-	}
+	handleResult(cuCtxDestroy_v2(cuctx), "cannot destroy context");
 }
 
 

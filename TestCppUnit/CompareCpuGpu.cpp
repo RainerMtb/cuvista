@@ -62,7 +62,7 @@ public:
 
 		{
 			//GPU
-			dataGpu.probeCudaDevices();
+			dataGpu.probeCuda();
 			dataGpu.fileIn = file;
 			FFmpegReader reader;
 			InputContext ctx = reader.open(file);
@@ -74,7 +74,7 @@ public:
 		{
 			//CPU
 			dataCpu.deviceRequested = true;
-			dataCpu.deviceNum = -1;
+			dataCpu.deviceRequested = 0;
 			dataCpu.fileIn = file;
 			FFmpegReader reader;
 			InputContext ctx = reader.open(file);

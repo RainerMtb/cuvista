@@ -29,7 +29,7 @@ AVStream* FFmpegFormatWriter::newStream(AVFormatContext* fmt_ctx, AVStream* inSt
 }
 
 //setup output format
-void FFmpegFormatWriter::open(OutputCodec videoCodec) {
+void FFmpegFormatWriter::open(EncodingOption videoCodec) {
     //av_log_set_level(AV_LOG_ERROR);
     //custom callback to log ffmpeg errors
     av_log_set_callback(ffmpeg_log);
@@ -45,7 +45,8 @@ void FFmpegFormatWriter::open(OutputCodec videoCodec) {
         AVStream* inStream = sc.inputStream;
 
         if (inStream->index == videoIn->index) {
-            int codecSupported = avformat_query_codec(fmt_ctx->oformat, codecMap[videoCodec], FF_COMPLIANCE_STRICT);
+            AVCodecID codec = codecMap[videoCodec.codec];
+            int codecSupported = avformat_query_codec(fmt_ctx->oformat, codec, FF_COMPLIANCE_STRICT);
             if (codecSupported == 1) {
                 videoStream = newStream(fmt_ctx, inStream);
                 sc.outputStream = videoStream;

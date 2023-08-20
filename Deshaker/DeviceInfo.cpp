@@ -16,25 +16,14 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
-#pragma once
+#include "DeviceInfo.hpp"
+#include <thread>
+#include <format>
 
-#include "clKernels.hpp"
-#include "clMain.hpp"
-#include <CL/cl.hpp>
+std::string DeviceInfoCpu::getName() const {
+	return std::string("CPU: Software only, ") + std::to_string(std::thread::hardware_concurrency()) + " threads";
+}
 
-
-struct LoadResult {
-	cl_int status;
-	cl::Context context;
-	cl::CommandQueue queue;
-	cl::Kernel kernel;
-};
-
-namespace cltest {
-
-	LoadResult loadKernels(std::initializer_list<std::string> kernelNames);
-
-	bool cl_inv(LoadResult& res, double* input, double* invOut, size_t s);
-
-	double cl_norm1(double* input, size_t s, int threads);
+std::string DeviceInfoCuda::getName() const {
+	return std::format("Cuda: {}, Compute {}.{}, {} Mb", props.name, props.major, props.minor, props.totalGlobalMem / 1024 / 1024);
 }

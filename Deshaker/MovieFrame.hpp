@@ -28,6 +28,7 @@
 #include "UserInput.hpp"
 
 #include "cuDeshaker.cuh"
+#include "clMain.hpp"
 
 
 //---------------------------------------------------------------------
@@ -141,8 +142,8 @@ protected:
 		mData { data }, 
 		mStatus { data.status },
 		mFrameResult(data),
-		inputFrame(data.h, data.w, data.pitch),
-		bufferFrame(data.h, data.w, data.pitch),
+		inputFrame(data.h, data.w, data.cpupitch),
+		bufferFrame(data.h, data.w, data.cpupitch),
 		resultPointsOld(data.resultCount), 
 		resultPoints(data.resultCount),
 		mPool(data.cpuThreads)
@@ -170,7 +171,10 @@ class CudaFrame : public MovieFrame {
 
 public:
 	CudaFrame(MainData& data) : MovieFrame(data) {
-		cudaInit(data, inputFrame);
+		DeviceInfo* dev = data.deviceList[data.deviceSelected];
+		int devIdx = dev->targetIndex;
+		const cudaDeviceProp& prop = data.deviceListCuda[devIdx].props;
+		cudaInit(data, devIdx, prop, inputFrame);
 	}
 
 	~CudaFrame() {
@@ -201,7 +205,9 @@ public:
 	}
 
 	void computePartOne() override {
-		cudaCompute1(mStatus.frameInputIndex, mData);
+		DeviceInfo* dev = mData.deviceList[mData.deviceSelected];
+		const DeviceInfoCuda& dic = mData.deviceListCuda[dev->targetIndex];
+		cudaCompute1(mStatus.frameInputIndex, mData, dic.props);
 	}
 
 	void computePartTwo() override {
@@ -247,6 +253,65 @@ public:
 			cudaGetCurrentOutputFrame(image, mData);
 		}
 		return state;
+	}
+};
+
+
+//---------------------------------------------------------------------
+//---------- OPENCL FRAME ---------------------------------------------
+//---------------------------------------------------------------------
+
+class OpenClFrame : public MovieFrame {
+
+public:
+	OpenClFrame(MainData& data) : MovieFrame(data) {
+		cl::init(data, inputFrame);
+	}
+
+	~OpenClFrame() {}
+
+	void inputData(ImageYuv& frame) override { 
+		cl::inputData(frame); 
+	}
+
+	void createPyramid() override { 
+		cl::createPyramid(); 
+	}
+
+	void computePartOne() override { 
+		cl::computePartOne(); 
+	}
+
+	void computePartTwo() override { 
+		cl::computePartTwo(); 
+	}
+
+	void computeTerminate() override { 
+		cl::computeTerminate(); 
+	}
+
+	void outputData(const AffineTransform& trf, OutputContext outCtx) override { 
+		cl::outputData(trf, outCtx); 
+	}
+
+	Mat<float> getTransformedOutput() const override { 
+		cl::getTransformedOutput(); 
+	}
+
+	Mat<float> getPyramid(size_t idx) const override { 
+		cl::getPyramid(idx); 
+	}
+
+	ImageYuv getInput(int64_t idx) const override { 
+		cl::getInput(idx); 
+	}
+
+	bool getCurrentInputFrame(ImagePPM& image) override { 
+		cl::getCurrentInputFrame(image); 
+	}
+
+	bool getCurrentOutputFrame(ImagePPM& image) override { 
+		cl::getCurrentOutputFrame(image); 
 	}
 };
 
