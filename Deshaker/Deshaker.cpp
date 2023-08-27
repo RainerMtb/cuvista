@@ -73,6 +73,9 @@ int deshake(int argsCount, char** args) {
 			//use CUDA GPU
 			frame = std::make_unique<CudaFrame>(data);
 			if (errorLogger.hasError()) throw AVException("cannot setup cuda: " + errorLogger.getErrorMessage());
+
+		} else if (data.deviceList[data.deviceSelected]->type == DeviceType::OPEN_CL) {
+			frame = std::make_unique<OpenClFrame>(data);
 		}
 
 	} catch (const CancelException& ce) {

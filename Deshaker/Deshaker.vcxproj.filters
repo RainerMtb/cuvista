@@ -104,6 +104,9 @@
     <ClCompile Include="DeviceInfo.cpp">
       <Filter>Main</Filter>
     </ClCompile>
+    <ClCompile Include="clFunctions.cpp">
+      <Filter>OpenCl</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MovieReader.hpp">
@@ -189,6 +192,12 @@
     </ClInclude>
     <ClInclude Include="DeviceInfo.hpp">
       <Filter>Main</Filter>
+    </ClInclude>
+    <ClInclude Include="clHeaders.hpp">
+      <Filter>OpenCl</Filter>
+    </ClInclude>
+    <ClInclude Include="clFunctions.hpp">
+      <Filter>OpenCl</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

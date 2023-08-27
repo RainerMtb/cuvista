@@ -185,6 +185,9 @@ public:
 		{ 0.25, 0.5, 0.25 },
 	};
 
+	//array of pyramid heights
+	std::vector<int> pyramidRows;
+
 	//filter for differences in x and y when reading
 	const std::vector<float> filterKernel = { -0.5f, 0.0f, 0.5f };
 

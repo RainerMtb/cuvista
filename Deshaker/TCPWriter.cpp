@@ -19,8 +19,6 @@
 #include "MovieWriter.hpp"
 #include <ws2tcpip.h>
 #include <WinSock2.h>
-
- //undef conflicting macro
 #undef max
 #undef min
 

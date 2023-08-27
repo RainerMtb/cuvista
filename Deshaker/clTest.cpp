@@ -37,22 +37,25 @@ bool cltest::cl_inv(LoadResult& res, double* input, double* invOut, size_t s) {
 	res.queue.enqueueWriteBuffer(cl_input, CL_TRUE, 0, siz, input);
 
 	//kernel parameters
-	cl_int status;
-	status = res.kernel.setArg(0, cl_input);
-	status = res.kernel.setArg(1, cl_inv);
-	status = res.kernel.setArg(2, (int) s);
-	//set local memory size, can only define ONE SINGLE local array
-	status = res.kernel.setArg(3, sizeof(double) * s * 2, nullptr);
+	try {
+		res.kernel.setArg(0, cl_input);
+		res.kernel.setArg(1, cl_inv);
+		res.kernel.setArg(2, (int) s);
+		//set local memory size, can only define ONE SINGLE local array
+		res.kernel.setArg(3, sizeof(double) * s * 2, nullptr);
 
-	status = res.queue.enqueueNDRangeKernel(res.kernel, 0, s, s);
-	if (status != CL_SUCCESS) {
-		std::cout << "error parameters " << clErrorStrings[-status] << std::endl;
-		return false;
+		//start kernel
+		res.queue.enqueueNDRangeKernel(res.kernel, 0, s, s);
+		res.queue.finish();
+
+		//retrieve results from device
+		res.queue.enqueueReadBuffer(cl_inv, CL_TRUE, 0, siz, invOut);
+
+	} catch (cl::Error err) {
+		std::cout << "error: " << err.what() << std::endl;
+		//std::cout << clErrorStrings[-err.what] << std::endl;
 	}
-
-	//retrieve results from device
-	res.queue.enqueueReadBuffer(cl_inv, CL_TRUE, 0, siz, invOut);
-	return status == CL_SUCCESS;
+	return true;
 }
 
 double cltest::cl_norm1(double* input, size_t s, int threads) {

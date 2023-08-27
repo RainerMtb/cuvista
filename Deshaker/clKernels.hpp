@@ -20,6 +20,18 @@
 
 #include <string>
 
+inline std::string scale_8u32f_kernel = R"(
+__kernel void scale_8u32f(__read_only image2d_t src, sampler_t sampler, __write_only image2d_t dest) {
+	int c = get_global_id(0);
+	int r = get_global_id(1);
+	float f = 1.0f / 255.0f;
+
+	int2 coords = (int2) (c, r);
+	unsigned char val = read_imageui(src, sampler, coords).x;
+	write_imagef(dest, coords, val * f);
+}
+)";
+
 inline std::string luinvFunction = R"(
 void luinv(double** Apiv, double* A0, double* temp, double* Ainv, int s, int r, int ci, int cols) {
 	//step 1. decompose matrix A0

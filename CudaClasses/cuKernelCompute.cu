@@ -99,7 +99,7 @@ __global__ void kernelCompute(ComputeTextures tex, PointResult* results, Compute
 	//pyramid level to start at
 	int z = d_core.zMax;
 	//offset in rows to current pyramid level as texture spans one full pyramid
-	int rowOffset = d_core.pyramidRows - (d_core.h >> z);
+	int rowOffset = d_core.pyramidRowCount - (d_core.h >> z);
 
 	for (; z >= d_core.zMin && result >= PointResultType::RUNNING; z--) {
 		//dimensions for current pyramid level

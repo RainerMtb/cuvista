@@ -165,3 +165,49 @@ void cudaFMAD() {
 	//ai.times(a).minus(Matd::eye(dim)).toConsole("zero check");
 }
 
+void compare() {
+	{
+		MainData data;
+		data.probeCuda();
+		InputContext ctx = { 1080, 1920, 2, 1 };
+		data.validate(ctx);
+		NullReader reader;
+		NullWriter writer(data);
+		CudaFrame frame(data);
+
+		frame.inputFrame.readFromPGM("d:/VideoTest/v00.pgm");
+		frame.inputData(frame.inputFrame);
+		frame.createPyramid();
+		data.status.frameInputIndex++;
+
+		frame.inputFrame.readFromPGM("D:/VideoTest/v01.pgm");
+		frame.inputData(frame.inputFrame);
+		frame.createPyramid();
+		frame.computePartOne();
+		frame.computePartTwo();
+		frame.computeTerminate();
+		//frame.getTransformedOutput().saveAsBinary("f:/test.dat");
+		std::cout << cudaGetErrorString(cudaGetLastError()) << std::endl;
+	}
+
+	{
+		MainData data;
+		InputContext ctx = { 1080, 1920, 2, 1 };
+		data.validate(ctx);
+		NullReader reader;
+		NullWriter writer(data);
+		CpuFrame frame(data);
+
+		frame.inputFrame.readFromPGM("d:/VideoTest/v00.pgm");
+		frame.inputData(frame.inputFrame);
+		frame.createPyramid();
+		data.status.frameInputIndex++;
+
+		frame.inputFrame.readFromPGM("D:/VideoTest/v01.pgm");
+		frame.inputData(frame.inputFrame);
+		frame.createPyramid();
+		frame.computePartOne();
+		frame.computePartTwo();
+		frame.computeTerminate();
+	}
+}

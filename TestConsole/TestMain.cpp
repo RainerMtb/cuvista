@@ -20,52 +20,6 @@
 #include <chrono>
 #include <algorithm>
 
-void compare() {
-	{
-		MainData data;
-		data.probeCuda();
-		InputContext ctx = { 1080, 1920, 2, 1 };
-		data.validate(ctx);
-		NullReader reader;
-		NullWriter writer(data);
-		CudaFrame frame(data);
-
-		frame.inputFrame.readFromPGM("d:/VideoTest/v00.pgm");
-		frame.inputData(frame.inputFrame);
-		frame.createPyramid();
-		data.status.frameInputIndex++;
-
-		frame.inputFrame.readFromPGM("D:/VideoTest/v01.pgm");
-		frame.inputData(frame.inputFrame);
-		frame.createPyramid();
-		frame.computePartOne();
-		frame.computePartTwo();
-		frame.computeTerminate();
-		//frame.getTransformedOutput().saveAsBinary("f:/test.dat");
-		std::cout << cudaGetErrorString(cudaGetLastError()) << std::endl;
-	}
-
-	{
-		MainData data;
-		InputContext ctx = { 1080, 1920, 2, 1 };
-		data.validate(ctx);
-		NullReader reader;
-		NullWriter writer(data);
-		CpuFrame frame(data);
-
-		frame.inputFrame.readFromPGM("d:/VideoTest/v00.pgm");
-		frame.inputData(frame.inputFrame);
-		frame.createPyramid();
-		data.status.frameInputIndex++;
-
-		frame.inputFrame.readFromPGM("D:/VideoTest/v01.pgm");
-		frame.inputData(frame.inputFrame);
-		frame.createPyramid();
-		frame.computePartOne();
-		frame.computePartTwo();
-		frame.computeTerminate();
-	}
-}
 
 void check() {
 	int frameSkip = 0;
@@ -111,7 +65,7 @@ void check() {
 }
 
 int main() {
-	std::cout << "----------------------------" << std::endl << "MatrixTestMain:" << std::endl;
+	std::cout << "----------------------------" << std::endl << "TestMain:" << std::endl;
 	//check();
 	//qrdec();
 	//text();
@@ -130,6 +84,7 @@ int main() {
 	//checkVersions();
 	//transform();
 
-	cudaInvTest(1, 32);
-	openClInvTest(1, 32);
+	//cudaInvTest(1, 32);
+	//openClInvTest(1, 32);
+	pyramid();
 }

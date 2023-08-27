@@ -327,7 +327,7 @@ Mat<float> CpuFrame::getTransformedOutput() const {
 
 Mat<float> CpuFrame::getPyramid(size_t idx) const {
 	assert(idx < mPyr.size() && "pyramid index not available");
-	Mat<float> out = Mat<float>::zeros(mData.pyramidRows * 3LL, mData.w);
+	Mat<float> out = Mat<float>::zeros(mData.pyramidRowCount * 3LL, mData.w);
 	size_t row = 0;
 	const auto& items = { mPyr[idx].mY, mPyr[idx].mDX, mPyr[idx].mDY };
 	for (const auto& item : items) {

@@ -47,6 +47,11 @@ cuvistaGui::cuvistaGui(QWidget *parent) : QMainWindow(parent) {
     mData.probeOpenCl();
     mData.collectDeviceInfo();
 
+    //devices
+    for (int i = 0; i < mData.deviceList.size(); i++) {
+        ui.comboDevice->addItem(QString::fromStdString(mData.deviceList[i]->getName()));
+    }
+
     //combo box for encoding options for selected device
     auto fcnEncoding = [&] (int index) {
         encoderSettings.clear();
@@ -61,12 +66,9 @@ cuvistaGui::cuvistaGui(QWidget *parent) : QMainWindow(parent) {
             ui.comboEncoding->addItem(qs);
         }
     };
+    //set encoding options when device changes
     connect(ui.comboDevice, &QComboBox::currentIndexChanged, this, fcnEncoding);
-
-    //devices
-    for (int i = 0; i < mData.deviceList.size(); i++) {
-        ui.comboDevice->addItem(QString::fromStdString(mData.deviceList[i]->getName()));
-    }
+    //trigger setting encoding options
     ui.comboDevice->setCurrentIndex(ui.comboDevice->count() - 1);
 
     //file for reading

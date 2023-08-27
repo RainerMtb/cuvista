@@ -51,18 +51,22 @@ enum class DeviceType {
 class DeviceInfo {
 public:
 	DeviceType type;
-	int targetIndex;
+	size_t targetIndex;
 	std::vector<EncodingOption> encodingOptions;
-	size_t maxPixel;
+	int64_t maxPixel;
 
-	DeviceInfo(DeviceType type, int targetIndex, size_t maxPixel) : type { type }, targetIndex { targetIndex }, maxPixel { maxPixel } {}
+	DeviceInfo(DeviceType type, size_t targetIndex, int64_t maxPixel) 
+		: type { type }, targetIndex { targetIndex }, maxPixel { maxPixel } 
+	{}
 
 	virtual std::string getName() const = 0;
 };
 
 class DeviceInfoCpu : public DeviceInfo {
 public:
-	DeviceInfoCpu(DeviceType type, int targetIndex, size_t maxPixel) : DeviceInfo(type, targetIndex, maxPixel) {}
+	DeviceInfoCpu(DeviceType type, size_t targetIndex, int64_t maxPixel) 
+		: DeviceInfo(type, targetIndex, maxPixel) 
+	{}
 
 	DeviceInfoCpu() : DeviceInfoCpu(DeviceType::CPU, 0, 0) {}
 
@@ -73,7 +77,26 @@ class DeviceInfoCuda : public DeviceInfo {
 public:
 	cudaDeviceProp props;
 
-	DeviceInfoCuda(DeviceType type, int targetIndex, size_t maxPixel, cudaDeviceProp props) : DeviceInfo(type, targetIndex, maxPixel), props { props } {}
+	DeviceInfoCuda(DeviceType type, size_t targetIndex, int64_t maxPixel, cudaDeviceProp props) 
+		: DeviceInfo(type, targetIndex, maxPixel)
+		, props { props } 
+	{}
+
+	virtual std::string getName() const override;
+};
+
+namespace cl {
+	class Device;
+}
+
+class DeviceInfoCl : public DeviceInfo {
+public:
+	cl::Device* device;
+
+	DeviceInfoCl(DeviceType type, size_t targetIndex, int64_t maxPixel, cl::Device* device)
+		: DeviceInfo(type, targetIndex, maxPixel)
+		, device { device } 
+	{}
 
 	virtual std::string getName() const override;
 };

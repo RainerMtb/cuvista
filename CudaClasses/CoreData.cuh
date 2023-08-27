@@ -59,6 +59,9 @@ public:
 	int MAX_POINTS_COUNT = 150;		//max number of points in x or y direction
 
 	int pyramidLevels = 3;			//number of pyramid levels, not necessary starting at level 0
+	int pyramidRowCount = -1;	    //number of rows for one pyramid, for example all the rows of Y data
+	size_t pyramidCount = 3;	    //number of pyramids to allocate in memory
+
 	int cudapitch = 0;				//alignment of rows in cuda device memory
 	int cpupitch = 0;
 	int strideCount = 0;		    //number of float values in a row including padding
@@ -84,9 +87,7 @@ public:
 	int h = 0;					//frame height
 	int64_t frameCount = -1;
 
-	int pyramidRows = -1;		//number of rows for one pyramid, for example all the rows of Y data
 	int bufferCount = -1;		//number of frames to read before starting to average out trajectory
-	size_t pyramidCount = 3;	//number of pyramids to allocate in memory
 
 	int ixCount = -1;
 	int iyCount = -1;

@@ -62,13 +62,16 @@ public:
 
 		{
 			//GPU
+			dataCpu.deviceRequested = true;
+			dataCpu.deviceRequested = 1;
 			dataGpu.probeCuda();
+			dataGpu.probeOpenCl();
 			dataGpu.fileIn = file;
 			FFmpegReader reader;
 			InputContext ctx = reader.open(file);
 			dataGpu.validate(ctx);
 			NullWriter writer(dataGpu);
-			gpu = std::make_unique<CudaFrame>(dataGpu);
+			gpu = std::make_unique<OpenClFrame>(dataGpu);
 			runInit(dataGpu, gpu, trf, &reader, &writer);
 		}
 		{
@@ -91,13 +94,12 @@ public:
 	}
 
 	TEST_METHOD(status) {
-		Assert::IsTrue(errorLogger.hasNoError());
+		Assert::IsTrue(errorLogger.hasNoError(), toWString(errorLogger.getErrorMessage()).c_str());
 	}
 
-
 	TEST_METHOD(pyramid) {
-		//gpu->getPyramid(0).saveAsBinary("f:/pyr_g0.dat");
-		//cpu->getPyramid(0).saveAsBinary("f:/pyr_c0.dat");
+		gpu->getPyramid(0).saveAsBinary("f:/pyr_g0.dat");
+		cpu->getPyramid(0).saveAsBinary("f:/pyr_c0.dat");
 		Mat cpu0 = cpu->getPyramid(0);
 		Assert::AreNotEqual(0.0f, cpu0.sum());
 		Assert::IsTrue(cpu0.equals(gpu->getPyramid(0), 0), L"pyramid 0 mismatch");
@@ -123,6 +125,8 @@ public:
 	TEST_METHOD(transform) {
 		Mat cpuMat = cpu->getTransformedOutput();
 		Mat gpuMat = gpu->getTransformedOutput();
+		Assert::AreEqual(cpuMat.rows(), gpuMat.rows(), L"row dimension does not agree");
+		Assert::AreEqual(cpuMat.cols(), gpuMat.cols(), L"col dimension does not agree");
 		//cpuMat.saveAsBinary("f:/matCpu.dat");
 		//gpuMat.saveAsBinary("f:/matGpu.dat");
 

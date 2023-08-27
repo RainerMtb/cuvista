@@ -172,9 +172,9 @@ class CudaFrame : public MovieFrame {
 public:
 	CudaFrame(MainData& data) : MovieFrame(data) {
 		DeviceInfo* dev = data.deviceList[data.deviceSelected];
-		int devIdx = dev->targetIndex;
+		size_t devIdx = dev->targetIndex;
 		const cudaDeviceProp& prop = data.deviceListCuda[devIdx].props;
-		cudaInit(data, devIdx, prop, inputFrame);
+		cudaInit(data, (int) devIdx, prop, inputFrame);
 	}
 
 	~CudaFrame() {
@@ -229,7 +229,7 @@ public:
 	}
 
 	Mat<float> getPyramid(size_t idx) const override {
-		Mat<float> out = Mat<float>::allocate(mData.pyramidRows * 3LL, mData.w);
+		Mat<float> out = Mat<float>::allocate(mData.pyramidRowCount * 3LL, mData.w);
 		cudaGetPyramid(out.data(), idx, mData);
 		return out;
 	}
@@ -265,17 +265,21 @@ class OpenClFrame : public MovieFrame {
 
 public:
 	OpenClFrame(MainData& data) : MovieFrame(data) {
-		cl::init(data, inputFrame);
+		DeviceInfo* dev = data.deviceList[data.deviceSelected];
+		size_t devIdx = dev->targetIndex;
+		cl::init(data, inputFrame, devIdx, data.pyramidRows);
 	}
 
-	~OpenClFrame() {}
+	~OpenClFrame() {
+		cl::shutdown();
+	}
 
 	void inputData(ImageYuv& frame) override { 
-		cl::inputData(frame); 
+		cl::inputData(mStatus.frameInputIndex, mData, frame);
 	}
 
 	void createPyramid() override { 
-		cl::createPyramid(); 
+		cl::createPyramid(mStatus.frameInputIndex, mData);
 	}
 
 	void computePartOne() override { 
@@ -291,27 +295,29 @@ public:
 	}
 
 	void outputData(const AffineTransform& trf, OutputContext outCtx) override { 
-		cl::outputData(trf, outCtx); 
+		cl::outputData(mStatus.frameWriteIndex, mData, outCtx, trf.toCuAffine());
 	}
 
 	Mat<float> getTransformedOutput() const override { 
-		cl::getTransformedOutput(); 
+		return cl::getTransformedOutput(); 
 	}
 
-	Mat<float> getPyramid(size_t idx) const override { 
-		cl::getPyramid(idx); 
+	Mat<float> getPyramid(size_t idx) const override {
+		Mat<float> out = Mat<float>::allocate(mData.pyramidRowCount * 3LL, mData.w);
+		cl::getPyramid(out.data(), idx, mData);
+		return out;
 	}
 
 	ImageYuv getInput(int64_t idx) const override { 
-		cl::getInput(idx); 
+		return cl::getInput(idx); 
 	}
 
 	bool getCurrentInputFrame(ImagePPM& image) override { 
-		cl::getCurrentInputFrame(image); 
+		return cl::getCurrentInputFrame(image); 
 	}
 
 	bool getCurrentOutputFrame(ImagePPM& image) override { 
-		cl::getCurrentOutputFrame(image); 
+		return cl::getCurrentOutputFrame(image); 
 	}
 };
 

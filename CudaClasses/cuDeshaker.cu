@@ -104,14 +104,14 @@ cudaTextureObject_t prepareComputeTexture(float* src, int w, int h, int pitch) {
 }
 
 void ComputeTextures::create(int64_t idx, int64_t idxPrev, const CoreData& core) {
-	size_t pyramidSize = 1ull * core.pyramidRows * core.strideCount; //size of one full pyramid in elements
+	size_t pyramidSize = 1ull * core.pyramidRowCount * core.strideCount; //size of one full pyramid in elements
 	float* ptr1 = d_pyrData + 3 * pyramidSize * idx;
-	Ycur = prepareComputeTexture(ptr1, core.w, core.pyramidRows, core.strideFloatBytes);
+	Ycur = prepareComputeTexture(ptr1, core.w, core.pyramidRowCount, core.strideFloatBytes);
 
 	float* ptr2 = d_pyrData + 3 * pyramidSize * idxPrev;
-	Yprev = prepareComputeTexture(ptr2, core.w, core.pyramidRows, core.strideFloatBytes);
-	DXprev = prepareComputeTexture(ptr2 + pyramidSize, core.w, core.pyramidRows, core.strideFloatBytes);
-	DYprev = prepareComputeTexture(ptr2 + 2 * pyramidSize, core.w, core.pyramidRows, core.strideFloatBytes);
+	Yprev = prepareComputeTexture(ptr2, core.w, core.pyramidRowCount, core.strideFloatBytes);
+	DXprev = prepareComputeTexture(ptr2 + pyramidSize, core.w, core.pyramidRowCount, core.strideFloatBytes);
+	DYprev = prepareComputeTexture(ptr2 + 2 * pyramidSize, core.w, core.pyramidRowCount, core.strideFloatBytes);
 }
 
 void ComputeTextures::destroy() {
@@ -331,7 +331,7 @@ void cudaInit(CoreData& core, int devIdx, const cudaDeviceProp& prop, ImageYuv& 
 
 	//allocate image pyramids, all the same strided width but increasingly shorter
 	//number of rows through all three pyramids, Y, DX, DY
-	size_t pyrTotalRows = 3ull * core.pyramidRows * core.pyramidCount;
+	size_t pyrTotalRows = 3ull * core.pyramidRowCount * core.pyramidCount;
 	allocSafe(&d_pyrData, core.strideFloatBytes * pyrTotalRows);
 	allocDeviceIndices(&d_pyrRows, d_pyrData, core.strideCount, pyrTotalRows);
 
@@ -382,8 +382,8 @@ void cudaCreatePyramid(int64_t frameIdx, const CoreData& core) {
 	unsigned char* yuvStart = d_yuvData + frIdx * core.cudapitch * h * 3; //get to the start of this yuv image
 
 	int64_t pyrIdx = frameIdx % core.pyramidCount;
-	float* pyrStart = d_pyrData + pyrIdx * core.pyramidRows * 3 * core.strideCount; //get to the start of this pyramid
-	size_t planeOffset = 1ull * core.strideCount * core.pyramidRows;
+	float* pyrStart = d_pyrData + pyrIdx * core.pyramidRowCount * 3 * core.strideCount; //get to the start of this pyramid
+	size_t planeOffset = 1ull * core.strideCount * core.pyramidRowCount;
 
 	//first level of pyramid
 	//Y data
@@ -569,9 +569,9 @@ void cudaGetTransformedOutput(float* warpedData, const CoreData& core) {
 
 void cudaGetPyramid(float* pyramid, size_t idx, const CoreData& core) {
 	size_t pyrIdx = idx % core.pyramidCount;
-	float* devptr = d_pyrData + pyrIdx * core.pyramidRows * 3 * core.strideCount;
+	float* devptr = d_pyrData + pyrIdx * core.pyramidRowCount * 3 * core.strideCount;
 	size_t wbytes = core.w * sizeof(float);
-	cudaMemcpy2D(pyramid, wbytes, devptr, core.strideFloatBytes, wbytes, core.pyramidRows * 3ull, cudaMemcpyDefault);
+	cudaMemcpy2D(pyramid, wbytes, devptr, core.strideFloatBytes, wbytes, core.pyramidRowCount * 3ull, cudaMemcpyDefault);
 }
 
 ImageYuv cudaGetInput(int64_t index, const CoreData& core) {

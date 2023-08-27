@@ -281,9 +281,9 @@ void MainData::collectDeviceInfo() {
 
 	//cpu encoders
 	std::vector<EncodingOption> cpuEncoders = {
-		{EncodingDevice::CPU, Codec::AV1},
+		{EncodingDevice::CPU, Codec::H264},
 		{EncodingDevice::CPU, Codec::H265},
-		{EncodingDevice::CPU, Codec::H264}
+		{EncodingDevice::CPU, Codec::AV1},
 	};
 
 	//CPU device
@@ -294,6 +294,13 @@ void MainData::collectDeviceInfo() {
 		std::copy(dic.encodingOptions.begin(), dic.encodingOptions.end(), std::back_inserter(deviceInfoCpu.encodingOptions));
 	}
 	deviceList.push_back(&deviceInfoCpu);
+
+	//OpenCL devices
+	for (size_t i = 0; i < clinfo.devices.size(); i++) {
+		DeviceInfoCl& dic = clinfo.devices[i];
+		std::copy(cpuEncoders.begin(), cpuEncoders.end(), std::back_inserter(dic.encodingOptions));
+		deviceList.push_back(&dic);
+	}
 
 	//cuda devices
 	for (DeviceInfoCuda& cu : deviceListCuda) {
@@ -377,10 +384,12 @@ void MainData::validate() {
 	int hh = h;
 	int rowCount = hh;
 	for (int i = 0; i < zMax; i++) {
+		this->pyramidRows.push_back(hh);
 		hh /= 2;
 		rowCount += hh;
 	}
-	this->pyramidRows = rowCount;
+	this->pyramidRows.push_back(hh);
+	this->pyramidRowCount = rowCount;
 
 	this->ixCount = w / div - 2 * ir - 1;	//number of points in x
 	this->iyCount = h / div - 2 * ir - 1;	//number of points in y
@@ -470,24 +479,25 @@ void MainData::showDeviceInfo() {
 	collectDeviceInfo();
 
 	//ffmpeg
-	*console << "ffmpeg libavformat version " << LIBAVFORMAT_VERSION_MAJOR << "." << LIBAVFORMAT_VERSION_MINOR << "." << LIBAVFORMAT_VERSION_MICRO << std::endl;
+	*console << "libavformat version: " << LIBAVFORMAT_VERSION_MAJOR << "." << LIBAVFORMAT_VERSION_MINOR << "." << LIBAVFORMAT_VERSION_MICRO << std::endl;
+
+	//display OpenCL info
+	std::string cl = clinfo.devices.size() > 0 
+		? std::format("OpenCL version: {}", clinfo.version) 
+		: "OpenCL not found";
+	*console << cl << std::endl;
 
 	//display nvidia info
-	if (cudaInfo.nvidiaDriverVersion > 0) {
-		*console << "Nvidia driver version " << cudaInfo.nvidiaDriverToString() << ", ";
-
-	} else {
-		*console << "Nvidia driver not found" << ", ";
-	}
+	std::string nv = cudaInfo.nvidiaDriverVersion > 0 
+		? std::format("Nvidia driver version: {}", cudaInfo.nvidiaDriverToString()) 
+		: "Nvidia driver not found";
+	*console << nv << std::endl;
 
 	//display cuda info
-	if (deviceCountCuda() > 0) {
-		*console << "Cuda runtime " << cudaInfo.cudaRuntimeToString() << ", Cuda driver " << cudaInfo.cudaDriverToString();
-
-	} else {
-		*console << "No cuda devices found";
-	}
-	*console << std::endl;
+	std::string cuda = deviceCountCuda() > 0 
+		? std::format("Cuda runtime {}, Cuda driver version {}", cudaInfo.cudaRuntimeToString(), cudaInfo.cudaDriverToString())
+		: "No cuda devices found";
+	*console << cuda << std::endl;
 
 	//display all devices
 	*console << "Devices found on this system:" << std::endl;
@@ -559,5 +569,5 @@ size_t MainData::deviceCountCuda() const {
 }
 
 size_t MainData::deviceCountOpenCl() const {
-	return cl::deviceCount();
+	return clinfo.devices.size();
 }

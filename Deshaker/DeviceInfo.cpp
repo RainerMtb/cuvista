@@ -16,6 +16,7 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
+#include "clHeaders.hpp"
 #include "DeviceInfo.hpp"
 #include <thread>
 #include <format>
@@ -26,4 +27,12 @@ std::string DeviceInfoCpu::getName() const {
 
 std::string DeviceInfoCuda::getName() const {
 	return std::format("Cuda: {}, Compute {}.{}, {} Mb", props.name, props.major, props.minor, props.totalGlobalMem / 1024 / 1024);
+}
+
+std::string DeviceInfoCl::getName() const {
+	std::string name = device->getInfo<CL_DEVICE_NAME>();
+	std::string vendor = device->getInfo<CL_DEVICE_VENDOR>();
+	cl_ulong memSize = device->getInfo<CL_DEVICE_GLOBAL_MEM_SIZE>();
+	//cl_version version = device->getInfo<CL_DEVICE_NUMERIC_VERSION>();
+	return std::format("OpenCL: {}, {}, {} Mb", name, vendor, memSize / 1024 / 1024);
 }

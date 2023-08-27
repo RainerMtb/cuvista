@@ -76,7 +76,7 @@ void filterCompare() {
 	{
 		//CPU
 		dataCpu.deviceRequested = true;
-		dataCpu.deviceNum = -1;
+		dataCpu.deviceSelected = 0;
 		dataCpu.fileIn = file;
 		FFmpegReader reader;
 		InputContext ctx = reader.open(file);

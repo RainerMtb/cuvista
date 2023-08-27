@@ -18,9 +18,9 @@
 
 #pragma once
 
+#include "clHeaders.hpp"
 #include "clKernels.hpp"
 #include "clMain.hpp"
-#include <CL/cl.hpp>
 
 
 struct LoadResult {
