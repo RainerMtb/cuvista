@@ -33,12 +33,6 @@ std::vector<float*> bufferFrames; //index to one buffer frame, allocated on host
 float* d_pyrData;
 float** d_pyrRows;
 
-//declare memory for index lookup during filter operations
-__constant__ float constFilterKernels[] = { 0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f, 0.25f, 0.5f, 0.25f, -0.5f, 0.0f, 0.5f };
-float* filterKernelGauss[3];
-int filterKernelGaussSizes[] = { 5, 3, 3 };
-float* filterKernelDifference;
-
 //results from compute kernel
 PointResult* d_results;
 
@@ -62,6 +56,10 @@ char* d_interrupt;
 //array to keep track of already computed blocks
 char* d_computed;
 
+//parameter structure
+__constant__ CoreData d_core;
+
+
 __device__ void KernelTimer::start() {
 	block = blockIdx;
 	thread = threadIdx;
@@ -76,6 +74,14 @@ __device__ void KernelTimer::stop() {
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------- HOST CODE ------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
+
+__device__ const CoreData& getCoreData() {
+	return d_core;
+}
+
+__device__ const FilterKernel& getFilterKernel(size_t idx) {
+	return d_core.filterKernels[idx];
+}
 
 void handleStatus(cudaError_t status, std::string&& title) {
 	if (status != cudaSuccess) {
@@ -274,10 +280,10 @@ void cudaInit(CoreData& core, int devIdx, const cudaDeviceProp& prop, ImageYuv& 
 	size_t heapRequired = 0;
 	handleStatus(cudaDeviceGetLimit(&heap, cudaLimitMallocHeapSize), "error @init #10");
 
-	size_t frameSize8 = 3ull * core.cudapitch * h;			//bytes for yuv444 images
+	size_t frameSize8 = 3ull * core.cudapitch * h;		//bytes for yuv444 images
 	heapRequired += frameSize8 * core.bufferCount;		//yuv input storage
 	heapRequired += frameSize8 * 2;						//yuv out
-	heapRequired += 3ull * core.strideFloatBytes * h * (core.zMax + 1ull) * core.pyramidCount;		//pyramid mit Y, DX, DY
+	heapRequired += 3ull * core.strideFloatBytes * h * core.pyramidLevels * core.pyramidCount;		//pyramid mit Y, DX, DY
 	heapRequired += 1ull * core.strideFloatBytes * h * core.BUFFER_COUNT;						    //output buffer in floats
 	heapRequired += sizeof(PointResult) * core.resultCount;										    //array of results structure
 	heapRequired += 10 * 1024 * 1024;
@@ -292,15 +298,6 @@ void cudaInit(CoreData& core, int devIdx, const cudaDeviceProp& prop, ImageYuv& 
 	//allocate debug storage
 	allocSafe(&debugData.d_data, debugData.maxSize);
 	handleStatus(cudaMemset(debugData.d_data, 0, debugData.maxSize), "error @init #32");
-
-	//setup filter kernel pointers
-	float* constKernels;
-	float** symbolAddress = &constKernels;
-	handleStatus(cudaGetSymbolAddress((void**) (symbolAddress), constFilterKernels), "error @init #40");
-	filterKernelGauss[0] = constKernels;
-	filterKernelGauss[1] = constKernels + 5;
-	filterKernelGauss[2] = constKernels + 5;
-	filterKernelDifference = constKernels + 8;
 
 	//allocate frameResult array on device
 	allocSafe(&d_results, sizeof(PointResult) * core.resultCount);
@@ -341,7 +338,6 @@ void cudaInit(CoreData& core, int devIdx, const cudaDeviceProp& prop, ImageYuv& 
 	}
 
 	//set up compute kernel
-	computeInit(core);
 	allocSafe(&d_interrupt, 1);
 	allocSafe(&d_computed, 1ll * core.ixCount * core.iyCount);
 
@@ -349,6 +345,10 @@ void cudaInit(CoreData& core, int devIdx, const cudaDeviceProp& prop, ImageYuv& 
 	handleStatus(cudaMemGetInfo(&memfree2, &memtotal), "error @init #80");
 	core.cudaMemTotal = memtotal;
 	core.cudaUsedMem = memfree1 - memfree2;
+
+	//copy core struct to device
+	const void* ptr = &d_core;
+	cudaMemcpyToSymbol(ptr, &core, sizeof(core));
 
 	//final error checks
 	handleStatus(cudaDeviceSynchronize(), "error @init #90");
@@ -389,22 +389,24 @@ void cudaCreatePyramid(int64_t frameIdx, const CoreData& core) {
 	//Y data
 	cu::scale_8u32f(yuvStart, core.cudapitch, pyrStart, core.strideCount, w, h);
 	//DX data
-	cu::filter_32f(pyrStart, pyrStart + planeOffset, core.strideFloatBytes, w, h, filterKernelDifference, 3, cu::FilterDim::FILTER_HORIZONZAL);
+	cu::filter_32f_h(pyrStart, pyrStart + planeOffset, core.strideFloatBytes, w, h, 3);
 	//DY data
-	cu::filter_32f(pyrStart, pyrStart + planeOffset * 2, core.strideFloatBytes, w, h, filterKernelDifference, 3, cu::FilterDim::FILTER_VERTICAL);
+	cu::filter_32f_v(pyrStart, pyrStart + planeOffset * 2, core.strideFloatBytes, w, h, 3);
 
 	//lower levels
 	float* pyrNext = pyrStart + 1ull * core.strideCount * h;
 	for (int z = 1; z <= core.zMax; z++) {
-		cu::filter_32f(pyrStart, bufferFrames[13], core.strideFloatBytes, w, h, filterKernelGauss[0], filterKernelGaussSizes[0], cu::FilterDim::FILTER_HORIZONZAL);
-		cu::filter_32f(bufferFrames[13], bufferFrames[12], core.strideFloatBytes, w, h, filterKernelGauss[0], filterKernelGaussSizes[0], cu::FilterDim::FILTER_VERTICAL);
+		cu::filter_32f_h(pyrStart, bufferFrames[13], core.strideFloatBytes, w, h, 0);
+		cu::filter_32f_v(bufferFrames[13], bufferFrames[12], core.strideFloatBytes, w, h, 0);
 		cu::remap_downsize_32f(bufferFrames[12], core.strideFloatBytes, pyrNext, core.strideCount, w, h);
 		w /= 2;
 		h /= 2;
 		pyrStart = pyrNext;
 		pyrNext += 1ull * core.strideCount * h;
-		cu::filter_32f(pyrStart, pyrStart + planeOffset, core.strideFloatBytes, w, h, filterKernelDifference, 3, cu::FilterDim::FILTER_HORIZONZAL);
-		cu::filter_32f(pyrStart, pyrStart + planeOffset * 2, core.strideFloatBytes, w, h, filterKernelDifference, 3, cu::FilterDim::FILTER_VERTICAL);
+		//DX
+		cu::filter_32f_h(pyrStart, pyrStart + planeOffset, core.strideFloatBytes, w, h, 3);
+		//DY
+		cu::filter_32f_v(pyrStart, pyrStart + planeOffset * 2, core.strideFloatBytes, w, h, 3);
 	}
 
 	handleStatus(cudaGetLastError(), "error @pyramid");
@@ -416,8 +418,9 @@ void cudaCreatePyramid(int64_t frameIdx, const CoreData& core) {
 //----------------------------------
 
 void cudaCompute1(int64_t frameIdx, const CoreData& core, const cudaDeviceProp& props) {
+	assert(frameIdx > 0 && "invalid pyramid index");
 	int64_t pyrIdx = frameIdx % core.pyramidCount;
-	size_t pyrIdxPrev = (pyrIdx == 0 ? core.pyramidCount : pyrIdx) - 1;
+	int64_t pyrIdxPrev = (frameIdx - 1) % core.pyramidCount;
 
 	assert(checkKernelParameters(core, props) && "invalid kernel parameters");
 	compTex.create(pyrIdx, pyrIdxPrev, core);
@@ -513,9 +516,9 @@ void cudaOutput(int64_t frameIdx, const CoreData& core, OutputContext outCtx, cu
 		//transform input on top of background
 		cu::warp_back_32f(in, core.strideFloatBytes, warped, core.strideCount, w, h, trf, cs[1]);
 		//first filter pass
-		cu::filter_32f(warped, temp, core.strideFloatBytes, w, h, filterKernelGauss[i], filterKernelGaussSizes[i], cu::FilterDim::FILTER_HORIZONZAL, cs[1]);
+		cu::filter_32f_h(warped, temp, core.strideFloatBytes, w, h, i, cs[1]);
 		//second filter pass
-		cu::filter_32f(temp, buffer, core.strideFloatBytes, w, h, filterKernelGauss[i], filterKernelGaussSizes[i], cu::FilterDim::FILTER_VERTICAL, cs[1]);
+		cu::filter_32f_v(temp, buffer, core.strideFloatBytes, w, h, i, cs[1]);
 		//combine unsharp mask
 		cu::unsharp_32f(warped, buffer, core.strideFloatBytes, out, core.strideCount, w, h, core.unsharp[i], cs[1]);
 

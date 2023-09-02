@@ -31,7 +31,7 @@ struct OpenClInfo {
 
 namespace cl {
 	OpenClInfo probeRuntime(); //called on startup
-	void init(CoreData& core, ImageYuv& inputFrame, std::size_t devIdx, std::vector<int> pyramidRows); //called from constructor of MovieFrame
+	void init(CoreData& core, ImageYuv& inputFrame, std::size_t devIdx); //called from constructor of MovieFrame
 	void shutdown();
 
 	void inputData(int64_t frameIdx, const CoreData& core, const ImageYuv& inputFrame);

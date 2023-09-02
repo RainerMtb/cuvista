@@ -30,6 +30,7 @@
     <ClInclude Include="CudaInfo.hpp">
       <Filter>Util</Filter>
     </ClInclude>
+    <ClInclude Include="cuFilterKernel.cuh" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Util">

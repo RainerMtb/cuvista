@@ -21,6 +21,7 @@
 #include "Image.hpp"
 #include "ErrorLogger.hpp"
 #include "cuUtil.cuh"
+#include "cuFilterKernel.cuh"
 #include "CudaInfo.hpp"
 
 struct BlendInput {
@@ -55,12 +56,15 @@ struct CoreData {
 	//see __constant__ variables in device code
 
 public:
-	size_t BUFFER_COUNT = 21;	//number of buffer buffer frames to do filtering and output
+	size_t BUFFER_COUNT = 21;	    //number of buffer buffer frames to do filtering and output
 	int MAX_POINTS_COUNT = 150;		//max number of points in x or y direction
 
-	int pyramidLevels = 3;			//number of pyramid levels, not necessary starting at level 0
+	int zMin = -1;
+	int zMax = -1;				    //pyramid steps used for actual computing
+	int zCount = 3;			        //number of pyramid levels to use for stabilization
+	int pyramidLevels = -1;         //number of pyramid levels to create
 	int pyramidRowCount = -1;	    //number of rows for one pyramid, for example all the rows of Y data
-	size_t pyramidCount = 3;	    //number of pyramids to allocate in memory
+	size_t pyramidCount = 2;	    //number of pyramids to allocate in memory
 
 	int cudapitch = 0;				//alignment of rows in cuda device memory
 	int cpupitch = 0;
@@ -79,9 +83,6 @@ public:
 	double imZoom = 1.05;		//additional zoom
 	double radsec = 0.5;		//radius in senconds
 	int radius = -1;			//number of frames before and after used for smoothing
-	int zMin = -1;
-	int zMax = -1;				//pyramid steps used for actual computing
-	int div = -1;
 
 	int w = 0;                  //frame width
 	int h = 0;					//frame height
@@ -107,6 +108,13 @@ public:
 
 	//numeric constants used in compute kernel, will be initialized once
 	double dmin = 0.0, dmax = 0.0, deps = 0.0, dnan = 0.0;
+
+	FilterKernel filterKernels[4] = {
+		{5, {0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f}},
+		{3, {0.25f, 0.5f, 0.25f}},
+		{3, {0.25f, 0.5f, 0.25f}},
+		{3, {-0.5f, 0.0f, 0.5f}},
+	};
 };
 
 

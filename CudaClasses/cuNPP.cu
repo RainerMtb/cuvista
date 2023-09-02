@@ -17,7 +17,9 @@
  */
 
 #include "cuNPP.cuh"
+#include "cuFilterKernel.cuh"
 #include "Util.hpp"
+
 #include <chrono>
 #include <iostream>
 
@@ -172,29 +174,31 @@ __global__ void kernel_uv_to_nv12(cudaTextureObject_t texObj, uchar* nvencPtr, i
 	}
 }
 
-__global__ void kernel_filter_horizontal(cudaTextureObject_t texObj, cuMatf dest, float* kernel, int kernelSize) {
+__global__ void kernel_filter_horizontal(cudaTextureObject_t texObj, cuMatf dest, size_t filterKernelIndex) {
 	uint x = blockIdx.x * blockDim.x + threadIdx.x;
 	uint y = blockIdx.y * blockDim.y + threadIdx.y;
+	const FilterKernel& kernel = getFilterKernel(filterKernelIndex);
 
 	if (x < dest.w && y < dest.h) {
 		float result = 0.0f;
-		for (int i = 0; i < kernelSize; i++) {
-			int ix = x - kernelSize / 2 + i;
-			result += kernel[i] * tex2D<float>(texObj, ix, y);
+		for (int i = 0; i < kernel.siz; i++) {
+			int ix = x - kernel.siz / 2 + i;
+			result += kernel.k[i] * tex2D<float>(texObj, ix, y);
 		}
 		dest.at(y, x) = result;
 	}
 }
 
-__global__ void kernel_filter_vertical(cudaTextureObject_t texObj, cuMatf dest, float* kernel, int kernelSize) {
+__global__ void kernel_filter_vertical(cudaTextureObject_t texObj, cuMatf dest, size_t filterKernelIndex) {
 	uint x = blockIdx.x * blockDim.x + threadIdx.x;
 	uint y = blockIdx.y * blockDim.y + threadIdx.y;
+	const FilterKernel& kernel = getFilterKernel(filterKernelIndex);
 
 	if (x < dest.w && y < dest.h) {
 		float result = 0.0f;
-		for (int i = 0; i < kernelSize; i++) {
-			int iy = y - kernelSize / 2 + i;
-			result += kernel[i] * tex2D<float>(texObj, x, iy);
+		for (int i = 0; i < kernel.siz; i++) {
+			int iy = y - kernel.siz / 2 + i;
+			result += kernel.k[i] * tex2D<float>(texObj, x, iy);
 		}
 		dest.at(y, x) = result;
 	}
@@ -256,15 +260,18 @@ cudaError_t cu::warp_back_32f(float* src, int srcStep, float* dest, int destStep
 	return cudaGetLastError();
 }
 
-cudaError_t cu::filter_32f(float* src, float* dest, int srcStep, int w, int h, float* d_kernel, int kernelSize, FilterDim filterDim, cudaStream_t cs) {
+cudaError_t cu::filter_32f_h(float* src, float* dest, int srcStep, int w, int h, size_t filterKernelIndex, cudaStream_t cs) {
 	KernelContext ki = prepareTexture(src, srcStep, w, h);
 	cuMatf destMat(dest, h, w, srcStep / sizeof(float));
-	if (filterDim == FilterDim::FILTER_HORIZONZAL) {
-		kernel_filter_horizontal <<<ki.blocks, ki.threads, 0, cs>>> (ki.texture, destMat, d_kernel, kernelSize);
+	kernel_filter_horizontal <<<ki.blocks, ki.threads, 0, cs>>> (ki.texture, destMat, filterKernelIndex);
+	cudaDestroyTextureObject(ki.texture);
+	return cudaGetLastError();
+}
 
-	} else if (filterDim == FilterDim::FILTER_VERTICAL) {
-		kernel_filter_vertical <<<ki.blocks, ki.threads, 0, cs>>> (ki.texture, destMat, d_kernel, kernelSize);
-	}
+cudaError_t cu::filter_32f_v(float* src, float* dest, int srcStep, int w, int h, size_t filterKernelIndex, cudaStream_t cs) {
+	KernelContext ki = prepareTexture(src, srcStep, w, h);
+	cuMatf destMat(dest, h, w, srcStep / sizeof(float));
+	kernel_filter_vertical << <ki.blocks, ki.threads, 0, cs >> > (ki.texture, destMat, filterKernelIndex);
 	cudaDestroyTextureObject(ki.texture);
 	return cudaGetLastError();
 }

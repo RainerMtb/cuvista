@@ -708,9 +708,9 @@ public:
 		}
 	}
 
-	Mat<T>& filter1D(const std::vector<T>& kernel, Mat<T>& dest, Mat<T>& buffer, ThreadPoolBase& pool = defaultPool) {
-		filter1D(kernel.data(), kernel.size(), buffer, Direction::HORIZONTAL, pool);
-		buffer.filter1D(kernel.data(), kernel.size(), dest, Direction::VERTICAL, pool);
+	Mat<T>& filter1D(const T* kernel, size_t kernelSize, Mat<T>& dest, Mat<T>& buffer, ThreadPoolBase& pool = defaultPool) {
+		filter1D(kernel, kernelSize, buffer, Direction::HORIZONTAL, pool);
+		buffer.filter1D(kernel, kernelSize, dest, Direction::VERTICAL, pool);
 		return dest;
 	}
 

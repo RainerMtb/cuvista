@@ -178,19 +178,6 @@ public:
 	//cpu threads to use in cpu-compute and computing transform parameters, leave room for other things
 	size_t cpuThreads = std::max(1u, std::thread::hardware_concurrency() * 3 / 4);
 
-	//filter for unsharp masking output
-	const std::vector<std::vector<float>> kernelFilter = {
-		{ 0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f },
-		{ 0.25, 0.5, 0.25 },
-		{ 0.25, 0.5, 0.25 },
-	};
-
-	//array of pyramid heights
-	std::vector<int> pyramidRows;
-
-	//filter for differences in x and y when reading
-	const std::vector<float> filterKernel = { -0.5f, 0.0f, 0.5f };
-
 	int64_t maxFrames = std::numeric_limits<int32_t>::max();
 
 	std::unique_ptr<RNGbase> rng = std::make_unique<RNG<RandomSource>>();

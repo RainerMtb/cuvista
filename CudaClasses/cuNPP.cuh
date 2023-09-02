@@ -26,10 +26,6 @@ using cuMatf = cu::Mat<float>;
 using cuMatc = cu::Mat<uchar>;
 
 namespace cu {
-	enum class FilterDim {
-		FILTER_HORIZONZAL = 0,
-		FILTER_VERTICAL = 1,
-	};
 
 	cudaError_t scale_8u32f(uchar* src, int srcStep, float* dest, int destStep, int w, int h, cudaStream_t cs = 0);
 
@@ -43,7 +39,9 @@ namespace cu {
 
 	cudaError_t remap_downsize_32f(float* src, int srcStep, float* dest, int destStep, int wsrc, int hsrc);
 
-	cudaError_t filter_32f(float* src, float* dest, int srcStep, int w, int h, float* d_kernel, int kernelSize, FilterDim filterDim, cudaStream_t cs = 0);
+	cudaError_t filter_32f_h(float* src, float* dest, int srcStep, int w, int h, size_t filterKernelIndex, cudaStream_t cs = 0);
+
+	cudaError_t filter_32f_v(float* src, float* dest, int srcStep, int w, int h, size_t filterKernelIndex, cudaStream_t cs = 0);
 
 	cudaError_t uv_to_nv12(float* src, int srcStep, uchar* nvencPtr, int cudaPitch, int w, int h, cudaStream_t cs = 0);
 

@@ -69,8 +69,6 @@ struct ComputeKernelParam : KernelParam {
 
 void kernelComputeCall(ComputeKernelParam param, ComputeTextures& tex, PointResult* d_results);
 
-void computeInit(const CoreData& core);
-
 //----------------------------------
 // interface to host callers
 //----------------------------------
@@ -160,3 +158,5 @@ void cudaGetCurrentInputFrame(ImagePPM& image, const CoreData& core, int idx);
 @brief get current output frame for progress display
 */
 void cudaGetCurrentOutputFrame(ImagePPM& image, const CoreData& core);
+
+__device__ const CoreData& getCoreData();

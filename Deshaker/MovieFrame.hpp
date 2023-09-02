@@ -267,7 +267,7 @@ public:
 	OpenClFrame(MainData& data) : MovieFrame(data) {
 		DeviceInfo* dev = data.deviceList[data.deviceSelected];
 		size_t devIdx = dev->targetIndex;
-		cl::init(data, inputFrame, devIdx, data.pyramidRows);
+		cl::init(data, inputFrame, devIdx);
 	}
 
 	~OpenClFrame() {

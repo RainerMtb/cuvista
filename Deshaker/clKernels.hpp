@@ -20,14 +20,46 @@
 
 #include <string>
 
-inline std::string scale_8u32f_kernel = R"(
-__kernel void scale_8u32f(__read_only image2d_t src, sampler_t sampler, __write_only image2d_t dest) {
+inline std::string filter_32f_h_kernel = R"(
+__kernel void filter_32f_h(__read_only image2d_t src, __write_only image2d_t dest, __constant float* k, int ksiz) {
 	int c = get_global_id(0);
 	int r = get_global_id(1);
+
+	float result = 0.0f;
+	for (int i = 0; i < ksiz; i++) {
+		int ix = c - ksiz / 2 + i;
+		int2 coords = (int2) (ix, r);
+		result += k[i] * read_imagef(src, coords).x;
+	}
+	int2 coords = (int2) (c, r);
+	write_imagef(dest, coords, result);
+}
+)";
+
+inline std::string filter_32f_v_kernel = R"(
+__kernel void filter_32f_v(__read_only image2d_t src, __write_only image2d_t dest, __constant float* k, int ksiz) {
+	int c = get_global_id(0);
+	int r = get_global_id(1);
+
+	float result = 0.0f;
+	for (int i = 0; i < ksiz; i++) {
+		int iy = r - ksiz / 2 + i;
+		int2 coords = (int2) (c, iy);
+		result += k[i] * read_imagef(src, coords).x;
+	}
+	int2 coords = (int2) (c, r);
+	write_imagef(dest, coords, result);
+}
+)";
+
+inline std::string scale_8u32f_kernel = R"(
+__kernel void scale_8u32f(__read_only image2d_t src, __write_only image2d_t dest) {
+	int c = get_global_id(0);
+	int r = get_global_id(1);
+	int2 coords = (int2) (c, r);
 	float f = 1.0f / 255.0f;
 
-	int2 coords = (int2) (c, r);
-	unsigned char val = read_imageui(src, sampler, coords).x;
+	unsigned char val = read_imageui(src, coords).x;
 	write_imagef(dest, coords, val * f);
 }
 )";

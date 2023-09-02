@@ -118,6 +118,7 @@
   <ItemGroup>
     <ClInclude Include="CoreData.cuh" />
     <ClInclude Include="CudaInfo.hpp" />
+    <ClInclude Include="cuFilterKernel.cuh" />
     <ClInclude Include="cuNPP.cuh" />
     <ClInclude Include="cuTest.cuh" />
     <ClInclude Include="cuUtil.cuh" />

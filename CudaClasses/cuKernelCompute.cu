@@ -48,9 +48,6 @@ __constant__ double wp0[] = { 1, 0, 0, 0, 1, 0, 0, 0, 1 };
 //initial values for eta
 __constant__ double eta0[] = { 0, 0, 1, 0, 0, 1 };
 
-//parameter structure
-__constant__ CoreData d_core;
-
 //forward declaration to prevent underline
 template<class T> __device__ T tex2D(cudaTextureObject_t tex, float x, float y);
 
@@ -62,9 +59,10 @@ __global__ void kernelCompute(ComputeTextures tex, PointResult* results, Compute
 	uint blockIndex = iy0 * gridDim.x + ix0;
 	if (*param.d_interrupt || param.d_computed[blockIndex]) return;
 	param.kernelTimestamps[blockIndex].start();
+	const CoreData& d_core = getCoreData();
 
-	int& ir = d_core.ir;
-	int& iw = d_core.iw;
+	int ir = d_core.ir;
+	int iw = d_core.iw;
 
 	//allocate individual variables in shared memory
 	extern __shared__ double shd[];
@@ -271,10 +269,4 @@ void kernelComputeCall(ComputeKernelParam param, ComputeTextures& tex, PointResu
 	dim3 blk(param.blk.x, param.blk.y);
 	dim3 thr(param.thr.x, param.thr.y);
 	kernelCompute<<<blk, thr, param.shdBytes, param.stream>>> (tex, d_results, param);
-}
-
-void computeInit(const CoreData& core) {
-	//copy core struct to device
-	const void* ptr = &d_core;
-	cudaMemcpyToSymbol(ptr, &core, sizeof(core));
 }

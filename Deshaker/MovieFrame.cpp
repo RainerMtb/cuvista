@@ -90,7 +90,6 @@ void CpuFrame::createPyramid() {
 	//fill topmost level of pyramid
 	size_t yuvIdx = mStatus.frameInputIndex % mYUV.size();
 	ImageYuv& yuv = mYUV[yuvIdx];
-	auto& k = mData.kernelFilter[0];
 	float f = 1.0f / 255.0f;
 	Mat<float>& y0 = frame.mY[0];
 	y0.setValues([&] (size_t r, size_t c) { return yuv.at(0, r, c) * f; }, mPool);
@@ -102,7 +101,7 @@ void CpuFrame::createPyramid() {
 		//gauss filtering
 		Mat<float> filterTemp = mFilterBuffer.reuse(y.rows(), y.cols());
 		Mat<float> mat = mFilterResult.reuse(y.rows(), y.cols());
-		y.filter1D(k, mat, filterTemp, mPool);
+		y.filter1D(mData.filterKernels[0].k, mData.filterKernels[0].siz, mat, filterTemp, mPool);
 		//if (z == 0) mat.saveAsBinary("f:/buf_c.dat");
 		//downsampling
 		auto func = [&] (size_t r, size_t c) { return mat.interp2(c * 2, r * 2, 0.5f, 0.5f); };
@@ -112,8 +111,8 @@ void CpuFrame::createPyramid() {
 	
 	//create delta pyramids
 	for (size_t z = 0; z <= mData.zMax; z++) {
-		frame.mY[z].filter1D(mData.filterKernel.data(), mData.filterKernel.size(), frame.mDX[z], Direction::HORIZONTAL, mPool);
-		frame.mY[z].filter1D(mData.filterKernel.data(), mData.filterKernel.size(), frame.mDY[z], Direction::VERTICAL, mPool);
+		frame.mY[z].filter1D(mData.filterKernels[3].k, mData.filterKernels[3].siz, frame.mDX[z], Direction::HORIZONTAL, mPool);
+		frame.mY[z].filter1D(mData.filterKernels[3].k, mData.filterKernels[3].siz, frame.mDY[z], Direction::VERTICAL, mPool);
 	}
 }
 
@@ -276,8 +275,8 @@ void CpuFrame::outputData(const AffineTransform& trf, OutputContext outCtx) {
 
 		//unsharp masking
 		//Mat gauss = buf.filter2D(MainData::FILTER[z], &mPool);
-		auto& k = mData.kernelFilter[z];
-		buf.filter1D(k, mFilterResult, mFilterBuffer, mPool);
+		const FilterKernel& k = mData.filterKernels[z];
+		buf.filter1D(k.k, k.siz, mFilterResult, mFilterBuffer, mPool);
 		//gauss.saveAsCSV("f:/gauss_cpu.csv");
 
 		//write output

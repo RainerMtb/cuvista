@@ -83,10 +83,10 @@ int deshake(int argsCount, char** args) {
 		return -1;
 
 	} catch (const AVException& e) {
-		errorLogger.logError("ERROR: " + std::string(e.what()));
+		errorLogger.logError("ERROR: ", e.what());
 
 	} catch (const std::invalid_argument& e) {
-		errorLogger.logError("ERROR: invalid value: " + std::string(e.what()));
+		errorLogger.logError("ERROR: invalid value: ", e.what());
 
 	} catch (...) {
 		errorLogger.logError("ERROR: invalid parameter");

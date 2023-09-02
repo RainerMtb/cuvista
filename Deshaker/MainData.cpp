@@ -197,7 +197,7 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 			progressType = ProgressType::NONE;
 
 		} else if (args.nextArg("levels", next)) {
-			pyramidLevels = std::stoi(next);
+			zCount = std::stoi(next);
 
 		} else if (args.nextArg("ir", next)) {
 			//integration radius
@@ -370,27 +370,26 @@ void MainData::validate() {
 	}
 
 	//pyramid levels to compute
-	this->zMax = pyramidLevels - 1;
+	this->zMax = this->zCount - 1;
 	int div0 = 1 << zMax;
 	int points = std::max(w / div0, h / div0);
 	while (points > MAX_POINTS_COUNT) {
 		points /= 2;
 		zMax++;
 	}
-	this->zMin = zMax - pyramidLevels + 1;
-	this->div = 1 << zMax;
+	this->zMin = zMax - zCount + 1;
+	this->pyramidLevels = zMax + 1;
 
-	//number of rows for one pyramid
+	//number of rows for one complete pyramid
 	int hh = h;
 	int rowCount = hh;
 	for (int i = 0; i < zMax; i++) {
-		this->pyramidRows.push_back(hh);
 		hh /= 2;
 		rowCount += hh;
 	}
-	this->pyramidRows.push_back(hh);
 	this->pyramidRowCount = rowCount;
 
+	int div = 1 << zMax;
 	this->ixCount = w / div - 2 * ir - 1;	//number of points in x
 	this->iyCount = h / div - 2 * ir - 1;	//number of points in y
 	this->resultCount = ixCount * iyCount;
@@ -428,7 +427,7 @@ void MainData::validate() {
 	if (h > mp) throw AVException("frame height exceeds maximum of " + std::to_string(mp) + " px");
 	if (w % 2 != 0 || h % 2 != 0) throw AVException("width and height must be factors of two");
 
-	if (pyramidLevels < limits.levelsMin || pyramidLevels > limits.levelsMax) throw AVException("invalid pyramid levels:" + std::to_string(pyramidLevels));
+	if (zCount < limits.levelsMin || zCount > limits.levelsMax) throw AVException("invalid pyramid levels:" + std::to_string(pyramidLevels));
 	if (ir < limits.irMin || ir > limits.irMax) throw AVException("invalid integration radius:" + std::to_string(ir));
 }
 

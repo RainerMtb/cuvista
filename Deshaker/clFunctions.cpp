@@ -20,15 +20,38 @@
 #include <cassert>
 
 void cl::scale_8u32f(cl::Image src, cl::Image dest, ClData& clData) {
-	assert(src.getImageInfo<CL_IMAGE_WIDTH>() == dest.getImageInfo<CL_IMAGE_WIDTH>() && "image width mismatch");
-	assert(src.getImageInfo<CL_IMAGE_HEIGHT>() == dest.getImageInfo<CL_IMAGE_HEIGHT>() && "image width mismatch");
+	size_t w = src.getImageInfo<CL_IMAGE_WIDTH>();
+	size_t h = src.getImageInfo<CL_IMAGE_HEIGHT>();
+	assert(w == dest.getImageInfo<CL_IMAGE_WIDTH>() && "image width mismatch");
+	assert(h == dest.getImageInfo<CL_IMAGE_HEIGHT>() && "image width mismatch");
 
-	cl::Kernel& k = clData.scale_8u32f;
-	cl::Sampler sampler(clData.context, false, CL_ADDRESS_CLAMP_TO_EDGE, CL_FILTER_NEAREST);
-	k.setArg(0, src);
-	k.setArg(1, sampler);
-	k.setArg(2, dest);
+	cl::Kernel& kernel = clData.scale_8u32f;
+	//cl::Sampler sampler(clData.context, false, CL_ADDRESS_CLAMP_TO_EDGE, CL_FILTER_NEAREST);
+	kernel.setArg(0, src);
+	kernel.setArg(1, dest);
 
-	cl::NDRange dim(clData.w, clData.h);
-	clData.queue.enqueueNDRangeKernel(k, cl::NullRange, dim);
+	cl::NDRange dim(w, h);
+	clData.queue.enqueueNDRangeKernel(kernel, cl::NullRange, dim);
+}
+
+void cl::filter_32f_func(cl::Kernel& kernel, cl::Image src, cl::Image dest, const float* filterKernel, int kernelSize, ClData& clData) {
+	kernel.setArg(0, src);
+	kernel.setArg(1, dest);
+	kernel.setArg(2, clData.filterKernel);
+	kernel.setArg(3, kernelSize);
+
+	clData.queue.enqueueWriteBuffer(clData.filterKernel, CL_TRUE, 0, sizeof(float) * kernelSize, filterKernel);
+
+	size_t w = src.getImageInfo<CL_IMAGE_WIDTH>();
+	size_t h = src.getImageInfo<CL_IMAGE_HEIGHT>();
+    cl::NDRange dim(w, h);
+	clData.queue.enqueueNDRangeKernel(kernel, cl::NullRange, dim);
+}
+
+void cl::filter_32f_h(cl::Image src, cl::Image dest, const float* filterKernel, int kernelSize, ClData& clData) {
+	filter_32f_func(clData.filter_32f_h, src, dest, filterKernel, kernelSize, clData);
+}
+
+void cl::filter_32f_v(cl::Image src, cl::Image dest, const float* filterKernel, int kernelSize, ClData& clData) {
+	filter_32f_func(clData.filter_32f_v, src, dest, filterKernel, kernelSize, clData);
 }

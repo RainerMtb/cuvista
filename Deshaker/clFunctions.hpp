@@ -22,19 +22,25 @@
 #include "ErrorLogger.hpp"
 
 struct ClData {
-	int w;
-	int h;
-
 	std::vector<cl::Device> devices;
 	cl::Context context;
 	cl::CommandQueue queue;
 
 	std::vector<std::vector<cl::Image2D>> yuv;
 	std::vector<std::vector<std::vector<cl::Image2D>>> pyr;
+	std::vector<std::vector<cl::Image2D>> pyrBuffer;
+
+	cl::Buffer filterKernel;
 
 	cl::Kernel scale_8u32f;
+	cl::Kernel filter_32f_h;
+	cl::Kernel filter_32f_v;
 };
 
 namespace cl {
 	void scale_8u32f(cl::Image src, cl::Image dest, ClData& clData);
+	void filter_32f_h(cl::Image src, cl::Image dest, const float* filterKernel, int kernelSize, ClData& clData);
+	void filter_32f_v(cl::Image src, cl::Image dest, const float* filterKernel, int kernelSize, ClData& clData);
+
+	void filter_32f_func(cl::Kernel& kernel, cl::Image src, cl::Image dest, const float* filterKernel, int kernelSize, ClData& clData);
 }

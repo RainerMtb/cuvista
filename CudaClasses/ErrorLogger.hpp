@@ -47,8 +47,12 @@ public:
 		errorList.push_back({ std::chrono::system_clock::now(), msg });
 	}
 
-	void logError(const char* msg1, const char* msg2) {
-		logError(std::string(msg1) + std::string(msg2));
+	void logError(const char* title, const char* msg) {
+		logError(std::string(title) + std::string(msg));
+	}
+
+	void logError(const std::string& title, const std::string& msg) {
+		logError(title + msg);
 	}
 
 	std::vector<ErrorEntry> getErrors() {
