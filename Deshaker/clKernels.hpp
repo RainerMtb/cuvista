@@ -20,7 +20,19 @@
 
 #include <string>
 
-inline std::string filter_32f_h_kernel = R"(
+inline std::string kernelsInputOutput = R"(
+const sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE | CLK_FILTER_NEAREST;
+
+__kernel void scale_8u32f(__read_only image2d_t src, __write_only image2d_t dest) {
+	int c = get_global_id(0);
+	int r = get_global_id(1);
+	float f = 1.0f / 255.0f;
+
+	int2 coords = (int2)(c, r);
+	unsigned char val = read_imageui(src, coords).x;
+	write_imagef(dest, coords, val * f);
+}
+
 __kernel void filter_32f_h(__read_only image2d_t src, __write_only image2d_t dest, __constant float* k, int ksiz) {
 	int c = get_global_id(0);
 	int r = get_global_id(1);
@@ -28,15 +40,11 @@ __kernel void filter_32f_h(__read_only image2d_t src, __write_only image2d_t des
 	float result = 0.0f;
 	for (int i = 0; i < ksiz; i++) {
 		int ix = c - ksiz / 2 + i;
-		int2 coords = (int2) (ix, r);
-		result += k[i] * read_imagef(src, coords).x;
+		result = fma(read_imagef(src, sampler, (int2)(ix, r)).x, k[i], result);
 	}
-	int2 coords = (int2) (c, r);
-	write_imagef(dest, coords, result);
+	write_imagef(dest, (int2)(c, r), result);
 }
-)";
 
-inline std::string filter_32f_v_kernel = R"(
 __kernel void filter_32f_v(__read_only image2d_t src, __write_only image2d_t dest, __constant float* k, int ksiz) {
 	int c = get_global_id(0);
 	int r = get_global_id(1);
@@ -44,24 +52,31 @@ __kernel void filter_32f_v(__read_only image2d_t src, __write_only image2d_t des
 	float result = 0.0f;
 	for (int i = 0; i < ksiz; i++) {
 		int iy = r - ksiz / 2 + i;
-		int2 coords = (int2) (c, iy);
-		result += k[i] * read_imagef(src, coords).x;
+		result = fma(read_imagef(src, sampler, (int2)(c, iy)).x, k[i], result);
 	}
-	int2 coords = (int2) (c, r);
-	write_imagef(dest, coords, result);
+	write_imagef(dest, (int2)(c, r), result);
 }
-)";
 
-inline std::string scale_8u32f_kernel = R"(
-__kernel void scale_8u32f(__read_only image2d_t src, __write_only image2d_t dest) {
+float readImage(__read_only image2d_t src, int c, int r, float dx, float dy) {
+	float f00 = read_imagef(src, (int2)(c, r)).x;
+	float f01 = read_imagef(src, (int2)(c + 1, r)).x;
+	float f10 = read_imagef(src, (int2)(c, r + 1)).x;
+	float f11 = read_imagef(src, (int2)(c + 1, r + 1)).x;
+	return (1.0f - dx) * (1.0f - dy) * f00 + (1.0f - dx) * dy * f10 + dx * (1.0f - dy) * f01 + dx * dy * f11;
+}
+
+__kernel void remap_downsize_32f(__read_only image2d_t src, __write_only image2d_t dest) {
 	int c = get_global_id(0);
 	int r = get_global_id(1);
-	int2 coords = (int2) (c, r);
-	float f = 1.0f / 255.0f;
 
-	unsigned char val = read_imageui(src, coords).x;
-	write_imagef(dest, coords, val * f);
+	//sampling produces different result to cpu code
+	//int2 coords = (int2) (c * 2 + 0.5f, r * 2 + 0.5f);
+	//float val = read_imagef(src, sampler, coords).x;
+	
+	float val = readImage(src, c * 2, r * 2, 0.5f, 0.5f);
+	write_imagef(dest, (int2)(c, r), val);
 }
+
 )";
 
 inline std::string luinvFunction = R"(

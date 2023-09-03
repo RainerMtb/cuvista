@@ -91,7 +91,7 @@ void CpuFrame::createPyramid() {
 	size_t yuvIdx = mStatus.frameInputIndex % mYUV.size();
 	ImageYuv& yuv = mYUV[yuvIdx];
 	float f = 1.0f / 255.0f;
-	Mat<float>& y0 = frame.mY[0];
+	Matf& y0 = frame.mY[0];
 	y0.setValues([&] (size_t r, size_t c) { return yuv.at(0, r, c) * f; }, mPool);
 	//y0.filter1D(k, y0, mFilterBuffer, mPool);
 
@@ -99,20 +99,24 @@ void CpuFrame::createPyramid() {
 	for (size_t z = 0; z < mData.zMax; z++) {
 		Mat<float>& y = frame.mY[z];
 		//gauss filtering
-		Mat<float> filterTemp = mFilterBuffer.reuse(y.rows(), y.cols());
-		Mat<float> mat = mFilterResult.reuse(y.rows(), y.cols());
-		y.filter1D(mData.filterKernels[0].k, mData.filterKernels[0].siz, mat, filterTemp, mPool);
+		Matf filterTemp = mFilterBuffer.reuse(y.rows(), y.cols());
+		Matf mat = mFilterResult.reuse(y.rows(), y.cols());
+		y.filter1D_h(mData.filterKernels[0].k, mData.filterKernels[0].siz, filterTemp, mPool);
+		filterTemp.filter1D_v(mData.filterKernels[0].k, mData.filterKernels[0].siz, mat, mPool);
+		//if (z == 0) std::printf("%.14f\n", mat.at(143, 546));
+		
 		//if (z == 0) mat.saveAsBinary("f:/buf_c.dat");
 		//downsampling
 		auto func = [&] (size_t r, size_t c) { return mat.interp2(c * 2, r * 2, 0.5f, 0.5f); };
-		frame.mY[z + 1].setArea(func, mPool);
+		Matf& dest = frame.mY[z + 1];
+		dest.setArea(func, mPool);
 	}
 	//if (status.frameInputIndex == 1) frame.Y[1].saveAsBinary("f:/cpu.dat");
 	
 	//create delta pyramids
 	for (size_t z = 0; z <= mData.zMax; z++) {
-		frame.mY[z].filter1D(mData.filterKernels[3].k, mData.filterKernels[3].siz, frame.mDX[z], Direction::HORIZONTAL, mPool);
-		frame.mY[z].filter1D(mData.filterKernels[3].k, mData.filterKernels[3].siz, frame.mDY[z], Direction::VERTICAL, mPool);
+		frame.mY[z].filter1D_h(mData.filterKernels[3].k, mData.filterKernels[3].siz, frame.mDX[z], mPool);
+		frame.mY[z].filter1D_v(mData.filterKernels[3].k, mData.filterKernels[3].siz, frame.mDY[z], mPool);
 	}
 }
 
@@ -276,7 +280,8 @@ void CpuFrame::outputData(const AffineTransform& trf, OutputContext outCtx) {
 		//unsharp masking
 		//Mat gauss = buf.filter2D(MainData::FILTER[z], &mPool);
 		const FilterKernel& k = mData.filterKernels[z];
-		buf.filter1D(k.k, k.siz, mFilterResult, mFilterBuffer, mPool);
+		buf.filter1D_h(k.k, k.siz, mFilterBuffer, mPool);
+		mFilterBuffer.filter1D_v(k.k, k.siz, mFilterResult, mPool);
 		//gauss.saveAsCSV("f:/gauss_cpu.csv");
 
 		//write output

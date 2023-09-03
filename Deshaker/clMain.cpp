@@ -27,6 +27,54 @@ ClData clData;
 
 using size2 = cl::array<cl::size_type, 2>;
 
+//check available devices
+OpenClInfo cl::probeRuntime() {
+	clData.devices.clear();
+	using size_t = std::size_t;
+	OpenClInfo info;
+	std::vector<cl::Platform> platforms;
+	cl::Platform::get(&platforms);
+
+	if (platforms.size() > 0) {
+		cl::Platform pf = platforms[0];
+		info.version = pf.getInfo<CL_PLATFORM_VERSION>();
+		pf.getDevices(CL_DEVICE_TYPE_GPU, &clData.devices);
+
+		for (int i = 0; i < clData.devices.size(); i++) {
+			cl::Device& dev = clData.devices[i];
+
+			cl_bool avail = dev.getInfo<CL_DEVICE_AVAILABLE>();
+			if (avail == false) continue;
+
+			cl_int prefWidth = dev.getInfo<CL_DEVICE_PREFERRED_VECTOR_WIDTH_DOUBLE>();
+			if (prefWidth == 0) continue;
+
+			cl_int nativeWidth = dev.getInfo<CL_DEVICE_NATIVE_VECTOR_WIDTH_DOUBLE>();
+			if (nativeWidth == 0) continue;
+
+			cl_bool hasImage = dev.getInfo<CL_DEVICE_IMAGE_SUPPORT>();
+			if (hasImage == false) continue;
+
+			int64_t maxPixelWidth = dev.getInfo<CL_DEVICE_IMAGE2D_MAX_WIDTH>();
+			int64_t maxPixelHeight = dev.getInfo<CL_DEVICE_IMAGE2D_MAX_HEIGHT>();
+
+			cl_device_fp_config doubleConfig = dev.getInfo< CL_DEVICE_DOUBLE_FP_CONFIG>();
+			cl_int minDoubleConfig = CL_FP_FMA | CL_FP_ROUND_TO_NEAREST | CL_FP_INF_NAN | CL_FP_DENORM;
+			if ((doubleConfig & minDoubleConfig) == 0) continue;
+
+			cl_ulong localMemSize = dev.getInfo<CL_DEVICE_LOCAL_MEM_SIZE>();
+
+			int64_t maxPixel = localMemSize / sizeof(float);
+			if (maxPixelWidth < maxPixel) maxPixel = maxPixelWidth;
+			if (maxPixelHeight < maxPixel) maxPixel = maxPixelHeight;
+
+			DeviceInfoCl devInfo(DeviceType::OPEN_CL, i, maxPixel, &dev);
+			info.devices.push_back(devInfo);
+		}
+	}
+	return info;
+}
+
 //set up device to use
 void cl::init(CoreData& core, ImageYuv& inputFrame, std::size_t devIdx) {
 	try {
@@ -76,17 +124,18 @@ void cl::init(CoreData& core, ImageYuv& inputFrame, std::size_t devIdx) {
 		
 		//compile kernels
 		cl::Program::Sources sources;
-		std::string kernelNames[] = { scale_8u32f_kernel, filter_32f_h_kernel, filter_32f_v_kernel };
+		std::string kernelNames[] = { kernelsInputOutput };
 		for (const std::string& str : kernelNames) {
 			sources.emplace_back(str.c_str(), str.size());
 		}
 
 		cl::Program program(clData.context, sources);
-		program.build();
+		program.build(dev, "-cl-opt-disable");
 
 		clData.scale_8u32f = cl::Kernel(program, "scale_8u32f");
 		clData.filter_32f_h = cl::Kernel(program, "filter_32f_h");
-		clData.filter_32f_v = cl::Kernel(program, "filter_32f_h");
+		clData.filter_32f_v = cl::Kernel(program, "filter_32f_v");
+		clData.remap_downsize_32f = cl::Kernel(program, "remap_downsize_32f");
 
 	} catch (const cl::BuildError& err) {
 		for (auto& data : err.getBuildLog()) {
@@ -100,61 +149,16 @@ void cl::init(CoreData& core, ImageYuv& inputFrame, std::size_t devIdx) {
 	}
 }
 
-OpenClInfo cl::probeRuntime() {
-	clData.devices.clear();
-	using size_t = std::size_t;
-	OpenClInfo info;
-	std::vector<cl::Platform> platforms;
-	cl::Platform::get(&platforms);
-
-	if (platforms.size() > 0) {
-		cl::Platform pf = platforms[0];
-		info.version = pf.getInfo<CL_PLATFORM_VERSION>();
-		pf.getDevices(CL_DEVICE_TYPE_GPU, &clData.devices);
-
-		for (int i = 0; i < clData.devices.size(); i++) {
-			cl::Device& dev = clData.devices[i];
-
-			cl_bool avail = dev.getInfo<CL_DEVICE_AVAILABLE>();
-			if (avail == false) continue;
-
-			cl_int prefWidth = dev.getInfo<CL_DEVICE_PREFERRED_VECTOR_WIDTH_DOUBLE>();
-			if (prefWidth == 0) continue;
-
-			cl_int nativeWidth = dev.getInfo<CL_DEVICE_NATIVE_VECTOR_WIDTH_DOUBLE>();
-			if (nativeWidth == 0) continue;
-
-			cl_bool hasImage = dev.getInfo<CL_DEVICE_IMAGE_SUPPORT>();
-			if (hasImage == false) continue;
-
-			int64_t maxPixelWidth = dev.getInfo<CL_DEVICE_IMAGE2D_MAX_WIDTH>();
-			int64_t maxPixelHeight = dev.getInfo<CL_DEVICE_IMAGE2D_MAX_HEIGHT>();
-
-			cl_device_fp_config doubleConfig = dev.getInfo< CL_DEVICE_DOUBLE_FP_CONFIG>();
-			cl_int minDoubleConfig = CL_FP_FMA | CL_FP_ROUND_TO_NEAREST | CL_FP_INF_NAN | CL_FP_DENORM;
-			if ((doubleConfig & minDoubleConfig) == 0) continue;
-
-			cl_ulong localMemSize = dev.getInfo<CL_DEVICE_LOCAL_MEM_SIZE>();
-
-			int64_t maxPixel = localMemSize / sizeof(float);
-			if (maxPixelWidth < maxPixel) maxPixel = maxPixelWidth;
-			if (maxPixelHeight < maxPixel) maxPixel = maxPixelHeight;
-
-			DeviceInfoCl devInfo(DeviceType::OPEN_CL, i, maxPixel, &dev);
-			info.devices.push_back(devInfo);
-		}
-	}
-	return info;
-}
-
 void cl::inputData(int64_t frameIdx, const CoreData& core, const ImageYuv& inputFrame) {
 	int64_t fr = frameIdx % core.bufferCount;
 	int frameSize = core.cpupitch * core.h;
 	size2 origin = {};
 	size2 region = { size_t(core.w), size_t(core.h) };
-	clData.queue.enqueueWriteImage(clData.yuv[fr][0], CL_TRUE, origin, region, core.cpupitch, 0, inputFrame.data());
-	clData.queue.enqueueWriteImage(clData.yuv[fr][1], CL_TRUE, origin, region, core.cpupitch, 0, inputFrame.data() + frameSize);
-	clData.queue.enqueueWriteImage(clData.yuv[fr][2], CL_TRUE, origin, region, core.cpupitch, 0, inputFrame.data() + frameSize * 2ull);
+	const unsigned char* ptr = inputFrame.data();
+	for (int i = 0; i < 3; i++) {
+		clData.queue.enqueueWriteImage(clData.yuv[fr][i], CL_TRUE, origin, region, core.cpupitch, 0, ptr);
+		ptr += frameSize;
+	}
 }
 
 void cl::createPyramid(int64_t frameIdx, const CoreData& core) {
@@ -166,9 +170,15 @@ void cl::createPyramid(int64_t frameIdx, const CoreData& core) {
 	try {
 		scale_8u32f(clData.yuv[frIdx][0], clData.pyr[pyrIdx][0][0], clData);
 		for (size_t z = 1; z <= core.zMax; z++) {
-			const FilterKernel& fk = core.filterKernels[0];
+			const FilterKernel& fk = core.filterKernels[0]; //gauss size 5 
 			filter_32f_h(clData.pyr[pyrIdx][0][z - 1], clData.pyrBuffer[0][z - 1], fk.k, fk.siz, clData);
 			filter_32f_v(clData.pyrBuffer[0][z - 1], clData.pyrBuffer[1][z - 1], fk.k, fk.siz, clData);
+			remap_downsize_32f(clData.pyrBuffer[1][z - 1], clData.pyr[pyrIdx][0][z], clData);
+		}
+		for (size_t z = 0; z <= core.zMax; z++) {
+			const FilterKernel& fk = core.filterKernels[3]; //delta
+			filter_32f_h(clData.pyr[pyrIdx][0][z], clData.pyr[pyrIdx][1][z], fk.k, fk.siz, clData);
+			filter_32f_v(clData.pyr[pyrIdx][0][z], clData.pyr[pyrIdx][2][z], fk.k, fk.siz, clData);
 		}
 
 	} catch (const cl::Error& err) {
@@ -187,9 +197,11 @@ void cl::outputData(int64_t frameIdx, const CoreData& core, OutputContext outCtx
 	size2 region = { size_t(core.w), size_t(core.h) };
 
 	if (outCtx.encodeCpu) {
-		clData.queue.enqueueReadImage(clData.yuv[fr][0], CL_TRUE, origin, region, core.cpupitch, 0, outCtx.outputFrame->data());
-		clData.queue.enqueueReadImage(clData.yuv[fr][1], CL_TRUE, origin, region, core.cpupitch, 0, outCtx.outputFrame->data() + frameSize);
-		clData.queue.enqueueReadImage(clData.yuv[fr][2], CL_TRUE, origin, region, core.cpupitch, 0, outCtx.outputFrame->data() + frameSize * 2ull);
+		unsigned char* ptr = outCtx.outputFrame->data();
+		for (int i = 0; i < 3; i++) {
+			clData.queue.enqueueReadImage(clData.yuv[fr][i], CL_TRUE, origin, region, core.cpupitch, 0, ptr);
+			ptr += frameSize;
+		}
 	}
 }
 
@@ -216,9 +228,11 @@ void cl::getPyramid(float* pyramid, size_t idx, const CoreData& core) {
 			for (int z = 0; z < core.pyramidLevels; z++) {
 				cl::Image im = clData.pyr[pyrIdx][k][z];
 				size2 origin = {};
-				size2 region = { im.getImageInfo<CL_IMAGE_WIDTH>(), im.getImageInfo<CL_IMAGE_HEIGHT>() };
-				clData.queue.enqueueReadImage(im, CL_TRUE, origin, region, 0, 0, ptr);
-				ptr += region[1] * core.w;
+				size_t w = im.getImageInfo<CL_IMAGE_WIDTH>();
+				size_t h = im.getImageInfo<CL_IMAGE_HEIGHT>();
+				size2 region = { w, h };
+				clData.queue.enqueueReadImage(im, CL_TRUE, origin, region, core.w * sizeof(float), 0, ptr);
+				ptr += h * core.w;
 			}
 		}
 

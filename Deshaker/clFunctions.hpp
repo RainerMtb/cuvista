@@ -35,12 +35,14 @@ struct ClData {
 	cl::Kernel scale_8u32f;
 	cl::Kernel filter_32f_h;
 	cl::Kernel filter_32f_v;
+	cl::Kernel remap_downsize_32f;
 };
 
 namespace cl {
 	void scale_8u32f(cl::Image src, cl::Image dest, ClData& clData);
 	void filter_32f_h(cl::Image src, cl::Image dest, const float* filterKernel, int kernelSize, ClData& clData);
 	void filter_32f_v(cl::Image src, cl::Image dest, const float* filterKernel, int kernelSize, ClData& clData);
+	void remap_downsize_32f(cl::Image src, cl::Image dest, ClData& clData);
 
 	void filter_32f_func(cl::Kernel& kernel, cl::Image src, cl::Image dest, const float* filterKernel, int kernelSize, ClData& clData);
 }

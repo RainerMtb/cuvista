@@ -48,44 +48,58 @@ void openClInvTest(size_t s1, size_t s2) {
 	}
 }
 
-void pyramid() {
-	MainData data;
-	AffineTransform trf;
-	trf.addRotation(0.2).addTranslation(-40, 30);
-
-	data.deviceRequested = true;
-	data.deviceRequested = 1;
-	data.probeOpenCl();
-	data.fileIn = "d:/VideoTest/04.ts";
-	FFmpegReader r;
-	InputContext ctx = r.open(data.fileIn);
+template <class T> Matf runPyramid(MainData& data) {
+	FFmpegReader reader;
+	InputContext ctx = reader.open(data.fileIn);
 	data.validate(ctx);
-	NullWriter w(data);
-	OpenClFrame f(data);
-	
-	MovieFrame* frame = &f;
-	MovieReader* reader = &r;
-	MovieWriter* writer = &w;
+	NullWriter writer(data);
+	std::unique_ptr<MovieFrame> frame = std::make_unique<T>(data);
 	Stats& status = data.status;
 	status.reset();
-	reader->read(frame->bufferFrame, status);
+	reader.read(frame->bufferFrame, status);
 	status.frameReadIndex++;
 	frame->inputData(frame->bufferFrame);
 	frame->createPyramid();
 	status.frameInputIndex++;
 
-	reader->read(frame->bufferFrame, status);
-	std::cout << "input" << std::endl;
+	reader.read(frame->bufferFrame, status);
 	frame->inputData(frame->bufferFrame);
-	std::cout << "pyramid" << std::endl;
 	frame->createPyramid();
 
 	frame->computePartOne();
 	frame->computePartTwo();
 	frame->computeTerminate();
-	frame->outputData(trf, writer->getOutputData());
 
-	frame->getPyramid(0).saveAsBinary("f:/pyr_g0.dat");
+	AffineTransform trf;
+	trf.addRotation(0.2).addTranslation(-40, 30);
+	frame->outputData(trf, writer.getOutputData());
+	return frame->getPyramid(0);
+}
+
+void pyramid() {
+	Matf pyrCpu, pyrOcl;
+
+	{
+		MainData data;
+		data.deviceRequested = true;
+		data.deviceRequested = 0;
+		data.probeOpenCl();
+		data.fileIn = "d:/VideoTest/04.ts";
+		pyrCpu = runPyramid<CpuFrame>(data);
+	}
+
+	{
+		MainData data;
+		AffineTransform trf;
+		trf.addRotation(0.2).addTranslation(-40, 30);
+		data.deviceRequested = true;
+		data.deviceRequested = 1;
+		data.probeOpenCl();
+		data.fileIn = "d:/VideoTest/04.ts";
+		pyrOcl = runPyramid<OpenClFrame>(data);
+	}
+
+	std::cout << (pyrCpu.equalsExact(pyrOcl) ? "pyramids equal" : "pyramids differ") << std::endl;
 
 	if (errorLogger.hasError()) {
 		std::cout << errorLogger.getErrorMessage() << std::endl;

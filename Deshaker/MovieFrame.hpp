@@ -303,7 +303,7 @@ public:
 	}
 
 	Mat<float> getPyramid(size_t idx) const override {
-		Mat<float> out = Mat<float>::allocate(mData.pyramidRowCount * 3LL, mData.w);
+		Mat<float> out = Mat<float>::zeros(mData.pyramidRowCount * 3LL, mData.w);
 		cl::getPyramid(out.data(), idx, mData);
 		return out;
 	}

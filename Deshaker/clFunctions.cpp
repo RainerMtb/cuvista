@@ -55,3 +55,15 @@ void cl::filter_32f_h(cl::Image src, cl::Image dest, const float* filterKernel, 
 void cl::filter_32f_v(cl::Image src, cl::Image dest, const float* filterKernel, int kernelSize, ClData& clData) {
 	filter_32f_func(clData.filter_32f_v, src, dest, filterKernel, kernelSize, clData);
 }
+
+void cl::remap_downsize_32f(cl::Image src, cl::Image dest, ClData& clData) {
+	//cl::Sampler mid(clData.context, CL_FALSE, CL_ADDRESS_CLAMP_TO_EDGE, CL_FILTER_LINEAR);
+	cl::Kernel& kernel = clData.remap_downsize_32f;
+	kernel.setArg(0, src);
+	kernel.setArg(1, dest);
+
+	size_t w = dest.getImageInfo<CL_IMAGE_WIDTH>();
+	size_t h = dest.getImageInfo<CL_IMAGE_HEIGHT>();
+	cl::NDRange dim(w, h);
+	clData.queue.enqueueNDRangeKernel(kernel, cl::NullRange, dim);
+}

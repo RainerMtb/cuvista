@@ -28,7 +28,7 @@ void filter() {
 	std::vector<double> k = { 0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f };
 
 	auto t1 = std::chrono::high_resolution_clock::now();
-	m.filter1D(k.data(), k.size(), x, Direction::HORIZONTAL, pool);
+	m.filter1D_h(k.data(), k.size(), x, pool);
 	auto t2 = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double> sec = t2 - t1;
 	std::cout << "elapsed " << sec * 1000 << std::endl;

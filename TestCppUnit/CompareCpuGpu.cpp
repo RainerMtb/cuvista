@@ -61,23 +61,21 @@ public:
 		trf.addRotation(0.2).addTranslation(-40, 30);
 
 		{
-			//GPU
-			dataCpu.deviceRequested = true;
-			dataCpu.deviceRequested = 1;
+			//Cuda
+			dataCpu.deviceSelected = 2;
 			dataGpu.probeCuda();
-			dataGpu.probeOpenCl();
+			//dataGpu.probeOpenCl();
 			dataGpu.fileIn = file;
 			FFmpegReader reader;
 			InputContext ctx = reader.open(file);
 			dataGpu.validate(ctx);
 			NullWriter writer(dataGpu);
-			gpu = std::make_unique<OpenClFrame>(dataGpu);
+			gpu = std::make_unique<CudaFrame>(dataGpu);
 			runInit(dataGpu, gpu, trf, &reader, &writer);
 		}
 		{
 			//CPU
-			dataCpu.deviceRequested = true;
-			dataCpu.deviceRequested = 0;
+			dataCpu.deviceSelected = 0;
 			dataCpu.fileIn = file;
 			FFmpegReader reader;
 			InputContext ctx = reader.open(file);
