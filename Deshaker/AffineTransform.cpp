@@ -224,7 +224,7 @@ void AffineTransform::computeSimilarDirect(std::vector<PointResult>::iterator it
 	setParam(q[0], q[1], -dx * q[0] - dy * q[1] + q[2] + dx, dx * q[1] - dy * q[0] + q[3] + dy);
 }
 
-cu::Affine AffineTransform::toCuAffine() const {
+std::array<double, 6> AffineTransform::toArray() const {
 	return { array[0], array[1], array[2], array[3], array[4], array[5] };
 }
 

@@ -19,18 +19,21 @@
 #include "clFunctions.hpp"
 #include "clMain.hpp"
 #include "clKernels.hpp"
-#include <format>
 #include "AVException.hpp"
+#include <format>
+#include <algorithm>
 
 //data
 ClData clData;
 
 using size2 = cl::array<cl::size_type, 2>;
 
+bool operator == (const cl::ImageFormat& a, const cl::ImageFormat& b) {
+	return a.image_channel_data_type == b.image_channel_data_type && a.image_channel_order == b.image_channel_order;
+}
+
 //check available devices
 OpenClInfo cl::probeRuntime() {
-	clData.devices.clear();
-	using size_t = std::size_t;
 	OpenClInfo info;
 	std::vector<cl::Platform> platforms;
 	cl::Platform::get(&platforms);
@@ -83,12 +86,10 @@ void cl::init(CoreData& core, ImageYuv& inputFrame, std::size_t devIdx) {
 		clData.queue = cl::CommandQueue(clData.context, dev);
 
 		//allocate yuv data
+		cl::ImageFormat fmt(CL_R, CL_UNSIGNED_INT8);
 		for (int idx = 0; idx < core.bufferCount; idx++) {
-			cl::ImageFormat fmt(CL_R, CL_UNSIGNED_INT8);
-			cl::Image2D y(clData.context, 0, fmt, core.w, core.h, core.cpupitch);
-			cl::Image2D u(clData.context, 0, fmt, core.w, core.h, core.cpupitch);
-			cl::Image2D v(clData.context, 0, fmt, core.w, core.h, core.cpupitch);
-			clData.yuv.push_back({ y,u,v });
+			cl::Image2D yuv(clData.context, CL_MEM_READ_ONLY, fmt, core.w, core.h * 3ull);
+			clData.yuv.push_back(yuv);
 		}
 
 		auto pyramidCreator = [&] (int levels, int h, int w, std::vector<cl::Image2D>& dest) {
@@ -96,7 +97,7 @@ void cl::init(CoreData& core, ImageYuv& inputFrame, std::size_t devIdx) {
 			int ww = w;
 			for (int z = 0; z < levels; z++) {
 				cl::ImageFormat fmt(CL_R, CL_FLOAT);
-				dest[z] = cl::Image2D(clData.context, 0, fmt, ww, hh);
+				dest[z] = cl::Image2D(clData.context, CL_MEM_READ_WRITE, fmt, ww, hh);
 				hh /= 2;
 				ww /= 2;
 			}
@@ -112,17 +113,33 @@ void cl::init(CoreData& core, ImageYuv& inputFrame, std::size_t devIdx) {
 			}
 		}
 
-		//buffer pyramid for filtering
+		//check supported image formats
+		std::vector<cl::ImageFormat> fmts;
+		clData.context.getSupportedImageFormats(CL_MEM_READ_WRITE, CL_MEM_OBJECT_IMAGE2D, &fmts);
+		cl::ImageFormat outFmt(CL_RGBA, CL_FLOAT);
+		bool hasFormatSupport = std::count(fmts.cbegin(), fmts.cend(), outFmt) > 0;
+
+		//buffer pyramid for filtering, need two buffer images on every pyramid level
 		clData.pyrBuffer.resize(2);
 		for (size_t idx = 0; idx < 2; idx++) {
 			clData.pyrBuffer[idx].resize(core.pyramidLevels);
 			pyramidCreator(core.pyramidLevels, core.h, core.w, clData.pyrBuffer[idx]);
 		}
 
-		//buffer to hold one filter kernel
-		clData.filterKernel = cl::Buffer(clData.context, CL_MEM_READ_ONLY, sizeof(float) * FilterKernel::maxSize);
-		
-		//compile kernels
+		//output images
+		for (cl::Image& im : clData.out) {
+			im = cl::Image2D(clData.context, CL_MEM_READ_WRITE, outFmt, core.w, core.h);
+			size2 origin = {};
+			size2 region = { size_t(core.w), size_t(core.h) };
+			cl_float4 bg = { core.bgcol_yuv.colors[0], core.bgcol_yuv.colors[1], core.bgcol_yuv.colors[2], 0.0f };
+			clData.queue.enqueueFillImage(im, bg, origin, region);
+		}
+		clData.yuvOut = cl::Image2D(clData.context, CL_MEM_WRITE_ONLY, fmt, core.w, core.h * 3ull);
+
+		//allocate filter kernel buffer
+		clData.filterKernel = cl::Buffer(clData.context, CL_MEM_READ_ONLY, sizeof(cl_float4) * FilterKernel::maxSize);
+
+		//compile device code
 		cl::Program::Sources sources;
 		std::string kernelNames[] = { kernelsInputOutput };
 		for (const std::string& str : kernelNames) {
@@ -132,20 +149,20 @@ void cl::init(CoreData& core, ImageYuv& inputFrame, std::size_t devIdx) {
 		cl::Program program(clData.context, sources);
 		program.build(dev, "-cl-opt-disable");
 
-		clData.scale_8u32f = cl::Kernel(program, "scale_8u32f");
-		clData.filter_32f_h = cl::Kernel(program, "filter_32f_h");
-		clData.filter_32f_v = cl::Kernel(program, "filter_32f_v");
-		clData.remap_downsize_32f = cl::Kernel(program, "remap_downsize_32f");
+		//assign kernels
+		for (auto& entry : clData.kernelMap) {
+			entry.second = cl::Kernel(program, entry.first.c_str());
+		}
 
 	} catch (const cl::BuildError& err) {
 		for (auto& data : err.getBuildLog()) {
 			cl::Device dev = data.first;
 			std::string msg = data.second;
-			errorLogger.logError("init: ", msg);
+			errorLogger.logError("OpenCL init error: ", msg);
 		}
 
 	} catch (const cl::Error& err) {
-		errorLogger.logError("init: ", err.what());
+		errorLogger.logError("OpenCL init error: ", err.what());
 	}
 }
 
@@ -153,12 +170,8 @@ void cl::inputData(int64_t frameIdx, const CoreData& core, const ImageYuv& input
 	int64_t fr = frameIdx % core.bufferCount;
 	int frameSize = core.cpupitch * core.h;
 	size2 origin = {};
-	size2 region = { size_t(core.w), size_t(core.h) };
-	const unsigned char* ptr = inputFrame.data();
-	for (int i = 0; i < 3; i++) {
-		clData.queue.enqueueWriteImage(clData.yuv[fr][i], CL_TRUE, origin, region, core.cpupitch, 0, ptr);
-		ptr += frameSize;
-	}
+	size2 region = { size_t(core.w), size_t(core.h * 3ull) };
+	clData.queue.enqueueWriteImage(clData.yuv[fr], CL_TRUE, origin, region, core.cpupitch, 0, inputFrame.data());
 }
 
 void cl::createPyramid(int64_t frameIdx, const CoreData& core) {
@@ -168,21 +181,19 @@ void cl::createPyramid(int64_t frameIdx, const CoreData& core) {
 	int64_t pyrIdx = frameIdx % core.pyramidCount;
 
 	try {
-		scale_8u32f(clData.yuv[frIdx][0], clData.pyr[pyrIdx][0][0], clData);
+		scale_8u32f_1(clData.yuv[frIdx], clData.pyr[pyrIdx][0][0], clData);
 		for (size_t z = 1; z <= core.zMax; z++) {
-			const FilterKernel& fk = core.filterKernels[0]; //gauss size 5 
-			filter_32f_h(clData.pyr[pyrIdx][0][z - 1], clData.pyrBuffer[0][z - 1], fk.k, fk.siz, clData);
-			filter_32f_v(clData.pyrBuffer[0][z - 1], clData.pyrBuffer[1][z - 1], fk.k, fk.siz, clData);
+			filter_32f_h1(clData.pyr[pyrIdx][0][z - 1], clData.pyrBuffer[0][z - 1], clData.filterGauss, clData);
+			filter_32f_v1(clData.pyrBuffer[0][z - 1], clData.pyrBuffer[1][z - 1], clData.filterGauss, clData);
 			remap_downsize_32f(clData.pyrBuffer[1][z - 1], clData.pyr[pyrIdx][0][z], clData);
 		}
 		for (size_t z = 0; z <= core.zMax; z++) {
-			const FilterKernel& fk = core.filterKernels[3]; //delta
-			filter_32f_h(clData.pyr[pyrIdx][0][z], clData.pyr[pyrIdx][1][z], fk.k, fk.siz, clData);
-			filter_32f_v(clData.pyr[pyrIdx][0][z], clData.pyr[pyrIdx][2][z], fk.k, fk.siz, clData);
+			filter_32f_h1(clData.pyr[pyrIdx][0][z], clData.pyr[pyrIdx][1][z], clData.filterDifference, clData);
+			filter_32f_v1(clData.pyr[pyrIdx][0][z], clData.pyr[pyrIdx][2][z], clData.filterDifference, clData);
 		}
 
 	} catch (const cl::Error& err) {
-		errorLogger.logError("pyramid: ", err.what());
+		errorLogger.logError("OpenCL pyramid error: ", err.what());
 	}
 }
 
@@ -190,32 +201,50 @@ void cl::computePartOne() {}
 void cl::computePartTwo() {}
 void cl::computeTerminate() {}
 
-void cl::outputData(int64_t frameIdx, const CoreData& core, OutputContext outCtx, cu::Affine trf) {
-	int64_t fr = frameIdx % core.bufferCount;
-	int frameSize = core.cpupitch * core.h;
-	size2 origin = {};
-	size2 region = { size_t(core.w), size_t(core.h) };
+void cl::outputData(int64_t frameIdx, const CoreData& core, OutputContext outCtx, std::array<double, 6> trf) {
+	int64_t frIdx = frameIdx % core.bufferCount;
+	auto& [outStart, outWarped, outFilterH, outFilterV, outFinal] = clData.out;
 
-	if (outCtx.encodeCpu) {
-		unsigned char* ptr = outCtx.outputFrame->data();
-		for (int i = 0; i < 3; i++) {
-			clData.queue.enqueueReadImage(clData.yuv[fr][i], CL_TRUE, origin, region, core.cpupitch, 0, ptr);
-			ptr += frameSize;
+	try {
+		//convert input yuv to float image
+		scale_8u32f_3(clData.yuv[frIdx], outStart, clData);
+		//fill background if applicable
+		if (core.bgmode == BackgroundMode::COLOR) {
+			size2 origin = {};
+			size2 region = { size_t(core.w), size_t(core.h) };
+			cl_float4 bg = { core.bgcol_yuv.colors[0], core.bgcol_yuv.colors[1], core.bgcol_yuv.colors[2], 0.0f };
+			clData.queue.enqueueFillImage(outWarped, bg, origin, region);
 		}
+		//warp input on top of background
+		warp_back(outStart, outWarped, clData, trf);
+
+		//filtering
+		filter_32f_h3(outWarped, outFilterH, clData.filterGauss, clData);
+		filter_32f_v3(outFilterH, outFilterV, clData.filterGauss, clData);
+
+		//unsharp mask
+		unsharp(outWarped, outFinal, outFilterV, clData, core.unsharp);
+
+		//convert to YUV444 for output
+		scale_32f8u_3(outFinal, clData.yuvOut, clData);
+
+		//copy output to host
+		if (outCtx.encodeCpu) {
+			size2 origin = {};
+			size2 region = { size_t(core.w), size_t(core.h) * 3ull };
+			unsigned char* ptr = outCtx.outputFrame->data();
+			clData.queue.enqueueReadImage(clData.yuvOut, CL_TRUE, origin, region, core.cpupitch, 0, ptr);
+		}
+
+	} catch (const cl::Error& err) {
+		errorLogger.logError("OpenCL output error: ", err.what());
 	}
 }
 
-void cl::shutdown() {
-	clData.yuv.clear();
-	clData.pyr.clear();
-}
+void cl::shutdown() {}
 
 ImageYuv cl::getInput(int64_t idx) {
 	return {};
-}
-
-Matf cl::getTransformedOutput() {
-	return Matf();
 }
 
 void cl::getPyramid(float* pyramid, size_t idx, const CoreData& core) {
@@ -243,6 +272,10 @@ void cl::getPyramid(float* pyramid, size_t idx, const CoreData& core) {
 
 bool cl::getCurrentInputFrame(ImagePPM& image) {
 	return false;
+}
+
+Matf cl::getTransformedOutput() {
+	return Matf();
 }
 
 bool cl::getCurrentOutputFrame(ImagePPM& image) {

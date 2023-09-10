@@ -48,7 +48,7 @@ void openClInvTest(size_t s1, size_t s2) {
 	}
 }
 
-template <class T> Matf runPyramid(MainData& data) {
+template <class T> std::pair<Matf, ImageYuv> runPyramid(MainData& data) {
 	FFmpegReader reader;
 	InputContext ctx = reader.open(data.fileIn);
 	data.validate(ctx);
@@ -73,33 +73,48 @@ template <class T> Matf runPyramid(MainData& data) {
 	AffineTransform trf;
 	trf.addRotation(0.2).addTranslation(-40, 30);
 	frame->outputData(trf, writer.getOutputData());
-	return frame->getPyramid(0);
+	return { frame->getPyramid(0), writer.outputFrame };
 }
 
 void pyramid() {
+	AffineTransform trf;
+	trf.addRotation(0.2).addTranslation(-40, 30);
 	Matf pyrCpu, pyrOcl;
 
 	{
 		MainData data;
 		data.deviceRequested = true;
 		data.deviceRequested = 0;
-		data.probeOpenCl();
 		data.fileIn = "d:/VideoTest/04.ts";
-		pyrCpu = runPyramid<CpuFrame>(data);
+		auto ret = runPyramid<CpuFrame>(data);
+		pyrCpu = ret.first;
+		ret.second.saveAsColorBMP("f:/testCpu.bmp");
 	}
 
 	{
 		MainData data;
-		AffineTransform trf;
-		trf.addRotation(0.2).addTranslation(-40, 30);
 		data.deviceRequested = true;
 		data.deviceRequested = 1;
 		data.probeOpenCl();
 		data.fileIn = "d:/VideoTest/04.ts";
-		pyrOcl = runPyramid<OpenClFrame>(data);
+		auto ret = runPyramid<OpenClFrame>(data);
+		pyrOcl = ret.first;
+		ret.second.saveAsColorBMP("f:/testOcl.bmp");
 	}
 
-	std::cout << (pyrCpu.equalsExact(pyrOcl) ? "pyramids equal" : "pyramids differ") << std::endl;
+	{
+		MainData data;
+		data.deviceRequested = true;
+		data.deviceRequested = 1;
+		data.probeCuda();
+		data.fileIn = "d:/VideoTest/04.ts";
+		auto ret = runPyramid<CudaFrame>(data);
+		ret.second.saveAsColorBMP("f:/testCuda.bmp");
+	}
+
+	//pyrCpu.saveAsBinary("f:/pyr_c0.dat");
+	//pyrOcl.saveAsBinary("f:/pyr_g0.dat");
+	std::cout << (pyrCpu.equalsExact(pyrOcl) ? "pyramids equal ok" : "pyramids differ!!") << std::endl;
 
 	if (errorLogger.hasError()) {
 		std::cout << errorLogger.getErrorMessage() << std::endl;

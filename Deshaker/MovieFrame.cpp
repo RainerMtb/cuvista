@@ -103,8 +103,8 @@ void CpuFrame::createPyramid() {
 		Matf mat = mFilterResult.reuse(y.rows(), y.cols());
 		y.filter1D_h(mData.filterKernels[0].k, mData.filterKernels[0].siz, filterTemp, mPool);
 		filterTemp.filter1D_v(mData.filterKernels[0].k, mData.filterKernels[0].siz, mat, mPool);
-		//if (z == 0) std::printf("%.14f\n", mat.at(143, 546));
 		
+		//if (z == 0) std::printf("cpu %.14f %.14f %.14f %.14f %.14f\n", y.at(30, 28), y.at(30, 29), y.at(30, 30), y.at(30, 31), y.at(30, 32));
 		//if (z == 0) mat.saveAsBinary("f:/buf_c.dat");
 		//downsampling
 		auto func = [&] (size_t r, size_t c) { return mat.interp2(c * 2, r * 2, 0.5f, 0.5f); };

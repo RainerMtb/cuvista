@@ -21,7 +21,6 @@
 #include "Utils.hpp"
 #include "MovieFrame.hpp"
 
-std::string file = "d:/VideoTest/04.ts";
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
@@ -31,28 +30,39 @@ namespace CudaTest {
 
 private:
 
-	inline static MainData dataGpu, dataCpu;
-	inline static std::unique_ptr<MovieFrame> gpu, cpu;
+	inline static MainData dataCuda, dataCpu;
+	inline static std::unique_ptr<MovieFrame> frameCuda, frameCpu;
 
 	double sqr(double d) { return d * d; }
 
-	static void runInit(MainData& data, std::unique_ptr<MovieFrame>& frame, AffineTransform& trf, MovieReader* reader, MovieWriter* writer) {
+	template <class T> static std::unique_ptr<MovieFrame> runInit(MainData& data) {
+		AffineTransform trf;
+		trf.addRotation(0.2).addTranslation(-40, 30);
+		std::string file = "d:/VideoTest/04.ts";
+
+		data.fileIn = file;
+		FFmpegReader reader;
+		InputContext ctx = reader.open(file);
+		data.validate(ctx);
+		NullWriter writer(data);
+		std::unique_ptr<MovieFrame> frame = std::make_unique<T>(data);
+
 		Stats& status = data.status;
 		status.reset();
-		reader->read(frame->bufferFrame, status);
+		reader.read(frame->bufferFrame, status);
 		status.frameReadIndex++;
 		frame->inputData(frame->bufferFrame);
 		frame->createPyramid();
 		status.frameInputIndex++;
 
-		reader->read(frame->bufferFrame, status);
+		reader.read(frame->bufferFrame, status);
 		frame->inputData(frame->bufferFrame);
 		frame->createPyramid();
-
 		frame->computePartOne();
 		frame->computePartTwo();
 		frame->computeTerminate();
-		frame->outputData(trf, writer->getOutputData());
+		frame->outputData(trf, writer.getOutputData());
+		return frame;
 	}
 	
 public:
@@ -60,35 +70,20 @@ public:
 		AffineTransform trf;
 		trf.addRotation(0.2).addTranslation(-40, 30);
 
-		{
-			//Cuda
-			dataCpu.deviceSelected = 2;
-			dataGpu.probeCuda();
-			//dataGpu.probeOpenCl();
-			dataGpu.fileIn = file;
-			FFmpegReader reader;
-			InputContext ctx = reader.open(file);
-			dataGpu.validate(ctx);
-			NullWriter writer(dataGpu);
-			gpu = std::make_unique<CudaFrame>(dataGpu);
-			runInit(dataGpu, gpu, trf, &reader, &writer);
-		}
-		{
-			//CPU
-			dataCpu.deviceSelected = 0;
-			dataCpu.fileIn = file;
-			FFmpegReader reader;
-			InputContext ctx = reader.open(file);
-			dataCpu.validate(ctx);
-			NullWriter writer(dataCpu);
-			cpu = std::make_unique<CpuFrame>(dataCpu);
-			runInit(dataCpu, cpu, trf, &reader, &writer);
-		}
+		//Cuda
+		dataCuda.probeCuda();
+		dataCuda.probeOpenCl();
+		dataCuda.deviceSelected = 2;
+		frameCuda = runInit<CudaFrame>(dataCuda);
+
+		//CPU
+		dataCpu.deviceSelected = 0;
+		frameCpu = runInit<CpuFrame>(dataCpu);
 	}
 
 	TEST_CLASS_CLEANUP(shutdown) {
-		gpu.reset();
-		cpu.reset();
+		frameCuda.reset();
+		frameCpu.reset();
 	}
 
 	TEST_METHOD(status) {
@@ -96,24 +91,24 @@ public:
 	}
 
 	TEST_METHOD(pyramid) {
-		gpu->getPyramid(0).saveAsBinary("f:/pyr_g0.dat");
-		cpu->getPyramid(0).saveAsBinary("f:/pyr_c0.dat");
-		Mat cpu0 = cpu->getPyramid(0);
+		//frameCuda->getPyramid(0).saveAsBinary("f:/pyr_g0.dat");
+		//frameCpu->getPyramid(0).saveAsBinary("f:/pyr_c0.dat");
+		Mat cpu0 = frameCpu->getPyramid(0);
 		Assert::AreNotEqual(0.0f, cpu0.sum());
-		Assert::IsTrue(cpu0.equals(gpu->getPyramid(0), 0), L"pyramid 0 mismatch");
+		Assert::IsTrue(cpu0.equals(frameCuda->getPyramid(0), 0), L"pyramid 0 mismatch");
 
-		Mat cpu1 = cpu->getPyramid(1);
+		Mat cpu1 = frameCpu->getPyramid(1);
 		Assert::AreNotEqual(0.0f, cpu1.sum());
-		Assert::IsTrue(cpu1.equals(gpu->getPyramid(1), 0), L"pyramid 1 mismatch");
+		Assert::IsTrue(cpu1.equals(frameCuda->getPyramid(1), 0), L"pyramid 1 mismatch");
 	}
 
 	TEST_METHOD(equalPointResultSize) {
-		Assert::AreEqual(cpu->resultPoints.size(), gpu->resultPoints.size());
+		Assert::AreEqual(frameCpu->resultPoints.size(), frameCuda->resultPoints.size());
 	}
 
 	TEST_METHOD(equalPointResults) {
-		std::vector pc = cpu->resultPoints;
-		std::vector pg = gpu->resultPoints;
+		std::vector pc = frameCpu->resultPoints;
+		std::vector pg = frameCuda->resultPoints;
 		for (int i = 0; i < pc.size(); i++) {
 			//only check when both results are numerically stable
 			Assert::AreEqual(pc[i], pg[i], L"results not equal");
@@ -121,8 +116,8 @@ public:
 	}
 
 	TEST_METHOD(transform) {
-		Mat cpuMat = cpu->getTransformedOutput();
-		Mat gpuMat = gpu->getTransformedOutput();
+		Mat cpuMat = frameCpu->getTransformedOutput();
+		Mat gpuMat = frameCuda->getTransformedOutput();
 		Assert::AreEqual(cpuMat.rows(), gpuMat.rows(), L"row dimension does not agree");
 		Assert::AreEqual(cpuMat.cols(), gpuMat.cols(), L"col dimension does not agree");
 		//cpuMat.saveAsBinary("f:/matCpu.dat");
@@ -144,7 +139,7 @@ public:
 		for (int i = 0; i < siz; i++) {
 			FrameResult frameResult(dataCpu);
 			std::unique_ptr<RNGbase> rng = std::make_unique<RNG<RandomSource>>();
-			frameResult.computeTransform(cpu->resultPointsOld, dataCpu, pool, rng.get());
+			frameResult.computeTransform(frameCpu->resultPointsOld, dataCpu, pool, rng.get());
 			trfs[i] = frameResult.mTransform;
 		}
 
@@ -164,7 +159,7 @@ public:
 		std::unique_ptr<RNGbase> rng = std::make_unique<RNG<std::default_random_engine>>();
 		for (int i = 0; i < siz; i++) {
 			FrameResult frameResult(dataCpu);
-			frameResult.computeTransform(cpu->resultPointsOld, dataCpu, pool, rng.get());
+			frameResult.computeTransform(frameCpu->resultPointsOld, dataCpu, pool, rng.get());
 			trfs[i] = frameResult.mTransform;
 		}
 

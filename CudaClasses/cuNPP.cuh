@@ -26,6 +26,9 @@ using cuMatf = cu::Mat<float>;
 using cuMatc = cu::Mat<uchar>;
 
 namespace cu {
+	struct Affine {
+		double m00, m01, m02, m10, m11, m12;
+	};
 
 	cudaError_t scale_8u32f(uchar* src, int srcStep, float* dest, int destStep, int w, int h, cudaStream_t cs = 0);
 
@@ -33,7 +36,7 @@ namespace cu {
 
 	cudaError_t copy_32f(float* src, int srcStep, float* dest, int destStep, int w, int h);
 
-	cudaError_t warp_back_32f(float* src, int srcStep, float* dest, int destStep, int w, int h, cu::Affine coeffs, cudaStream_t cs = 0);
+	cudaError_t warp_back_32f(float* src, int srcStep, float* dest, int destStep, int w, int h, Affine trf, cudaStream_t cs = 0);
 
 	cudaError_t unsharp_32f(float* base, float* gauss, int srcStep, float* dest, int destStep, int w, int h, float factor, cudaStream_t cs = 0);
 

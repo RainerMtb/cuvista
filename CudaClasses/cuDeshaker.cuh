@@ -116,7 +116,7 @@ void cudaComputeTerminate(const CoreData& core, std::vector<PointResult>& result
 /*
 @brief transform a frame and output pixel data to host and/or device memory
 */
-void cudaOutput(int64_t frameIdx, const CoreData& core, OutputContext outCtx, cu::Affine trf);
+void cudaOutput(int64_t frameIdx, const CoreData& core, OutputContext outCtx, std::array<double, 6> trf);
 
 /*
 @brief only encode given nv12 data

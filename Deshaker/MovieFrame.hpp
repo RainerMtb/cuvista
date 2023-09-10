@@ -219,7 +219,7 @@ public:
 	}
 
 	void outputData(const AffineTransform& trf, OutputContext outCtx) override {
-		cudaOutput(mStatus.frameWriteIndex, mData, outCtx, trf.toCuAffine());
+		cudaOutput(mStatus.frameWriteIndex, mData, outCtx, trf.toArray());
 	}
 
 	Mat<float> getTransformedOutput() const override {
@@ -295,7 +295,7 @@ public:
 	}
 
 	void outputData(const AffineTransform& trf, OutputContext outCtx) override { 
-		cl::outputData(mStatus.frameWriteIndex, mData, outCtx, trf.toCuAffine());
+		cl::outputData(mStatus.frameWriteIndex, mData, outCtx, trf.toArray());
 	}
 
 	Mat<float> getTransformedOutput() const override { 

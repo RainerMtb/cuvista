@@ -38,11 +38,6 @@ double min(const double a, const double b);
 namespace cu {
 	const int THREAD_COUNT = 16;	//number of threads used in kernels to access textures
 
-	//parameters of Affine Transform in struct so it can be used as an argument to a cuda kernel
-	struct Affine {
-		double m00, m01, m02, m10, m11, m12;
-	};
-
 	//check if first thread is running
 	__device__ bool firstThread();
 

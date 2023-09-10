@@ -50,7 +50,7 @@ public:
 	void computeSimilarDirect(std::vector<PointResult>::iterator it, size_t count, ThreadPool& threadPool);
 
 	//convert to cuda struct
-	cu::Affine toCuAffine() const;
+	std::array<double, 6> toArray() const;
 
 private:
 	static void savePointResults(std::vector<PointResult>::iterator begin, size_t count);

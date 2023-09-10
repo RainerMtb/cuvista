@@ -39,7 +39,7 @@ namespace cl {
 	void computePartOne();
 	void computePartTwo();
 	void computeTerminate();
-	void outputData(int64_t frameIdx, const CoreData& core, OutputContext outCtx, cu::Affine trf);
+	void outputData(int64_t frameIdx, const CoreData& core, OutputContext outCtx, std::array<double, 6> trf);
 
 	ImageYuv getInput(int64_t idx);
 	Matf getTransformedOutput();

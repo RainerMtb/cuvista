@@ -483,7 +483,7 @@ buffer frames usage, each frame holds one plane Y, U, V in float format
 	15, 16, 17: gauss filter result
 	18, 19, 20: output to encoder
 */
-void cudaOutput(int64_t frameIdx, const CoreData& core, OutputContext outCtx, cu::Affine trf) {
+void cudaOutput(int64_t frameIdx, const CoreData& core, OutputContext outCtx, std::array<double, 6> trf) {
 	//interrupt compute kernel
 	handleStatus(cudaMemsetAsync(d_interrupt, 1, sizeof(char), cs[1]), "error @output #10 memset");
 
@@ -514,7 +514,8 @@ void cudaOutput(int64_t frameIdx, const CoreData& core, OutputContext outCtx, cu
 			cu::copy_32f(bg, core.strideFloatBytes, warped, core.strideCount, w, h);
 		}
 		//transform input on top of background
-		cu::warp_back_32f(in, core.strideFloatBytes, warped, core.strideCount, w, h, trf, cs[1]);
+		cu::Affine cutrf = { trf[0], trf[1], trf[2], trf[3], trf[4], trf[5] };
+		cu::warp_back_32f(in, core.strideFloatBytes, warped, core.strideCount, w, h, cutrf, cs[1]);
 		//first filter pass
 		cu::filter_32f_h(warped, temp, core.strideFloatBytes, w, h, i, cs[1]);
 		//second filter pass
