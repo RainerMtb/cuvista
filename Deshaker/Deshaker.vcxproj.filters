@@ -101,9 +101,6 @@
     <ClCompile Include="clMain.cpp">
       <Filter>OpenCl</Filter>
     </ClCompile>
-    <ClCompile Include="DeviceInfo.cpp">
-      <Filter>Main</Filter>
-    </ClCompile>
     <ClCompile Include="clFunctions.cpp">
       <Filter>OpenCl</Filter>
     </ClCompile>
@@ -189,9 +186,6 @@
     </ClInclude>
     <ClInclude Include="clMain.hpp">
       <Filter>OpenCl</Filter>
-    </ClInclude>
-    <ClInclude Include="DeviceInfo.hpp">
-      <Filter>Main</Filter>
     </ClInclude>
     <ClInclude Include="clHeaders.hpp">
       <Filter>OpenCl</Filter>

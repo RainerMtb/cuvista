@@ -48,10 +48,10 @@ void openClInvTest(size_t s1, size_t s2) {
 	}
 }
 
-template <class T> std::pair<Matf, ImageYuv> runPyramid(MainData& data) {
+template <class T> std::pair<Matf, Matf> runPyramid(MainData& data) {
 	FFmpegReader reader;
-	InputContext ctx = reader.open(data.fileIn);
-	data.validate(ctx);
+	data.inputCtx = reader.open(data.fileIn);
+	data.validate();
 	NullWriter writer(data);
 	std::unique_ptr<MovieFrame> frame = std::make_unique<T>(data);
 	Stats& status = data.status;
@@ -73,25 +73,29 @@ template <class T> std::pair<Matf, ImageYuv> runPyramid(MainData& data) {
 	AffineTransform trf;
 	trf.addRotation(0.2).addTranslation(-40, 30);
 	frame->outputData(trf, writer.getOutputData());
-	return { frame->getPyramid(0), writer.outputFrame };
+	return { frame->getPyramid(0), frame->getTransformedOutput()};
 }
 
 void pyramid() {
 	AffineTransform trf;
 	trf.addRotation(0.2).addTranslation(-40, 30);
 	Matf pyrCpu, pyrOcl;
+	Matf outCpu, outOcl;
 
 	{
+		//CPU
 		MainData data;
 		data.deviceRequested = true;
 		data.deviceRequested = 0;
 		data.fileIn = "d:/VideoTest/04.ts";
 		auto ret = runPyramid<CpuFrame>(data);
 		pyrCpu = ret.first;
-		ret.second.saveAsColorBMP("f:/testCpu.bmp");
+		outCpu = ret.second;
+		//ret.second.saveAsColorBMP("f:/testCpu.bmp");
 	}
 
 	{
+		//OpenCL
 		MainData data;
 		data.deviceRequested = true;
 		data.deviceRequested = 1;
@@ -99,22 +103,25 @@ void pyramid() {
 		data.fileIn = "d:/VideoTest/04.ts";
 		auto ret = runPyramid<OpenClFrame>(data);
 		pyrOcl = ret.first;
-		ret.second.saveAsColorBMP("f:/testOcl.bmp");
+		outOcl = ret.second;
+		//ret.second.saveAsColorBMP("f:/testOcl.bmp");
 	}
 
 	{
+		//Cuda
 		MainData data;
 		data.deviceRequested = true;
 		data.deviceRequested = 1;
 		data.probeCuda();
 		data.fileIn = "d:/VideoTest/04.ts";
 		auto ret = runPyramid<CudaFrame>(data);
-		ret.second.saveAsColorBMP("f:/testCuda.bmp");
+		//ret.second.saveAsColorBMP("f:/testCuda.bmp");
 	}
 
-	//pyrCpu.saveAsBinary("f:/pyr_c0.dat");
-	//pyrOcl.saveAsBinary("f:/pyr_g0.dat");
+	//outCpu.saveAsBinary("f:/outCpu.dat");
+	//outOcl.saveAsBinary("f:/outOcl.dat");
 	std::cout << (pyrCpu.equalsExact(pyrOcl) ? "pyramids equal ok" : "pyramids differ!!") << std::endl;
+	std::cout << (outCpu.equalsExact(outOcl) ? "warpend output equal ok" : "warped output differ!!") << std::endl;
 
 	if (errorLogger.hasError()) {
 		std::cout << errorLogger.getErrorMessage() << std::endl;

@@ -19,7 +19,7 @@
 #pragma once
 
 #include "AffineTransform.hpp"
-#include "CoreData.cuh"
+#include "CudaData.cuh"
 
 namespace Microsoft::VisualStudio::CppUnitTestFramework {
 

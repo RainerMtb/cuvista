@@ -17,7 +17,6 @@
  */
 
 #include "cuNPP.cuh"
-#include "cuFilterKernel.cuh"
 #include "Util.hpp"
 
 #include <chrono>
@@ -28,6 +27,19 @@ struct KernelContext {
 	dim3 blocks;
 	dim3 threads;
 	cudaError_t status;
+};
+
+struct CudaFilterKernel {
+	static const int maxSize = 8;
+	int siz;
+	float k[maxSize];
+};
+
+__device__ CudaFilterKernel filterKernels[4] = {
+	{5, {0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f}},
+	{3, {0.25f, 0.5f, 0.25f}},
+	{3, {0.25f, 0.5f, 0.25f}},
+	{3, {-0.5f, 0.0f, 0.5f}},
 };
 
 //declare here to mitigate red underlines
@@ -177,7 +189,7 @@ __global__ void kernel_uv_to_nv12(cudaTextureObject_t texObj, uchar* nvencPtr, i
 __global__ void kernel_filter_horizontal(cudaTextureObject_t texObj, cuMatf dest, size_t filterKernelIndex) {
 	uint x = blockIdx.x * blockDim.x + threadIdx.x;
 	uint y = blockIdx.y * blockDim.y + threadIdx.y;
-	const FilterKernel& kernel = getFilterKernel(filterKernelIndex);
+	const CudaFilterKernel& kernel = filterKernels[filterKernelIndex];
 
 	if (x < dest.w && y < dest.h) {
 		float result = 0.0f;
@@ -192,7 +204,7 @@ __global__ void kernel_filter_horizontal(cudaTextureObject_t texObj, cuMatf dest
 __global__ void kernel_filter_vertical(cudaTextureObject_t texObj, cuMatf dest, size_t filterKernelIndex) {
 	uint x = blockIdx.x * blockDim.x + threadIdx.x;
 	uint y = blockIdx.y * blockDim.y + threadIdx.y;
-	const FilterKernel& kernel = getFilterKernel(filterKernelIndex);
+	const CudaFilterKernel& kernel = filterKernels[filterKernelIndex];
 
 	if (x < dest.w && y < dest.h) {
 		float result = 0.0f;

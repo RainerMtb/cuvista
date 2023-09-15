@@ -235,7 +235,7 @@ void cuvistaGui::stabilize() {
     mData.inputCtx = mInputCtx;
     mData.fileOut = outFile.toStdString();
     mData.deviceRequested = true;
-    mData.deviceSelected = ui.comboDevice->currentIndex() - 1;
+    mData.deviceSelected = ui.comboDevice->currentIndex();
     EncoderSetting settings = encoderSettings[ui.comboEncoding->currentIndex()];
     mData.requestedEncoding = settings.encoder;
     mData.radsec = ui.spinRadius->value();
@@ -299,7 +299,7 @@ void cuvistaGui::showMessage(const QString& msg) {
 
 void cuvistaGui::showInfo() {
     int boxHeight = 175;
-    int boxWidth = 400;
+    int boxWidth = 450;
 
     QMessageBox msgBox(this);
     msgBox.setWindowTitle(QString("Cuvista Info"));

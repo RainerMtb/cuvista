@@ -19,7 +19,7 @@
 #pragma once
 
 #include "AVException.hpp"
-#include "DeviceInfo.hpp"
+#include "DeviceInfoCuda.cuh"
 #include "nvEncodeAPI.h"
 
 #undef min

@@ -23,9 +23,10 @@
 #include <map>
 
 struct FilterKernelData {
-	std::vector<cl_float4> filterKernel;
-	cl_int8 idx;
-	int siz;
+	std::vector<cl_float4> filterKernel;  //vector holding filter kernel values
+	cl_int8 idx;                          //vector holding index offset values
+	int siz;                              //size of this kernel
+	inline static int maxSize = 8;        //max size
 };
 
 struct ClData {
@@ -36,6 +37,10 @@ struct ClData {
 	std::vector<cl::Image2D> yuv;
 	std::vector<std::vector<std::vector<cl::Image2D>>> pyr;
 	std::vector<std::vector<cl::Image2D>> pyrBuffer;
+
+	cl::Buffer filterKernel;
+	std::array<cl::Image2D, 5> out;
+	cl::Image2D yuvOut;
 
 	std::map<std::string, cl::Kernel> kernelMap = {
 		{"scale_8u32f_1", {}},
@@ -48,8 +53,6 @@ struct ClData {
 		{"unsharp", {}},
 		{"scrap", {}},
 	};
-
-	cl::Buffer filterKernel;
 
 	FilterKernelData filterGauss = {
 		{
@@ -71,9 +74,6 @@ struct ClData {
 		{-1, 0, 1},
 		3,
 	};
-
-	std::array<cl::Image2D, 5> out;
-	cl::Image2D yuvOut;
 
 	cl::Kernel& kernel(const std::string& key) {
 		return kernelMap.at(key);

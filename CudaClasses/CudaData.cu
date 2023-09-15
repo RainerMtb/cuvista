@@ -16,7 +16,7 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
-#include "CoreData.cuh"
+#include "CudaData.cuh"
 
 __device__ __host__ bool PointResult::isValid() const {
 	return result > PointResultType::RUNNING;
@@ -26,8 +26,8 @@ __device__ __host__ int PointResult::resultValue() const {
 	return static_cast<int>(result) - static_cast<int>(PointResultType::RUNNING);
 }
 
-__device__ __host__ bool PointResult::equal(double a, double b, double tol) const { 
-	return (isnan(a) && isnan(b)) || std::fabs(a - b) <= tol; 
+__device__ __host__ bool PointResult::equal(double a, double b, double tol) const {
+	return (isnan(a) && isnan(b)) || std::fabs(a - b) <= tol;
 }
 
 __device__ __host__ bool PointResult::equals(const PointResult& other, double tol) const {

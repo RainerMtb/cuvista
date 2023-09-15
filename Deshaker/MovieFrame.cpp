@@ -42,6 +42,19 @@ std::map<int64_t, TransformValues> MovieFrame::readTransforms() {
 //---------- CPU FRAME ------------------------------------------------
 //---------------------------------------------------------------------
 
+struct FilterKernel {
+	static const int maxSize = 8;
+	int siz;
+	float k[maxSize];
+};
+
+FilterKernel filterKernels[4] = {
+	{5, {0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f}},
+	{3, {0.25f, 0.5f, 0.25f}},
+	{3, {0.25f, 0.5f, 0.25f}},
+	{3, {-0.5f, 0.0f, 0.5f}},
+};
+
 
 //constructor
 CpuFrame::CpuFrame(MainData& data) : MovieFrame(data) {
@@ -101,8 +114,8 @@ void CpuFrame::createPyramid() {
 		//gauss filtering
 		Matf filterTemp = mFilterBuffer.reuse(y.rows(), y.cols());
 		Matf mat = mFilterResult.reuse(y.rows(), y.cols());
-		y.filter1D_h(mData.filterKernels[0].k, mData.filterKernels[0].siz, filterTemp, mPool);
-		filterTemp.filter1D_v(mData.filterKernels[0].k, mData.filterKernels[0].siz, mat, mPool);
+		y.filter1D_h(filterKernels[0].k, filterKernels[0].siz, filterTemp, mPool);
+		filterTemp.filter1D_v(filterKernels[0].k, filterKernels[0].siz, mat, mPool);
 		
 		//if (z == 0) std::printf("cpu %.14f %.14f %.14f %.14f %.14f\n", y.at(30, 28), y.at(30, 29), y.at(30, 30), y.at(30, 31), y.at(30, 32));
 		//if (z == 0) mat.saveAsBinary("f:/buf_c.dat");
@@ -115,8 +128,8 @@ void CpuFrame::createPyramid() {
 	
 	//create delta pyramids
 	for (size_t z = 0; z <= mData.zMax; z++) {
-		frame.mY[z].filter1D_h(mData.filterKernels[3].k, mData.filterKernels[3].siz, frame.mDX[z], mPool);
-		frame.mY[z].filter1D_v(mData.filterKernels[3].k, mData.filterKernels[3].siz, frame.mDY[z], mPool);
+		frame.mY[z].filter1D_h(filterKernels[3].k, filterKernels[3].siz, frame.mDX[z], mPool);
+		frame.mY[z].filter1D_v(filterKernels[3].k, filterKernels[3].siz, frame.mDY[z], mPool);
 	}
 }
 
@@ -279,7 +292,7 @@ void CpuFrame::outputData(const AffineTransform& trf, OutputContext outCtx) {
 
 		//unsharp masking
 		//Mat gauss = buf.filter2D(MainData::FILTER[z], &mPool);
-		const FilterKernel& k = mData.filterKernels[z];
+		const FilterKernel& k = filterKernels[z];
 		buf.filter1D_h(k.k, k.siz, mFilterBuffer, mPool);
 		mFilterBuffer.filter1D_v(k.k, k.siz, mFilterResult, mPool);
 		//gauss.saveAsCSV("f:/gauss_cpu.csv");
@@ -344,21 +357,13 @@ Mat<float> CpuFrame::getPyramid(size_t idx) const {
 	return out;
 }
 
-bool CpuFrame::getCurrentInputFrame(ImagePPM& image) {
-	bool state = mStatus.frameReadIndex > 0;
-	if (state) {
-		size_t idxIn = (mStatus.frameReadIndex - 1) % mYUV.size();
-		mYUV[idxIn].toPPM(image, mPool);
-	}
-	return state;
+void CpuFrame::getCurrentInputFrame(ImagePPM& image) {
+	size_t idxIn = (mStatus.frameReadIndex - 1) % mYUV.size();
+	mYUV[idxIn].toPPM(image, mPool);
 }
 
-bool CpuFrame::getCurrentOutputFrame(ImagePPM& image) {
-	bool state = mStatus.frameWriteIndex > 0;
-	if (state) {
-		ImageYuvMat(mData.h, mData.w, mBuffer[0], mBuffer[1], mBuffer[2]).toPPM(image, mPool);
-	}
-	return state;
+void CpuFrame::getCurrentOutputFrame(ImagePPM& image) {
+	ImageYuvMat(mData.h, mData.w, mBuffer[0], mBuffer[1], mBuffer[2]).toPPM(image, mPool);
 }
 
 ImageYuv CpuFrame::getInput(int64_t index) const {

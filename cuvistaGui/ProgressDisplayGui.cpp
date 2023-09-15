@@ -28,14 +28,16 @@ void ProgressDisplayGui::update(bool force) {
     std::chrono::nanoseconds delta = tnow - tp;
     bool imageDue = delta.count() / 1'000'000 > 250;
 
-    if (imageDue && frame->getCurrentInputFrame(ppmInput)) {
+    if (imageDue && data.status.frameReadIndex > 0) {
         tp = tnow;
+        frame->getCurrentInputFrame(ppmInput);
         QPixmap im(data.w, data.h);
         im.loadFromData(ppmInput.header(), ppmInput.sizeTotal(), "PPM");
         thread->updateInput(im);
     }
-    if (imageDue && frame->getCurrentOutputFrame(ppmOutput)) {
+    if (imageDue && data.status.frameWriteIndex > 0) {
         tp = tnow;
+        frame->getCurrentOutputFrame(ppmOutput);
         QPixmap im(data.w, data.h);
         im.loadFromData(ppmOutput.header(), ppmInput.sizeTotal(), "PPM");
         thread->updateOutput(im);

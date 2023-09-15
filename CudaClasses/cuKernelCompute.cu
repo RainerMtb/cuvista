@@ -59,7 +59,7 @@ __global__ void kernelCompute(ComputeTextures tex, PointResult* results, Compute
 	uint blockIndex = iy0 * gridDim.x + ix0;
 	if (*param.d_interrupt || param.d_computed[blockIndex]) return;
 	param.kernelTimestamps[blockIndex].start();
-	const CoreData& d_core = getCoreData();
+	const CudaData& d_core = getCudaData();
 
 	int ir = d_core.ir;
 	int iw = d_core.iw;

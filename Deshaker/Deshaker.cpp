@@ -37,9 +37,10 @@ int deshake(int argsCount, char** args) {
 		data.probeOpenCl();
 		data.probeCuda();
 		data.probeInput(argsInput);
+		data.collectDeviceInfo();
 		//create MovieReader
-		InputContext ctx = reader->open(data.fileIn);
-		data.validate(ctx);
+		data.inputCtx = reader->open(data.fileIn);
+		data.validate();
 
 		//----------- create appropriate MovieWriter
 		if (data.pass == DeshakerPass::FIRST_PASS)

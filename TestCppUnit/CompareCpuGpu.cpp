@@ -42,8 +42,8 @@ private:
 
 		data.fileIn = file;
 		FFmpegReader reader;
-		InputContext ctx = reader.open(file);
-		data.validate(ctx);
+		data.inputCtx = reader.open(file);
+		data.validate();
 		NullWriter writer(data);
 		std::unique_ptr<MovieFrame> frame = std::make_unique<T>(data);
 

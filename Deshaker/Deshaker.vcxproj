@@ -165,7 +165,6 @@
     <ClCompile Include="CudaWriter.cpp" />
     <ClCompile Include="Deshaker.cpp" />
     <ClCompile Include="DeshakerLoop.cpp" />
-    <ClCompile Include="DeviceInfo.cpp" />
     <ClCompile Include="Diagnostics.cpp" />
     <ClCompile Include="FFmpegFormatWriter.cpp" />
     <ClCompile Include="FFmpegUtil.cpp" />
@@ -196,7 +195,6 @@
     <ClInclude Include="clTest.hpp" />
     <ClInclude Include="CudaWriter.hpp" />
     <ClInclude Include="Deshaker.hpp" />
-    <ClInclude Include="DeviceInfo.hpp" />
     <ClInclude Include="Diagnostics.hpp" />
     <ClInclude Include="FFmpegUtil.hpp" />
     <ClInclude Include="KeyboardInput.hpp" />

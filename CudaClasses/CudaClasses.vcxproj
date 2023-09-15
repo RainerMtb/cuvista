@@ -116,17 +116,18 @@
     </CudaLink>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="CoreData.cuh" />
-    <ClInclude Include="CudaInfo.hpp" />
-    <ClInclude Include="cuFilterKernel.cuh" />
+    <ClInclude Include="CoreData.hpp" />
+    <ClInclude Include="CudaData.cuh" />
     <ClInclude Include="cuNPP.cuh" />
     <ClInclude Include="cuTest.cuh" />
     <ClInclude Include="cuUtil.cuh" />
+    <ClInclude Include="DeviceInfo.hpp" />
+    <ClInclude Include="DeviceInfoCuda.cuh" />
     <ClInclude Include="ErrorLogger.hpp" />
+    <CudaCompile Include="CudaData.cu" />
     <CudaCompile Include="cuNPP.cu" />
     <CudaCompile Include="cuTest.cu" />
     <CudaCompile Include="cuUtil.cu" />
-    <CudaCompile Include="CoreData.cu" />
     <CudaCompile Include="cuDecompose.cu" />
     <CudaCompile Include="cuDeshaker.cu" />
     <CudaCompile Include="cuKernelCompute.cu" />
@@ -134,9 +135,6 @@
   <ItemGroup>
     <ClInclude Include="cuDecompose.cuh" />
     <ClInclude Include="cuDeshaker.cuh" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="CudaInfo.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CudaClasses.rc" />

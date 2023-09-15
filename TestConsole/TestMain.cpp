@@ -27,12 +27,9 @@ void check() {
 
 	MainData data;
 	FFmpegReader reader;
-	//InputContext ctx = reader.open("d:/videotest/07.mp4");
-	InputContext ctx = reader.open("//READYNAS/Data/Documents/x.orig/bikini.1.1.avi");
-
-	std::cout << "using file " << ctx.source << std::endl;
 	data.probeCuda();
-	data.validate(ctx);
+	data.inputCtx = reader.open("//READYNAS/Data/Documents/x.orig/bikini.1.1.avi");
+	data.validate();
 	NullWriter writer(data);
 	CudaFrame frame(data);
 	OutputContext oc = { true, false, &writer.outputFrame, nullptr, 0 };

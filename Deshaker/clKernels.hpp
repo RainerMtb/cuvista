@@ -122,8 +122,13 @@ __kernel void warp_back(__read_only image2d_t src, __write_only image2d_t dest, 
 		float4 f11 = read_imagef(src, sampler, (float2)(xx + 1, yy + 1));
 		float dx = xx - floor(xx);
 		float dy = yy - floor(yy);
-		float4 val = (1.0f - dx) * (1.0f - dy) * f00 + (1.0f - dx) * dy * f10 + dx * (1.0f - dy) * f01 + dx * dy * f11;
-		write_imagef(dest, (int2)(x, y), val);
+
+		//matching result with cpu code only when separating sums
+		float4 a = (1.0f - dx) * (1.0f - dy) * f00;
+		float4 b = (1.0f - dx) * dy * f10;
+		float4 c = dx * (1.0f - dy) * f01;
+		float4 d = dx * dy * f11;
+		write_imagef(dest, (int2)(x, y), a + b + c + d);
 	}
 }
 

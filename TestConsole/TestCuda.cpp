@@ -169,8 +169,8 @@ void compare() {
 	{
 		MainData data;
 		data.probeCuda();
-		InputContext ctx = { 1080, 1920, 2, 1 };
-		data.validate(ctx);
+		data.inputCtx = { 1080, 1920, 2, 1 };
+		data.validate();
 		NullReader reader;
 		NullWriter writer(data);
 		CudaFrame frame(data);
@@ -192,8 +192,8 @@ void compare() {
 
 	{
 		MainData data;
-		InputContext ctx = { 1080, 1920, 2, 1 };
-		data.validate(ctx);
+		data.inputCtx = { 1080, 1920, 2, 1 };
+		data.validate();
 		NullReader reader;
 		NullWriter writer(data);
 		CpuFrame frame(data);

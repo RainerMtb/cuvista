@@ -28,6 +28,25 @@
 #include <map>
 #include <filesystem>
 
+
+//implement getName for all subclasses
+std::string DeviceInfoCpu::getName() const {
+	return std::string("CPU: Software only, ") + std::to_string(std::thread::hardware_concurrency()) + " threads";
+}
+
+std::string DeviceInfoCuda::getName() const {
+	return std::format("Cuda: {}, Compute {}.{}, {} Mb", props.name, props.major, props.minor, props.totalGlobalMem / 1024 / 1024);
+}
+
+std::string DeviceInfoCl::getName() const {
+	std::string name = device.getInfo<CL_DEVICE_NAME>();
+	std::string vendor = device.getInfo<CL_DEVICE_VENDOR>();
+	cl_ulong memSize = device.getInfo<CL_DEVICE_GLOBAL_MEM_SIZE>();
+	//cl_version version = device->getInfo<CL_DEVICE_NUMERIC_VERSION>();
+	return std::format("OpenCL: {}, {}, {} Mb", name, vendor, memSize / 1024 / 1024);
+}
+
+//test or ask for file writing
 bool MainData::checkFileForWriting(const std::string& file, DecideYNA permission) const {
 	if (file.empty()) {
 		throw AVException("output file missing");
@@ -323,14 +342,7 @@ void MainData::collectDeviceInfo() {
 	}
 }
 
-void MainData::validate(InputContext& input) {
-	inputCtx = input;
-	validate();
-}
-
 void MainData::validate() {
-	collectDeviceInfo();
-
 	status.inputStreams.clear();
 	for (AVStream* st : inputCtx.inputStreams) {
 		status.inputStreams.push_back({ st });
@@ -569,4 +581,8 @@ size_t MainData::deviceCountCuda() const {
 
 size_t MainData::deviceCountOpenCl() const {
 	return clinfo.devices.size();
+}
+
+void MainData::reset() {
+	status.reset();
 }

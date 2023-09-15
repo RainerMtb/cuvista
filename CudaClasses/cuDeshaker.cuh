@@ -19,7 +19,7 @@
 #pragma once
 
 #include "cuDecompose.cuh"
-#include "CoreData.cuh"
+#include "CudaData.cuh"
 
 #include <sstream>
 #include <fstream>
@@ -32,7 +32,7 @@ class ComputeTextures {
 public:
 	cudaTextureObject_t Ycur, Yprev, DXprev, DYprev;
 
-	__host__ void create(int64_t idx, int64_t idxPrev, const CoreData& core);
+	__host__ void create(int64_t idx, int64_t idxPrev, const CudaData& core);
 
 	__host__ void destroy();
 };
@@ -80,43 +80,43 @@ std::vector<cudaDeviceProp> cudaProbeRuntime(CudaInfo& cudaInfo);
 
 /*
 @brief initialize cuda device
-@param core: CoreData structure
+@param core: CudaData structure
 @param yuvFrame: the object used later to transfer frame data
 */
-void cudaInit(CoreData& core, int devIdx, const cudaDeviceProp& prop, ImageYuv& yuvFrame);
+void cudaInit(CudaData& core, int devIdx, const cudaDeviceProp& prop, ImageYuv& yuvFrame);
 
 /*
 @brief read a frame into device memory
 @param frameIdx: frame index to read
-@param core: CoreData structure
+@param core: CudaData structure
 @param inputFrame: YUV pixel data to load into device for processing
 */
-void cudaReadFrame(int64_t frameIdx, const CoreData& core, const ImageYuv& inputFrame);
+void cudaReadFrame(int64_t frameIdx, const CudaData& core, const ImageYuv& inputFrame);
 
 /*
 @brief create image pyramid
 */
-void cudaCreatePyramid(int64_t frameIdx, const CoreData& core);
+void cudaCreatePyramid(int64_t frameIdx, const CudaData& core);
 
 /*
 @brief compute displacements between frame and previous frame in video for part of a frame
 */
-void cudaCompute1(int64_t frameIdx, const CoreData& core, const cudaDeviceProp& props);
+void cudaCompute1(int64_t frameIdx, const CudaData& core, const cudaDeviceProp& props);
 
 /*
 @brief compute second part of frame
 */
-void cudaCompute2(int64_t frameIdx, const CoreData& core);
+void cudaCompute2(int64_t frameIdx, const CudaData& core);
 
 /*
 @brief return vector of results from async computation
 */
-void cudaComputeTerminate(const CoreData& core, std::vector<PointResult>& results);
+void cudaComputeTerminate(const CudaData& core, std::vector<PointResult>& results);
 
 /*
 @brief transform a frame and output pixel data to host and/or device memory
 */
-void cudaOutput(int64_t frameIdx, const CoreData& core, OutputContext outCtx, std::array<double, 6> trf);
+void cudaOutput(int64_t frameIdx, const CudaData& core, OutputContext outCtx, std::array<double, 6> trf);
 
 /*
 @brief only encode given nv12 data
@@ -132,31 +132,32 @@ void getNvData(std::vector<unsigned char>& nv12, OutputContext outCtx);
 @brief shutdown cuda device
 @return timing values and debug data
 */
-DebugData cudaShutdown(const CoreData& core);
+DebugData cudaShutdown(const CudaData& core);
 
 /*
 @brief get transformed float output for testing
 */
-void cudaGetTransformedOutput(float* warpedData, const CoreData& core);
+void cudaGetTransformedOutput(float* warpedData, const CudaData& core);
 
 /*
 @brief get pyramid image for given index
 */
-void cudaGetPyramid(float* pyramid, size_t idx, const CoreData& core);
+void cudaGetPyramid(float* pyramid, size_t idx, const CudaData& core);
 
 /*
 @brief get input iomage from buffers
 */
-ImageYuv cudaGetInput(int64_t index, const CoreData& core);
+ImageYuv cudaGetInput(int64_t index, const CudaData& core);
 
 /*
 @brief get current input frame for progress display
 */
-void cudaGetCurrentInputFrame(ImagePPM& image, const CoreData& core, int idx);
+void cudaGetCurrentInputFrame(ImagePPM& image, const CudaData& core, int64_t idx);
 
 /*
 @brief get current output frame for progress display
 */
-void cudaGetCurrentOutputFrame(ImagePPM& image, const CoreData& core);
+void cudaGetCurrentOutputFrame(ImagePPM& image, const CudaData& core);
 
-__device__ const CoreData& getCoreData();
+//access main data structure from compute kernel
+__device__ const CudaData& getCudaData();

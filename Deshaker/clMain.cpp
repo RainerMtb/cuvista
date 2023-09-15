@@ -71,7 +71,7 @@ OpenClInfo cl::probeRuntime() {
 			if (maxPixelWidth < maxPixel) maxPixel = maxPixelWidth;
 			if (maxPixelHeight < maxPixel) maxPixel = maxPixelHeight;
 
-			DeviceInfoCl devInfo(DeviceType::OPEN_CL, i, maxPixel, &dev);
+			DeviceInfoCl devInfo(DeviceType::OPEN_CL, i, maxPixel, dev);
 			info.devices.push_back(devInfo);
 		}
 	}
@@ -127,7 +127,7 @@ void cl::init(CoreData& core, ImageYuv& inputFrame, std::size_t devIdx) {
 		}
 
 		//output images
-		for (cl::Image& im : clData.out) {
+		for (cl::Image2D& im : clData.out) {
 			im = cl::Image2D(clData.context, CL_MEM_READ_WRITE, outFmt, core.w, core.h);
 			size2 origin = {};
 			size2 region = { size_t(core.w), size_t(core.h) };
@@ -137,7 +137,7 @@ void cl::init(CoreData& core, ImageYuv& inputFrame, std::size_t devIdx) {
 		clData.yuvOut = cl::Image2D(clData.context, CL_MEM_WRITE_ONLY, fmt, core.w, core.h * 3ull);
 
 		//allocate filter kernel buffer
-		clData.filterKernel = cl::Buffer(clData.context, CL_MEM_READ_ONLY, sizeof(cl_float4) * FilterKernel::maxSize);
+		clData.filterKernel = cl::Buffer(clData.context, CL_MEM_READ_ONLY, sizeof(cl_float4) * FilterKernelData::maxSize);
 
 		//compile device code
 		cl::Program::Sources sources;
@@ -201,6 +201,15 @@ void cl::computePartOne() {}
 void cl::computePartTwo() {}
 void cl::computeTerminate() {}
 
+//utility function to read from image
+void readImage(cl::Image2D src, size_t destPitch, void* dest, cl::CommandQueue queue) {
+	size2 origin = {};
+	size_t w = src.getImageInfo<CL_IMAGE_WIDTH>();
+	size_t h = src.getImageInfo<CL_IMAGE_HEIGHT>();
+	size2 region = { w, h };
+	queue.enqueueReadImage(src, CL_TRUE, origin, region, destPitch, 0, dest);
+}
+
 void cl::outputData(int64_t frameIdx, const CoreData& core, OutputContext outCtx, std::array<double, 6> trf) {
 	int64_t frIdx = frameIdx % core.bufferCount;
 	auto& [outStart, outWarped, outFilterH, outFilterV, outFinal] = clData.out;
@@ -230,10 +239,7 @@ void cl::outputData(int64_t frameIdx, const CoreData& core, OutputContext outCtx
 
 		//copy output to host
 		if (outCtx.encodeCpu) {
-			size2 origin = {};
-			size2 region = { size_t(core.w), size_t(core.h) * 3ull };
-			unsigned char* ptr = outCtx.outputFrame->data();
-			clData.queue.enqueueReadImage(clData.yuvOut, CL_TRUE, origin, region, core.cpupitch, 0, ptr);
+			readImage(clData.yuvOut, core.cpupitch, outCtx.outputFrame->data(), clData.queue);
 		}
 
 	} catch (const cl::Error& err) {
@@ -241,10 +247,14 @@ void cl::outputData(int64_t frameIdx, const CoreData& core, OutputContext outCtx
 	}
 }
 
-void cl::shutdown() {}
-
-ImageYuv cl::getInput(int64_t idx) {
-	return {};
+ImageYuv cl::getInput(int64_t idx, const CoreData& core) {
+	ImageYuv out(core.h, core.w, core.w);
+	int64_t fr = idx % core.bufferCount;
+	size2 origin = {};
+	size2 region = { size_t(core.w), size_t(core.h * 3ull) };
+	Image2D im = clData.yuv[fr];
+	clData.queue.enqueueReadImage(im, CL_TRUE, origin, region, core.w, 0, out.data());
+	return out;
 }
 
 void cl::getPyramid(float* pyramid, size_t idx, const CoreData& core) {
@@ -255,13 +265,9 @@ void cl::getPyramid(float* pyramid, size_t idx, const CoreData& core) {
 		float* ptr = pyramid;
 		for (int k = 0; k < 3; k++) {
 			for (int z = 0; z < core.pyramidLevels; z++) {
-				cl::Image im = clData.pyr[pyrIdx][k][z];
-				size2 origin = {};
-				size_t w = im.getImageInfo<CL_IMAGE_WIDTH>();
-				size_t h = im.getImageInfo<CL_IMAGE_HEIGHT>();
-				size2 region = { w, h };
-				clData.queue.enqueueReadImage(im, CL_TRUE, origin, region, core.w * sizeof(float), 0, ptr);
-				ptr += h * core.w;
+				cl::Image2D im = clData.pyr[pyrIdx][k][z];
+				readImage(im, core.w * sizeof(float), ptr, clData.queue);
+				ptr += im.getImageInfo<CL_IMAGE_HEIGHT>() * core.w;
 			}
 		}
 
@@ -270,14 +276,25 @@ void cl::getPyramid(float* pyramid, size_t idx, const CoreData& core) {
 	}
 }
 
-bool cl::getCurrentInputFrame(ImagePPM& image) {
-	return false;
+Matf cl::getTransformedOutput(const CoreData& core) {
+	std::vector<cl_float4> imageData(1ull * core.w * core.h);
+	readImage(clData.out[1], core.w * sizeof(cl_float4), imageData.data(), clData.queue);
+	
+	Matf warped = Mat<float>::allocate(core.h * 3ull, core.w);
+	float* ptr = warped.data();
+	for (int k = 0; k < 3; k++) {
+		for (int i = 0; i < core.w * core.h; i++) {
+			*ptr = imageData[i].s[k];
+			ptr++;
+		}
+	}
+	return warped;
 }
 
-Matf cl::getTransformedOutput() {
-	return Matf();
+void cl::getCurrentInputFrame(ImagePPM& image, int64_t idx) {
+	
 }
 
-bool cl::getCurrentOutputFrame(ImagePPM& image) {
-	return false;
+void cl::getCurrentOutputFrame(ImagePPM& image) {
+	
 }

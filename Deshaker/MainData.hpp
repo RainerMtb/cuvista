@@ -26,7 +26,7 @@
 #include "RandomSource.hpp"
 #include "cuDeshaker.cuh"
 #include "clMain.hpp"
-#include "DeviceInfo.hpp"
+#include "DeviceInfoCuda.cuh"
 
 inline std::string CUVISTA_VERSION = "0.9.7";
 
@@ -60,7 +60,18 @@ enum class DecideYNA {
 	ASK,
 };
 
-class MainData : public CoreData {
+class DeviceInfoCpu : public DeviceInfo {
+public:
+	DeviceInfoCpu(DeviceType type, size_t targetIndex, int64_t maxPixel)
+		: DeviceInfo(type, targetIndex, maxPixel) {}
+
+	DeviceInfoCpu() : DeviceInfoCpu(DeviceType::CPU, 0, 0) {}
+
+	std::string getName() const override;
+};
+
+
+class MainData : public CudaData {
 
 private:
 
@@ -196,8 +207,6 @@ public:
 
 	void collectDeviceInfo();
 
-	void validate(InputContext& input);
-
 	void validate();
 
 	void showIntro() const;
@@ -209,4 +218,6 @@ public:
 	size_t deviceCountCuda() const;
 
 	size_t deviceCountOpenCl() const;
+
+	void reset();
 };

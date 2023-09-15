@@ -25,13 +25,14 @@ void StabilizerThread::run() {
     std::unique_ptr<MovieFrame> frame;
 
     try {
-        //clear all previous errors
-        mData.status.reset();
         //rewind reader to beginning of input
         mReader.rewind();
+        //clear all previous errors
+
+        mData.reset();
         //check input parameters
         mData.validate();
-
+        //select frame handler and writer
         if (mData.deviceList[mData.deviceSelected]->type == DeviceType::CPU) {
             frame = std::make_unique<CpuFrame>(mData);
             if (mData.requestedEncoding.device == EncodingDevice::NVENC)
@@ -45,6 +46,10 @@ void StabilizerThread::run() {
                 writer = std::make_unique<CudaFFmpegWriter>(mData);
             else
                 writer = std::make_unique<FFmpegWriter>(mData);
+
+        } else if (mData.deviceList[mData.deviceSelected]->type == DeviceType::OPEN_CL) {
+            frame = std::make_unique<OpenClFrame>(mData);
+            writer = std::make_unique<FFmpegWriter>(mData);
         }
 
         writer->open(mData.requestedEncoding);

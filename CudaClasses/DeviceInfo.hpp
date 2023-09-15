@@ -18,10 +18,43 @@
 
 #pragma once
 
-struct FilterKernel {
-	static const int maxSize = 8;
-	int siz;
-	float k[maxSize];
+#include <vector>
+#include <string>
+
+enum class Codec {
+	AUTO,
+	H264,
+	H265,
+	AV1,
 };
 
-__device__ const FilterKernel& getFilterKernel(size_t idx);
+enum class EncodingDevice {
+	AUTO,
+	NVENC,
+	CPU,
+};
+
+struct EncodingOption {
+	EncodingDevice device;
+	Codec codec;
+};
+
+enum class DeviceType {
+	CPU,
+	CUDA,
+	OPEN_CL,
+};
+
+class DeviceInfo {
+public:
+	DeviceType type;
+	size_t targetIndex;
+	std::vector<EncodingOption> encodingOptions;
+	int64_t maxPixel;
+
+	DeviceInfo(DeviceType type, size_t targetIndex, int64_t maxPixel)
+		: type { type }, targetIndex { targetIndex }, maxPixel { maxPixel } 
+	{}
+
+	virtual std::string getName() const = 0;
+};

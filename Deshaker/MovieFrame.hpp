@@ -100,8 +100,8 @@ public:
 	const AffineTransform& computeTransform(std::vector<PointResult> resultPoints);
 
 	/*
-	* get transformed image as Mat<float> where YUV color planes are stacked vertically
-	* useful for debugging
+	* get transformed image as Mat<float> where YUV color planes are stacked vertically for debugging
+	* warped output before unsharping
 	*/
 	virtual Mat<float> getTransformedOutput() const { return {}; }
 
@@ -119,12 +119,12 @@ public:
 	/*
 	* get most recently read input frame to show progress
 	*/
-	virtual bool getCurrentInputFrame(ImagePPM& image) { return false; }
+	virtual void getCurrentInputFrame(ImagePPM& image) {}
 
 	/*
-	* get most resently processed output frame, after warping, before filtering and blending
+	* get most resently processed output frame, after warping, before unsharping
 	*/
-	virtual bool getCurrentOutputFrame(ImagePPM& image) { return false; }
+	virtual void getCurrentOutputFrame(ImagePPM& image) {}
 
 	/*
 	* read transforms from previous pass
@@ -238,21 +238,12 @@ public:
 		return cudaGetInput(index, mData);
 	}
 
-	bool getCurrentInputFrame(ImagePPM& image) override {
-		bool state = mStatus.frameReadIndex > 0;
-		if (state) {
-			int idx = (mStatus.frameReadIndex - 1) % mData.bufferCount;
-			cudaGetCurrentInputFrame(image, mData, idx);
-		}
-		return state;
+	void getCurrentInputFrame(ImagePPM& image) override {
+		cudaGetCurrentInputFrame(image, mData, mStatus.frameReadIndex - 1);
 	}
 
-	bool getCurrentOutputFrame(ImagePPM& image) override {
-		bool state = mStatus.frameWriteIndex > 0;
-		if (state) {
-			cudaGetCurrentOutputFrame(image, mData);
-		}
-		return state;
+	void getCurrentOutputFrame(ImagePPM& image) override {
+		cudaGetCurrentOutputFrame(image, mData);
 	}
 };
 
@@ -270,9 +261,7 @@ public:
 		cl::init(data, inputFrame, devIdx);
 	}
 
-	~OpenClFrame() {
-		cl::shutdown();
-	}
+	~OpenClFrame() {}
 
 	void inputData(ImageYuv& frame) override { 
 		cl::inputData(mStatus.frameInputIndex, mData, frame);
@@ -298,26 +287,26 @@ public:
 		cl::outputData(mStatus.frameWriteIndex, mData, outCtx, trf.toArray());
 	}
 
-	Mat<float> getTransformedOutput() const override { 
-		return cl::getTransformedOutput(); 
-	}
-
 	Mat<float> getPyramid(size_t idx) const override {
 		Mat<float> out = Mat<float>::zeros(mData.pyramidRowCount * 3LL, mData.w);
 		cl::getPyramid(out.data(), idx, mData);
 		return out;
 	}
 
+	Mat<float> getTransformedOutput() const override { 
+		return cl::getTransformedOutput(mData); 
+	}
+
 	ImageYuv getInput(int64_t idx) const override { 
-		return cl::getInput(idx); 
+		return cl::getInput(idx, mData); 
 	}
 
-	bool getCurrentInputFrame(ImagePPM& image) override { 
-		return cl::getCurrentInputFrame(image); 
+	void getCurrentInputFrame(ImagePPM& image) override { 
+		cl::getCurrentInputFrame(image, mStatus.frameReadIndex - 1);
 	}
 
-	bool getCurrentOutputFrame(ImagePPM& image) override { 
-		return cl::getCurrentOutputFrame(image); 
+	void getCurrentOutputFrame(ImagePPM& image) override { 
+		cl::getCurrentOutputFrame(image); 
 	}
 };
 
@@ -340,8 +329,8 @@ public:
 	Mat<float> getTransformedOutput() const override;
 	Mat<float> getPyramid(size_t idx) const override;
 	ImageYuv getInput(int64_t index) const override;
-	bool getCurrentInputFrame(ImagePPM& image) override;
-	bool getCurrentOutputFrame(ImagePPM& image) override;
+	void getCurrentInputFrame(ImagePPM& image) override;
+	void getCurrentOutputFrame(ImagePPM& image) override;
 
 protected:
 

@@ -46,7 +46,6 @@ void cl::scale_32f8u_3(cl::Image src, cl::Image dest, ClData& clData) {
 }
 
 void cl::remap_downsize_32f(cl::Image src, cl::Image dest, ClData& clData) {
-	//cl::Sampler mid(clData.context, CL_FALSE, CL_ADDRESS_CLAMP_TO_EDGE, CL_FILTER_LINEAR);
 	runKernel(clData.kernel("remap_downsize_32f"), src, dest, clData.queue);
 }
 

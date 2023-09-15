@@ -18,11 +18,23 @@
 
 #pragma once
 
-#include "AffineTransform.hpp"
-#include "CoreData.cuh"
-#include "Image.hpp"
+#include "clHeaders.hpp"
+#include "CoreData.hpp"
 #include "DeviceInfo.hpp"
+#include "Mat.h"
 
+
+class DeviceInfoCl : public DeviceInfo {
+public:
+	cl::Device device;
+
+	DeviceInfoCl(DeviceType type, size_t targetIndex, int64_t maxPixel, cl::Device device)
+		: DeviceInfo(type, targetIndex, maxPixel)
+		, device { device } 
+	{}
+
+	std::string getName() const override;
+};
 
 struct OpenClInfo {
 	std::vector<DeviceInfoCl> devices;
@@ -32,7 +44,6 @@ struct OpenClInfo {
 namespace cl {
 	OpenClInfo probeRuntime(); //called on startup
 	void init(CoreData& core, ImageYuv& inputFrame, std::size_t devIdx); //called from constructor of MovieFrame
-	void shutdown();
 
 	void inputData(int64_t frameIdx, const CoreData& core, const ImageYuv& inputFrame);
 	void createPyramid(int64_t frameIdx, const CoreData& core);
@@ -41,9 +52,9 @@ namespace cl {
 	void computeTerminate();
 	void outputData(int64_t frameIdx, const CoreData& core, OutputContext outCtx, std::array<double, 6> trf);
 
-	ImageYuv getInput(int64_t idx);
-	Matf getTransformedOutput();
+	ImageYuv getInput(int64_t idx, const CoreData& core);
+	Matf getTransformedOutput(const CoreData& core);
 	void getPyramid(float* pyramid, size_t idx, const CoreData& core);
-	bool getCurrentInputFrame(ImagePPM& image);
-	bool getCurrentOutputFrame(ImagePPM& image);
+	void getCurrentInputFrame(ImagePPM& image, int64_t idx);
+	void getCurrentOutputFrame(ImagePPM& image);
 }

@@ -23,7 +23,9 @@
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 
-//general info about cuda devices
+#include "DeviceInfo.hpp"
+
+ //general info about cuda devices
 struct CudaInfo {
 	int nvidiaDriverVersion = 0;
 	int cudaRuntimeVersion = 0;
@@ -36,7 +38,27 @@ struct CudaInfo {
 	uint32_t nvencVersionApi;
 	uint32_t nvencVersionDriver;
 
-	std::string nvidiaDriverToString() const;
-	std::string cudaRuntimeToString() const;
-	std::string cudaDriverToString() const;
+	std::string nvidiaDriverToString() const {
+		return std::to_string(nvidiaDriverVersion / 100) + "." + std::to_string(nvidiaDriverVersion % 100);
+	}
+
+	std::string cudaRuntimeToString() const {
+		return std::to_string(cudaRuntimeVersion / 1000) + "." + std::to_string(cudaRuntimeVersion % 1000 / 10);
+	}
+
+	std::string cudaDriverToString() const {
+		return std::to_string(cudaDriverVersion / 1000) + "." + std::to_string(cudaDriverVersion % 1000 / 10);
+	}
+};
+
+class DeviceInfoCuda : public DeviceInfo {
+public:
+	cudaDeviceProp props;
+
+	DeviceInfoCuda(DeviceType type, size_t targetIndex, int64_t maxPixel, cudaDeviceProp props)
+		: DeviceInfo(type, targetIndex, maxPixel)
+		, props { props } 
+	{}
+
+	std::string getName() const override;
 };

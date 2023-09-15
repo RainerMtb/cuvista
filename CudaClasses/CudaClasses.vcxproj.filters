@@ -4,7 +4,6 @@
     <CudaCompile Include="cuDecompose.cu" />
     <CudaCompile Include="cuDeshaker.cu" />
     <CudaCompile Include="cuKernelCompute.cu" />
-    <CudaCompile Include="CoreData.cu" />
     <CudaCompile Include="cuNPP.cu" />
     <CudaCompile Include="cuUtil.cu">
       <Filter>Util</Filter>
@@ -12,35 +11,39 @@
     <CudaCompile Include="cuTest.cu">
       <Filter>Util</Filter>
     </CudaCompile>
+    <CudaCompile Include="CudaData.cu" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cuDecompose.cuh" />
     <ClInclude Include="cuDeshaker.cuh" />
-    <ClInclude Include="CoreData.cuh" />
     <ClInclude Include="cuNPP.cuh" />
     <ClInclude Include="cuUtil.cuh">
-      <Filter>Util</Filter>
-    </ClInclude>
-    <ClInclude Include="ErrorLogger.hpp">
       <Filter>Util</Filter>
     </ClInclude>
     <ClInclude Include="cuTest.cuh">
       <Filter>Util</Filter>
     </ClInclude>
-    <ClInclude Include="CudaInfo.hpp">
+    <ClInclude Include="CudaData.cuh" />
+    <ClInclude Include="CoreData.hpp">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="ErrorLogger.hpp">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="DeviceInfo.hpp">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="DeviceInfoCuda.cuh">
       <Filter>Util</Filter>
     </ClInclude>
-    <ClInclude Include="cuFilterKernel.cuh" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Util">
       <UniqueIdentifier>{7c61acbe-c22e-4b03-9c6b-b8508cf76a31}</UniqueIdentifier>
     </Filter>
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="CudaInfo.cpp">
-      <Filter>Util</Filter>
-    </ClCompile>
+    <Filter Include="Common">
+      <UniqueIdentifier>{c5114c4b-8853-40fd-9f1f-977636174e0f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CudaClasses.rc" />

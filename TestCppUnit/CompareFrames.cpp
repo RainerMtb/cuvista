@@ -109,8 +109,8 @@ public:
 			MainData data;
 			ProgressDisplayNone progress(data);
 			TestReader reader;
-			InputContext ctx = reader.open("");
-			data.validate(ctx);
+			data.inputCtx = reader.open("");
+			data.validate();
 			TestWriter writer(data);
 			CpuFrame frame(data);
 			reader.read(frame.bufferFrame, data.status);
@@ -127,8 +127,8 @@ public:
 			ProgressDisplayNone progress(data);
 			data.probeCuda();
 			TestReader reader;
-			InputContext ctx = reader.open("");
-			data.validate(ctx);
+			data.inputCtx = reader.open("");
+			data.validate();
 			TestWriter writer(data);
 			CudaFrame frame(data);
 			reader.read(frame.bufferFrame, data.status);
@@ -158,8 +158,8 @@ public:
 			MainData data;
 			data.fileIn = file;
 			FFmpegReader reader;
-			InputContext ctx = reader.open(file);
-			data.validate(ctx);
+			data.inputCtx = reader.open(file);
+			data.validate();
 			CpuFrame frame(data);
 
 			resCpu = run(frame, data, reader);
@@ -172,8 +172,8 @@ public:
 			data.probeCuda();
 			data.fileIn = file;
 			FFmpegReader reader;
-			InputContext ctx = reader.open(file);
-			data.validate(ctx);
+			data.inputCtx = reader.open(file);
+			data.validate();
 			CudaFrame frame(data);
 
 			resGpu = run(frame, data, reader);
@@ -215,8 +215,8 @@ public:
 		{
 			MainData data;
 			data.probeCuda();
-			InputContext ctx = { 1080, 1920, 2, 1 };
-			data.validate(ctx);
+			data.inputCtx = { 1080, 1920, 2, 1 };
+			data.validate();
 			NullReader reader;
 			NullWriter writer(data);
 			CudaFrame frame(data);
@@ -247,8 +247,8 @@ public:
 		ImageYuv imCpu;
 		{
 			MainData data;
-			InputContext ctx = { 1080, 1920, 2, 1 };
-			data.validate(ctx);
+			data.inputCtx = { 1080, 1920, 2, 1 };
+			data.validate();
 			NullReader reader;
 			NullWriter writer(data);
 			CpuFrame frame(data);

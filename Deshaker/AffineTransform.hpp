@@ -19,7 +19,7 @@
 #pragma once
 
 #include "Affine2D.h"
-#include "CoreData.cuh"
+#include "CudaData.cuh"
 #include "Instrumentor.h"
 #include "ThreadPool.h"
 

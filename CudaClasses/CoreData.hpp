@@ -18,12 +18,11 @@
 
 #pragma once
 
-#include "Image.hpp"
 #include "ErrorLogger.hpp"
-#include "cuUtil.cuh"
-#include "cuFilterKernel.cuh"
-#include "CudaInfo.hpp"
+#include "Image.hpp"
 
+
+//how to put original and stabilized video side by side
 struct BlendInput {
 	double percent = 0.0;
 	int blendStart = 0;
@@ -38,11 +37,6 @@ struct OutputContext {
 	ImageYuv* outputFrame;
 	unsigned char* cudaNv12ptr;
 	int cudaPitch;
-};
-
-struct DebugData {
-	std::vector<double> debugData;
-	ImageBGR kernelTimings;
 };
 
 //how to deal with background when frame does not cover complete output canvas
@@ -96,65 +90,4 @@ public:
 
 	uint8_t crf = 22;
 	char fileDelimiter = ';';
-
-	size_t cudaUsedMem = 0;
-	size_t computeSharedMem = 0;
-
-	size_t cudaMemTotal = 0;
-	size_t cudaMemUsed = 0;
-
-	int3 computeBlocks = {};
-	int3 computeThreads = {};
-
-	//numeric constants used in compute kernel, will be initialized once
-	double dmin = 0.0, dmax = 0.0, deps = 0.0, dnan = 0.0;
-
-	FilterKernel filterKernels[4] = {
-		{5, {0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f}},
-		{3, {0.25f, 0.5f, 0.25f}},
-		{3, {0.25f, 0.5f, 0.25f}},
-		{3, {-0.5f, 0.0f, 0.5f}},
-	};
-};
-
-
-//result type of one computed point
-enum class PointResultType {
-	FAIL_SINGULAR,
-	FAIL_ITERATIONS,
-	FAIL_ETA_NAN,
-	RUNNING,
-	SUCCESS_ABSOLUTE_ERR,
-	SUCCESS_STABLE_ITER,
-};
-
-//result of one computed point in a frame
-struct PointResult {
-
-private:
-	__device__ __host__ bool equal(double a, double b, double tol) const;
-
-public:
-	size_t idx, ix0, iy0;
-	int px, py;
-	int x, y;
-	double u, v;
-	PointResultType result;
-	double distance;
-	double length;
-	double distanceRelative;
-
-	//is valid when numeric stable result was found
-	__device__ __host__ bool isValid() const;
-
-	//numeric value for type of result
-	__device__ __host__ int resultValue() const;
-
-	__device__ __host__ bool equals(const PointResult& other, double tol = 0.0) const;
-
-	__device__ __host__ bool operator == (const PointResult& other) const;
-
-	__device__ __host__ bool operator != (const PointResult& other) const;
-
-	friend __host__ std::ostream& operator << (std::ostream& out, const PointResult& res);
 };

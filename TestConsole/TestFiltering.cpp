@@ -67,8 +67,8 @@ void filterCompare() {
 		dataGpu.probeCuda();
 		dataGpu.fileIn = file;
 		FFmpegReader reader;
-		InputContext ctx = reader.open(file);
-		dataGpu.validate(ctx);
+		dataGpu.inputCtx = reader.open(file);
+		dataGpu.validate();
 		NullWriter writer(dataGpu);
 		gpu = std::make_unique<CudaFrame>(dataGpu);
 		runInit(dataGpu, gpu, trf, &reader, &writer);
@@ -79,8 +79,8 @@ void filterCompare() {
 		dataCpu.deviceSelected = 0;
 		dataCpu.fileIn = file;
 		FFmpegReader reader;
-		InputContext ctx = reader.open(file);
-		dataCpu.validate(ctx);
+		dataCpu.inputCtx = reader.open(file);
+		dataCpu.validate();
 		NullWriter writer(dataCpu);
 		cpu = std::make_unique<CpuFrame>(dataCpu);
 		runInit(dataCpu, cpu, trf, &reader, &writer);
