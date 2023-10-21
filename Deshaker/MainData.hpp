@@ -153,7 +153,6 @@ public:
 	Stats status;
 	DeviceInfoCpu deviceInfoCpu;
 	std::vector<DeviceInfo*> deviceList;
-	std::vector<DeviceInfoCuda> deviceListCuda;
 	CudaInfo cudaInfo;
 	OpenClInfo clinfo;
 	bool deviceRequested = false;

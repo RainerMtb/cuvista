@@ -296,7 +296,7 @@ void MainData::collectDeviceInfo() {
 	auto less = [] (const DeviceInfoCuda& a, const DeviceInfoCuda& b) {
 		return a.props.major == b.props.major ? a.props.minor < b.props.minor : a.props.major < b.props.major;
 	};
-	std::sort(deviceListCuda.begin(), deviceListCuda.end(), less);
+	std::sort(cudaInfo.devices.begin(), cudaInfo.devices.end(), less);
 
 	//cpu encoders
 	std::vector<EncodingOption> cpuEncoders = {
@@ -308,8 +308,8 @@ void MainData::collectDeviceInfo() {
 	//CPU device
 	deviceInfoCpu = DeviceInfoCpu(DeviceType::CPU, 0, 8192);
 	deviceInfoCpu.encodingOptions = cpuEncoders;
-	if (deviceListCuda.size() > 0) {
-		DeviceInfoCuda& dic = deviceListCuda[0];
+	if (cudaInfo.devices.size() > 0) {
+		DeviceInfoCuda& dic = cudaInfo.devices.front();
 		std::copy(dic.encodingOptions.begin(), dic.encodingOptions.end(), std::back_inserter(deviceInfoCpu.encodingOptions));
 	}
 	deviceList.push_back(&deviceInfoCpu);
@@ -322,7 +322,7 @@ void MainData::collectDeviceInfo() {
 	}
 
 	//cuda devices
-	for (DeviceInfoCuda& cu : deviceListCuda) {
+	for (DeviceInfoCuda& cu : cudaInfo.devices) {
 		std::copy(cpuEncoders.begin(), cpuEncoders.end(), std::back_inserter(cu.encodingOptions));
 		deviceList.push_back(&cu);
 	}
@@ -434,6 +434,7 @@ void MainData::validate() {
 	if (radius < limits.radiusMin || radius > limits.radiusMax) throw AVException("invalid image radius: " + std::to_string(radius));
 	if (w < limits.wMin) throw AVException("invalid input video width: " + std::to_string(w));
 	if (h < limits.hMin) throw AVException("invalid input video height: " + std::to_string(h));
+	if (deviceSelected >= deviceList.size()) throw AVException("invalid device selected: "  + std::to_string(deviceSelected));
 	size_t mp = deviceList[deviceSelected]->maxPixel;
 	if (w > mp) throw AVException("frame width exceeds maximum of " + std::to_string(mp) + " px");
 	if (h > mp) throw AVException("frame height exceeds maximum of " + std::to_string(mp) + " px");
@@ -565,18 +566,18 @@ void MainData::probeCuda() {
 				cudaDeviceProp& prop = props[i];
 				DeviceInfoCuda cuda(DeviceType::CUDA, i, prop.sharedMemPerBlock / sizeof(float), prop);
 				NvEncoder::probeSupportedCodecs(cuda);
-				deviceListCuda.push_back(cuda);
+				cudaInfo.devices.push_back(cuda);
 			}
 		}
 	}
 }
 
-void MainData::probeOpenCl() {
-	this->clinfo = cl::probeRuntime();
+size_t MainData::deviceCountCuda() const {
+	return cudaInfo.devices.size();
 }
 
-size_t MainData::deviceCountCuda() const {
-	return deviceListCuda.size();
+void MainData::probeOpenCl() {
+	this->clinfo = cl::probeRuntime();
 }
 
 size_t MainData::deviceCountOpenCl() const {

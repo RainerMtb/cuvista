@@ -63,10 +63,6 @@ namespace cu {
 	//matrix implementation in device code
 	template <class T> class Mat {
 
-		__device__ float roundTex(double d) const {
-			return float(nextafter(d, signbit(d) ? -1e300 : 1e300));
-		}
-
 	public:
 		int h, w, stride;
 		T* data;
@@ -96,14 +92,6 @@ namespace cu {
 		__device__ T* row(int row) {
 			assert(row >= 0 && row < h);
 			return data + row * stride;
-		}
-
-		__device__ T interp2(int ix, int iy, T dx, T dy, T dxdy) const {
-			T f00 = at(iy, ix);
-			T f01 = dx == 0 ? f00 : at(iy, ix + 1);
-			T f10 = dy == 0 ? f00 : at(iy + 1, ix);
-			T f11 = dx == 0 || dy == 0 ? f00 : at(iy + 1, ix + 1);
-			return roundTex((1 - dx) * (1 - dy) * f00) + roundTex((1 - dx) * dy * f10) + roundTex(dx * (1 - dy) * f01) + roundTex(dxdy * f11);
 		}
 
 		__device__ void toConsole(int digits = 6, const char* title = "") const {

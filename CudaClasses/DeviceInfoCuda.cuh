@@ -18,15 +18,28 @@
 
 #pragma once
 
-#include <string>
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 
 #include "DeviceInfo.hpp"
 
- //general info about cuda devices
+class DeviceInfoCuda : public DeviceInfo {
+public:
+	cudaDeviceProp props;
+
+	DeviceInfoCuda(DeviceType type, size_t targetIndex, int64_t maxPixel, cudaDeviceProp props)
+		: DeviceInfo(type, targetIndex, maxPixel)
+		, props { props } 
+	{}
+
+	std::string getName() const override;
+};
+
+//info about cuda devices
 struct CudaInfo {
+	std::vector<DeviceInfoCuda> devices;
+
 	int nvidiaDriverVersion = 0;
 	int cudaRuntimeVersion = 0;
 	int cudaDriverVersion = 0;
@@ -49,16 +62,4 @@ struct CudaInfo {
 	std::string cudaDriverToString() const {
 		return std::to_string(cudaDriverVersion / 1000) + "." + std::to_string(cudaDriverVersion % 1000 / 10);
 	}
-};
-
-class DeviceInfoCuda : public DeviceInfo {
-public:
-	cudaDeviceProp props;
-
-	DeviceInfoCuda(DeviceType type, size_t targetIndex, int64_t maxPixel, cudaDeviceProp props)
-		: DeviceInfo(type, targetIndex, maxPixel)
-		, props { props } 
-	{}
-
-	std::string getName() const override;
 };

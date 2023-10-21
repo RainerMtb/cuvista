@@ -110,6 +110,7 @@ public:
 			ProgressDisplayNone progress(data);
 			TestReader reader;
 			data.inputCtx = reader.open("");
+			data.collectDeviceInfo();
 			data.validate();
 			TestWriter writer(data);
 			CpuFrame frame(data);
@@ -128,6 +129,7 @@ public:
 			data.probeCuda();
 			TestReader reader;
 			data.inputCtx = reader.open("");
+			data.collectDeviceInfo();
 			data.validate();
 			TestWriter writer(data);
 			CudaFrame frame(data);
@@ -159,6 +161,7 @@ public:
 			data.fileIn = file;
 			FFmpegReader reader;
 			data.inputCtx = reader.open(file);
+			data.collectDeviceInfo();
 			data.validate();
 			CpuFrame frame(data);
 
@@ -173,6 +176,7 @@ public:
 			data.fileIn = file;
 			FFmpegReader reader;
 			data.inputCtx = reader.open(file);
+			data.collectDeviceInfo();
 			data.validate();
 			CudaFrame frame(data);
 
@@ -216,6 +220,7 @@ public:
 			MainData data;
 			data.probeCuda();
 			data.inputCtx = { 1080, 1920, 2, 1 };
+			data.collectDeviceInfo();
 			data.validate();
 			NullReader reader;
 			NullWriter writer(data);
@@ -248,6 +253,7 @@ public:
 		{
 			MainData data;
 			data.inputCtx = { 1080, 1920, 2, 1 };
+			data.collectDeviceInfo();
 			data.validate();
 			NullReader reader;
 			NullWriter writer(data);

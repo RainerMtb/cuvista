@@ -51,6 +51,7 @@ void openClInvTest(size_t s1, size_t s2) {
 template <class T> std::pair<Matf, Matf> runPyramid(MainData& data) {
 	FFmpegReader reader;
 	data.inputCtx = reader.open(data.fileIn);
+	data.collectDeviceInfo();
 	data.validate();
 	NullWriter writer(data);
 	std::unique_ptr<MovieFrame> frame = std::make_unique<T>(data);
@@ -77,10 +78,12 @@ template <class T> std::pair<Matf, Matf> runPyramid(MainData& data) {
 }
 
 void pyramid() {
+	std::cout << "compare pyramids" << std::endl;
+
 	AffineTransform trf;
 	trf.addRotation(0.2).addTranslation(-40, 30);
-	Matf pyrCpu, pyrOcl;
-	Matf outCpu, outOcl;
+	Matf pyrCpu, pyrOcl, pyrCuda;
+	Matf outCpu, outOcl, outCuda;
 
 	{
 		//CPU
@@ -115,13 +118,15 @@ void pyramid() {
 		data.probeCuda();
 		data.fileIn = "d:/VideoTest/04.ts";
 		auto ret = runPyramid<CudaFrame>(data);
+		pyrCuda = ret.first;
+		outCuda = ret.second;
 		//ret.second.saveAsColorBMP("f:/testCuda.bmp");
 	}
 
 	//outCpu.saveAsBinary("f:/outCpu.dat");
 	//outOcl.saveAsBinary("f:/outOcl.dat");
-	std::cout << (pyrCpu.equalsExact(pyrOcl) ? "pyramids equal ok" : "pyramids differ!!") << std::endl;
-	std::cout << (outCpu.equalsExact(outOcl) ? "warpend output equal ok" : "warped output differ!!") << std::endl;
+	std::cout << (pyrCpu.equalsExact(pyrCuda) ? "pyramids equal ok" : "pyramids differ!!") << std::endl;
+	std::cout << (outCpu.equalsExact(outCuda) ? "warped output equal ok" : "warped output differ!!") << std::endl;
 
 	if (errorLogger.hasError()) {
 		std::cout << errorLogger.getErrorMessage() << std::endl;

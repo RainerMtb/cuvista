@@ -43,7 +43,8 @@ struct OpenClInfo {
 
 namespace cl {
 	OpenClInfo probeRuntime(); //called on startup
-	void init(CoreData& core, ImageYuv& inputFrame, std::size_t devIdx); //called from constructor of MovieFrame
+	void init(CoreData& core, ImageYuv& inputFrame, OpenClInfo clinfo, std::size_t devIdx); //called from constructor of MovieFrame
+	void shutdown(const CoreData& core); //called from destructor of MovieFrame
 
 	void inputData(int64_t frameIdx, const CoreData& core, const ImageYuv& inputFrame);
 	void createPyramid(int64_t frameIdx, const CoreData& core);

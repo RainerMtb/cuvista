@@ -23,7 +23,7 @@
 #include <format>
 #include <algorithm>
 
-//data
+//data structure
 ClData clData;
 
 using size2 = cl::array<cl::size_type, 2>;
@@ -41,10 +41,11 @@ OpenClInfo cl::probeRuntime() {
 	if (platforms.size() > 0) {
 		cl::Platform pf = platforms[0];
 		info.version = pf.getInfo<CL_PLATFORM_VERSION>();
-		pf.getDevices(CL_DEVICE_TYPE_GPU, &clData.devices);
+		std::vector<cl::Device> devices;
+		pf.getDevices(CL_DEVICE_TYPE_GPU, &devices);
 
-		for (int i = 0; i < clData.devices.size(); i++) {
-			cl::Device& dev = clData.devices[i];
+		for (int i = 0; i < devices.size(); i++) {
+			cl::Device& dev = devices[i];
 
 			cl_bool avail = dev.getInfo<CL_DEVICE_AVAILABLE>();
 			if (avail == false) continue;
@@ -79,9 +80,9 @@ OpenClInfo cl::probeRuntime() {
 }
 
 //set up device to use
-void cl::init(CoreData& core, ImageYuv& inputFrame, std::size_t devIdx) {
+void cl::init(CoreData& core, ImageYuv& inputFrame, OpenClInfo clinfo, std::size_t devIdx) {
 	try {
-		cl::Device dev = clData.devices[devIdx];
+		cl::Device dev = clinfo.devices[devIdx].device;
 		clData.context = cl::Context(dev);
 		clData.queue = cl::CommandQueue(clData.context, dev);
 
@@ -135,6 +136,7 @@ void cl::init(CoreData& core, ImageYuv& inputFrame, std::size_t devIdx) {
 			clData.queue.enqueueFillImage(im, bg, origin, region);
 		}
 		clData.yuvOut = cl::Image2D(clData.context, CL_MEM_WRITE_ONLY, fmt, core.w, core.h * 3ull);
+		clData.rgbOut = cl::Buffer(clData.context, CL_MEM_WRITE_ONLY, 3ull * core.w * core.h);
 
 		//allocate filter kernel buffer
 		clData.filterKernel = cl::Buffer(clData.context, CL_MEM_READ_ONLY, sizeof(cl_float4) * FilterKernelData::maxSize);
@@ -166,6 +168,14 @@ void cl::init(CoreData& core, ImageYuv& inputFrame, std::size_t devIdx) {
 	}
 }
 
+void cl::shutdown(const CoreData& core) {
+	clData = {};
+}
+
+//----------------------------------
+//-------- INPUT YUV DATA ----------
+//----------------------------------
+
 void cl::inputData(int64_t frameIdx, const CoreData& core, const ImageYuv& inputFrame) {
 	int64_t fr = frameIdx % core.bufferCount;
 	int frameSize = core.cpupitch * core.h;
@@ -173,6 +183,10 @@ void cl::inputData(int64_t frameIdx, const CoreData& core, const ImageYuv& input
 	size2 region = { size_t(core.w), size_t(core.h * 3ull) };
 	clData.queue.enqueueWriteImage(clData.yuv[fr], CL_TRUE, origin, region, core.cpupitch, 0, inputFrame.data());
 }
+
+//----------------------------------
+//-------- CREATE PYRAMID ----------
+//----------------------------------
 
 void cl::createPyramid(int64_t frameIdx, const CoreData& core) {
 	int w = core.w;
@@ -197,9 +211,17 @@ void cl::createPyramid(int64_t frameIdx, const CoreData& core) {
 	}
 }
 
+//----------------------------------
+//-------- COMPUTE -----------------
+//----------------------------------
+
 void cl::computePartOne() {}
 void cl::computePartTwo() {}
 void cl::computeTerminate() {}
+
+//----------------------------------
+//-------- OUTPUT STABILIZED -------
+//----------------------------------
 
 //utility function to read from image
 void readImage(cl::Image2D src, size_t destPitch, void* dest, cl::CommandQueue queue) {
@@ -217,7 +239,7 @@ void cl::outputData(int64_t frameIdx, const CoreData& core, OutputContext outCtx
 	try {
 		//convert input yuv to float image
 		scale_8u32f_3(clData.yuv[frIdx], outStart, clData);
-		//fill background if applicable
+		//fill static background when requested
 		if (core.bgmode == BackgroundMode::COLOR) {
 			size2 origin = {};
 			size2 region = { size_t(core.w), size_t(core.h) };
@@ -232,7 +254,8 @@ void cl::outputData(int64_t frameIdx, const CoreData& core, OutputContext outCtx
 		filter_32f_v3(outFilterH, outFilterV, clData.filterGauss, clData);
 
 		//unsharp mask
-		unsharp(outWarped, outFinal, outFilterV, clData, core.unsharp);
+		std::array f = { core.unsharp.y, core.unsharp.u, core.unsharp.v };
+		unsharp(outWarped, outFinal, outFilterV, clData, f);
 
 		//convert to YUV444 for output
 		scale_32f8u_3(outFinal, clData.yuvOut, clData);
@@ -292,9 +315,10 @@ Matf cl::getTransformedOutput(const CoreData& core) {
 }
 
 void cl::getCurrentInputFrame(ImagePPM& image, int64_t idx) {
-	
+	size_t fridx = idx % clData.yuv.size();
+	yuv_to_rgb("yuv8u_to_rgb", clData.yuv[fridx], image.data(), clData, image.w, image.h);
 }
 
 void cl::getCurrentOutputFrame(ImagePPM& image) {
-	
+	yuv_to_rgb("yuv32f_to_rgb", clData.out[1], image.data(), clData, image.w, image.h);
 }

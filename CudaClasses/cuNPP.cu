@@ -18,9 +18,12 @@
 
 #include "cuNPP.cuh"
 #include "Util.hpp"
+#include "CudaData.cuh"
 
 #include <chrono>
 #include <iostream>
+
+extern __constant__ CudaData d_core;
 
 struct KernelContext {
 	cudaTextureObject_t texture;
@@ -35,10 +38,10 @@ struct CudaFilterKernel {
 	float k[maxSize];
 };
 
-__device__ CudaFilterKernel filterKernels[4] = {
+__constant__ CudaFilterKernel filterKernels[4] = {
 	{5, {0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f}},
-	{3, {0.25f, 0.5f, 0.25f}},
-	{3, {0.25f, 0.5f, 0.25f}},
+	{5, {0.0f, 0.25f, 0.5f, 0.25f, 0.0f}},
+	{5, {0.0f, 0.25f, 0.5f, 0.25f, 0.0f}},
 	{3, {-0.5f, 0.0f, 0.5f}},
 };
 
@@ -46,44 +49,25 @@ __device__ CudaFilterKernel filterKernels[4] = {
 template<class T> __device__ T tex2D(cudaTextureObject_t tex, float x, float y);
 template<class T> __device__ T tex2Dgather(cudaTextureObject_t tex, float x, float y, int comp);
 
-KernelContext prepareTextureObject(cudaResourceDesc resDesc, cudaTextureDesc texDesc, int thrw, int thrh) {
-	// Create texture object
-	cudaTextureObject_t texObj;
-	cudaError_t status = cudaCreateTextureObject(&texObj, &resDesc, &texDesc, NULL);
 
-	//kernel configuration
-	dim3 threads = { cu::THREAD_COUNT, cu::THREAD_COUNT };
-	uint bx = (thrw + threads.x - 1) / threads.x;
-	uint by = (thrh + threads.y - 1) / threads.y;
-	dim3 blocks = { bx, by };
-
-	return { texObj, blocks, threads, status };
+dim3 configThreads() {
+	return { cu::THREAD_COUNT, cu::THREAD_COUNT };
 }
 
-//KernelContext prepareTextureArray(float* src, int srcStep, int texw, int texh, int thrw, int thrh) {
-//	cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc(32, 0, 0, 0, cudaChannelFormatKindFloat);
-//	cudaError_t status = cudaMallocArray(&d_array, &channelDesc, texw, texh, cudaArrayTextureGather | cudaArraySurfaceLoadStore);
-//	status = cudaMemcpy2DToArray(d_array, 0, 0, src, srcStep, texw * sizeof(float), texh, cudaMemcpyDefault);
-//	cudaResourceDesc resDesc {};
-//	resDesc.resType = cudaResourceTypeArray;
-//	resDesc.res.array.array = d_array;
-//
-//	cudaTextureDesc texDesc {};
-//	texDesc.addressMode[0] = cudaAddressModeClamp;
-//	texDesc.addressMode[1] = cudaAddressModeClamp;
-//	texDesc.filterMode = cudaFilterModeLinear;
-//
-//	return prepareTextureObject(resDesc, texDesc, thrw, thrh);
-//}
+dim3 configBlocks(dim3 threads, int width, int height) {
+	uint bx = (width + threads.x - 1) / threads.x;
+	uint by = (height + threads.y - 1) / threads.y;
+	return { bx, by };
+}
 
 //create texture for reading data in kernel
-template <class T> KernelContext prepareTexture(T* src, int srcStep, int texw, int texh, int thrw, int thrh) {
+template <class T> KernelContext prepareTexture(T* src, int lineCount, int texw, int texh, int thrw, int thrh) {
 	cudaResourceDesc resDesc {};
 	resDesc.resType = cudaResourceTypePitch2D;
 	resDesc.res.pitch2D.devPtr = src;
 	resDesc.res.pitch2D.width = texw;
 	resDesc.res.pitch2D.height = texh;
-	resDesc.res.pitch2D.pitchInBytes = srcStep;
+	resDesc.res.pitch2D.pitchInBytes = lineCount * sizeof(T);
 	resDesc.res.pitch2D.desc = cudaCreateChannelDesc<T>();
 
 	// Specify texture object parameters
@@ -92,7 +76,15 @@ template <class T> KernelContext prepareTexture(T* src, int srcStep, int texw, i
 	texDesc.addressMode[1] = cudaAddressModeClamp;
 	texDesc.filterMode = cudaFilterModePoint;
 
-	return prepareTextureObject(resDesc, texDesc, thrw, thrh);
+	// Create texture object
+	cudaTextureObject_t texObj;
+	cudaError_t status = cudaCreateTextureObject(&texObj, &resDesc, &texDesc, NULL);
+
+	//kernel configuration
+	dim3 threads = configThreads();
+	dim3 blocks = configBlocks(threads, thrw, thrh);
+
+	return { texObj, blocks, threads, status };
 }
 
 template <class T> KernelContext prepareTexture(T* src, int srcStep, int texw, int texh) {
@@ -108,6 +100,10 @@ __device__ void yuv_to_rgb_func(float yf, float uf, float vf, uchar* r, uchar* g
 	*b = (uchar) cu::clamp(yf + (1.732446f * (uf - 128.0f)), 0.0f, 255.0f);
 }
 
+__device__ float interp(float f00, float f01, float f10, float f11, float dx, float dy) {
+	return (1.0f - dx) * (1.0f - dy) * f00 + (1.0f - dx) * dy * f10 + dx * (1.0f - dy) * f01 + dx * dy * f11;
+}
+
 __device__ float tex2Dinterp(cudaTextureObject_t tex, float dx, float dy) {
 	float f00 = tex2D<float>(tex, dx, dy);
 	float f01 = tex2D<float>(tex, dx + 1, dy);
@@ -115,7 +111,124 @@ __device__ float tex2Dinterp(cudaTextureObject_t tex, float dx, float dy) {
 	float f11 = tex2D<float>(tex, dx + 1, dy + 1);
 	dx = dx - floorf(dx);
 	dy = dy - floorf(dy);
-	return (1.0f - dx) * (1.0f - dy) * f00 + (1.0f - dx) * dy * f10 + dx * (1.0f - dy) * f01 + dx * dy * f11;
+	return interp(f00, f01, f10, f11, dx, dy);
+}
+
+__device__ float4 tex2Dinterp_3(cudaTextureObject_t tex, float dx, float dy) {
+	float4 f00 = tex2D<float4>(tex, dx, dy);
+	float4 f01 = tex2D<float4>(tex, dx + 1, dy);
+	float4 f10 = tex2D<float4>(tex, dx, dy + 1);
+	float4 f11 = tex2D<float4>(tex, dx + 1, dy + 1);
+	dx = dx - floorf(dx);
+	dy = dy - floorf(dy);
+	return { 
+		interp(f00.x, f01.x, f10.x, f11.x, dx, dy), 
+		interp(f00.y, f01.y, f10.y, f11.y, dx, dy), 
+		interp(f00.z, f01.z, f10.z, f11.z, dx, dy) 
+	};
+}
+
+
+//------------ KERNELS
+
+__global__ void kernel_scale_8u32f_3(cudaTextureObject_t texObj, cuMatf4 dest) {
+	uint x = blockIdx.x * blockDim.x + threadIdx.x;
+	uint y = blockIdx.y * blockDim.y + threadIdx.y;
+	constexpr float f = 1.0f / 255.0f;
+
+	if (x < dest.w && y < dest.h) {
+		uchar yy = tex2D<uchar>(texObj, x, y);
+		uchar uu = tex2D<uchar>(texObj, x, y + dest.h);
+		uchar vv = tex2D<uchar>(texObj, x, y + 2 * dest.h);
+		dest.at(y, x) = { yy * f, uu * f, vv * f };
+	}
+}
+
+__global__ void kernel_warp_back_3(cudaTextureObject_t texObj, cuMatf4 dest, cu::Affine trf) {
+	uint x = blockIdx.x * blockDim.x + threadIdx.x;
+	uint y = blockIdx.y * blockDim.y + threadIdx.y;
+
+	float xx = (float) (x * trf.m00 + y * trf.m01 + trf.m02);
+	float yy = (float) (x * trf.m10 + y * trf.m11 + trf.m12);
+	if (x < dest.w && y < dest.h && xx >= 0.0f && xx <= dest.w - 1 && yy >= 0.0f && yy <= dest.h - 1) {
+		//dest.at(y, x) = tex2D<float>(texObj, xx + 0.5f, yy + 0.5f); //linear interpolation
+		dest.at(y, x) = tex2Dinterp_3(texObj, xx, yy);
+	}
+}
+
+__global__ void kernel_filter_3(cudaTextureObject_t texObj, cuMatf4 dest, int ks, int dx, int dy) {
+	uint x = blockIdx.x * blockDim.x + threadIdx.x;
+	uint y = blockIdx.y * blockDim.y + threadIdx.y;
+
+	if (x < dest.w && y < dest.h) {
+		float4 result = {};
+		int ix = x - dx * ks / 2;
+		int iy = y - dy * ks / 2;
+		for (int i = 0; i < ks; i++) {
+			float4 val = tex2D<float4>(texObj, ix, iy);
+			result.x = fma(val.x, filterKernels[0].k[i], result.x);
+			result.y = fma(val.y, filterKernels[1].k[i], result.y);
+			result.z = fma(val.z, filterKernels[2].k[i], result.z);
+			ix += dx;
+			iy += dy;
+		}
+		dest.at(y, x) = result;
+	}
+}
+
+__global__ void kernel_unsharp_3(float4* base, float4* gauss, float4* dest, int step, int w, int h) {
+	uint x = blockIdx.x * blockDim.x + threadIdx.x;
+	uint y = blockIdx.y * blockDim.y + threadIdx.y;
+
+	if (x < w && y < h) {
+		int idx = y * step + x;
+		float4 valBase = base[idx];
+		float4 valGauss = gauss[idx];
+		dest[idx].x = __saturatef(valBase.x + (valBase.x - valGauss.x) * d_core.unsharp.y);
+		dest[idx].y = __saturatef(valBase.y + (valBase.y - valGauss.y) * d_core.unsharp.u);
+		dest[idx].z = __saturatef(valBase.z + (valBase.z - valGauss.z) * d_core.unsharp.v);
+	}
+}
+
+__global__ void kernel_output_host(float4* src, int srcStep, uchar* dest, int destStep, int w, int h) {
+	uint x = blockIdx.x * blockDim.x + threadIdx.x;
+	uint y = blockIdx.y * blockDim.y + threadIdx.y;
+
+	if (x < w && y < h) {
+		float4 yuv = src[y * srcStep + x];
+		int idx = y * destStep + x;
+		dest[idx] = (uchar) roundf(yuv.x * 255.0f);
+		idx += h * destStep;
+		dest[idx] = (uchar) roundf(yuv.y * 255.0f);
+		idx += h * destStep;
+		dest[idx] = (uchar) roundf(yuv.z * 255.0f);
+	}
+}
+
+__device__ void output(float4 val, uchar* nv12, int idx, float* u, float* v) {
+	nv12[idx] = (uchar) roundf(val.x * 255.0f);
+	*u += val.y;
+	*v += val.z;
+}
+
+__global__ void kernel_output_nvenc(float4* src, int srcStep, uchar* cudaNv12ptr, int cudaPitch, int w, int h) {
+	uint x = blockIdx.x * blockDim.x + threadIdx.x;
+	uint y = blockIdx.y * blockDim.y + threadIdx.y;
+
+	if (x < w / 2 && y < h / 2) {
+		int idx = y * 2 * srcStep + x * 2;
+		int outIdx = y * 2 * cudaPitch + x * 2;
+		float u = 0.0f;
+		float v = 0.0f;
+		output(src[idx], cudaNv12ptr, outIdx, &u, &v);
+		output(src[idx + 1], cudaNv12ptr, outIdx + 1, &u, &v);
+		output(src[idx + w], cudaNv12ptr, outIdx + cudaPitch, &u, &v);
+		output(src[idx + w + 1], cudaNv12ptr, outIdx + cudaPitch + 1, &u, &v);
+
+		outIdx = (y + h) * cudaPitch + x * 2;
+		cudaNv12ptr[outIdx] = (uchar) roundf(u / 4 * 255);
+		cudaNv12ptr[outIdx + 1] = (uchar) roundf(v / 4 * 255);
+	}
 }
 
 __global__ void kernel_scale_8u32f(cudaTextureObject_t texObj, cuMatf dest) {
@@ -136,18 +249,6 @@ __global__ void kernel_scale_32f8u(cudaTextureObject_t texObj, cuMatc dest) {
 	if (x < dest.w && y < dest.h) {
 		float val = tex2D<float>(texObj, x, y);
 		dest.at(y, x) = (uchar) roundf(val * 255.0f);
-	}
-}
-
-__global__ void kernel_warp_back(cudaTextureObject_t texObj, cuMatf dest, cu::Affine trf) {
-	uint x = blockIdx.x * blockDim.x + threadIdx.x;
-	uint y = blockIdx.y * blockDim.y + threadIdx.y;
-
-	float xx = (float) (x * trf.m00 + y * trf.m01 + trf.m02);
-	float yy = (float) (x * trf.m10 + y * trf.m11 + trf.m12);
-	if (x < dest.w && y < dest.h && xx >= 0.0f && xx <= dest.w - 1 && yy >= 0.0f && yy <= dest.h - 1) {
-		//dest.at(y, x) = tex2D<float>(texObj, xx + 0.5f, yy + 0.5f); //linear interpolation
-		dest.at(y, x) = tex2Dinterp(texObj, xx, yy);
 	}
 }
 
@@ -172,45 +273,19 @@ __global__ void kernel_remap_downsize(cudaTextureObject_t texObj, cuMatf dest, c
 	}
 }
 
-__global__ void kernel_uv_to_nv12(cudaTextureObject_t texObj, uchar* nvencPtr, int cudaPitch, int w, int h) {
+__global__ void kernel_filter(cudaTextureObject_t texObj, cuMatf dest, size_t ki, int dx, int dy) {
 	uint x = blockIdx.x * blockDim.x + threadIdx.x;
 	uint y = blockIdx.y * blockDim.y + threadIdx.y;
-
-	if (x < w / 2 && y < h / 2) {
-		//u
-		float val = tex2D<float>(texObj, x * 2 + 1, y * 2 + 1);
-		nvencPtr[cudaPitch * y + x * 2] = (uchar) (val * 255.0f);
-		//v
-		val = tex2D<float>(texObj, x * 2 + 1, y * 2 + h + 1);
-		nvencPtr[cudaPitch * y + x * 2 + 1] = (uchar) (val * 255.0f);
-	}
-}
-
-__global__ void kernel_filter_horizontal(cudaTextureObject_t texObj, cuMatf dest, size_t filterKernelIndex) {
-	uint x = blockIdx.x * blockDim.x + threadIdx.x;
-	uint y = blockIdx.y * blockDim.y + threadIdx.y;
-	const CudaFilterKernel& kernel = filterKernels[filterKernelIndex];
+	const CudaFilterKernel& kernel = filterKernels[ki];
 
 	if (x < dest.w && y < dest.h) {
 		float result = 0.0f;
+		int ix = x - dx * kernel.siz / 2;
+		int iy = y - dy * kernel.siz / 2;
 		for (int i = 0; i < kernel.siz; i++) {
-			int ix = x - kernel.siz / 2 + i;
-			result = fma(tex2D<float>(texObj, ix, y), kernel.k[i], result);
-		}
-		dest.at(y, x) = result;
-	}
-}
-
-__global__ void kernel_filter_vertical(cudaTextureObject_t texObj, cuMatf dest, size_t filterKernelIndex) {
-	uint x = blockIdx.x * blockDim.x + threadIdx.x;
-	uint y = blockIdx.y * blockDim.y + threadIdx.y;
-	const CudaFilterKernel& kernel = filterKernels[filterKernelIndex];
-
-	if (x < dest.w && y < dest.h) {
-		float result = 0.0f;
-		for (int i = 0; i < kernel.siz; i++) {
-			int iy = y - kernel.siz / 2 + i;
-			result = fma(tex2D<float>(texObj, x, iy), kernel.k[i], result);
+			result = fma(tex2D<float>(texObj, ix, iy), kernel.k[i], result);
+			ix += dx;
+			iy += dy;
 		}
 		dest.at(y, x) = result;
 	}
@@ -229,20 +304,77 @@ __global__ void kernel_yuv8_to_rgb8(cudaTextureObject_t texObj, uchar* rgb, int 
 	}
 }
 
-__global__ void kernel_yuv32_to_rgb8(cudaTextureObject_t texObj, uchar* rgb, int w, int h) {
+__global__ void kernel_yuv128_to_rgb8(cudaTextureObject_t texObj, uchar* rgb, int w, int h) {
 	uint x = blockIdx.x * blockDim.x + threadIdx.x;
 	uint y = blockIdx.y * blockDim.y + threadIdx.y;
 
 	if (x < w && y < h) {
-		float colY = tex2D<float>(texObj, x, y);
-		float colU = tex2D<float>(texObj, x, y + h);
-		float colV = tex2D<float>(texObj, x, y + h + h);
+		float4 yuv = tex2D<float4>(texObj, x, y);
 		uchar* dest = rgb + 3ull * (y * w + x);
-		yuv_to_rgb_func(colY * 255.0f, colU * 255.0f, colV * 255.0f, dest, dest + 1, dest + 2);
+		yuv_to_rgb_func(yuv.x * 255.0f, yuv.y * 255.0f, yuv.z * 255.0f, dest, dest + 1, dest + 2);
 	}
 }
 
-//----------- callers
+//----------- callers float4
+
+cudaError_t cu::scale_8u32f_3(uchar* src, int srcStep, float4* dest, int destStep, int w, int h, cudaStream_t cs) {
+	KernelContext ki = prepareTexture(src, srcStep, w, h * 3, w, h);
+	cuMatf4 destMat(dest, h, w, destStep);
+	kernel_scale_8u32f_3 <<<ki.blocks, ki.threads, 0, cs>>> (ki.texture, destMat);
+	cudaDestroyTextureObject(ki.texture);
+	return cudaGetLastError();
+}
+
+cudaError_t cu::warp_back_32f_3(float4* src, int srcStep, float4* dest, int destStep, int w, int h, cu::Affine trf, cudaStream_t cs) {
+	KernelContext ki = prepareTexture(src, srcStep, w, h);
+	cuMatf4 destMat(dest, h, w, destStep);
+	kernel_warp_back_3 <<<ki.blocks, ki.threads, 0, cs>>> (ki.texture, destMat, trf);
+	cudaDestroyTextureObject(ki.texture);
+	return cudaGetLastError();
+}
+
+cudaError_t cu::filter_32f_h_3(float4* src, float4* dest, int step, int w, int h, cudaStream_t cs) {
+	KernelContext ki = prepareTexture(src, step, w, h);
+	cuMatf4 destMat(dest, h, w, step);
+	kernel_filter_3 <<<ki.blocks, ki.threads, 0, cs>>> (ki.texture, destMat, 5, 1, 0);
+	cudaDestroyTextureObject(ki.texture);
+	return cudaGetLastError();
+}
+
+cudaError_t cu::filter_32f_v_3(float4* src, float4* dest, int step, int w, int h, cudaStream_t cs) {
+	KernelContext ki = prepareTexture(src, step, w, h);
+	cuMatf4 destMat(dest, h, w, step);
+	kernel_filter_3 <<<ki.blocks, ki.threads, 0, cs>>> (ki.texture, destMat, 5, 0, 1);
+	cudaDestroyTextureObject(ki.texture);
+	return cudaGetLastError();
+}
+
+cudaError_t cu::unsharp_32f_3(float4* base, float4* gauss, float4* dest, int step, int w, int h, cudaStream_t cs) {
+	dim3 threads = configThreads();
+	dim3 blocks = configBlocks(threads, w, h);
+	kernel_unsharp_3 <<<blocks, threads, 0, cs>>> (base, gauss, dest, step, w, h);
+	return cudaGetLastError();
+}
+
+cudaError_t cu::outputHost(float4* src, int srcStep, uchar* destYuv, int destStep, int w, int h, cudaStream_t cs) {
+	dim3 threads = configThreads();
+	dim3 blocks = configBlocks(threads, w, h);
+	kernel_output_host <<<blocks, threads, 0, cs>>> (src, srcStep, destYuv, destStep, w, h);
+	return cudaGetLastError();
+}
+
+cudaError_t cu::outputNvenc(float4* src, int srcStep, uchar* cudaNv12ptr, int cudaPitch, int w, int h, cudaStream_t cs) {
+	dim3 threads = configThreads();
+	dim3 blocks = configBlocks(threads, w / 2, h / 2);
+	kernel_output_nvenc <<<blocks, threads, 0, cs>>> (src, srcStep, cudaNv12ptr, cudaPitch, w, h);
+	return cudaGetLastError();
+}
+
+cudaError_t cu::copy_32f_3(float4* src, int srcStep, float4* dest, int destStep, int w, int h, cudaStream_t cs) {
+	return cudaMemcpy2DAsync(dest, destStep * sizeof(float4), src, srcStep * sizeof(float4), w * sizeof(float4), h, cudaMemcpyDefault, cs);
+}
+
+//----------- callers float
 
 cudaError_t cu::scale_8u32f(uchar* src, int srcStep, float* dest, int destStep, int w, int h, cudaStream_t cs) {
 	KernelContext ki = prepareTexture(src, srcStep, w, h);
@@ -252,66 +384,33 @@ cudaError_t cu::scale_8u32f(uchar* src, int srcStep, float* dest, int destStep, 
 	return cudaGetLastError();
 }
 
-cudaError_t cu::scale_32f8u(float* src, int srcStep, uchar* dest, int destStep, int w, int h, cudaStream_t cs) {
-	KernelContext ki = prepareTexture(src, srcStep, w, h);
-	cuMatc destMat(dest, h, w, destStep);
-	kernel_scale_32f8u <<<ki.blocks, ki.threads, 0, cs>>> (ki.texture, destMat);
-	cudaDestroyTextureObject(ki.texture);
-	return cudaGetLastError();
-}
-
-cudaError_t cu::copy_32f(float* src, int srcStep, float* dest, int destStep, int w, int h) {
-	return cudaMemcpy2D(dest, destStep * sizeof(float), src, srcStep, w * sizeof(float), h, cudaMemcpyDeviceToDevice);
-}
-
-cudaError_t cu::warp_back_32f(float* src, int srcStep, float* dest, int destStep, int w, int h, cu::Affine trf, cudaStream_t cs) {
-	KernelContext ki = prepareTexture(src, srcStep, w, h);
-	cuMatf destMat(dest, h, w, destStep);
-	kernel_warp_back <<<ki.blocks, ki.threads, 0, cs>>> (ki.texture, destMat, trf);
-	cudaDestroyTextureObject(ki.texture);
-	return cudaGetLastError();
+cudaError_t cu::copy_32f_3(uchar* src, int srcStep, uchar* dest, int destStep, int w, int h, cudaStream_t cs) {
+	return cudaMemcpy2DAsync(dest, destStep, src, srcStep, w, h, cudaMemcpyDefault, cs);
 }
 
 cudaError_t cu::filter_32f_h(float* src, float* dest, int srcStep, int w, int h, size_t filterKernelIndex, cudaStream_t cs) {
 	KernelContext ki = prepareTexture(src, srcStep, w, h);
-	cuMatf destMat(dest, h, w, srcStep / sizeof(float));
-	kernel_filter_horizontal <<<ki.blocks, ki.threads, 0, cs>>> (ki.texture, destMat, filterKernelIndex);
+	cuMatf destMat(dest, h, w, srcStep);
+	kernel_filter <<<ki.blocks, ki.threads, 0, cs>>> (ki.texture, destMat, filterKernelIndex, 1, 0);
 	cudaDestroyTextureObject(ki.texture);
 	return cudaGetLastError();
 }
 
 cudaError_t cu::filter_32f_v(float* src, float* dest, int srcStep, int w, int h, size_t filterKernelIndex, cudaStream_t cs) {
 	KernelContext ki = prepareTexture(src, srcStep, w, h);
-	cuMatf destMat(dest, h, w, srcStep / sizeof(float));
-	kernel_filter_vertical << <ki.blocks, ki.threads, 0, cs >> > (ki.texture, destMat, filterKernelIndex);
+	cuMatf destMat(dest, h, w, srcStep);
+	kernel_filter << <ki.blocks, ki.threads, 0, cs >> > (ki.texture, destMat, filterKernelIndex, 0, 1);
 	cudaDestroyTextureObject(ki.texture);
 	return cudaGetLastError();
 }
 
-cudaError_t cu::unsharp_32f(float* base, float* gauss, int srcStep, float* dest, int destStep, int w, int h, float factor, cudaStream_t cs) {
-	KernelContext kiBase = prepareTexture(base, srcStep, w, h);
-	KernelContext kiGauss = prepareTexture(gauss, srcStep, w, h);
-	cuMatf destMat(dest, h, w, destStep);
-	kernel_unsharp <<<kiBase.blocks, kiBase.threads, 0, cs>>> (kiBase.texture, kiGauss.texture, destMat, factor);
-	cudaDestroyTextureObject(kiBase.texture);
-	cudaDestroyTextureObject(kiGauss.texture);
-	return cudaGetLastError();
-}
-
-cudaError_t cu::remap_downsize_32f(float* src, int srcStep, float* dest, int destStep, int wsrc, int hsrc) {
+cudaError_t cu::remap_downsize_32f(float* src, int srcStep, float* dest, int destStep, int wsrc, int hsrc, cudaStream_t cs) {
 	int wdest = wsrc / 2;
 	int hdest = hsrc / 2;
 	KernelContext ki = prepareTexture(src, srcStep, wsrc, hsrc, wdest, hdest);
 	cuMatf srcMat(src, hsrc, wsrc, destStep);
 	cuMatf destMat(dest, hdest, wdest, destStep);
-	kernel_remap_downsize <<<ki.blocks, ki.threads>>> (ki.texture, destMat, srcMat);
-	cudaDestroyTextureObject(ki.texture);
-	return cudaGetLastError();
-}
-
-cudaError_t cu::uv_to_nv12(float* src, int srcStep, uchar* nvencPtr, int cudaPitch, int w, int h, cudaStream_t cs) {
-	KernelContext ki = prepareTexture(src, srcStep, w, h * 2, w / 2, h / 2);
-	kernel_uv_to_nv12 <<<ki.blocks, ki.threads, 0, cs>>> (ki.texture, nvencPtr, cudaPitch, w, h);
+	kernel_remap_downsize <<<ki.blocks, ki.threads, 0, cs>>> (ki.texture, destMat, srcMat);
 	cudaDestroyTextureObject(ki.texture);
 	return cudaGetLastError();
 }
@@ -323,9 +422,9 @@ cudaError_t cu::yuv_to_rgb(uchar* src, int srcStep, uchar* dest, int destStep, i
 	return cudaGetLastError();
 }
 
-cudaError_t cu::yuv_to_rgb(float* src, int srcStep, uchar* dest, int destStep, int w, int h) {
-	KernelContext ki = prepareTexture(src, srcStep, w, 3 * h, w, h);
-	kernel_yuv32_to_rgb8 <<<ki.blocks, ki.threads>>> (ki.texture, dest, w, h);
+cudaError_t cu::yuv_to_rgb(float4* src, int srcStep, uchar* dest, int destStep, int w, int h) {
+	KernelContext ki = prepareTexture(src, srcStep, w, h);
+	kernel_yuv128_to_rgb8 <<<ki.blocks, ki.threads>>> (ki.texture, dest, w, h);
 	cudaDestroyTextureObject(ki.texture);
 	return cudaGetLastError();
 }

@@ -31,6 +31,17 @@ struct BlendInput {
 	int separatorWidth = 0;
 };
 
+struct Triplet {
+	float y, u, v;
+
+	float operator [] (size_t idx) const { 
+		if (idx == 0) return y;
+		if (idx == 1) return u;
+		if (idx == 2) return v;
+		throw std::exception("invalid index");
+	}
+};
+
 struct OutputContext {
 	bool encodeCpu;
 	bool encodeCuda;
@@ -46,13 +57,12 @@ enum class BackgroundMode {
 };
 
 struct CoreData {
-	//inside CoreData struct all values must be initialized
-	//see __constant__ variables in device code
+	//inside CoreData struct all values must be initialized to be used as __constant__ variable in device code
 
-public:
-	size_t BUFFER_COUNT = 21;	    //number of buffer buffer frames to do filtering and output
+protected:
 	int MAX_POINTS_COUNT = 150;		//max number of points in x or y direction
 
+public:
 	int zMin = -1;
 	int zMax = -1;				    //pyramid steps used for actual computing
 	int zCount = 3;			        //number of pyramid levels to use for stabilization
@@ -60,15 +70,12 @@ public:
 	int pyramidRowCount = -1;	    //number of rows for one pyramid, for example all the rows of Y data
 	size_t pyramidCount = 2;	    //number of pyramids to allocate in memory
 
-	int cudapitch = 0;				//alignment of rows in cuda device memory
 	int cpupitch = 0;
-	int strideCount = 0;		    //number of float values in a row including padding
-	int strideFloatBytes = 0;		//number of bytes in an image row including padding
 	int compMaxIter = 20;			//max loop iterations
 	double compMaxTol = 0.05;		//tolerance to stop window pattern matching
 
-	std::array<float, 3> unsharp = { 0.6f, 0.3f, 0.3f };	//ffmpeg unsharp=5:5:0.6:3:3:0.3
-	ColorNorm bgcol_yuv = {};								//background fill colors in yuv
+	Triplet unsharp = { 0.6f, 0.3f, 0.3f };	//ffmpeg unsharp=5:5:0.6:3:3:0.3
+	ColorNorm bgcol_yuv = {};				//background fill colors in yuv
 	BlendInput blendInput = {};
 	BackgroundMode bgmode = BackgroundMode::BLEND;
 

@@ -43,8 +43,8 @@ class KernelTimer {
 public:
 	dim3 block;
 	dim3 thread;
-	int64_t timeStart; //nanos
-	int64_t timeStop;  //nanos
+	int64_t timeStart = 0; //nanos
+	int64_t timeStop = 0;  //nanos
 
 	__device__ void start();
 
@@ -65,6 +65,23 @@ struct ComputeKernelParam : KernelParam {
 	int64_t frameIdx;
 	volatile char* d_interrupt;
 	char* d_computed;
+};
+
+//measuring runtime
+class ConsoleTimer {
+
+	std::chrono::steady_clock::time_point t1;
+
+public:
+	ConsoleTimer() {
+		t1 = std::chrono::high_resolution_clock::now();
+	}
+
+	~ConsoleTimer() {
+		auto t2 = std::chrono::high_resolution_clock::now();
+		auto delta = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
+		std::printf("elapsed %zd us\n", delta);
+	}
 };
 
 void kernelComputeCall(ComputeKernelParam param, ComputeTextures& tex, PointResult* d_results);

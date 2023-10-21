@@ -173,7 +173,7 @@ public:
 	CudaFrame(MainData& data) : MovieFrame(data) {
 		DeviceInfo* dev = data.deviceList[data.deviceSelected];
 		size_t devIdx = dev->targetIndex;
-		const cudaDeviceProp& prop = data.deviceListCuda[devIdx].props;
+		const cudaDeviceProp& prop = data.cudaInfo.devices[devIdx].props;
 		cudaInit(data, (int) devIdx, prop, inputFrame);
 	}
 
@@ -206,7 +206,7 @@ public:
 
 	void computePartOne() override {
 		DeviceInfo* dev = mData.deviceList[mData.deviceSelected];
-		const DeviceInfoCuda& dic = mData.deviceListCuda[dev->targetIndex];
+		const DeviceInfoCuda& dic = mData.cudaInfo.devices[dev->targetIndex];
 		cudaCompute1(mStatus.frameInputIndex, mData, dic.props);
 	}
 
@@ -258,10 +258,12 @@ public:
 	OpenClFrame(MainData& data) : MovieFrame(data) {
 		DeviceInfo* dev = data.deviceList[data.deviceSelected];
 		size_t devIdx = dev->targetIndex;
-		cl::init(data, inputFrame, devIdx);
+		cl::init(data, inputFrame, data.clinfo, devIdx);
 	}
 
-	~OpenClFrame() {}
+	~OpenClFrame() {
+		cl::shutdown(mData);
+	}
 
 	void inputData(ImageYuv& frame) override { 
 		cl::inputData(mStatus.frameInputIndex, mData, frame);

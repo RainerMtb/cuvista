@@ -67,6 +67,7 @@ void similarTransformPerformance() {
 void readAndWriteOneFrame() {
 	MainData data;
 	data.probeCuda();
+	data.collectDeviceInfo();
 	data.inputCtx = { 1080, 1920, 2, 1 };
 	data.validate();
 	Stats& status = data.status;

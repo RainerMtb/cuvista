@@ -21,46 +21,6 @@
 #include <algorithm>
 
 
-void check() {
-	int frameSkip = 0;
-	int frameOut = 20;
-
-	MainData data;
-	FFmpegReader reader;
-	data.probeCuda();
-	data.inputCtx = reader.open("//READYNAS/Data/Documents/x.orig/bikini.1.1.avi");
-	data.validate();
-	NullWriter writer(data);
-	CudaFrame frame(data);
-	OutputContext oc = { true, false, &writer.outputFrame, nullptr, 0 };
-	ResultImage resim(data, {});
-
-	for (int i = 0; i < frameSkip; i++) {
-		reader.read(frame.inputFrame, data.status);
-		if (i % 25 == 0)
-			std::cout << "skipping " << i << std::endl;
-	}
-
-	frame.inputData(frame.inputFrame);
-	frame.createPyramid();
-	data.status.frameInputIndex++;
-
-	for (int i = 0; i < frameOut; i++) {
-		std::cout << "reading " << data.status.frameInputIndex << std::endl;
-		reader.read(frame.inputFrame, data.status);
-		frame.inputData(frame.inputFrame);
-		frame.createPyramid();
-		frame.computePartOne();
-		frame.computePartTwo();
-		frame.computeTerminate();
-		const AffineTransform& trf = frame.computeTransform(frame.resultPoints);
-		std::string fname = std::format("c:/temp/im{:03d}.bmp", i);
-		resim.write(frame.mFrameResult, i, frame.getInput(i), fname);
-		data.status.frameInputIndex++;
-	}
-
-}
-
 int main() {
 	std::cout << "----------------------------" << std::endl << "TestMain:" << std::endl;
 	//check();

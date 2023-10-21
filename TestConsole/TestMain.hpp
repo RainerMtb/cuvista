@@ -50,3 +50,5 @@ void openClInvTest(size_t s1, size_t s2);
 
 void compare();
 void pyramid();
+
+void check();

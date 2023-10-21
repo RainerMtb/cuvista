@@ -143,6 +143,37 @@ __kernel void unsharp(__read_only image2d_t src, __write_only image2d_t dest, __
 	write_imagef(dest, coords, val);
 }
 
+//input float values in range 0..255
+void yuv_to_rgb_func(float yf, float uf, float vf, uchar* r, uchar* g, uchar* b) {
+	*r = (uchar) clamp(yf + (1.370705f * (vf - 128.0f)), 0.0f, 255.0f);
+	*g = (uchar) clamp(yf - (0.337633f * (uf - 128.0f)) - (0.698001f * (vf - 128.0f)), 0.0f, 255.0f);
+	*b = (uchar) clamp(yf + (1.732446f * (uf - 128.0f)), 0.0f, 255.0f);
+}
+
+__kernel void yuv8u_to_rgb(__read_only image2d_t src, __global uchar* dest) {
+	int c = get_global_id(0);
+	int r = get_global_id(1);
+	int w = get_global_size(0);
+	int h = get_global_size(1);
+
+	uchar y = read_imageui(src, (int2)(c, r)).x;
+	uchar u = read_imageui(src, (int2)(c, r + h)).x;
+	uchar v = read_imageui(src, (int2)(c, r + h + h)).x;
+	uchar* ptr = dest + 3 * (r * w + c);
+	yuv_to_rgb_func(y, u, v, ptr, ptr + 1, ptr + 2);
+}
+
+__kernel void yuv32f_to_rgb(__read_only image2d_t src, __global uchar* dest) {
+	int c = get_global_id(0);
+	int r = get_global_id(1);
+	int w = get_global_size(0);
+	int h = get_global_size(1);
+
+	float4 yuv = read_imagef(src, (int2)(c, r)) * 255.0f;
+	uchar* ptr = dest + 3 * (r * w + c);
+	yuv_to_rgb_func(yuv.s0, yuv.s1, yuv.s2, ptr, ptr + 1, ptr + 2);
+}
+
 __kernel void scrap() {}
 
 )";

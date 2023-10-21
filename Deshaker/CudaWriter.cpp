@@ -7,7 +7,7 @@ void CudaFFmpegWriter::open(EncodingOption videoCodec) {
 
     //select codec
     size_t deviceIndex = mData.deviceList[mData.deviceSelected]->type == DeviceType::CUDA ? mData.deviceList[mData.deviceSelected]->targetIndex : 0;
-    const DeviceInfoCuda& dic = mData.deviceListCuda[deviceIndex];
+    const DeviceInfoCuda& dic = mData.cudaInfo.devices[deviceIndex];
     if (videoCodec.codec == Codec::AUTO) videoCodec.codec = dic.encodingOptions[0].codec;
     GUID guid = guidMap[videoCodec.codec];
 

@@ -30,7 +30,6 @@ struct FilterKernelData {
 };
 
 struct ClData {
-	std::vector<cl::Device> devices;
 	cl::Context context;
 	cl::CommandQueue queue;
 
@@ -41,6 +40,7 @@ struct ClData {
 	cl::Buffer filterKernel;
 	std::array<cl::Image2D, 5> out;
 	cl::Image2D yuvOut;
+	cl::Buffer rgbOut;
 
 	std::map<std::string, cl::Kernel> kernelMap = {
 		{"scale_8u32f_1", {}},
@@ -51,6 +51,8 @@ struct ClData {
 		{"remap_downsize_32f", {}},
 		{"warp_back", {}},
 		{"unsharp", {}},
+		{"yuv8u_to_rgb", {}},
+		{"yuv32f_to_rgb", {}},
 		{"scrap", {}},
 	};
 
@@ -94,6 +96,8 @@ namespace cl {
 	void remap_downsize_32f(cl::Image src, cl::Image dest, ClData& clData);
 	void warp_back(cl::Image src, cl::Image dest, ClData& clData, std::array<double, 6> trf);
 	void unsharp(cl::Image src, cl::Image dest, cl::Image gauss, ClData& clData, std::array<float, 3> factor);
+
+	void yuv_to_rgb(const std::string& kernelName, cl::Image src, unsigned char* imageData, ClData& clData, int w, int h);
 
 	void runKernel(cl::Kernel& kernel, cl::Image src, cl::Image dest, cl::CommandQueue queue);
 	void runKernel(cl::Kernel& kernel, cl::Image src, cl::Image dest, cl::CommandQueue queue, size_t w, size_t h);

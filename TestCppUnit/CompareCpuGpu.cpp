@@ -73,11 +73,13 @@ public:
 		//Cuda
 		dataCuda.probeCuda();
 		dataCuda.probeOpenCl();
+		dataCuda.collectDeviceInfo();
 		dataCuda.deviceSelected = 2;
 		frameCuda = runInit<CudaFrame>(dataCuda);
 
 		//CPU
 		dataCpu.deviceSelected = 0;
+		dataCpu.collectDeviceInfo();
 		frameCpu = runInit<CpuFrame>(dataCpu);
 	}
 
