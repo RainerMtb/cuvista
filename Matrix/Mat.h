@@ -318,6 +318,16 @@ public:
 		return generate(rows, cols, [&] (size_t r, size_t c) { return dist(generator); });
 	}
 
+	static Mat<T> rand(size_t rows, size_t cols, T lowerBound, T upperBound, T maxCondition) {
+		Mat<T> out;
+		T cond = maxCondition;
+		while (cond >= maxCondition) {
+			out = rand(rows, cols, lowerBound, upperBound);
+			cond = out.cond();
+		}
+		return out;
+	}
+
 	static Mat<T> hilb(size_t n) {
 		return generate(n, n, [] (size_t r, size_t c) {return 1 / (1 + (T) r + (T) c); });
 	}
@@ -687,42 +697,37 @@ public:
 		return generate(rows(), cols(), func, pool);
 	}
 
-	Mat<T> filter2D(const Mat<T>& f, ThreadPoolBase& pool = defaultPool) const {
-		return filter(f, pool).filter(f.trans(), pool);
+	Mat<T>& filter1D(const T* kernel, size_t siz, size_t offsetX, size_t offsetY, size_t dx, size_t dy, Mat<T>& dest, ThreadPoolBase& pool = defaultPool) {
+		//check matrix dimensions
+		assert(cols() == dest.cols() && rows() == dest.rows() && "dimension mismatch");
+
+		//vector of indizes
+		std::vector<size_t> idx(siz * 2);
+		std::iota(idx.data(), idx.data() + siz, 0);
+
+		//function to filter for one point
+		auto func = [&] (size_t r, size_t c) {
+			T sum = 0;
+			for (size_t i = 0; i < siz; i++) {
+				size_t x = clampUnsigned(c + idx[offsetX + i], dx, 0, cols() - 1);
+				size_t y = clampUnsigned(r + idx[offsetY + i], dy, 0, rows() - 1);
+				sum += at(y, x) * kernel[i];
+			}
+			return sum;
+		};
+
+		//apply function
+		return dest.setArea(func, pool);
 	}
 
 	//filter mat horizontally through given filter kernel
 	Mat<T>& filter1D_h(const T* kernel, size_t kernelSize, Mat<T>& dest, ThreadPoolBase& pool = defaultPool) {
-		//check matrix dimensions
-		assert(cols() == dest.cols() && rows() == dest.rows() && "dimension mismatch");
-
-		//function to filter for one point
-		auto func = [&] (size_t r, size_t c) {
-			T sum = 0;
-			for (size_t i = 0; i < kernelSize; i++) {
-				size_t ix = clampUnsigned(c + i, kernelSize / 2, 0, cols() - 1);
-				sum = std::fma(at(r, ix), kernel[i], sum);
-			}
-			return sum;
-		};
-		return dest.setArea(func, pool);
+		return filter1D(kernel, kernelSize, 0, kernelSize, kernelSize / 2, 0, dest, pool);
 	}
 
 	//filter mat vertically through given filter kernel
 	Mat<T>& filter1D_v(const T* kernel, size_t kernelSize, Mat<T>& dest, ThreadPoolBase& pool = defaultPool) {
-		//check matrix dimensions
-		assert(cols() == dest.cols() && rows() == dest.rows() && "dimension mismatch");
-
-		//function to filter for one point
-		auto func = [&] (size_t r, size_t c) {
-			T sum = 0;
-			for (size_t i = 0; i < kernelSize; i++) {
-				size_t iy = clampUnsigned(r + i, kernelSize / 2, 0, rows() - 1);
-				sum = std::fma(at(iy, c), kernel[i], sum);
-			}
-			return sum;
-		};
-		return dest.setArea(func, pool);
+		return filter1D(kernel, kernelSize, kernelSize, 0, 0, kernelSize / 2, dest, pool);
 	}
 
 	//evaluate this mat at points given by x and y mats respective, put results into dest

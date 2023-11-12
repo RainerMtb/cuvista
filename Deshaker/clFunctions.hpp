@@ -22,22 +22,17 @@
 #include "ErrorLogger.hpp"
 #include <map>
 
-struct FilterKernelData {
-	std::vector<cl_float4> filterKernel;  //vector holding filter kernel values
-	cl_int8 idx;                          //vector holding index offset values
-	int siz;                              //size of this kernel
-	inline static int maxSize = 8;        //max size
-};
-
 struct ClData {
 	cl::Context context;
 	cl::CommandQueue queue;
 
+	// input yuv frames
 	std::vector<cl::Image2D> yuv;
+	// stored pyramid images, first index frame, second index 0:Y, 1:DX, 2:DY, third index level
 	std::vector<std::vector<std::vector<cl::Image2D>>> pyr;
+	// buffers for filtering on pyramid creation
 	std::vector<std::vector<cl::Image2D>> pyrBuffer;
 
-	cl::Buffer filterKernel;
 	std::array<cl::Image2D, 5> out;
 	cl::Image2D yuvOut;
 	cl::Buffer rgbOut;
@@ -54,27 +49,7 @@ struct ClData {
 		{"yuv8u_to_rgb", {}},
 		{"yuv32f_to_rgb", {}},
 		{"scrap", {}},
-	};
-
-	FilterKernelData filterGauss = {
-		{
-		{0.0625f, 0.0f, 0.0f},
-		{0.25f, 0.25f, 0.25f},
-		{0.375f, 0.5f, 0.5f},
-		{0.25f, 0.25f, 0.25f},
-		{0.0625f, 0.0f, 0.0f},
-		},
-		{-2, -1, 0, 1, 2},
-		5,
-	};
-	FilterKernelData filterDifference = {
-		{
-		{-0.5f},
-		{0.0f},
-		{0.5f},
-		},
-		{-1, 0, 1},
-		3,
+		{"compute", {}},
 	};
 
 	cl::Kernel& kernel(const std::string& key) {
@@ -87,15 +62,15 @@ namespace cl {
 	void scale_8u32f_3(cl::Image src, cl::Image dest, ClData& clData);
 	void scale_32f8u_3(cl::Image src, cl::Image dest, ClData& clData);
 
-	void filter_32f_h1(cl::Image src, cl::Image dest, FilterKernelData& filterData, ClData& clData);
-	void filter_32f_h3(cl::Image src, cl::Image dest, FilterKernelData& filterData, ClData& clData);
-	void filter_32f_v1(cl::Image src, cl::Image dest, FilterKernelData& filterData, ClData& clData);
-	void filter_32f_v3(cl::Image src, cl::Image dest, FilterKernelData& filterData, ClData& clData);
-	void filter_32f_func(cl::Kernel& kernel, cl::Image src, cl::Image dest, FilterKernelData& filterData, cl_int8 ix, cl_int8 iy, ClData& clData);
+	void filter_32f_h1(cl::Image src, cl::Image dest, int filterIndex, ClData& clData);
+	void filter_32f_h3(cl::Image src, cl::Image dest, ClData& clData);
+	void filter_32f_v1(cl::Image src, cl::Image dest, int filterIndex, ClData& clData);
+	void filter_32f_v3(cl::Image src, cl::Image dest, ClData& clData);
+	void filter_32f_func(cl::Kernel& kernel, cl::Image src, cl::Image dest, int filterIndex, int dx, int dy, ClData& clData);
 
 	void remap_downsize_32f(cl::Image src, cl::Image dest, ClData& clData);
 	void warp_back(cl::Image src, cl::Image dest, ClData& clData, std::array<double, 6> trf);
-	void unsharp(cl::Image src, cl::Image dest, cl::Image gauss, ClData& clData, std::array<float, 3> factor);
+	void unsharp(cl::Image src, cl::Image dest, cl::Image gauss, ClData& clData, cl_float4 factor);
 
 	void yuv_to_rgb(const std::string& kernelName, cl::Image src, unsigned char* imageData, ClData& clData, int w, int h);
 

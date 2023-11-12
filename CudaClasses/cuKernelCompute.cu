@@ -51,6 +51,8 @@ __constant__ double eta0[] = { 0, 0, 1, 0, 0, 1 };
 //forward declaration to prevent underline
 template<class T> __device__ T tex2D(cudaTextureObject_t tex, float x, float y);
 
+extern __constant__ CudaData d_core;
+
 //compute displacement
 //one cuda block works one point in the image using one warp
 __global__ void kernelCompute(ComputeTextures tex, PointResult* results, ComputeKernelParam param) {
@@ -59,7 +61,6 @@ __global__ void kernelCompute(ComputeTextures tex, PointResult* results, Compute
 	uint blockIndex = iy0 * gridDim.x + ix0;
 	if (*param.d_interrupt || param.d_computed[blockIndex]) return;
 	param.kernelTimestamps[blockIndex].start();
-	const CudaData& d_core = getCudaData();
 
 	int ir = d_core.ir;
 	int iw = d_core.iw;
@@ -219,7 +220,7 @@ __global__ void kernelCompute(ComputeTextures tex, PointResult* results, Compute
 			//analyse result, decide on continuing loop
 			double err = eta[0] * eta[0] + eta[1] * eta[1];
 			int typeIndex = 0;
-			typeIndex += (int) isnan(err) * 1; //leave loop with fail message FAIL_ETA_NAN
+			typeIndex += (int) isnan(err); //leave loop with fail message FAIL_ETA_NAN
 			typeIndex += (int) (err < d_core.compMaxTol) * 2; //leave loop with success SUCCESS_ABSOLUTE_ERR
 			typeIndex += (int) (fabs(err - bestErr) / bestErr < d_core.compMaxTol * d_core.compMaxTol) * 3; //SUCCESS_STABLE_ITER
 			result = resultTypes[typeIndex];

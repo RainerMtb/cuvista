@@ -135,11 +135,11 @@ void CpuFrame::createPyramid() {
 
 void CpuFrame::computeTerminate() {
 	size_t pyrIdx = mStatus.frameInputIndex % mPyr.size();
-	size_t pyrIdxPrev = (pyrIdx == 0 ? mPyr.size() : pyrIdx) - 1;
+	size_t pyrIdxPrev = pyrIdx - 1;
 	CpuFrameItem& frame = mPyr[pyrIdx];
 	CpuFrameItem& previous = mPyr[pyrIdxPrev];
 	assert(frame.frameIndex > 0 && frame.frameIndex == previous.frameIndex + 1 && "wrong frames to compute");
-	Mat<double>::precision(16);
+	//Mat<double>::precision(16);
 
 	for (size_t threadIdx = 0; threadIdx < mData.cpuThreads; threadIdx++) mPool.add([&, threadIdx] {
 		int ir = mData.ir;

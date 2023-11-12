@@ -453,6 +453,7 @@ void cudaCompute1(int64_t frameIdx, const CudaData& core, const cudaDeviceProp& 
 
 	assert(checkKernelParameters(core, props) && "invalid kernel parameters");
 	compTex.create(pyrIdx, pyrIdxPrev, core);
+	//reset computed flags
 	handleStatus(cudaMemsetAsync(d_computed, 0, 1ll * core.ixCount * core.iyCount, cs[0]), "error @compute #20");
 	ComputeKernelParam param = { 
 		core.computeBlocks, 

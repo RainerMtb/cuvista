@@ -16,21 +16,21 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
-#include "CudaData.cuh"
+#include "CoreData.hpp"
 
-__device__ __host__ bool PointResult::isValid() const {
+bool PointResult::isValid() const {
 	return result > PointResultType::RUNNING;
 }
 
-__device__ __host__ int PointResult::resultValue() const {
+int PointResult::resultValue() const {
 	return static_cast<int>(result) - static_cast<int>(PointResultType::RUNNING);
 }
 
-__device__ __host__ bool PointResult::equal(double a, double b, double tol) const {
+bool PointResult::equal(double a, double b, double tol) const {
 	return (isnan(a) && isnan(b)) || std::fabs(a - b) <= tol;
 }
 
-__device__ __host__ bool PointResult::equals(const PointResult& other, double tol) const {
+bool PointResult::equals(const PointResult& other, double tol) const {
 	bool checkType = result == other.result; //type of result
 	bool checkIndex = idx == other.idx && ix0 == other.ix0 && iy0 == other.iy0 && px == other.px && py == other.py && x == other.x && y == other.y;
 	bool checkU = equal(u, other.u, tol); //displacement in X
@@ -38,15 +38,15 @@ __device__ __host__ bool PointResult::equals(const PointResult& other, double to
 	return checkType && checkIndex && checkU && checkV;
 }
 
-__device__ __host__ bool PointResult::operator == (const PointResult& other) const {
+bool PointResult::operator == (const PointResult& other) const {
 	return equals(other, 0.0);
 }
 
-__device__ __host__ bool PointResult::operator != (const PointResult& other) const {
+bool PointResult::operator != (const PointResult& other) const {
 	return !(*this == other);
 }
 
-__host__ std::ostream& operator << (std::ostream& out, const PointResult& res) {
+std::ostream& operator << (std::ostream& out, const PointResult& res) {
 	out << "ix0=" << res.ix0 << ", iy0=" << res.iy0 << ", u=" << res.u << ", v=" << res.v;
 	return out;
 }

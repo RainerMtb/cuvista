@@ -59,30 +59,53 @@ __kernel void scale_32f8u_3(__read_only image2d_t src, __write_only image2d_t de
 	write_imageui(dest, (int2)(c, r + h + h), (uchar)(val.z));
 }
 
-__kernel void filter_32f_1(__read_only image2d_t src, __write_only image2d_t dest, __constant float4* filterKernel, int8 ix, int8 iy, int siz) {
+const int maxSize = 8;
+
+struct FilterKernel {
+	int siz;
+	float k[maxSize];
+};
+
+__constant struct FilterKernel filterKernels[4] = {
+	{5, {0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f}},
+	{5, {0.0f, 0.25f, 0.5f, 0.25f, 0.0f}},
+	{5, {0.0f, 0.25f, 0.5f, 0.25f, 0.0f}},
+	{3, {-0.5f, 0.0f, 0.5f}},
+};
+
+__kernel void filter_32f_1(__read_only image2d_t src, __write_only image2d_t dest, int filterIndex, int dx, int dy) {
 	int c = get_global_id(0);
 	int r = get_global_id(1);
 
 	float result = 0.0f;
+	int siz = filterKernels[filterIndex].siz;
+	__constant float* k = filterKernels[filterIndex].k;
+	int x = c - dx * siz / 2;
+	int y = r - dy * siz / 2;
 	for (int i = 0; i < siz; i++) {
-		int x = c + ix[i];
-		int y = r + iy[i];
 		float val = read_imagef(src, sampler, (int2)(x, y)).x;
-		result = fma(val, filterKernel[i][0], result);
+		result += val * k[i];
+		x += dx;
+		y += dy;
 	}
 	write_imagef(dest, (int2)(c, r), result);
 }
 
-__kernel void filter_32f_3(__read_only image2d_t src, __write_only image2d_t dest, __constant float4* filterKernel, int8 ix, int8 iy, int siz) {
+__kernel void filter_32f_3(__read_only image2d_t src, __write_only image2d_t dest, int filterIndex, int dx, int dy) {
 	int c = get_global_id(0);
 	int r = get_global_id(1);
 
 	float4 result = 0.0f;
+	int siz = filterKernels[0].siz;
+	int x = c - dx * siz / 2;
+	int y = r - dy * siz / 2;
 	for (int i = 0; i < siz; i++) {
-		int x = c + ix[i];
-		int y = r + iy[i];
 		float4 val = read_imagef(src, sampler, (int2)(x, y));
-		result = fma(val, filterKernel[i], result);
+		result.x += val.x * filterKernels[0].k[i];
+		result.y += val.y * filterKernels[1].k[i];
+		result.z += val.z * filterKernels[2].k[i];
+		x += dx;
+		y += dy;
 	}
 	write_imagef(dest, (int2)(c, r), result);
 }
@@ -124,11 +147,8 @@ __kernel void warp_back(__read_only image2d_t src, __write_only image2d_t dest, 
 		float dy = yy - floor(yy);
 
 		//matching result with cpu code only when separating sums
-		float4 a = (1.0f - dx) * (1.0f - dy) * f00;
-		float4 b = (1.0f - dx) * dy * f10;
-		float4 c = dx * (1.0f - dy) * f01;
-		float4 d = dx * dy * f11;
-		write_imagef(dest, (int2)(x, y), a + b + c + d);
+		float4 val = (1.0f - dx) * (1.0f - dy) * f00 + (1.0f - dx) * dy * f10 + dx * (1.0f - dy) * f01 + dx * dy * f11;
+		write_imagef(dest, (int2)(x, y), val);
 	}
 }
 
@@ -238,13 +258,67 @@ void luinv(double** Apiv, double* A0, double* temp, double* Ainv, int s, int r, 
 }
 )";
 
-inline std::string luinvTestKernel = R"(
-__kernel void luinvTest(__global double* input, __global double* outAinv, int s, __local double* temp) {
-	int c = get_global_id(0) / s;
-	int cols = get_global_size(0) / s;
-	int r = get_global_id(0) - c * s;
+inline std::string norm1Function = R"(
+double norm1(const double* mat, int m, int n, double* temp) {
+	int i = get_local_id(0);
+	int k = get_local_id(1);
+
+	//find max per column
+	if (i < n && k == 0) {
+		temp[i] = fabs(mat[i]); //first row from mat
+		for (int y = 1; y < m; y++) {
+			temp[i] += fabs(mat[y * n + i]);
+		}
+	}
+
+	//find max in row
+	if (i == 0 && k == 0) {
+		for (int x = 1; x < n; x++) {
+			double val = temp[x];
+			if (isnan(val) || val > temp[0]) temp[0] = val;
+		}
+	}
+
+	//max is now first item
+	return temp[0];
+}
+
+//provide an implementation for testing norm1
+void luinv(double** Apiv, double* A0, double* temp, double* Ainv, int s, int r, int ci, int cols) {}
+)";
+
+inline std::string testKernels = R"(
+__kernel void luinvTest(__global double* input, __global double* outAinv, __local double* temp) {
+	int s = get_local_size(0);
+	int r = get_local_id(0);
+	int c = get_local_id(1);
+	int cols = get_local_size(1);
 
 	double** Apiv = (double**) (temp + s);
 	luinv(Apiv, input, temp, outAinv, s, r, c, cols);
+}
+
+__kernel void luinvGroupTest(__global double* input, __global double* output, __local double* shdmem) {
+	int s = get_local_size(0);
+	int offsetLocal = get_local_id(0) * s;
+	int offsetGlobal = get_group_id(0) * s * s;
+	int gid = offsetGlobal + offsetLocal;
+
+	double* src = shdmem;
+	for (int i = 0; i < s; i++) {
+		src[offsetLocal + i] = input[gid + i];
+	}
+
+	double* temp = shdmem + s * s;
+	double** Apiv = (double**) (temp + s);
+	int r = get_local_id(0);
+	int c = get_local_id(1);
+	int cols = get_local_size(1);
+	double* out = output + offsetGlobal;
+	luinv(Apiv, src, temp, out, s, r, c, cols);
+}
+
+__kernel void norm1Test(__global double* mat, int m, int n, __local double* temp, __global double* result) {
+	*result = norm1(mat, m, n, temp);
 }
 )";

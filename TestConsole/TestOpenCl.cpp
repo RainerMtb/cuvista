@@ -20,30 +20,71 @@
 #include "clTest.hpp"
 
 void openClInvTest(size_t s1, size_t s2) {
-	LoadResult res = cltest::loadKernels({ luinvFunction, luinvTestKernel });
+	LoadResult res = cltest::loadKernels({ luinvFunction, testKernels }, "luinvTest");
+	if (res.status != CL_SUCCESS) return;
 
 	for (size_t s = s1; s <= s2; s++) {
-		Matd a = Matd::rand(s, s, -20, 50);
-		Matd ainv = Matd::allocate(s, s);
-		bool isOK = cltest::cl_inv(res, a.data(), ainv.data(), s);
-		Matd b = ainv.times(a);
+		Matd a = Matd::rand(s, s, -20, 50, 1000);
+		Matd ainvCPU = a.inv().value();
+		Matd ainvOCL = Matd::allocate(s, s);
+		bool isOK = cltest::cl_inv(res, a.data(), ainvOCL.data(), s);
 
 		std::cout << "OpenCL inv test, dim=" << s << "; ";
-		if (!b.equalsIdentity()) {
-			Matd cpuinv = a.inv().value();
-			Matd cpub = cpuinv.times(a);
-			if (!cpub.equalsIdentity()) {
-				std::cout << "FAIL IDENTITIY TEST also on CPU" << std::endl;
-
-			} else {
-				std::cout << "FAIL IDENTITIY TEST" << std::endl;
-				if (s > 10) printf("MAX absolute value %f\n", b.abs().max());
-				else b.toConsole("I");
-				//a.saveAsCSV("c:/video/fail.csv");
-			}
+		if (!ainvCPU.equalsExact(ainvOCL)) {
+			Matd delta = ainvCPU.minus(ainvOCL);
+			std::cout << "FAIL " << std::endl;
+			if (s > 6) printf("MAX absolute delta %g\n", delta.abs().max());
+			else delta.toConsole();
 
 		} else {
 			std::cout << "OK" << std::endl;
+		}
+	}
+}
+
+void openClInvGroupTest(int w1, int w2) {
+	LoadResult res = cltest::loadKernels({ luinvFunction, testKernels }, "luinvGroupTest");
+	if (res.status != CL_SUCCESS) return;
+
+	size_t s = 6;
+	for (int groupWidth = w1; groupWidth <= w2; groupWidth++) {
+		Matd a = Matd::rand(s * groupWidth, s, -10, 20, 1000);
+		Matd ainv = Matd::allocate(s * groupWidth, s);
+		for (int i = 0; i < groupWidth; i++) {
+			ainv.setArea(i * s, 0, a.subMat(i * s, 0, s, s).inv().value());
+		}
+
+		Matd clmat = Matd::allocate(s * groupWidth, s);
+		bool isOK = cltest::cl_inv_group(res, a.data(), clmat.data(), groupWidth, s);
+		double deltaMax = ainv.minus(clmat).abs().max();
+		std::cout << "group test " << groupWidth << " ";
+		if (isOK && deltaMax == 0.0) {
+			std::cout << "exactly equal" << std::endl;
+		} else if (isOK) {
+			std::cout << "max delta " << deltaMax << std::endl;
+		} else {
+			std::cout << "FAIL" << std::endl;
+		}
+
+		//std::cout << "cpu" << std::endl << ainv << std::endl;
+		//std::cout << "ocl" << std::endl << clmat << std::endl;
+		//std::cout << "delta" << std::endl << (ainv - clmat) << std::endl;
+	}
+}
+
+void openClnorm1Test() {
+	LoadResult res = cltest::loadKernels({ norm1Function, testKernels }, "norm1Test");
+	if (res.status != CL_SUCCESS) return;
+
+	int s = 6;
+	for (int i = 0; i < 10; i++) {
+		Matd a = Matd::rand(s, s, -10, 20);
+		double norm1cpu = a.norm1();
+		double norm1ocl = cltest::cl_norm1(res, a.data(), s);
+		if (norm1cpu == norm1ocl) {
+			std::cout << "norm1 test OK" << std::endl;
+		} else {
+			std::cout << "norm1 test FAIL" << std::endl;
 		}
 	}
 }
@@ -125,8 +166,15 @@ void pyramid() {
 
 	//outCpu.saveAsBinary("f:/outCpu.dat");
 	//outOcl.saveAsBinary("f:/outOcl.dat");
-	std::cout << (pyrCpu.equalsExact(pyrCuda) ? "pyramids equal ok" : "pyramids differ!!") << std::endl;
-	std::cout << (outCpu.equalsExact(outCuda) ? "warped output equal ok" : "warped output differ!!") << std::endl;
+	std::cout << "comparing CPU and CUDA: ";
+	std::cout << (pyrCpu.equalsExact(pyrCuda) ? "pyramids equal" : "pyramids DIFFER");
+	std::cout << ", ";
+	std::cout << (outCpu.equalsExact(outCuda) ? "warped output equal" : "warped output DIFFER") << std::endl;
+
+	std::cout << "comparing CPU and OPENCL: ";
+	std::cout << (pyrCpu.equalsExact(pyrOcl) ? "pyramids equal" : "pyramids DIFFER");
+	std::cout << ", ";
+	std::cout << (outCpu.equalsExact(outOcl) ? "warped output equal" : "warped output DIFFER") << std::endl;
 
 	if (errorLogger.hasError()) {
 		std::cout << errorLogger.getErrorMessage() << std::endl;

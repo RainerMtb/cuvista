@@ -274,15 +274,15 @@ public:
 	}
 
 	void computePartOne() override { 
-		cl::computePartOne(); 
+		cl::computePartOne();
 	}
 
 	void computePartTwo() override { 
-		cl::computePartTwo(); 
+		cl::computePartTwo();
 	}
 
 	void computeTerminate() override { 
-		cl::computeTerminate(); 
+		cl::computeTerminate(mStatus.frameInputIndex, mData, resultPoints);
 	}
 
 	void outputData(const AffineTransform& trf, OutputContext outCtx) override { 

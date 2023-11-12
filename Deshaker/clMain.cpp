@@ -19,6 +19,7 @@
 #include "clFunctions.hpp"
 #include "clMain.hpp"
 #include "clKernels.hpp"
+#include "clKernelCompute.hpp"
 #include "AVException.hpp"
 #include <format>
 #include <algorithm>
@@ -138,18 +139,16 @@ void cl::init(CoreData& core, ImageYuv& inputFrame, OpenClInfo clinfo, std::size
 		clData.yuvOut = cl::Image2D(clData.context, CL_MEM_WRITE_ONLY, fmt, core.w, core.h * 3ull);
 		clData.rgbOut = cl::Buffer(clData.context, CL_MEM_WRITE_ONLY, 3ull * core.w * core.h);
 
-		//allocate filter kernel buffer
-		clData.filterKernel = cl::Buffer(clData.context, CL_MEM_READ_ONLY, sizeof(cl_float4) * FilterKernelData::maxSize);
-
 		//compile device code
 		cl::Program::Sources sources;
-		std::string kernelNames[] = { kernelsInputOutput };
+		std::string kernelNames[] = { kernelsInputOutput, kernelCompute };
 		for (const std::string& str : kernelNames) {
 			sources.emplace_back(str.c_str(), str.size());
 		}
 
 		cl::Program program(clData.context, sources);
-		program.build(dev, "-cl-opt-disable");
+		program.build();
+		//program.build(dev, "-cl-opt-disable");
 
 		//assign kernels
 		for (auto& entry : clData.kernelMap) {
@@ -197,13 +196,13 @@ void cl::createPyramid(int64_t frameIdx, const CoreData& core) {
 	try {
 		scale_8u32f_1(clData.yuv[frIdx], clData.pyr[pyrIdx][0][0], clData);
 		for (size_t z = 1; z <= core.zMax; z++) {
-			filter_32f_h1(clData.pyr[pyrIdx][0][z - 1], clData.pyrBuffer[0][z - 1], clData.filterGauss, clData);
-			filter_32f_v1(clData.pyrBuffer[0][z - 1], clData.pyrBuffer[1][z - 1], clData.filterGauss, clData);
+			filter_32f_h1(clData.pyr[pyrIdx][0][z - 1], clData.pyrBuffer[0][z - 1], 0, clData);
+			filter_32f_v1(clData.pyrBuffer[0][z - 1], clData.pyrBuffer[1][z - 1], 0, clData);
 			remap_downsize_32f(clData.pyrBuffer[1][z - 1], clData.pyr[pyrIdx][0][z], clData);
 		}
 		for (size_t z = 0; z <= core.zMax; z++) {
-			filter_32f_h1(clData.pyr[pyrIdx][0][z], clData.pyr[pyrIdx][1][z], clData.filterDifference, clData);
-			filter_32f_v1(clData.pyr[pyrIdx][0][z], clData.pyr[pyrIdx][2][z], clData.filterDifference, clData);
+			filter_32f_h1(clData.pyr[pyrIdx][0][z], clData.pyr[pyrIdx][1][z], 3, clData);
+			filter_32f_v1(clData.pyr[pyrIdx][0][z], clData.pyr[pyrIdx][2][z], 3, clData);
 		}
 
 	} catch (const cl::Error& err) {
@@ -217,7 +216,22 @@ void cl::createPyramid(int64_t frameIdx, const CoreData& core) {
 
 void cl::computePartOne() {}
 void cl::computePartTwo() {}
-void cl::computeTerminate() {}
+
+void cl::computeTerminate(int64_t frameIdx, const CoreData& core, std::vector<PointResult>& results) {
+	assert(frameIdx > 0 && "invalid pyramid index");
+	int64_t pyrIdx = frameIdx % core.pyramidCount;
+	int64_t pyrIdxPrev = (frameIdx - 1) % core.pyramidCount;
+
+	try {
+		cl::Kernel kernel = clData.kernel("compute");
+		cl::NDRange ndglobal = cl::NDRange(1ull * core.iw * core.w, core.h);
+		cl::NDRange ndlocal = cl::NDRange(core.iw, 1);
+		clData.queue.enqueueNDRangeKernel(kernel, cl::NullRange, ndglobal, ndlocal);
+
+	} catch (const cl::Error& err) {
+		errorLogger.logError("OpenCL compute error: ", err.what());
+	}
+}
 
 //----------------------------------
 //-------- OUTPUT STABILIZED -------
@@ -229,6 +243,7 @@ void readImage(cl::Image2D src, size_t destPitch, void* dest, cl::CommandQueue q
 	size_t w = src.getImageInfo<CL_IMAGE_WIDTH>();
 	size_t h = src.getImageInfo<CL_IMAGE_HEIGHT>();
 	size2 region = { w, h };
+	//ConsoleTimer timer;
 	queue.enqueueReadImage(src, CL_TRUE, origin, region, destPitch, 0, dest);
 }
 
@@ -250,12 +265,12 @@ void cl::outputData(int64_t frameIdx, const CoreData& core, OutputContext outCtx
 		warp_back(outStart, outWarped, clData, trf);
 
 		//filtering
-		filter_32f_h3(outWarped, outFilterH, clData.filterGauss, clData);
-		filter_32f_v3(outFilterH, outFilterV, clData.filterGauss, clData);
+		filter_32f_h3(outWarped, outFilterH, clData);
+		filter_32f_v3(outFilterH, outFilterV, clData);
 
 		//unsharp mask
-		std::array f = { core.unsharp.y, core.unsharp.u, core.unsharp.v };
-		unsharp(outWarped, outFinal, outFilterV, clData, f);
+		cl_float4 factor = { core.unsharp.y, core.unsharp.u, core.unsharp.v };
+		unsharp(outWarped, outFinal, outFilterV, clData, factor);
 
 		//convert to YUV444 for output
 		scale_32f8u_3(outFinal, clData.yuvOut, clData);

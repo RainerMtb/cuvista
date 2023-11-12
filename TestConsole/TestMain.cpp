@@ -40,8 +40,10 @@ int main() {
 	//readAndWriteOneFrame();
 	//checkVersions();
 	//transform();
-
 	//cudaInvTest(1, 32);
-	//openClInvTest(1, 32);
+
 	pyramid();
+	//openClInvTest(1, 32);
+	//openClInvGroupTest(1, 9);
+	//openClnorm1Test();
 }

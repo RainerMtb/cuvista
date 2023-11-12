@@ -50,7 +50,7 @@ namespace cl {
 	void createPyramid(int64_t frameIdx, const CoreData& core);
 	void computePartOne();
 	void computePartTwo();
-	void computeTerminate();
+	void computeTerminate(int64_t frameIdx, const CoreData& core, std::vector<PointResult>& results);
 	void outputData(int64_t frameIdx, const CoreData& core, OutputContext outCtx, std::array<double, 6> trf);
 
 	ImageYuv getInput(int64_t idx, const CoreData& core);

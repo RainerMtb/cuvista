@@ -166,9 +166,9 @@ __global__ void kernel_filter_3(cudaTextureObject_t texObj, cuMatf4 dest, int ks
 		int iy = y - dy * ks / 2;
 		for (int i = 0; i < ks; i++) {
 			float4 val = tex2D<float4>(texObj, ix, iy);
-			result.x = fma(val.x, filterKernels[0].k[i], result.x);
-			result.y = fma(val.y, filterKernels[1].k[i], result.y);
-			result.z = fma(val.z, filterKernels[2].k[i], result.z);
+			result.x += val.x * filterKernels[0].k[i];
+			result.y += val.y * filterKernels[1].k[i];
+			result.z += val.z * filterKernels[2].k[i];
 			ix += dx;
 			iy += dy;
 		}
@@ -283,7 +283,7 @@ __global__ void kernel_filter(cudaTextureObject_t texObj, cuMatf dest, size_t ki
 		int ix = x - dx * kernel.siz / 2;
 		int iy = y - dy * kernel.siz / 2;
 		for (int i = 0; i < kernel.siz; i++) {
-			result = fma(tex2D<float>(texObj, ix, iy), kernel.k[i], result);
+			result += tex2D<float>(texObj, ix, iy) * kernel.k[i];
 			ix += dx;
 			iy += dy;
 		}

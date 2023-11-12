@@ -67,23 +67,6 @@ struct ComputeKernelParam : KernelParam {
 	char* d_computed;
 };
 
-//measuring runtime
-class ConsoleTimer {
-
-	std::chrono::steady_clock::time_point t1;
-
-public:
-	ConsoleTimer() {
-		t1 = std::chrono::high_resolution_clock::now();
-	}
-
-	~ConsoleTimer() {
-		auto t2 = std::chrono::high_resolution_clock::now();
-		auto delta = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
-		std::printf("elapsed %zd us\n", delta);
-	}
-};
-
 void kernelComputeCall(ComputeKernelParam param, ComputeTextures& tex, PointResult* d_results);
 
 //----------------------------------
@@ -175,6 +158,3 @@ void cudaGetCurrentInputFrame(ImagePPM& image, const CudaData& core, int64_t idx
 @brief get current output frame for progress display
 */
 void cudaGetCurrentOutputFrame(ImagePPM& image, const CudaData& core);
-
-//access main data structure from compute kernel
-__device__ const CudaData& getCudaData();

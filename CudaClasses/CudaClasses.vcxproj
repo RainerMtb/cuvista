@@ -124,7 +124,6 @@
     <ClInclude Include="DeviceInfo.hpp" />
     <ClInclude Include="DeviceInfoCuda.cuh" />
     <ClInclude Include="ErrorLogger.hpp" />
-    <CudaCompile Include="CudaData.cu" />
     <CudaCompile Include="cuNPP.cu" />
     <CudaCompile Include="cuTest.cu" />
     <CudaCompile Include="cuUtil.cu" />
@@ -138,6 +137,9 @@
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CudaClasses.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="CoreData.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

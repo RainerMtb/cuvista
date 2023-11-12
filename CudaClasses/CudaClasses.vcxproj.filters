@@ -11,7 +11,6 @@
     <CudaCompile Include="cuTest.cu">
       <Filter>Util</Filter>
     </CudaCompile>
-    <CudaCompile Include="CudaData.cu" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cuDecompose.cuh" />
@@ -47,5 +46,10 @@
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CudaClasses.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="CoreData.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

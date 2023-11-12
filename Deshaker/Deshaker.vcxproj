@@ -190,6 +190,7 @@
     <ClInclude Include="AVException.hpp" />
     <ClInclude Include="clFunctions.hpp" />
     <ClInclude Include="clHeaders.hpp" />
+    <ClInclude Include="clKernelCompute.hpp" />
     <ClInclude Include="clKernels.hpp" />
     <ClInclude Include="clMain.hpp" />
     <ClInclude Include="clTest.hpp" />

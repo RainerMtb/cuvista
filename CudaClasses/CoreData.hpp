@@ -21,7 +21,6 @@
 #include "ErrorLogger.hpp"
 #include "Image.hpp"
 
-
 //how to put original and stabilized video side by side
 struct BlendInput {
 	double percent = 0.0;
@@ -97,4 +96,62 @@ public:
 
 	uint8_t crf = 22;
 	char fileDelimiter = ';';
+};
+
+//result type of one computed point
+enum class PointResultType {
+	FAIL_SINGULAR,
+	FAIL_ITERATIONS,
+	FAIL_ETA_NAN,
+	RUNNING,
+	SUCCESS_ABSOLUTE_ERR,
+	SUCCESS_STABLE_ITER,
+};
+
+//result of one computed point in a frame
+struct PointResult {
+
+private:
+	bool equal(double a, double b, double tol) const;
+
+public:
+	size_t idx, ix0, iy0;
+	int px, py;
+	int x, y;
+	double u, v;
+	PointResultType result;
+	double distance;
+	double length;
+	double distanceRelative;
+
+	//is valid when numeric stable result was found
+	bool isValid() const;
+
+	//numeric value for type of result
+	int resultValue() const;
+
+	bool equals(const PointResult& other, double tol = 0.0) const;
+
+	bool operator == (const PointResult& other) const;
+
+	bool operator != (const PointResult& other) const;
+
+	friend std::ostream& operator << (std::ostream& out, const PointResult& res);
+};
+
+//simple class to measure runtime
+class ConsoleTimer {
+
+	std::chrono::steady_clock::time_point t1;
+
+public:
+	ConsoleTimer() {
+		t1 = std::chrono::high_resolution_clock::now();
+	}
+
+	~ConsoleTimer() {
+		auto t2 = std::chrono::high_resolution_clock::now();
+		auto delta = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
+		std::printf("elapsed %zd us\n", delta);
+	}
 };

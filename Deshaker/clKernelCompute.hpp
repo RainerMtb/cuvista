@@ -18,39 +18,10 @@
 
 #pragma once
 
-#include <numbers>
+#include <string>
 
-#include "Mat.h"
-#include "MovieFrame.hpp"
-#include "FrameResult.hpp"
-#include "cuTest.cuh"
-
-void matTest();
-void qrdec();
-void subMat();
-void matPerf();
-
-void iteratorTest();
-void similarTransformPerformance();
-void readAndWriteOneFrame();
-void checkVersions();
-
-void transform();
-void text();
-void filterCompare();
-
-void cudaInvSimple();
-void cudaInvPerformanceTest();
-void cudaInvEqualityTest();
-void cudaInvParallel();
-void cudaFMAD();
-
-void cudaInvTest(size_t s1, size_t s2);
-void openClInvTest(size_t s1, size_t s2);
-void openClInvGroupTest(int w1, int w2);
-void openClnorm1Test();
-
-void compare();
-void pyramid();
-
-void check();
+inline std::string kernelCompute = R"(
+__kernel void compute() {
+	
+}
+)";

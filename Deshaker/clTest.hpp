@@ -32,9 +32,11 @@ struct LoadResult {
 
 namespace cltest {
 
-	LoadResult loadKernels(std::initializer_list<std::string> kernelNames);
+	LoadResult loadKernels(std::initializer_list<std::string> kernelNames, const std::string& startKernel);
 
 	bool cl_inv(LoadResult& res, double* input, double* invOut, size_t s);
 
-	double cl_norm1(double* input, size_t s, int threads);
+	bool cl_inv_group(LoadResult& res, double* input, double* invGroup, int groupWidth, size_t s);
+
+	double cl_norm1(LoadResult& res, double* input, int s);
 }

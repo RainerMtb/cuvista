@@ -61,7 +61,7 @@ void check() {
 
 void cudaInvTest(size_t s1, size_t s2) {
 	for (size_t s = s1; s <= s2; s++) {
-		Matd a = Matd::rand(s, s, -20, 50);
+		Matd a = Matd::rand(s, s, -20, 50, 1000);
 		Matd ainv = Matd::allocate(s, s);
 		bool isOK = cutest::cudaInv(a.data(), ainv.data(), s);
 		Matd b = ainv.times(a);

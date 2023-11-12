@@ -22,8 +22,7 @@
 void cl::runKernel(cl::Kernel& kernel, cl::Image src, cl::Image dest, cl::CommandQueue queue, size_t w, size_t h) {
 	kernel.setArg(0, src);
 	kernel.setArg(1, dest);
-	cl::NDRange dim(w, h);
-	queue.enqueueNDRangeKernel(kernel, cl::NDRange(), dim);
+	queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(w, h));
 }
 
 void cl::runKernel(cl::Kernel& kernel, cl::Image src, cl::Image dest, cl::CommandQueue queue) {
@@ -49,29 +48,27 @@ void cl::remap_downsize_32f(cl::Image src, cl::Image dest, ClData& clData) {
 	runKernel(clData.kernel("remap_downsize_32f"), src, dest, clData.queue);
 }
 
-void cl::filter_32f_func(cl::Kernel& kernel, cl::Image src, cl::Image dest, FilterKernelData& filterData, cl_int8 ix, cl_int8 iy, ClData& clData) {
-	clData.queue.enqueueWriteBuffer(clData.filterKernel, CL_TRUE, 0, sizeof(cl_float4) * filterData.siz, filterData.filterKernel.data());
-	kernel.setArg(2, clData.filterKernel);
-	kernel.setArg(3, ix);
-	kernel.setArg(4, iy);
-	kernel.setArg(5, filterData.siz);
+void cl::filter_32f_func(cl::Kernel& kernel, cl::Image src, cl::Image dest, int filterIndex, int dx, int dy, ClData& clData) {
+	kernel.setArg(2, filterIndex);
+	kernel.setArg(3, dx);
+	kernel.setArg(4, dy);
 	runKernel(kernel, src, dest, clData.queue);
 }
 
-void cl::filter_32f_h1(cl::Image src, cl::Image dest, FilterKernelData& filterData, ClData& clData) {
-	filter_32f_func(clData.kernel("filter_32f_1"), src, dest, filterData, filterData.idx, {}, clData);
+void cl::filter_32f_h1(cl::Image src, cl::Image dest, int filterIndex, ClData& clData) {
+	filter_32f_func(clData.kernel("filter_32f_1"), src, dest, filterIndex, 1, 0, clData);
 }
 
-void cl::filter_32f_h3(cl::Image src, cl::Image dest, FilterKernelData& filterData, ClData& clData) {
-	filter_32f_func(clData.kernel("filter_32f_3"), src, dest, filterData, filterData.idx, {}, clData);
+void cl::filter_32f_h3(cl::Image src, cl::Image dest, ClData& clData) {
+	filter_32f_func(clData.kernel("filter_32f_3"), src, dest, -1, 1, 0, clData);
 }
 
-void cl::filter_32f_v1(cl::Image src, cl::Image dest, FilterKernelData& filterData, ClData& clData) {
-	filter_32f_func(clData.kernel("filter_32f_1"), src, dest, filterData, {}, filterData.idx, clData);
+void cl::filter_32f_v1(cl::Image src, cl::Image dest, int filterIndex, ClData& clData) {
+	filter_32f_func(clData.kernel("filter_32f_1"), src, dest, filterIndex, 0, 1, clData);
 }
 
-void cl::filter_32f_v3(cl::Image src, cl::Image dest, FilterKernelData& filterData, ClData& clData) {
-	filter_32f_func(clData.kernel("filter_32f_3"), src, dest, filterData, {}, filterData.idx, clData);
+void cl::filter_32f_v3(cl::Image src, cl::Image dest, ClData& clData) {
+	filter_32f_func(clData.kernel("filter_32f_3"), src, dest, -1, 0, 1, clData);
 }
 
 void cl::warp_back(cl::Image src, cl::Image dest, ClData& clData, std::array<double, 6> trf) {
@@ -81,11 +78,10 @@ void cl::warp_back(cl::Image src, cl::Image dest, ClData& clData, std::array<dou
 	runKernel(kernel, src, dest, clData.queue);
 }
 
-void cl::unsharp(cl::Image src, cl::Image dest, cl::Image gauss, ClData& clData, std::array<float, 3> factor) {
-	cl_float4 clfactor = { factor[0], factor[1], factor[2] };
+void cl::unsharp(cl::Image src, cl::Image dest, cl::Image gauss, ClData& clData, cl_float4 factor) {
 	cl::Kernel& kernel = clData.kernel("unsharp");
 	kernel.setArg(2, gauss);
-	kernel.setArg(3, clfactor);
+	kernel.setArg(3, factor);
 	runKernel(kernel, src, dest, clData.queue);
 }
 
@@ -93,6 +89,6 @@ void cl::yuv_to_rgb(const std::string& kernelName, cl::Image src, unsigned char*
 	cl::Kernel& kernel = clData.kernel(kernelName);
 	kernel.setArg(0, src);
 	kernel.setArg(1, clData.rgbOut);
-	clData.queue.enqueueNDRangeKernel(kernel, cl::NDRange(), cl::NDRange(w, h));
+	clData.queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(w, h));
 	clData.queue.enqueueReadBuffer(clData.rgbOut, CL_TRUE, 0, 3ull * w * h, imageData);
 }
