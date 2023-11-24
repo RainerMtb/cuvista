@@ -20,7 +20,7 @@
 #include "clTest.hpp"
 
 void openClInvTest(size_t s1, size_t s2) {
-	LoadResult res = cltest::loadKernels({ luinvFunction, testKernels }, "luinvTest");
+	LoadResult res = cltest::loadKernels({ norm1Function, luinvFunction, testKernels }, "luinvTest");
 	if (res.status != CL_SUCCESS) return;
 
 	for (size_t s = s1; s <= s2; s++) {
@@ -29,21 +29,23 @@ void openClInvTest(size_t s1, size_t s2) {
 		Matd ainvOCL = Matd::allocate(s, s);
 		bool isOK = cltest::cl_inv(res, a.data(), ainvOCL.data(), s);
 
-		std::cout << "OpenCL inv test, dim=" << s << "; ";
-		if (!ainvCPU.equalsExact(ainvOCL)) {
-			Matd delta = ainvCPU.minus(ainvOCL);
-			std::cout << "FAIL " << std::endl;
-			if (s > 6) printf("MAX absolute delta %g\n", delta.abs().max());
-			else delta.toConsole();
+		std::cout << "OpenCL inv test, dim=" << s << " ";
+		Matd delta = ainvCPU.minus(ainvOCL);
+		double deltaMax = delta.abs().max();
+		if (deltaMax == 0.0) {
+			std::cout << "EXACT" << std::endl;
+
+		} else if (deltaMax < 1e-12) {
+			std::cout << "delta " << deltaMax << std::endl;
 
 		} else {
-			std::cout << "OK" << std::endl;
+			delta.toConsole();
 		}
 	}
 }
 
 void openClInvGroupTest(int w1, int w2) {
-	LoadResult res = cltest::loadKernels({ luinvFunction, testKernels }, "luinvGroupTest");
+	LoadResult res = cltest::loadKernels({ norm1Function, luinvFunction, testKernels }, "luinvGroupTest");
 	if (res.status != CL_SUCCESS) return;
 
 	size_t s = 6;
@@ -59,21 +61,17 @@ void openClInvGroupTest(int w1, int w2) {
 		double deltaMax = ainv.minus(clmat).abs().max();
 		std::cout << "group test " << groupWidth << " ";
 		if (isOK && deltaMax == 0.0) {
-			std::cout << "exactly equal" << std::endl;
+			std::cout << "EXACT" << std::endl;
 		} else if (isOK) {
 			std::cout << "max delta " << deltaMax << std::endl;
 		} else {
 			std::cout << "FAIL" << std::endl;
 		}
-
-		//std::cout << "cpu" << std::endl << ainv << std::endl;
-		//std::cout << "ocl" << std::endl << clmat << std::endl;
-		//std::cout << "delta" << std::endl << (ainv - clmat) << std::endl;
 	}
 }
 
 void openClnorm1Test() {
-	LoadResult res = cltest::loadKernels({ norm1Function, testKernels }, "norm1Test");
+	LoadResult res = cltest::loadKernels({ norm1Function, luinvFunction, testKernels }, "norm1Test");
 	if (res.status != CL_SUCCESS) return;
 
 	int s = 6;
@@ -89,7 +87,13 @@ void openClnorm1Test() {
 	}
 }
 
-template <class T> std::pair<Matf, Matf> runPyramid(MainData& data) {
+struct Result {
+	Matf pyramid;
+	Matf output;
+	std::vector<PointResult> results;
+};
+
+template <class T> Result runPyramid(MainData& data) {
 	FFmpegReader reader;
 	data.inputCtx = reader.open(data.fileIn);
 	data.collectDeviceInfo();
@@ -115,66 +119,65 @@ template <class T> std::pair<Matf, Matf> runPyramid(MainData& data) {
 	AffineTransform trf;
 	trf.addRotation(0.2).addTranslation(-40, 30);
 	frame->outputData(trf, writer.getOutputData());
-	return { frame->getPyramid(0), frame->getTransformedOutput()};
+	return { frame->getPyramid(0), frame->getTransformedOutput(), frame->resultPoints };
 }
 
 void pyramid() {
-	std::cout << "compare pyramids" << std::endl;
+	std::cout << "comparing platforms..." << std::endl;
 
 	AffineTransform trf;
 	trf.addRotation(0.2).addTranslation(-40, 30);
-	Matf pyrCpu, pyrOcl, pyrCuda;
-	Matf outCpu, outOcl, outCuda;
+	Result cpu, ocl, cuda;
 
 	{
 		//CPU
 		MainData data;
 		data.deviceRequested = true;
-		data.deviceRequested = 0;
+		data.deviceSelected = 0;
 		data.fileIn = "d:/VideoTest/04.ts";
-		auto ret = runPyramid<CpuFrame>(data);
-		pyrCpu = ret.first;
-		outCpu = ret.second;
+		cpu = runPyramid<CpuFrame>(data);
 		//ret.second.saveAsColorBMP("f:/testCpu.bmp");
-	}
-
-	{
-		//OpenCL
-		MainData data;
-		data.deviceRequested = true;
-		data.deviceRequested = 1;
-		data.probeOpenCl();
-		data.fileIn = "d:/VideoTest/04.ts";
-		auto ret = runPyramid<OpenClFrame>(data);
-		pyrOcl = ret.first;
-		outOcl = ret.second;
-		//ret.second.saveAsColorBMP("f:/testOcl.bmp");
 	}
 
 	{
 		//Cuda
 		MainData data;
 		data.deviceRequested = true;
-		data.deviceRequested = 1;
+		data.deviceSelected = 1;
 		data.probeCuda();
 		data.fileIn = "d:/VideoTest/04.ts";
-		auto ret = runPyramid<CudaFrame>(data);
-		pyrCuda = ret.first;
-		outCuda = ret.second;
+		cuda = runPyramid<CudaFrame>(data);
 		//ret.second.saveAsColorBMP("f:/testCuda.bmp");
 	}
 
-	//outCpu.saveAsBinary("f:/outCpu.dat");
-	//outOcl.saveAsBinary("f:/outOcl.dat");
-	std::cout << "comparing CPU and CUDA: ";
-	std::cout << (pyrCpu.equalsExact(pyrCuda) ? "pyramids equal" : "pyramids DIFFER");
-	std::cout << ", ";
-	std::cout << (outCpu.equalsExact(outCuda) ? "warped output equal" : "warped output DIFFER") << std::endl;
+	{
+		//OpenCL
+		MainData data;
+		data.deviceRequested = true;
+		data.deviceSelected = 1;
+		data.probeOpenCl();
+		data.fileIn = "d:/VideoTest/04.ts";
+		ocl = runPyramid<OpenClFrame>(data);
+		//ret.second.saveAsColorBMP("f:/testOcl.bmp");
+	}
 
-	std::cout << "comparing CPU and OPENCL: ";
-	std::cout << (pyrCpu.equalsExact(pyrOcl) ? "pyramids equal" : "pyramids DIFFER");
+	//outCpu.saveAsBinary("f:/outCpu.dat");
+	//outCuda.saveAsBinary("f:/outCuda.dat");
+	std::cout << "comparing CPU and CUDA: ";
+	std::cout << (cpu.pyramid.equalsExact(cuda.pyramid) ? "pyramids equal" : "pyramids DIFFER");
 	std::cout << ", ";
-	std::cout << (outCpu.equalsExact(outOcl) ? "warped output equal" : "warped output DIFFER") << std::endl;
+	std::cout << (cpu.output.equalsExact(cuda.output) ? "warped output equal" : "warped output DIFFER");
+	std::cout << ", ";
+	std::cout << (cpu.results == cuda.results ? "results equal" : "results DIFFER");
+	std::cout << std::endl;
+
+	std::cout << "comparing CPU and OPEN CL: ";
+	std::cout << (cpu.pyramid.equalsExact(ocl.pyramid) ? "pyramids equal" : "pyramids DIFFER");
+	std::cout << ", ";
+	std::cout << (cpu.output.equalsExact(ocl.output) ? "warped output equal" : "warped output DIFFER");
+	std::cout << ", ";
+	std::cout << (cpu.results == ocl.results ? "results equal" : "results DIFFER");
+	std::cout << std::endl;
 
 	if (errorLogger.hasError()) {
 		std::cout << errorLogger.getErrorMessage() << std::endl;

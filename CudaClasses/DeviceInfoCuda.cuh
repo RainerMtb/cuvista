@@ -27,13 +27,17 @@
 class DeviceInfoCuda : public DeviceInfo {
 public:
 	cudaDeviceProp props;
+	int cudaIndex;
 
-	DeviceInfoCuda(DeviceType type, size_t targetIndex, int64_t maxPixel, cudaDeviceProp props)
-		: DeviceInfo(type, targetIndex, maxPixel)
+	DeviceInfoCuda(DeviceType type, int64_t maxPixel, cudaDeviceProp props, int cudaIndex)
+		: DeviceInfo(type, maxPixel)
 		, props { props } 
+		, cudaIndex { cudaIndex }
 	{}
 
 	std::string getName() const override;
+
+	friend std::ostream& operator << (std::ostream& os, const DeviceInfoCuda& info);
 };
 
 //info about cuda devices

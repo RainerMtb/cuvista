@@ -34,15 +34,6 @@ __constant__ ArrayIndex sidx[] = {
 	                                   {5,5},
 };
 
-//list of possible results of one compute iteration
-__constant__ PointResultType resultTypes[] = {
-	PointResultType::RUNNING, 
-	PointResultType::FAIL_ETA_NAN, 
-	PointResultType::SUCCESS_ABSOLUTE_ERR, 
-	PointResultType::SUCCESS_STABLE_ITER,
-	PointResultType::FAIL_ITERATIONS,
-};
-
 //initial values for wp
 __constant__ double wp0[] = { 1, 0, 0, 0, 1, 0, 0, 0, 1 };
 //initial values for eta
@@ -91,8 +82,8 @@ __global__ void kernelCompute(ComputeTextures tex, PointResult* results, Compute
 	}
 
 	//center point of image patch in this block
-	int ym = iy0 + ir;
-	int xm = ix0 + ir;
+	int ym = iy0 + ir + 1;
+	int xm = ix0 + ir + 1;
 	PointResultType result = PointResultType::RUNNING;
 
 	//pyramid level to start at
@@ -220,10 +211,10 @@ __global__ void kernelCompute(ComputeTextures tex, PointResult* results, Compute
 			//analyse result, decide on continuing loop
 			double err = eta[0] * eta[0] + eta[1] * eta[1];
 			int typeIndex = 0;
-			typeIndex += (int) isnan(err); //leave loop with fail message FAIL_ETA_NAN
-			typeIndex += (int) (err < d_core.compMaxTol) * 2; //leave loop with success SUCCESS_ABSOLUTE_ERR
-			typeIndex += (int) (fabs(err - bestErr) / bestErr < d_core.compMaxTol * d_core.compMaxTol) * 3; //SUCCESS_STABLE_ITER
-			result = resultTypes[typeIndex];
+			typeIndex += (int) isnan(err) * -1; //leave loop with fail message FAIL_ETA_NAN
+			typeIndex += (int) (err < d_core.compMaxTol) * 1; //leave loop with success SUCCESS_ABSOLUTE_ERR
+			typeIndex += (int) (fabs(err - bestErr) / bestErr < d_core.compMaxTol * d_core.compMaxTol) * 2; //SUCCESS_STABLE_ITER
+			result = static_cast<PointResultType>(typeIndex);
 
 			bestErr = min(err, bestErr);
 			iter++;
@@ -256,10 +247,8 @@ __global__ void kernelCompute(ComputeTextures tex, PointResult* results, Compute
 		//bring values to level 0
 		while (z < 0) { xm /= 2; ym /= 2; u /= 2; v /= 2; z++; }
 		while (z > 0) { xm *= 2; ym *= 2; u *= 2; v *= 2; z--; }
-		//index into results array
-		size_t idx = iy0 * gridDim.x + ix0;
 		//store results object
-		results[idx] = { idx, ix0, iy0, xm, ym, xm - d_core.w / 2, ym - d_core.h / 2, u, v, result };
+		results[blockIndex] = { blockIndex, ix0, iy0, xm, ym, xm - d_core.w / 2, ym - d_core.h / 2, u, v, result };
 	}
 
 	param.kernelTimestamps[blockIndex].stop();

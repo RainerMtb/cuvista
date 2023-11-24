@@ -169,12 +169,15 @@ protected:
 
 class CudaFrame : public MovieFrame {
 
+private:
+	DeviceInfoCuda* device;
+
 public:
 	CudaFrame(MainData& data) : MovieFrame(data) {
 		DeviceInfo* dev = data.deviceList[data.deviceSelected];
-		size_t devIdx = dev->targetIndex;
-		const cudaDeviceProp& prop = data.cudaInfo.devices[devIdx].props;
-		cudaInit(data, (int) devIdx, prop, inputFrame);
+		assert(dev->type == DeviceType::CUDA && "device type must be CUDA here");
+		device = static_cast<DeviceInfoCuda*>(dev);
+		cudaInit(data, device->cudaIndex, device->props, inputFrame);
 	}
 
 	~CudaFrame() {
@@ -205,9 +208,7 @@ public:
 	}
 
 	void computePartOne() override {
-		DeviceInfo* dev = mData.deviceList[mData.deviceSelected];
-		const DeviceInfoCuda& dic = mData.cudaInfo.devices[dev->targetIndex];
-		cudaCompute1(mStatus.frameInputIndex, mData, dic.props);
+		cudaCompute1(mStatus.frameInputIndex, mData, device->props);
 	}
 
 	void computePartTwo() override {
@@ -257,8 +258,7 @@ class OpenClFrame : public MovieFrame {
 public:
 	OpenClFrame(MainData& data) : MovieFrame(data) {
 		DeviceInfo* dev = data.deviceList[data.deviceSelected];
-		size_t devIdx = dev->targetIndex;
-		cl::init(data, inputFrame, data.clinfo, devIdx);
+		cl::init(data, inputFrame, data.clinfo, dev);
 	}
 
 	~OpenClFrame() {

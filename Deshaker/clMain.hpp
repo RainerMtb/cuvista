@@ -27,13 +27,16 @@
 class DeviceInfoCl : public DeviceInfo {
 public:
 	cl::Device device;
+	int versionDevice = 0;
+	int versionC = 0;
 
-	DeviceInfoCl(DeviceType type, size_t targetIndex, int64_t maxPixel, cl::Device device)
-		: DeviceInfo(type, targetIndex, maxPixel)
-		, device { device } 
+	DeviceInfoCl(DeviceType type, int64_t maxPixel)
+		: DeviceInfo(type, maxPixel)
 	{}
 
 	std::string getName() const override;
+
+	friend std::ostream& operator << (std::ostream& os, const DeviceInfoCl& info);
 };
 
 struct OpenClInfo {
@@ -43,7 +46,7 @@ struct OpenClInfo {
 
 namespace cl {
 	OpenClInfo probeRuntime(); //called on startup
-	void init(CoreData& core, ImageYuv& inputFrame, OpenClInfo clinfo, std::size_t devIdx); //called from constructor of MovieFrame
+	void init(CoreData& core, ImageYuv& inputFrame, OpenClInfo clinfo, const DeviceInfo* device); //called from constructor of MovieFrame
 	void shutdown(const CoreData& core); //called from destructor of MovieFrame
 
 	void inputData(int64_t frameIdx, const CoreData& core, const ImageYuv& inputFrame);

@@ -57,7 +57,7 @@ void NvEncoder::probeSupportedCodecs(DeviceInfoCuda& deviceInfoCuda) {
 	//create context per device
 	CUcontext cuctx;
 	CUdevice dev;
-	handleResult(cuDeviceGet(&dev, (int) deviceInfoCuda.targetIndex), "cannot get device");
+	handleResult(cuDeviceGet(&dev, (int) deviceInfoCuda.cudaIndex), "cannot get device");
 	handleResult(cuCtxCreate_v2(&cuctx, 0, dev), "cannot create device context");
 
 	//open session

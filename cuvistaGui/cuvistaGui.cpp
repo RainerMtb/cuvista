@@ -298,7 +298,7 @@ void cuvistaGui::showMessage(const QString& msg) {
 }
 
 void cuvistaGui::showInfo() {
-    int boxHeight = 175;
+    int boxHeight = 250;
     int boxWidth = 450;
 
     QMessageBox msgBox(this);
@@ -311,27 +311,14 @@ void cuvistaGui::showInfo() {
     msgBox.setTextFormat(Qt::RichText);
 
     std::stringstream ss;
-    if (mData.cudaInfo.nvidiaDriverVersion > 0) {
-        ss << "Nvidia Driver " << mData.cudaInfo.nvidiaDriverToString() << std::endl;
-        ss << "Cuda Runtime " << mData.cudaInfo.cudaRuntimeToString() << ", Cuda Driver " << mData.cudaInfo.cudaDriverToString() << std::endl;
-
-    } else {
-        ss << "Nvidia Driver Not Found" << std::endl;
-    }
-
-    ss << "FFmpeg libavformat " << LIBAVFORMAT_VERSION_MAJOR << "." << LIBAVFORMAT_VERSION_MINOR << "." << LIBAVFORMAT_VERSION_MICRO << std::endl;
-    ss << std::endl;
-
-    ss << "Devices found on this system:" << std::endl;
-    for (int i = 0; i < mData.deviceList.size(); i++) {
-        ss << "# " << i << ": " << mData.deviceList[i]->getName() << std::endl;
-    }
+    mData.showDeviceInfo(ss);
 
     QPlainTextEdit* textBox = new QPlainTextEdit(this);
-    QString qstr = QString::fromStdString(ss.str()).trimmed();
+    QString qstr = QString::fromStdString(ss.str());
     textBox->setPlainText(qstr);
     textBox->setMinimumHeight(boxHeight);
     textBox->setReadOnly(true);
+    textBox->setFont(QFont("Lucida Console"));
 
     QSpacerItem* spacer = new QSpacerItem(boxWidth, 0, QSizePolicy::Minimum, QSizePolicy::Minimum);
     QGridLayout* layout = (QGridLayout*) msgBox.layout();

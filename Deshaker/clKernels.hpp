@@ -21,6 +21,7 @@
 #include <string>
 
 inline std::string kernelsInputOutput = R"(
+#pragma OPENCL FP_CONTRACT OFF
 const sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE | CLK_FILTER_NEAREST;
 
 __kernel void scale_8u32f_1(__read_only image2d_t src, __write_only image2d_t dest) {
@@ -48,15 +49,18 @@ __kernel void scale_8u32f_3(__read_only image2d_t src, __write_only image2d_t de
 	write_imagef(dest, (int2)(c, r), val * f);
 }
 
-__kernel void scale_32f8u_3(__read_only image2d_t src, __write_only image2d_t dest) {
+__kernel void scale_32f8u_3(__read_only image2d_t src, __global uchar* dest, int pitch) {
 	int c = get_global_id(0);
 	int r = get_global_id(1);
 	int h = get_global_size(1);
 
 	float4 val = round(read_imagef(src, (int2)(c, r)) * 255.0f);
-	write_imageui(dest, (int2)(c, r), (uchar)(val.x));
-	write_imageui(dest, (int2)(c, r + h), (uchar)(val.y));
-	write_imageui(dest, (int2)(c, r + h + h), (uchar)(val.z));
+	int idx = r * pitch + c;
+	dest[idx] = (uchar)(val.x);
+	idx += h * pitch;
+	dest[idx] = (uchar)(val.y);
+	idx += h * pitch;
+	dest[idx] = (uchar)(val.z);
 }
 
 const int maxSize = 8;
@@ -73,7 +77,7 @@ __constant struct FilterKernel filterKernels[4] = {
 	{3, {-0.5f, 0.0f, 0.5f}},
 };
 
-__kernel void filter_32f_1(__read_only image2d_t src, __write_only image2d_t dest, int filterIndex, int dx, int dy) {
+__kernel void filter_32f_1(__read_only image2d_t src, __write_only image2d_t dest, int filterIndex, int dx, int dy, int row) {
 	int c = get_global_id(0);
 	int r = get_global_id(1);
 
@@ -88,10 +92,10 @@ __kernel void filter_32f_1(__read_only image2d_t src, __write_only image2d_t des
 		x += dx;
 		y += dy;
 	}
-	write_imagef(dest, (int2)(c, r), result);
+	write_imagef(dest, (int2)(c, r + row), result);
 }
 
-__kernel void filter_32f_3(__read_only image2d_t src, __write_only image2d_t dest, int filterIndex, int dx, int dy) {
+__kernel void filter_32f_3(__read_only image2d_t src, __write_only image2d_t dest, int filterIndex, int dx, int dy, int ignore) {
 	int c = get_global_id(0);
 	int r = get_global_id(1);
 
@@ -199,10 +203,11 @@ __kernel void scrap() {}
 )";
 
 inline std::string luinvFunction = R"(
+#pragma OPENCL FP_CONTRACT OFF
 void luinv(double** Apiv, double* A0, double* temp, double* Ainv, int s, int r, int ci, int cols) {
 	//step 1. decompose matrix A0
 	if (r < s && ci == 0) {
-		Apiv[r] = A0 + 1ull * r * s;
+		Apiv[r] = A0 + r * s;
 
 		//iterate j over columns
 		for (int j = 0; j < s; j++) {
@@ -235,7 +240,7 @@ void luinv(double** Apiv, double* A0, double* temp, double* Ainv, int s, int r, 
 			Ainv[r * s + c] = 0.0;
 		}
 		if (ci == 0) {
-			Ainv[1ull * r * s + (Apiv[r] - A0) / s] = 1.0;
+			Ainv[r * s + (Apiv[r] - A0) / s] = 1.0;
 		}
 
 		//forward substitution
@@ -259,6 +264,7 @@ void luinv(double** Apiv, double* A0, double* temp, double* Ainv, int s, int r, 
 )";
 
 inline std::string norm1Function = R"(
+#pragma OPENCL FP_CONTRACT OFF
 double norm1(const double* mat, int m, int n, double* temp) {
 	int i = get_local_id(0);
 	int k = get_local_id(1);
@@ -282,9 +288,6 @@ double norm1(const double* mat, int m, int n, double* temp) {
 	//max is now first item
 	return temp[0];
 }
-
-//provide an implementation for testing norm1
-void luinv(double** Apiv, double* A0, double* temp, double* Ainv, int s, int r, int ci, int cols) {}
 )";
 
 inline std::string testKernels = R"(
@@ -298,19 +301,19 @@ __kernel void luinvTest(__global double* input, __global double* outAinv, __loca
 	luinv(Apiv, input, temp, outAinv, s, r, c, cols);
 }
 
-__kernel void luinvGroupTest(__global double* input, __global double* output, __local double* shdmem) {
+__kernel void luinvGroupTest(__global double* input, __global double* output, __local double* ptr) {
 	int s = get_local_size(0);
 	int offsetLocal = get_local_id(0) * s;
 	int offsetGlobal = get_group_id(0) * s * s;
 	int gid = offsetGlobal + offsetLocal;
 
-	double* src = shdmem;
+	double* src = ptr;
 	for (int i = 0; i < s; i++) {
 		src[offsetLocal + i] = input[gid + i];
 	}
 
-	double* temp = shdmem + s * s;
-	double** Apiv = (double**) (temp + s);
+	double* temp = src + s * s;
+	double** Apiv = (double**)(temp + s);
 	int r = get_local_id(0);
 	int c = get_local_id(1);
 	int cols = get_local_size(1);

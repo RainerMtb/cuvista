@@ -100,10 +100,10 @@ public:
 
 //result type of one computed point
 enum class PointResultType {
-	FAIL_SINGULAR,
+	FAIL_SINGULAR = -3,
 	FAIL_ITERATIONS,
 	FAIL_ETA_NAN,
-	RUNNING,
+	RUNNING = 0,
 	SUCCESS_ABSOLUTE_ERR,
 	SUCCESS_STABLE_ITER,
 };

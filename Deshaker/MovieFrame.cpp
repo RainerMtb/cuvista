@@ -135,7 +135,7 @@ void CpuFrame::createPyramid() {
 
 void CpuFrame::computeTerminate() {
 	size_t pyrIdx = mStatus.frameInputIndex % mPyr.size();
-	size_t pyrIdxPrev = pyrIdx - 1;
+	size_t pyrIdxPrev = (mStatus.frameInputIndex - 1) % mPyr.size();
 	CpuFrameItem& frame = mPyr[pyrIdx];
 	CpuFrameItem& previous = mPyr[pyrIdxPrev];
 	assert(frame.frameIndex > 0 && frame.frameIndex == previous.frameIndex + 1 && "wrong frames to compute");
@@ -157,23 +157,26 @@ void CpuFrame::computeTerminate() {
 				dwp.setValuesByRow({ 1, 0, 0, 0, 1, 0, 0, 0, 1 });
 
 				//center of previous integration window
-				int ym = (int) iy0 + ir;
-				int xm = (int) ix0 + ir;
+				int ym = (int) iy0 + ir + 1;
+				int xm = (int) ix0 + ir + 1;
 				PointResultType result = PointResultType::RUNNING;
 				int z = mData.zMax;
 				for (; z >= mData.zMin && result >= PointResultType::RUNNING; z--) {
 					//based on previous frame
-					SubMat<float> dx = previous.mDX[z].subMatShared(ym - ir, xm - ir, iw, iw);
-					SubMat<float> dy = previous.mDY[z].subMatShared(ym - ir, xm - ir, iw, iw);
-					SubMat<float> im = previous.mY[z].subMatShared(ym - ir, xm - ir, iw, iw);
+					//SubMat<float> dx = previous.mDX[z].subMatShared(ym - ir, xm - ir, iw, iw);
+					//SubMat<float> dy = previous.mDY[z].subMatShared(ym - ir, xm - ir, iw, iw);
+					Matf& Y = previous.mY[z];
+					SubMat<float> im = Y.subMatShared(ym - ir, xm - ir, iw, iw);
 
 					//affine transform
 					for (size_t r = 0; r < iw; r++) {
 						for (size_t c = 0; c < iw; c++) {
-							double x = dx.at(c, r);
-							double y = dy.at(c, r);
-							double rd = (double) (r) - mData.ir;
-							double cd = (double) (c) - mData.ir;
+							//double x = dx.at(c, r);
+							//double y = dy.at(c, r);
+							double x = Y.at(ym - ir + c, xm - ir + r + 1) / 2 - Y.at(ym - ir + c, xm - ir + r - 1) / 2;
+							double y = Y.at(ym - ir + c + 1, xm - ir + r) / 2 - Y.at(ym - ir + c - 1, xm - ir + r) / 2;
+							double rd = (double) (r) - ir;
+							double cd = (double) (c) - ir;
 							size_t idx = r * iw + c;
 							sd.at(0, idx) = x;
 							sd.at(1, idx) = y;

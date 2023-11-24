@@ -22,58 +22,83 @@
 #include "ErrorLogger.hpp"
 #include <map>
 
-struct ClData {
-	cl::Context context;
-	cl::CommandQueue queue;
-
-	// input yuv frames
-	std::vector<cl::Image2D> yuv;
-	// stored pyramid images, first index frame, second index 0:Y, 1:DX, 2:DY, third index level
-	std::vector<std::vector<std::vector<cl::Image2D>>> pyr;
-	// buffers for filtering on pyramid creation
-	std::vector<std::vector<cl::Image2D>> pyrBuffer;
-
-	std::array<cl::Image2D, 5> out;
-	cl::Image2D yuvOut;
-	cl::Buffer rgbOut;
-
-	std::map<std::string, cl::Kernel> kernelMap = {
-		{"scale_8u32f_1", {}},
-		{"scale_8u32f_3", {}},
-		{"scale_32f8u_3", {}},
-		{"filter_32f_1", {}},
-		{"filter_32f_3", {}},
-		{"remap_downsize_32f", {}},
-		{"warp_back", {}},
-		{"unsharp", {}},
-		{"yuv8u_to_rgb", {}},
-		{"yuv32f_to_rgb", {}},
-		{"scrap", {}},
-		{"compute", {}},
-	};
-
-	cl::Kernel& kernel(const std::string& key) {
-		return kernelMap.at(key);
-	}
-};
 
 namespace cl {
-	void scale_8u32f_1(cl::Image src, cl::Image dest, ClData& clData);
-	void scale_8u32f_3(cl::Image src, cl::Image dest, ClData& clData);
-	void scale_32f8u_3(cl::Image src, cl::Image dest, ClData& clData);
+	class Size2 : public array<size_type, 2> {
+	public:
+		Size2(size_type x, size_type y) : array<size_type, 2>{x, y} {}
+		Size2(int x, int y) : Size2(size_type(x), size_type(y)) {}
+		Size2() : Size2(0, 0) {}
+	};
 
-	void filter_32f_h1(cl::Image src, cl::Image dest, int filterIndex, ClData& clData);
-	void filter_32f_h3(cl::Image src, cl::Image dest, ClData& clData);
-	void filter_32f_v1(cl::Image src, cl::Image dest, int filterIndex, ClData& clData);
-	void filter_32f_v3(cl::Image src, cl::Image dest, ClData& clData);
-	void filter_32f_func(cl::Kernel& kernel, cl::Image src, cl::Image dest, int filterIndex, int dx, int dy, ClData& clData);
+	//definition of results structure must be the same in device code
+	struct cl_PointResult {
+		cl_double u, v;
+		cl_uint idx, ix0, iy0;
+		cl_int px, py;
+		cl_int xm, ym;
+		cl_char result;
+	};
 
-	void remap_downsize_32f(cl::Image src, cl::Image dest, ClData& clData);
-	void warp_back(cl::Image src, cl::Image dest, ClData& clData, std::array<double, 6> trf);
-	void unsharp(cl::Image src, cl::Image dest, cl::Image gauss, ClData& clData, cl_float4 factor);
+	//one image to hold all image levels
+	struct ImagePyramid {
+		Image2D Y, DX, DY;
+	};
 
-	void yuv_to_rgb(const std::string& kernelName, cl::Image src, unsigned char* imageData, ClData& clData, int w, int h);
+	struct Data {
+		Context context;
+		CommandQueue queue;
 
-	void runKernel(cl::Kernel& kernel, cl::Image src, cl::Image dest, cl::CommandQueue queue);
-	void runKernel(cl::Kernel& kernel, cl::Image src, cl::Image dest, cl::CommandQueue queue, size_t w, size_t h);
+		// input yuv frames
+		std::vector<Image2D> yuv;
+		// pyramid images, one image for all levels
+		std::vector<ImagePyramid> pyr;
+		// buffers for filtering on pyramid creation
+		std::vector<std::vector<Image2D>> pyrBuffer;
+
+		//data storage for output
+		std::array<Image2D, 5> out;
+		Buffer yuvOut;
+		Buffer rgbOut;
+
+		//storage for results struct
+		Buffer results;
+		std::vector<cl_PointResult> cl_results;
+
+		std::map<std::string, Kernel> kernelMap = {
+			{"scale_8u32f_1", {}},
+			{"scale_8u32f_3", {}},
+			{"scale_32f8u_3", {}},
+			{"filter_32f_1", {}},
+			{"filter_32f_3", {}},
+			{"remap_downsize_32f", {}},
+			{"warp_back", {}},
+			{"unsharp", {}},
+			{"yuv8u_to_rgb", {}},
+			{"yuv32f_to_rgb", {}},
+			{"scrap", {}},
+			{"compute", {}},
+		};
+
+		Kernel& kernel(const std::string& key) {
+			return kernelMap.at(key);
+		}
+	};
+
+	void scale_8u32f_1(Image src, Image dest, Data& clData);
+	void scale_8u32f_3(Image src, Image dest, Data& clData);
+	void scale_32f8u_3(Image src, Buffer dest, int pitch, Data& clData);
+
+	void filter_32f_h1(Image src, Image dest, int filterIndex, size_t destRowOffset, size_t destCols, size_t destRows, Data& clData);
+	void filter_32f_h3(Image src, Image dest, Data& clData);
+	void filter_32f_v1(Image src, Image dest, int filterIndex, size_t destRowOffset, size_t destCols, size_t destRows, Data& clData);
+	void filter_32f_v3(Image src, Image dest, Data& clData);
+
+	void remap_downsize_32f(Image src, Image dest, Data& clData);
+	void warp_back(Image src, Image dest, Data& clData, std::array<double, 6> trf);
+	void unsharp(Image src, Image dest, Image gauss, Data& clData, cl_float4 factor);
+
+	void yuv_to_rgb(const std::string& kernelName, Image src, unsigned char* imageData, Data& clData, int w, int h);
+
+	void readImage(Image src, size_t destPitch, void* dest, CommandQueue queue);
 }

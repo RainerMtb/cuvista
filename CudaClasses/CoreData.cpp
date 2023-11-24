@@ -23,7 +23,7 @@ bool PointResult::isValid() const {
 }
 
 int PointResult::resultValue() const {
-	return static_cast<int>(result) - static_cast<int>(PointResultType::RUNNING);
+	return static_cast<int>(result);
 }
 
 bool PointResult::equal(double a, double b, double tol) const {

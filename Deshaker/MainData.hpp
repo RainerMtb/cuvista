@@ -62,10 +62,13 @@ enum class DecideYNA {
 
 class DeviceInfoCpu : public DeviceInfo {
 public:
-	DeviceInfoCpu(DeviceType type, size_t targetIndex, int64_t maxPixel)
-		: DeviceInfo(type, targetIndex, maxPixel) {}
+	DeviceInfoCpu(DeviceType type, int64_t maxPixel)
+		: DeviceInfo(type, maxPixel) 
+	{}
 
-	DeviceInfoCpu() : DeviceInfoCpu(DeviceType::CPU, 0, 0) {}
+	DeviceInfoCpu() 
+		: DeviceInfoCpu(DeviceType::CPU, 16384) 
+	{}
 
 	std::string getName() const override;
 };
@@ -213,6 +216,8 @@ public:
 	void showBasicInfo() const;
 
 	void showDeviceInfo();
+	
+	std::ostream& showDeviceInfo(std::ostream& os) const;
 
 	size_t deviceCountCuda() const;
 

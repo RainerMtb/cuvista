@@ -6,16 +6,18 @@ void CudaFFmpegWriter::open(EncodingOption videoCodec) {
     int result;
 
     //select codec
-    size_t deviceIndex = mData.deviceList[mData.deviceSelected]->type == DeviceType::CUDA ? mData.deviceList[mData.deviceSelected]->targetIndex : 0;
-    const DeviceInfoCuda& dic = mData.cudaInfo.devices[deviceIndex];
-    if (videoCodec.codec == Codec::AUTO) videoCodec.codec = dic.encodingOptions[0].codec;
+    const DeviceInfoCuda* dic = &mData.cudaInfo.devices[0];
+    if (mData.deviceList[mData.deviceSelected]->type == DeviceType::CUDA) {
+        dic = static_cast<DeviceInfoCuda*>(mData.deviceList[mData.deviceSelected]);
+    }
+    if (videoCodec.codec == Codec::AUTO) videoCodec.codec = dic->encodingOptions[0].codec;
     GUID guid = guidMap[videoCodec.codec];
 
     //open ffmpeg output format
     FFmpegFormatWriter::open(videoCodec);
 
     //setup nvenc class
-    nvenc.createEncoder(mData.inputCtx.fpsNum, mData.inputCtx.fpsDen, GOP_SIZE, mData.crf, guid, (int) deviceIndex);
+    nvenc.createEncoder(mData.inputCtx.fpsNum, mData.inputCtx.fpsDen, GOP_SIZE, mData.crf, guid, dic->cudaIndex);
 
     //setup codec parameters for ffmpeg format output
     AVCodecParameters* params = videoStream->codecpar;

@@ -48,12 +48,11 @@ enum class DeviceType {
 class DeviceInfo {
 public:
 	DeviceType type;
-	size_t targetIndex;
 	std::vector<EncodingOption> encodingOptions;
 	int64_t maxPixel;
 
-	DeviceInfo(DeviceType type, size_t targetIndex, int64_t maxPixel)
-		: type { type }, targetIndex { targetIndex }, maxPixel { maxPixel } 
+	DeviceInfo(DeviceType type, int64_t maxPixel)
+		: type { type }, maxPixel { maxPixel } 
 	{}
 
 	virtual std::string getName() const = 0;
