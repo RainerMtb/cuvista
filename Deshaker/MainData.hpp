@@ -189,7 +189,7 @@ public:
 	double cSigmaParam = 1.25;
 
 	//cpu threads to use in cpu-compute and computing transform parameters, leave room for other things
-	size_t cpuThreads = std::max(1u, std::thread::hardware_concurrency() * 3 / 4);
+	int cpuThreads = std::max(1u, std::thread::hardware_concurrency() * 3 / 4);
 
 	int64_t maxFrames = std::numeric_limits<int32_t>::max();
 

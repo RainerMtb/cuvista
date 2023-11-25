@@ -230,7 +230,7 @@ public:
 	}
 
 	Mat<float> getPyramid(size_t idx) const override {
-		Mat<float> out = Mat<float>::allocate(mData.pyramidRowCount * 3LL, mData.w);
+		Mat<float> out = Mat<float>::allocate(mData.pyramidRowCount, mData.w);
 		cudaGetPyramid(out.data(), idx, mData);
 		return out;
 	}
@@ -290,7 +290,7 @@ public:
 	}
 
 	Mat<float> getPyramid(size_t idx) const override {
-		Mat<float> out = Mat<float>::zeros(mData.pyramidRowCount * 3LL, mData.w);
+		Mat<float> out = Mat<float>::zeros(mData.pyramidRowCount, mData.w);
 		cl::getPyramid(out.data(), idx, mData);
 		return out;
 	}
@@ -340,7 +340,7 @@ protected:
 
 	public:
 		int64_t frameIndex = -1;
-		std::vector<Mat<float>> mY, mDX, mDY;
+		std::vector<Mat<float>> mY;
 
 		CpuFrameItem(MainData& data);
 	};

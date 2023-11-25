@@ -29,16 +29,15 @@ void runKernel(cl::Kernel& kernel, cl::Image src, cl::Image dest, cl::CommandQue
 	runKernel(kernel, src, dest, queue, dest.getImageInfo<CL_IMAGE_WIDTH>(), dest.getImageInfo<CL_IMAGE_HEIGHT>());
 }
 
-void filter_32f_func(cl::Kernel& kernel, cl::Image src, cl::Image dest, int filterIndex, int dx, int dy, cl::Data& clData, size_t row, size_t w, size_t h) {
+void filter_32f_func(cl::Kernel& kernel, cl::Image src, cl::Image dest, int filterIndex, int dx, int dy, cl::Data& clData, size_t w, size_t h) {
 	kernel.setArg(2, filterIndex);
 	kernel.setArg(3, dx);
 	kernel.setArg(4, dy);
-	kernel.setArg(5, int(row));
 	runKernel(kernel, src, dest, clData.queue, w, h);
 }
 
 void filter_32f_func(cl::Kernel& kernel, cl::Image src, cl::Image dest, int filterIndex, int dx, int dy, cl::Data& clData) {
-	filter_32f_func(kernel, src, dest, filterIndex, dx, dy, clData, 0, dest.getImageInfo<CL_IMAGE_WIDTH>(), dest.getImageInfo<CL_IMAGE_HEIGHT>());
+	filter_32f_func(kernel, src, dest, filterIndex, dx, dy, clData, dest.getImageInfo<CL_IMAGE_WIDTH>(), dest.getImageInfo<CL_IMAGE_HEIGHT>());
 }
 
 
@@ -68,16 +67,16 @@ void cl::remap_downsize_32f(Image src, Image dest, Data& clData) {
 	runKernel(clData.kernel("remap_downsize_32f"), src, dest, clData.queue);
 }
 
-void cl::filter_32f_h1(Image src, Image dest, int filterIndex, size_t destRowOffset, size_t destCols, size_t destRows, Data& clData) {
-	filter_32f_func(clData.kernel("filter_32f_1"), src, dest, filterIndex, 1, 0, clData, destRowOffset, destCols, destRows);
+void cl::filter_32f_h1(Image src, Image dest, int filterIndex, Data& clData) {
+	filter_32f_func(clData.kernel("filter_32f_1"), src, dest, filterIndex, 1, 0, clData);
 }
 
 void cl::filter_32f_h3(Image src, Image dest, Data& clData) {
 	filter_32f_func(clData.kernel("filter_32f_3"), src, dest, -1, 1, 0, clData);
 }
 
-void cl::filter_32f_v1(Image src, Image dest, int filterIndex, size_t destRowOffset, size_t destCols, size_t destRows, Data& clData) {
-	filter_32f_func(clData.kernel("filter_32f_1"), src, dest, filterIndex, 0, 1, clData, destRowOffset, destCols, destRows);
+void cl::filter_32f_v1(Image src, Image dest, int filterIndex, Data& clData) {
+	filter_32f_func(clData.kernel("filter_32f_1"), src, dest, filterIndex, 0, 1, clData);
 }
 
 void cl::filter_32f_v3(Image src, Image dest, Data& clData) {

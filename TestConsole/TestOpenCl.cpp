@@ -161,21 +161,24 @@ void pyramid() {
 		//ret.second.saveAsColorBMP("f:/testOcl.bmp");
 	}
 
-	//outCpu.saveAsBinary("f:/outCpu.dat");
-	//outCuda.saveAsBinary("f:/outCuda.dat");
+	cpu.pyramid.saveAsBinary("f:/pyrCpu.dat");
+	ocl.pyramid.saveAsBinary("f:/pyrOcl.dat");
 	std::cout << "comparing CPU and CUDA: ";
+	std::cout << std::endl;
 	std::cout << (cpu.pyramid.equalsExact(cuda.pyramid) ? "pyramids equal" : "pyramids DIFFER");
-	std::cout << ", ";
+	std::cout << std::endl;
 	std::cout << (cpu.output.equalsExact(cuda.output) ? "warped output equal" : "warped output DIFFER");
-	std::cout << ", ";
+	std::cout << std::endl;
 	std::cout << (cpu.results == cuda.results ? "results equal" : "results DIFFER");
+	std::cout << std::endl;
 	std::cout << std::endl;
 
 	std::cout << "comparing CPU and OPEN CL: ";
+	std::cout << std::endl;
 	std::cout << (cpu.pyramid.equalsExact(ocl.pyramid) ? "pyramids equal" : "pyramids DIFFER");
-	std::cout << ", ";
+	std::cout << std::endl;
 	std::cout << (cpu.output.equalsExact(ocl.output) ? "warped output equal" : "warped output DIFFER");
-	std::cout << ", ";
+	std::cout << std::endl;
 	std::cout << (cpu.results == ocl.results ? "results equal" : "results DIFFER");
 	std::cout << std::endl;
 

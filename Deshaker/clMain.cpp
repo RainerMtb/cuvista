@@ -137,26 +137,22 @@ void cl::init(CoreData& core, ImageYuv& inputFrame, OpenClInfo clinfo, const Dev
 		//image format gray single channel float
 		ImageFormat fmt32(CL_R, CL_FLOAT);
 
-		//buffer pyramid for filtering, need 3 buffer images on every pyramid level
-		int siz = 3;
-		clData.pyrBuffer.resize(siz);
-		for (size_t idx = 0; idx < siz; idx++) {
-			clData.pyrBuffer[idx].resize(core.pyramidLevels);
-			for (int z = 0; z < core.pyramidLevels; z++) {
-				int hh = core.h >> z;
-				int ww = core.w >> z;
-				clData.pyrBuffer[idx][z] = Image2D(clData.context, CL_MEM_READ_WRITE, fmt32, ww, hh);
-			}
+		//buffer pyramid for filtering
+		for (int z = 0; z < core.pyramidLevels; z++) {
+			int hh = core.h >> z;
+			int ww = core.w >> z;
+			BufferImages buf = {
+				Image2D(clData.context, CL_MEM_READ_WRITE, fmt32, ww, hh),
+				Image2D(clData.context, CL_MEM_READ_WRITE, fmt32, ww, hh),
+				Image2D(clData.context, CL_MEM_READ_WRITE, fmt32, ww, hh)
+			};
+			clData.buffer.push_back(buf);
 		}
 
 		//allocate pyramid, one image for all levels
-		clData.pyr.resize(core.pyramidCount);
 		for (size_t idx = 0; idx < core.pyramidCount; idx++) {
-			clData.pyr[idx] = { 
-				Image2D(clData.context, CL_MEM_READ_WRITE, fmt32, core.w, core.pyramidRowCount),
-				Image2D(clData.context, CL_MEM_READ_WRITE, fmt32, core.w, core.pyramidRowCount),
-				Image2D(clData.context, CL_MEM_READ_WRITE, fmt32, core.w, core.pyramidRowCount)
-			};
+			Image2D im = Image2D(clData.context, CL_MEM_READ_WRITE, fmt32, core.w, core.pyramidRowCount);
+			clData.pyramid.push_back(im);
 		}
 
 		//output images
@@ -231,34 +227,21 @@ void cl::createPyramid(int64_t frameIdx, const CoreData& core) {
 
 	try {
 		//convert yuv image to first level of Y pyramid
-		Image& im = clData.pyrBuffer[2][0];
+		Image& im = clData.buffer[0].result;
 		scale_8u32f_1(clData.yuv[frIdx], im, clData);
-		clData.queue.enqueueCopyImage(im, clData.pyr[pyrIdx].Y, Size2(), Size2(), Size2(w, h));
-		//first level of DX
-		filter_32f_h1(im, clData.pyr[pyrIdx].DX, 3, 0, w, h, clData);
-		//first level of DY
-		filter_32f_v1(im, clData.pyr[pyrIdx].DY, 3, 0, w, h, clData);
+		clData.queue.enqueueCopyImage(im, clData.pyramid[pyrIdx], Size2(), Size2(), Size2(w, h));
 
 		//lower levels of pyramid
 		size_t row = h;
-		size_t ww = w;
-		size_t hh = h;
 		for (size_t z = 1; z < core.pyramidLevels; z++) {
-			Image& src = clData.pyrBuffer[2][z - 1];
-			Image& filterH = clData.pyrBuffer[0][z - 1];
-			Image& filterV = clData.pyrBuffer[1][z - 1];
-			Image& dest = clData.pyrBuffer[2][z];
-
-			filter_32f_h1(src, filterH, 0, 0, ww, hh, clData);
-			filter_32f_v1(filterH, filterV, 0, 0, ww, hh, clData);
-			remap_downsize_32f(filterV, dest, clData);
-
-			hh = dest.getImageInfo<CL_IMAGE_HEIGHT>();
-			ww = dest.getImageInfo<CL_IMAGE_WIDTH>();
-			clData.queue.enqueueCopyImage(dest, clData.pyr[pyrIdx].Y, Size2(), Size2(0ull, row), Size2(ww, hh));
-			filter_32f_h1(dest, clData.pyr[pyrIdx].DX, 3, row, ww, hh, clData);
-			filter_32f_v1(dest, clData.pyr[pyrIdx].DY, 3, row, ww, hh, clData);
-
+			Image& src = clData.buffer[z - 1].result;
+			Image& dest = clData.buffer[z].result;
+			filter_32f_h1(src, clData.buffer[z - 1].filterH, 0, clData);
+			filter_32f_v1(clData.buffer[z - 1].filterH, clData.buffer[z - 1].filterV, 0, clData);
+			remap_downsize_32f(clData.buffer[z - 1].filterV, dest, clData);
+			int ww = w >> z;
+			int hh = h >> z;
+			clData.queue.enqueueCopyImage(dest, clData.pyramid[pyrIdx], Size2(), Size2(0ull, row), Size2(ww, hh));
 			row += hh;
 		}
 
@@ -281,11 +264,9 @@ void cl::computeTerminate(int64_t frameIdx, const CoreData& core, std::vector<Po
 
 	try {
 		Kernel kernel = clData.kernel("compute");
-		kernel.setArg(0, clData.pyr[pyrIdxPrev].Y);
-		kernel.setArg(1, clData.pyr[pyrIdxPrev].DX);
-		kernel.setArg(2, clData.pyr[pyrIdxPrev].DY);
-		kernel.setArg(3, clData.pyr[pyrIdx].Y);
-		kernel.setArg(4, clData.results);
+		kernel.setArg(0, clData.pyramid[pyrIdxPrev]);
+		kernel.setArg(1, clData.pyramid[pyrIdx]);
+		kernel.setArg(2, clData.results);
 		NDRange ndglobal = NDRange(1ull * core.iw * core.ixCount, core.iyCount);
 		NDRange ndlocal = NDRange(core.iw, 1);
 		clData.queue.enqueueNDRangeKernel(kernel, NullRange, ndglobal, ndlocal);
@@ -307,13 +288,6 @@ void cl::computeTerminate(int64_t frameIdx, const CoreData& core, std::vector<Po
 //----------------------------------
 //-------- OUTPUT STABILIZED -------
 //----------------------------------
-
-//utility function to read from image
-void cl::readImage(Image src, size_t destPitch, void* dest, CommandQueue queue) {
-	size_t w = src.getImageInfo<CL_IMAGE_WIDTH>();
-	size_t h = src.getImageInfo<CL_IMAGE_HEIGHT>();
-	queue.enqueueReadImage(src, CL_TRUE, Size2(), Size2(w, h), destPitch, 0, dest);
-}
 
 void cl::outputData(int64_t frameIdx, const CoreData& core, OutputContext outCtx, std::array<double, 6> trf) {
 	//ConsoleTimer timer;
@@ -352,6 +326,13 @@ void cl::outputData(int64_t frameIdx, const CoreData& core, OutputContext outCtx
 	}
 }
 
+//utility function to read from image
+void cl::readImage(Image src, size_t destPitch, void* dest, CommandQueue queue) {
+	size_t w = src.getImageInfo<CL_IMAGE_WIDTH>();
+	size_t h = src.getImageInfo<CL_IMAGE_HEIGHT>();
+	queue.enqueueReadImage(src, CL_TRUE, Size2(), Size2(w, h), destPitch, 0, dest);
+}
+
 ImageYuv cl::getInput(int64_t idx, const CoreData& core) {
 	ImageYuv out(core.h, core.w, core.w);
 	int64_t fr = idx % core.bufferCount;
@@ -365,11 +346,7 @@ void cl::getPyramid(float* pyramid, size_t idx, const CoreData& core) {
 	size_t wbytes = core.w * sizeof(float);
 
 	try {
-		float* ptr = pyramid;
-		for (const Image& im : { clData.pyr[pyrIdx].Y, clData.pyr[pyrIdx].DX, clData.pyr[pyrIdx].DY }) {
-			readImage(im, wbytes, ptr, clData.queue);
-			ptr += core.pyramidRowCount * core.w;
-		}
+		readImage(clData.pyramid[pyrIdx], wbytes, pyramid, clData.queue);
 
 	} catch (const Error& err) {
 		errorLogger.logError("OpenCL get pyramid: ", err.what());

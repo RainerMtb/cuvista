@@ -48,19 +48,13 @@ char SUCCESS_STABLE_ITER = 2;
 //result of one computed point in a frame
 struct PointResult {
 	double u, v;
-	uint idx, ix0, iy0;
+	int idx, ix0, iy0;
 	int px, py;
 	int xm, ym;
 	char result;
 };
 
-__kernel void compute(
-__read_only image2d_t Yp, 
-__read_only image2d_t DXp, 
-__read_only image2d_t DYp, 
-__read_only image2d_t Y, 
-__global struct PointResult* results
-) {
+__kernel void compute(__read_only image2d_t Yp, __read_only image2d_t Y, __global struct PointResult* results) {
 	uint ix0 = get_group_id(0);
 	uint iy0 = get_group_id(1);
 	uint blockIndex = iy0 * get_num_groups(0) + ix0;

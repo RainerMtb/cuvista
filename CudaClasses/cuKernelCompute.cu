@@ -47,9 +47,9 @@ extern __constant__ CudaData d_core;
 //compute displacement
 //one cuda block works one point in the image using one warp
 __global__ void kernelCompute(ComputeTextures tex, PointResult* results, ComputeKernelParam param) {
-	uint ix0 = blockIdx.x;
-	uint iy0 = blockIdx.y;
-	uint blockIndex = iy0 * gridDim.x + ix0;
+	int ix0 = blockIdx.x;
+	int iy0 = blockIdx.y;
+	int blockIndex = iy0 * gridDim.x + ix0;
 	if (*param.d_interrupt || param.d_computed[blockIndex]) return;
 	param.kernelTimestamps[blockIndex].start();
 
@@ -99,8 +99,10 @@ __global__ void kernelCompute(ComputeTextures tex, PointResult* results, Compute
 		//build sd matrix [6 x iw*iw]
 		if (r < iw) {
 			for (int c = ci; c < iw; c += cols) {
-				double x = tex2D<float>(tex.DXprev, xm - ir + r, rowOffset + ym - ir + c);
-				double y = tex2D<float>(tex.DYprev, xm - ir + r, rowOffset + ym - ir + c);
+				int ix = xm - ir + r;
+				int iy = ym - ir + c + rowOffset;
+				double x = tex2D<float>(tex.Yprev, ix + 1, iy) / 2 - tex2D<float>(tex.Yprev, ix - 1, iy) / 2;
+				double y = tex2D<float>(tex.Yprev, ix, iy + 1) / 2 - tex2D<float>(tex.Yprev, ix, iy - 1) / 2;
 				int idx = r * iw + c;
 				sd[idx] = x;
 				idx += iw * iw;
@@ -214,7 +216,7 @@ __global__ void kernelCompute(ComputeTextures tex, PointResult* results, Compute
 			typeIndex += (int) isnan(err) * -1; //leave loop with fail message FAIL_ETA_NAN
 			typeIndex += (int) (err < d_core.compMaxTol) * 1; //leave loop with success SUCCESS_ABSOLUTE_ERR
 			typeIndex += (int) (fabs(err - bestErr) / bestErr < d_core.compMaxTol * d_core.compMaxTol) * 2; //SUCCESS_STABLE_ITER
-			result = static_cast<PointResultType>(typeIndex);
+			result = (PointResultType) typeIndex;
 
 			bestErr = min(err, bestErr);
 			iter++;

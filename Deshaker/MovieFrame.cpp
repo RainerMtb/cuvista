@@ -65,15 +65,15 @@ CpuFrame::CpuFrame(MainData& data) : MovieFrame(data) {
 	for (int i = 0; i < data.pyramidCount; i++) mPyr.emplace_back(data);
 
 	//init storage for previous output frame to background colors
-	mPrevOut.push_back(Mat<float>::values(data.h, data.w, data.bgcol_yuv.colors[0]));
-	mPrevOut.push_back(Mat<float>::values(data.h, data.w, data.bgcol_yuv.colors[1]));
-	mPrevOut.push_back(Mat<float>::values(data.h, data.w, data.bgcol_yuv.colors[2]));
+	mPrevOut.push_back(Matf::values(data.h, data.w, data.bgcol_yuv.colors[0]));
+	mPrevOut.push_back(Matf::values(data.h, data.w, data.bgcol_yuv.colors[1]));
+	mPrevOut.push_back(Matf::values(data.h, data.w, data.bgcol_yuv.colors[2]));
 
 	//buffer for output and pyramid creation
-	mBuffer.assign(4, Mat<float>::allocate(data.h, data.w));
-	mFilterBuffer = Mat<float>::allocate(data.h, data.w);
-	mFilterResult = Mat<float>::allocate(data.h, data.w);
-	mYuv = Mat<float>::allocate(data.h, data.w);
+	mBuffer.assign(4, Matf::allocate(data.h, data.w));
+	mFilterBuffer = Matf::allocate(data.h, data.w);
+	mFilterResult = Matf::allocate(data.h, data.w);
+	mYuv = Matf::allocate(data.h, data.w);
 }
 
 //construct data for one pyramid
@@ -82,9 +82,7 @@ CpuFrame::CpuFrameItem::CpuFrameItem(MainData& data) {
 	for (int z = 0; z <= data.zMax; z++) {
 		int hz = data.h >> z;
 		int wz = data.w >> z;
-		mY.push_back(Mat<float>::allocate(hz, wz));
-		mDX.push_back(Mat<float>::allocate(hz, wz));
-		mDY.push_back(Mat<float>::allocate(hz, wz));
+		mY.push_back(Matf::allocate(hz, wz));
 	}
 }
 
@@ -110,7 +108,7 @@ void CpuFrame::createPyramid() {
 
 	//create pyramid levels below by downsampling level above
 	for (size_t z = 0; z < mData.zMax; z++) {
-		Mat<float>& y = frame.mY[z];
+		Matf& y = frame.mY[z];
 		//gauss filtering
 		Matf filterTemp = mFilterBuffer.reuse(y.rows(), y.cols());
 		Matf mat = mFilterResult.reuse(y.rows(), y.cols());
@@ -125,12 +123,6 @@ void CpuFrame::createPyramid() {
 		dest.setArea(func, mPool);
 	}
 	//if (status.frameInputIndex == 1) frame.Y[1].saveAsBinary("f:/cpu.dat");
-	
-	//create delta pyramids
-	for (size_t z = 0; z <= mData.zMax; z++) {
-		frame.mY[z].filter1D_h(filterKernels[3].k, filterKernels[3].siz, frame.mDX[z], mPool);
-		frame.mY[z].filter1D_v(filterKernels[3].k, filterKernels[3].siz, frame.mDY[z], mPool);
-	}
 }
 
 void CpuFrame::computeTerminate() {
@@ -141,7 +133,7 @@ void CpuFrame::computeTerminate() {
 	assert(frame.frameIndex > 0 && frame.frameIndex == previous.frameIndex + 1 && "wrong frames to compute");
 	//Mat<double>::precision(16);
 
-	for (size_t threadIdx = 0; threadIdx < mData.cpuThreads; threadIdx++) mPool.add([&, threadIdx] {
+	for (int threadIdx = 0; threadIdx < mData.cpuThreads; threadIdx++) mPool.add([&, threadIdx] {
 		int ir = mData.ir;
 		int iw = mData.iw;
 		Mat jm = Mat<double>::allocate(iw, iw);
@@ -150,40 +142,37 @@ void CpuFrame::computeTerminate() {
 		Mat etaMat = Mat<double>::allocate(6, 1);
 		Mat wp = Mat<double>::allocate(3, 3);
 		Mat dwp = Mat<double>::allocate(3, 3);
-		for (size_t iy0 = threadIdx; iy0 < mData.iyCount; iy0 += mData.cpuThreads) {
-			for (size_t ix0 = 0; ix0 < mData.ixCount; ix0++) {
+		for (int iy0 = threadIdx; iy0 < mData.iyCount; iy0 += mData.cpuThreads) {
+			for (int ix0 = 0; ix0 < mData.ixCount; ix0++) {
 				//start with null transform
 				wp.setValuesByRow({ 1, 0, 0, 0, 1, 0, 0, 0, 1 });
 				dwp.setValuesByRow({ 1, 0, 0, 0, 1, 0, 0, 0, 1 });
 
-				//center of previous integration window
-				int ym = (int) iy0 + ir + 1;
-				int xm = (int) ix0 + ir + 1;
+				// center of previous integration window
+				// one pixel padding around outside for delta
+				// changes per z level
+				int ym = iy0 + ir + 1;
+				int xm = ix0 + ir + 1;
 				PointResultType result = PointResultType::RUNNING;
 				int z = mData.zMax;
 				for (; z >= mData.zMin && result >= PointResultType::RUNNING; z--) {
-					//based on previous frame
-					//SubMat<float> dx = previous.mDX[z].subMatShared(ym - ir, xm - ir, iw, iw);
-					//SubMat<float> dy = previous.mDY[z].subMatShared(ym - ir, xm - ir, iw, iw);
 					Matf& Y = previous.mY[z];
 					SubMat<float> im = Y.subMatShared(ym - ir, xm - ir, iw, iw);
 
 					//affine transform
-					for (size_t r = 0; r < iw; r++) {
-						for (size_t c = 0; c < iw; c++) {
-							//double x = dx.at(c, r);
-							//double y = dy.at(c, r);
-							double x = Y.at(ym - ir + c, xm - ir + r + 1) / 2 - Y.at(ym - ir + c, xm - ir + r - 1) / 2;
-							double y = Y.at(ym - ir + c + 1, xm - ir + r) / 2 - Y.at(ym - ir + c - 1, xm - ir + r) / 2;
-							double rd = (double) (r) - ir;
-							double cd = (double) (c) - ir;
-							size_t idx = r * iw + c;
-							sd.at(0, idx) = x;
-							sd.at(1, idx) = y;
-							sd.at(2, idx) = x * rd;
-							sd.at(3, idx) = y * rd;
-							sd.at(4, idx) = x * cd;
-							sd.at(5, idx) = y * cd;
+					for (int r = 0; r < iw; r++) {
+						for (int c = 0; c < iw; c++) {
+							int iy = ym - ir + c;
+							int ix = xm - ir + r;
+							double dx = Y.at(iy, ix + 1) / 2 - Y.at(iy, ix - 1) / 2;
+							double dy = Y.at(iy + 1, ix) / 2 - Y.at(iy - 1, ix) / 2;
+							int idx = r * iw + c;
+							sd.at(0, idx) = dx;
+							sd.at(1, idx) = dy;
+							sd.at(2, idx) = dx * (r - ir);
+							sd.at(3, idx) = dy * (r - ir);
+							sd.at(4, idx) = dx * (c - ir);
+							sd.at(5, idx) = dy * (c - ir);
 						}
 					}
 					//if (mData.status.frameInputIndex == 1 && ix0 == 63 && iy0 == 1) sd.toConsole(); //----------------
@@ -264,7 +253,7 @@ void CpuFrame::computeTerminate() {
 				}
 
 				//transformation for points with respect to center of image and level 0 of pyramid
-				size_t idx = iy0 * mData.ixCount + ix0;
+				int idx = iy0 * mData.ixCount + ix0;
 				resultPoints[idx] = { idx, ix0, iy0, xm, ym, xm - mData.w / 2, ym - mData.h / 2, u, v, result };
 			}
 		}
@@ -289,7 +278,7 @@ void CpuFrame::outputData(const AffineTransform& trf, OutputContext outCtx) {
 			auto [x, y] = trf.transform(c, r); //pay attention to order of x and y
 			return mYuv.interp2(float(x), float(y)).value_or(bg);
 		};
-		Mat<float>& buf = mBuffer[z];
+		Matf& buf = mBuffer[z];
 		buf.setValues(func1, mPool);
 		mPrevOut[z].setData(buf);
 
@@ -341,21 +330,17 @@ void CpuFrame::outputData(const AffineTransform& trf, OutputContext outCtx) {
 	}
 }
 
-Mat<float> CpuFrame::getTransformedOutput() const {
-	return Mat<float>::concatVert(mBuffer[0], mBuffer[1], mBuffer[2]);
+Matf CpuFrame::getTransformedOutput() const {
+	return Matf::concatVert(mBuffer[0], mBuffer[1], mBuffer[2]);
 }
 
-Mat<float> CpuFrame::getPyramid(size_t idx) const {
-	assert(idx < mPyr.size() && "pyramid index not available");
-	Mat<float> out = Mat<float>::zeros(mData.pyramidRowCount * 3LL, mData.w);
+Matf CpuFrame::getPyramid(size_t idx) const {
+	assert(idx < mPyr.size() && "invalid pyramid index");
+	Matf out = Matf::zeros(mData.pyramidRowCount, mData.w);
 	size_t row = 0;
-	const auto& items = { mPyr[idx].mY, mPyr[idx].mDX, mPyr[idx].mDY };
-	for (const auto& item : items) {
-		for (int i = 0; i <= mData.zMax; i++) {
-			const Mat<float>& ymat = item[i];
-			out.setArea(row, 0, ymat);
-			row += ymat.rows();
-		}
+	for (const Matf& mat : mPyr[idx].mY) {
+		out.setArea(row, 0, mat);
+		row += mat.rows();
 	}
 	return out;
 }

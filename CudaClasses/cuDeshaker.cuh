@@ -30,7 +30,7 @@
 class ComputeTextures {
 
 public:
-	cudaTextureObject_t Ycur, Yprev, DXprev, DYprev;
+	cudaTextureObject_t Ycur, Yprev;
 
 	__host__ void create(int64_t idx, int64_t idxPrev, const CudaData& core);
 

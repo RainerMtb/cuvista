@@ -115,7 +115,7 @@ private:
 	bool equal(double a, double b, double tol) const;
 
 public:
-	size_t idx, ix0, iy0;
+	int idx, ix0, iy0;
 	int px, py;
 	int x, y;
 	double u, v;

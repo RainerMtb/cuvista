@@ -34,15 +34,14 @@ namespace cl {
 	//definition of results structure must be the same in device code
 	struct cl_PointResult {
 		cl_double u, v;
-		cl_uint idx, ix0, iy0;
+		cl_int idx, ix0, iy0;
 		cl_int px, py;
 		cl_int xm, ym;
 		cl_char result;
 	};
 
-	//one image to hold all image levels
-	struct ImagePyramid {
-		Image2D Y, DX, DY;
+	struct BufferImages {
+		Image2D filterH, filterV, result;
 	};
 
 	struct Data {
@@ -52,9 +51,9 @@ namespace cl {
 		// input yuv frames
 		std::vector<Image2D> yuv;
 		// pyramid images, one image for all levels
-		std::vector<ImagePyramid> pyr;
+		std::vector<Image2D> pyramid;
 		// buffers for filtering on pyramid creation
-		std::vector<std::vector<Image2D>> pyrBuffer;
+		std::vector<BufferImages> buffer;
 
 		//data storage for output
 		std::array<Image2D, 5> out;
@@ -89,9 +88,9 @@ namespace cl {
 	void scale_8u32f_3(Image src, Image dest, Data& clData);
 	void scale_32f8u_3(Image src, Buffer dest, int pitch, Data& clData);
 
-	void filter_32f_h1(Image src, Image dest, int filterIndex, size_t destRowOffset, size_t destCols, size_t destRows, Data& clData);
+	void filter_32f_h1(Image src, Image dest, int filterIndex, Data& clData);
 	void filter_32f_h3(Image src, Image dest, Data& clData);
-	void filter_32f_v1(Image src, Image dest, int filterIndex, size_t destRowOffset, size_t destCols, size_t destRows, Data& clData);
+	void filter_32f_v1(Image src, Image dest, int filterIndex, Data& clData);
 	void filter_32f_v3(Image src, Image dest, Data& clData);
 
 	void remap_downsize_32f(Image src, Image dest, Data& clData);

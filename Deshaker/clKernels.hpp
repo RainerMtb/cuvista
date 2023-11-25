@@ -77,7 +77,7 @@ __constant struct FilterKernel filterKernels[4] = {
 	{3, {-0.5f, 0.0f, 0.5f}},
 };
 
-__kernel void filter_32f_1(__read_only image2d_t src, __write_only image2d_t dest, int filterIndex, int dx, int dy, int row) {
+__kernel void filter_32f_1(__read_only image2d_t src, __write_only image2d_t dest, int filterIndex, int dx, int dy) {
 	int c = get_global_id(0);
 	int r = get_global_id(1);
 
@@ -92,10 +92,10 @@ __kernel void filter_32f_1(__read_only image2d_t src, __write_only image2d_t des
 		x += dx;
 		y += dy;
 	}
-	write_imagef(dest, (int2)(c, r + row), result);
+	write_imagef(dest, (int2)(c, r), result);
 }
 
-__kernel void filter_32f_3(__read_only image2d_t src, __write_only image2d_t dest, int filterIndex, int dx, int dy, int ignore) {
+__kernel void filter_32f_3(__read_only image2d_t src, __write_only image2d_t dest, int filterIndex, int dx, int dy) {
 	int c = get_global_id(0);
 	int r = get_global_id(1);
 
