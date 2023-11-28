@@ -116,10 +116,18 @@ template <class T> Result runPyramid(MainData& data) {
 	frame->computePartTwo();
 	frame->computeTerminate();
 
-	AffineTransform trf;
-	trf.addRotation(0.2).addTranslation(-40, 30);
-	frame->outputData(trf, writer.getOutputData());
-	return { frame->getPyramid(0), frame->getTransformedOutput(), frame->resultPoints };
+	Result result;
+	if (errorLogger.hasError()) {
+		std::cout << errorLogger.getErrorMessage() << std::endl;
+
+	} else {
+		AffineTransform trf;
+		trf.addRotation(0.2).addTranslation(-40, 30);
+		frame->outputData(trf, writer.getOutputData());
+		result = { frame->getPyramid(0), frame->getTransformedOutput(), frame->resultPoints };
+	}
+
+	return result;
 }
 
 void pyramid() {
@@ -131,6 +139,7 @@ void pyramid() {
 
 	{
 		//CPU
+		std::cout << "running CPU" << std::endl;
 		MainData data;
 		data.deviceRequested = true;
 		data.deviceSelected = 0;
@@ -141,6 +150,7 @@ void pyramid() {
 
 	{
 		//Cuda
+		std::cout << "running CUDA" << std::endl;
 		MainData data;
 		data.deviceRequested = true;
 		data.deviceSelected = 1;
@@ -152,6 +162,7 @@ void pyramid() {
 
 	{
 		//OpenCL
+		std::cout << "running OpenCL" << std::endl;
 		MainData data;
 		data.deviceRequested = true;
 		data.deviceSelected = 1;
@@ -161,8 +172,9 @@ void pyramid() {
 		//ret.second.saveAsColorBMP("f:/testOcl.bmp");
 	}
 
-	cpu.pyramid.saveAsBinary("f:/pyrCpu.dat");
-	ocl.pyramid.saveAsBinary("f:/pyrOcl.dat");
+	//cpu.pyramid.saveAsBinary("f:/pyrCpu.dat");
+	//ocl.pyramid.saveAsBinary("f:/pyrOcl.dat");
+	std::cout << std::endl;
 	std::cout << "comparing CPU and CUDA: ";
 	std::cout << std::endl;
 	std::cout << (cpu.pyramid.equalsExact(cuda.pyramid) ? "pyramids equal" : "pyramids DIFFER");

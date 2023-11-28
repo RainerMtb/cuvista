@@ -526,14 +526,19 @@ std::ostream& MainData::showDeviceInfo(std::ostream& os) const {
 	//display nvidia info
 	os << std::endl;
 	os << "Nvidia/Cuda System Details:" << std::endl;
-	if (cudaInfo.nvidiaDriverVersion > 0) os << "Nvidia driver version: " << cudaInfo.nvidiaDriverToString();
-	else os << "Nvidia driver not found";
+	if (cudaInfo.nvidiaDriverVersion > 0) {
+		os << "Nvidia Driver: " << cudaInfo.nvidiaDriverToString();
+	} else {
+		os << "Nvidia driver not found";
+	}
 
 	//display cuda info
 	os << std::endl;
-	if (deviceCountCuda() > 0) os << "Cuda Runtime: " << cudaInfo.cudaRuntimeToString() << std::endl << "Cuda Driver: " << cudaInfo.cudaDriverToString();
-	os << std::endl;
-
+	if (deviceCountCuda() > 0) {
+		os << "Cuda Runtime:  " << cudaInfo.cudaRuntimeToString() << std::endl;
+		os << "Cuda Driver:   " << cudaInfo.cudaDriverToString() << std::endl;
+	}
+	
 	for (auto& info : cudaInfo.devices) {
 		os << std::endl << "Cuda Device:" << std::endl;
 		os << info;

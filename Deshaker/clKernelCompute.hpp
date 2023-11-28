@@ -49,18 +49,124 @@ char SUCCESS_STABLE_ITER = 2;
 struct PointResult {
 	double u, v;
 	int idx, ix0, iy0;
-	int px, py;
 	int xm, ym;
 	char result;
 };
 
-__kernel void compute(__read_only image2d_t Yp, __read_only image2d_t Y, __global struct PointResult* results) {
-	uint ix0 = get_group_id(0);
-	uint iy0 = get_group_id(1);
-	uint blockIndex = iy0 * get_num_groups(0) + ix0;
-	
+//core data in opencl structure
+//definition must be repeated in host code
+struct KernelData {
+	double compMaxTol, deps, dmin, dmax, dnan;
+	int w, h, ir, iw, zMin, zMax, compMaxIter, pyramidRowCount;
+};
+
+//initial values for wp
+__constant double wp0[] = { 1, 0, 0, 0, 1, 0, 0, 0, 1 };
+//initial values for eta
+__constant double eta0[] = { 0, 0, 1, 0, 0, 1 };
+
+__kernel void compute(long frameIndex, __read_only image2d_depth_t Yprev, __read_only image2d_depth_t Ycur, __global struct PointResult* results, 
+						__constant struct KernelData* d_core, __local double* shd) {
+	const int ix0 = get_group_id(0);
+	const int iy0 = get_group_id(1);
+	const int blockIndex = iy0 * get_num_groups(0) + ix0;
+	const int ci = get_local_id(1);
+	const int cols = get_local_size(1);
+	const int r = get_local_id(0);
+	const int tidx = r * cols + ci;
+
+	int ir = d_core->ir;
+	int iw = d_core->iw;
+
+	double* ptr = shd;
+	double* sd = ptr;		ptr += 6 * iw * iw;
+	double* delta = ptr;	ptr += 1 * iw * iw;
+	double* s = ptr;		ptr += 36;
+	double* g = ptr;		ptr += 36;
+	double* wp = ptr;		ptr += 9;
+	double* dwp = ptr;		ptr += 9;
+	double* b = ptr;        ptr += 6;
+	double* eta = ptr;      ptr += 6;
+	double* temp = ptr;     ptr += 6;
+	double** Apiv = (double**) ptr;
+
+	//init wp and dwp to identitiy
+	if (r < 3 && ci < 3) {
+		dwp[r * 3 + ci] = wp[r * 3 + ci] = wp0[r * 3 + ci];
+	}
+
+	//center point of image patch in this block
+	int ym = iy0 + ir + 1;
+	int xm = ix0 + ir + 1;
+	char result = RUNNING;
+
+	int z = d_core->zMax;
+	int rowOffset = d_core->pyramidRowCount - (d_core->h >> z);
+
+	for (; z >= d_core->zMin && result >= RUNNING; z--) {
+		int wz = d_core->w >> z;
+		int hz = d_core->h >> z;
+
+		if (r < iw) {
+			for (int c = ci; c < iw; c += cols) {
+				int ix = xm - ir + r;
+				int iy = ym - ir + c + rowOffset;
+				double x = read_imagef(Yprev, (int2)(ix + 1, iy)) / 2 - read_imagef(Yprev, (int2)(ix - 1, iy)) / 2;
+				double y = read_imagef(Yprev, (int2)(ix, iy + 1)) / 2 - read_imagef(Yprev, (int2)(ix, iy - 1)) / 2;
+				int idx = r * iw + c;
+				sd[idx] = x;
+				idx += iw * iw;
+				sd[idx] = y;
+				idx += iw * iw;
+				sd[idx] = x * (r - ir);
+				idx += iw * iw;
+				sd[idx] = y * (r - ir);
+				idx += iw * iw;
+				sd[idx] = x * (c - ir);
+				idx += iw * iw;
+				sd[idx] = y * (c - ir);
+			}
+		}
+
+		//S = sd * sd' [6 x 6]
+		if (tidx < 21) {
+			const struct ArrayIndex ai = sidx[tidx];
+			double sval = 0.0;
+			for (int i = 0; i < iw * iw; i++) {
+				sval += sd[ai.r * iw * iw + i] * sd[ai.c * iw * iw + i];
+			}
+			//copy symmetric value
+			s[ai.c * 6 + ai.r] = s[ai.r * 6 + ai.c] = sval;
+		}
+
+		//compute norm before starting inverse, s will be overwritten
+		double ns = norm1(s, 6, 6, temp);
+		//compute inverse
+		luinv(Apiv, s, temp, g, 6, r, ci, cols);
+		//compute reciprocal condition, see if result is valid
+		double ng = norm1(g, 6, 6, temp);
+		double rcond = 1 / (ns * ng);
+
+if (frameIndex == 1 && ix0 == 63 && iy0 == 1 && r == 0 && ci == 0) printf("%d %.14f\n", z, rcond);
+	}
+
+
+	//first thread writes into result structure
 	if (get_local_id(0) == 0 && get_local_id(1) == 0) {
+		double u = wp[2];
+		double v = wp[5];
+
+		while (z < 0) { xm /= 2; ym /= 2; u /= 2; v /= 2; z++; }
+		while (z > 0) { xm *= 2; ym *= 2; u *= 2; v *= 2; z--; }
+
 		results[blockIndex].idx = blockIndex;
+		results[blockIndex].ix0 = ix0;
+		results[blockIndex].iy0 = iy0;
+		results[blockIndex].xm = xm;
+		results[blockIndex].ym = ym;
+		results[blockIndex].u = u;
+		results[blockIndex].v = v;
+		results[blockIndex].result = result;
 	}
 }
 )";

@@ -27,7 +27,7 @@ void matTest() {
 	std::cout << std::endl;
 
 	std::cout << "output by column: ";
-	std::copy(md.begin(Direction::VERTICAL), md.end(Direction::VERTICAL), std::ostream_iterator<double>(std::cout, ", "));
+	std::copy(md.begin(Matd::Direction::VERTICAL), md.end(Matd::Direction::VERTICAL), std::ostream_iterator<double>(std::cout, ", "));
 	std::cout << std::endl;
 
 	Matd out = Mat<double>::fromRows(4, 3, {
@@ -44,7 +44,7 @@ void matTest() {
 	Matd c1 = Matd::rand(2, 3).toConsole("c1");
 	Matd c2 = Matd::fromRow({ 15, 15, -15 }).toConsole("c2");
 	Matd c3 = Matd::hilb(3).toConsole("c3");
-	Matd m = Matd::concat(Direction::VERTICAL, { c1, c2, c3 });
+	Matd m = Matd::concat(Matd::Direction::VERTICAL, { c1, c2, c3 });
 	m.toConsole("vertcat");
 	m.subMat(1, 1, 2, 2).toConsole("subMat");
 
@@ -122,9 +122,9 @@ void iteratorTest() {
 	std::cout << std::endl;
 
 	std::cout << "iter cols: ";
-	for (auto it = s.begin(Direction::VERTICAL); it != s.end(Direction::VERTICAL); it++) std::cout << *it << ", ";
+	for (auto it = s.begin(Matd::Direction::VERTICAL); it != s.end(Matd::Direction::VERTICAL); it++) std::cout << *it << ", ";
 	std::cout << std::endl;
 	std::cout << "iter cols: ";
-	for (auto it = ss.begin(Direction::VERTICAL); it != ss.end(Direction::VERTICAL); it++) std::cout << *it << ", ";
+	for (auto it = ss.begin(Matd::Direction::VERTICAL); it != ss.end(Matd::Direction::VERTICAL); it++) std::cout << *it << ", ";
 	std::cout << std::endl;
 }

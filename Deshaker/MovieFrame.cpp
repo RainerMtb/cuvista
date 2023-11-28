@@ -112,8 +112,8 @@ void CpuFrame::createPyramid() {
 		//gauss filtering
 		Matf filterTemp = mFilterBuffer.reuse(y.rows(), y.cols());
 		Matf mat = mFilterResult.reuse(y.rows(), y.cols());
-		y.filter1D_h(filterKernels[0].k, filterKernels[0].siz, filterTemp, mPool);
-		filterTemp.filter1D_v(filterKernels[0].k, filterKernels[0].siz, mat, mPool);
+		y.filter1D(filterKernels[0].k, filterKernels[0].siz, Matf::Direction::HORIZONTAL, filterTemp, mPool);
+		filterTemp.filter1D(filterKernels[0].k, filterKernels[0].siz, Matf::Direction::VERTICAL, mat, mPool);
 		
 		//if (z == 0) std::printf("cpu %.14f %.14f %.14f %.14f %.14f\n", y.at(30, 28), y.at(30, 29), y.at(30, 30), y.at(30, 31), y.at(30, 32));
 		//if (z == 0) mat.saveAsBinary("f:/buf_c.dat");
@@ -180,8 +180,11 @@ void CpuFrame::computeTerminate() {
 					//if (mData.status.frameInputIndex == 1 && ix0 == 63 && iy0 == 1) s.toConsole(); //----------------
 
 					Mat g = s.inv().value();
-					double rcond = 1 / (s.norm1() * g.norm1()); //reciprocal condition number
+					double ns = s.norm1();
+					double gs = g.norm1();
+					double rcond = 1 / (ns * gs); //reciprocal condition number
 
+					if (mData.status.frameInputIndex == 1 && ix0 == 63 && iy0 == 1) std::printf("%d %.14f\n", z, rcond);
 					//if (mData.status.frameInputIndex == 1 && ix0 == 63 && iy0 == 1) g.toConsole(); //----------------
 
 					result = (std::isnan(rcond) || rcond < mData.deps) ? PointResultType::FAIL_SINGULAR : PointResultType::RUNNING;
@@ -285,8 +288,8 @@ void CpuFrame::outputData(const AffineTransform& trf, OutputContext outCtx) {
 		//unsharp masking
 		//Mat gauss = buf.filter2D(MainData::FILTER[z], &mPool);
 		const FilterKernel& k = filterKernels[z];
-		buf.filter1D_h(k.k, k.siz, mFilterBuffer, mPool);
-		mFilterBuffer.filter1D_v(k.k, k.siz, mFilterResult, mPool);
+		buf.filter1D(k.k, k.siz, Matf::Direction::HORIZONTAL, mFilterBuffer, mPool);
+		mFilterBuffer.filter1D(k.k, k.siz, Matf::Direction::VERTICAL, mFilterResult, mPool);
 		//gauss.saveAsCSV("f:/gauss_cpu.csv");
 
 		//write output

@@ -20,7 +20,7 @@
 #include "MovieWriter.hpp"
 #include <format>
 
-ResultDetailsFile::ResultDetailsFile(const std::string& filename, const char delimiter) : std::ofstream(filename), delimiter { delimiter } {
+ResultDetailsFile::ResultDetailsFile(const std::string& filename) : std::ofstream(filename) {
 	if (is_open()) {
 		*this << "frameIdx" << delimiter << "ix0" << delimiter << "iy0" 
 			<< delimiter << "px" << delimiter << "py" << delimiter << "u" << delimiter << "v" 

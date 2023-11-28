@@ -102,9 +102,12 @@ void readAndWriteOneFrame() {
 
 void checkVersions() {
 	std::cout << "check cuda devices" << std::endl;
-	MainData data;
-	data.probeCuda();
-	data.showDeviceInfo();
+	try {
+		MainData data;
+		data.probeCuda();
+		data.probeOpenCl();
+		data.showDeviceInfo();
+	} catch (CancelException ignore) {}
 }
 
 void transform() {

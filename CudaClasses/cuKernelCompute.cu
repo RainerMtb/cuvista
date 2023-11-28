@@ -46,11 +46,11 @@ extern __constant__ CudaData d_core;
 
 //compute displacement
 //one cuda block works one point in the image using one warp
-__global__ void kernelCompute(ComputeTextures tex, PointResult* results, ComputeKernelParam param) {
+__global__ void kernelCompute(ComputeTextures tex, CudaPointResult* results, ComputeKernelParam param) {
 	int ix0 = blockIdx.x;
 	int iy0 = blockIdx.y;
 	int blockIndex = iy0 * gridDim.x + ix0;
-	if (*param.d_interrupt || param.d_computed[blockIndex]) return;
+	if (*param.d_interrupt || results[blockIndex].computed) return;
 	param.kernelTimestamps[blockIndex].start();
 
 	int ir = d_core.ir;
@@ -60,21 +60,20 @@ __global__ void kernelCompute(ComputeTextures tex, PointResult* results, Compute
 	extern __shared__ double shd[];
 	double* ptr = shd;
 	double* sd = ptr;		ptr += 6 * iw * iw;  // 6 x iw*iw
+	double* delta = ptr;	ptr += 1 * iw * iw;  // iw x iw
 	double* s = ptr;		ptr += 36;           // 6 x 6
 	double* g = ptr;		ptr += 36;           // 6 x 6
-	double* delta = ptr;	ptr += iw * iw;      // iw x iw
 	double* wp = ptr;		ptr += 9;            // 3 x 3
 	double* dwp = ptr;		ptr += 9;            // 3 x 3
 	double* b = ptr;        ptr += 6;            // 6 doubles
-	double* eta = ptr;      ptr += 6;            //eta 6 doubles
-	double* temp = ptr;     ptr += 6;            //temp 6 doubles
-	//array of double pointers to get rows in LU decomposition
-	double** Apiv = (double**) (ptr);
+	double* eta = ptr;      ptr += 6;            // 6 doubles
+	double* temp = ptr;     ptr += 6;            // 6 doubles
+	double** Apiv = (double**) (ptr);            // 6 double pointers to rows in LU decomposition
 
 	const int ci = threadIdx.x;	    //column into image
 	const int cols = blockDim.x;	//columns that can be addressed in one warp
 	const int r = threadIdx.y;		//row into image
-	const int tidx = threadIdx.y * blockDim.x + threadIdx.x;
+	const int tidx = r * cols + ci;
 
 	//init wp and dwp to identitiy
 	if (r < 3 && ci < 3) {
@@ -98,8 +97,8 @@ __global__ void kernelCompute(ComputeTextures tex, PointResult* results, Compute
 
 		//build sd matrix [6 x iw*iw]
 		if (r < iw) {
+			int ix = xm - ir + r;
 			for (int c = ci; c < iw; c += cols) {
-				int ix = xm - ir + r;
 				int iy = ym - ir + c + rowOffset;
 				double x = tex2D<float>(tex.Yprev, ix + 1, iy) / 2 - tex2D<float>(tex.Yprev, ix - 1, iy) / 2;
 				double y = tex2D<float>(tex.Yprev, ix, iy + 1) / 2 - tex2D<float>(tex.Yprev, ix, iy - 1) / 2;
@@ -122,7 +121,7 @@ __global__ void kernelCompute(ComputeTextures tex, PointResult* results, Compute
 		//S = sd * sd' [6 x 6]
 		//compute upper triangle and mirror value to write all values for S
 		if (tidx < 21) {
-			ArrayIndex ai = sidx[tidx]; //the value to compute in S
+			const ArrayIndex& ai = sidx[tidx]; //the value to compute in S
 			double sval = 0.0;
 			for (int i = 0; i < iw * iw; i++) {
 				sval += sd[ai.r * iw * iw + i] * sd[ai.c * iw * iw + i];
@@ -152,9 +151,8 @@ __global__ void kernelCompute(ComputeTextures tex, PointResult* results, Compute
 			//interpolate image patch
 			if (r < iw) {
 				for (int c = ci; c < iw; c += cols) {
-					int x = c - ir;
-					double ix = xm + x * wp[0] + (r - ir) * wp[3] + wp[2];
-					double iy = ym + x * wp[1] + (r - ir) * wp[4] + wp[5];
+					double ix = xm + (c - ir) * wp[0] + (r - ir) * wp[3] + wp[2];
+					double iy = ym + (c - ir) * wp[1] + (r - ir) * wp[4] + wp[5];
 
 					//compute difference between image patches
 					//store delta in transposed order [c * iw + r]
@@ -250,14 +248,13 @@ __global__ void kernelCompute(ComputeTextures tex, PointResult* results, Compute
 		while (z < 0) { xm /= 2; ym /= 2; u /= 2; v /= 2; z++; }
 		while (z > 0) { xm *= 2; ym *= 2; u *= 2; v *= 2; z--; }
 		//store results object
-		results[blockIndex] = { blockIndex, ix0, iy0, xm, ym, xm - d_core.w / 2, ym - d_core.h / 2, u, v, result };
+		results[blockIndex] = { u, v, blockIndex, ix0, iy0, xm, ym, result, 1 };
 	}
 
 	param.kernelTimestamps[blockIndex].stop();
-	param.d_computed[blockIndex] = 1;
 }
 
-void kernelComputeCall(ComputeKernelParam param, ComputeTextures& tex, PointResult* d_results) {
+void kernelComputeCall(ComputeKernelParam param, ComputeTextures& tex, CudaPointResult* d_results) {
 	dim3 blk(param.blk.x, param.blk.y);
 	dim3 thr(param.thr.x, param.thr.y);
 	kernelCompute<<<blk, thr, param.shdBytes, param.stream>>> (tex, d_results, param);

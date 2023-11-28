@@ -89,6 +89,11 @@ public:
 	using CoreMat<T>::at;
 	using CoreMat<T>::addr;
 
+	enum class Direction {
+		VERTICAL = 0,
+		HORIZONTAL = 1,
+	};
+
 protected:
 	//pretty print mat values
 	inline static int printDigits = 5;
@@ -686,9 +691,9 @@ public:
 			size_t dx = f.cols() / 2;
 			size_t dy = f.rows() / 2;
 			for (size_t x = 0; x < f.cols(); x++) {
-				size_t ix = clampUnsigned(x + c, dx, 1ull, cols() - 1);
+				size_t ix = clampUnsigned(x + c, dx, 0ull, cols() - 1);
 				for (size_t y = 0; y < f.rows(); y++) {
-					size_t iy = clampUnsigned(y + r, dy, 1ull, rows() - 1);
+					size_t iy = clampUnsigned(y + r, dy, 0ull, rows() - 1);
 					sum += at(iy, ix) * f.at(y, x);
 				}
 			}
@@ -697,20 +702,21 @@ public:
 		return generate(rows(), cols(), func, pool);
 	}
 
-	Mat<T>& filter1D(const T* kernel, size_t siz, size_t offsetX, size_t offsetY, size_t dx, size_t dy, Mat<T>& dest, ThreadPoolBase& pool = defaultPool) {
+	//filter mat in one dimension
+	Mat<T>& filter1D(const T* kernel, size_t siz, Direction dir, Mat<T>& dest, ThreadPoolBase& pool = defaultPool) {
 		//check matrix dimensions
 		assert(cols() == dest.cols() && rows() == dest.rows() && "dimension mismatch");
 
-		//vector of indizes
-		std::vector<size_t> idx(siz * 2);
-		std::iota(idx.data(), idx.data() + siz, 0);
+		//delta values
+		size_t dy = 1 - (size_t) dir;
+		size_t dx = 1 - dy;
 
 		//function to filter for one point
 		auto func = [&] (size_t r, size_t c) {
 			T sum = 0;
-			for (size_t i = 0; i < siz; i++) {
-				size_t x = clampUnsigned(c + idx[offsetX + i], dx, 0, cols() - 1);
-				size_t y = clampUnsigned(r + idx[offsetY + i], dy, 0, rows() - 1);
+			for (int i = 0; i < siz; i++) {
+				size_t x = clampUnsigned(c + dx * i, dx * siz / 2, 0ull, cols() - 1);
+				size_t y = clampUnsigned(r + dy * i, dy * siz / 2, 0ull, rows() - 1);
 				sum += at(y, x) * kernel[i];
 			}
 			return sum;
@@ -718,16 +724,6 @@ public:
 
 		//apply function
 		return dest.setArea(func, pool);
-	}
-
-	//filter mat horizontally through given filter kernel
-	Mat<T>& filter1D_h(const T* kernel, size_t kernelSize, Mat<T>& dest, ThreadPoolBase& pool = defaultPool) {
-		return filter1D(kernel, kernelSize, 0, kernelSize, kernelSize / 2, 0, dest, pool);
-	}
-
-	//filter mat vertically through given filter kernel
-	Mat<T>& filter1D_v(const T* kernel, size_t kernelSize, Mat<T>& dest, ThreadPoolBase& pool = defaultPool) {
-		return filter1D(kernel, kernelSize, kernelSize, 0, 0, kernelSize / 2, dest, pool);
 	}
 
 	//evaluate this mat at points given by x and y mats respective, put results into dest

@@ -35,9 +35,15 @@ namespace cl {
 	struct cl_PointResult {
 		cl_double u, v;
 		cl_int idx, ix0, iy0;
-		cl_int px, py;
 		cl_int xm, ym;
 		cl_char result;
+	};
+
+	//structure holding data for compute kernel
+	//definition must be repeated in device code
+	struct KernelData {
+		cl_double compMaxTol, deps, dmin, dmax, dnan;
+		cl_int w, h, ir, iw, zMin, zMax, compMaxIter, pyramidRowCount;
 	};
 
 	struct BufferImages {
@@ -48,11 +54,11 @@ namespace cl {
 		Context context;
 		CommandQueue queue;
 
-		// input yuv frames
+		//input yuv frames
 		std::vector<Image2D> yuv;
-		// pyramid images, one image for all levels
+		//pyramid images, one image for all levels
 		std::vector<Image2D> pyramid;
-		// buffers for filtering on pyramid creation
+		//buffers for filtering on pyramid creation
 		std::vector<BufferImages> buffer;
 
 		//data storage for output
@@ -63,6 +69,9 @@ namespace cl {
 		//storage for results struct
 		Buffer results;
 		std::vector<cl_PointResult> cl_results;
+
+		//core data in opencl structure format
+		Buffer core;
 
 		std::map<std::string, Kernel> kernelMap = {
 			{"scale_8u32f_1", {}},

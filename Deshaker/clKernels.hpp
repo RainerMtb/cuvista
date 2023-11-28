@@ -22,6 +22,7 @@
 
 inline std::string kernelsInputOutput = R"(
 #pragma OPENCL FP_CONTRACT OFF
+
 const sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE | CLK_FILTER_NEAREST;
 
 __kernel void scale_8u32f_1(__read_only image2d_t src, __write_only image2d_t dest) {
@@ -204,6 +205,7 @@ __kernel void scrap() {}
 
 inline std::string luinvFunction = R"(
 #pragma OPENCL FP_CONTRACT OFF
+
 void luinv(double** Apiv, double* A0, double* temp, double* Ainv, int s, int r, int ci, int cols) {
 	//step 1. decompose matrix A0
 	if (r < s && ci == 0) {
@@ -265,6 +267,7 @@ void luinv(double** Apiv, double* A0, double* temp, double* Ainv, int s, int r, 
 
 inline std::string norm1Function = R"(
 #pragma OPENCL FP_CONTRACT OFF
+
 double norm1(const double* mat, int m, int n, double* temp) {
 	int i = get_local_id(0);
 	int k = get_local_id(1);

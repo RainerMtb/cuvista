@@ -18,11 +18,6 @@
 
 #pragma once
 
-enum class Direction {
-	VERTICAL = 0,
-	HORIZONTAL = 1,
-};
-
 template <class T> class Mat;
 template <class T> class MatRow;
 
@@ -67,8 +62,8 @@ private:
 	}
 
 	//translate index into submat to index into main array based on direction row major or col major
-	virtual std::function<size_t(size_t)> indexFunc(Direction dir) const {
-		if (dir == Direction::HORIZONTAL) return [&] (size_t i) { return r0 * this->w + c0 + i / ws * this->w + i % ws; };
+	virtual std::function<size_t(size_t)> indexFunc(Mat<T>::Direction dir) const {
+		if (dir == Mat<T>::Direction::HORIZONTAL) return [&] (size_t i) { return r0 * this->w + c0 + i / ws * this->w + i % ws; };
 		else return [&] (size_t i) { return r0 * this->w + c0 + i % hs * this->w + i / hs; };
 	}
 

@@ -153,7 +153,7 @@ protected:
 			diagsList.push_back(std::make_unique<TransformsFile>(data.trajectoryFile, std::ios::out | std::ios::binary));
 		}
 		if (!data.resultsFile.empty()) {
-			diagsList.push_back(std::make_unique<ResultDetailsFile>(data.resultsFile, data.fileDelimiter));
+			diagsList.push_back(std::make_unique<ResultDetailsFile>(data.resultsFile));
 		}
 		if (!data.resultImageFile.empty()) {
 			diagsList.push_back(std::make_unique<ResultImage>(data, [&] (int64_t idx) { return getInput(idx); }));
@@ -182,7 +182,7 @@ public:
 
 	~CudaFrame() {
 		//retrieve debug data from device
-		DebugData data = cudaShutdown(mData);
+		DebugData data = cudaShutdown(mData, false);
 		std::vector<double>& debugData = data.debugData;
 		size_t siz = (size_t) debugData[0];
 		double* ptr = debugData.data() + 1;
@@ -274,11 +274,11 @@ public:
 	}
 
 	void computePartOne() override { 
-		cl::computePartOne();
+		cl::computePartOne(mStatus.frameInputIndex, mData);
 	}
 
 	void computePartTwo() override { 
-		cl::computePartTwo();
+		cl::computePartTwo(mStatus.frameInputIndex, mData);
 	}
 
 	void computeTerminate() override { 

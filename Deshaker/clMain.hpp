@@ -29,6 +29,8 @@ public:
 	cl::Device device;
 	int versionDevice = 0;
 	int versionC = 0;
+	int pitch = 0;
+	std::vector<cl_name_version> extensions;
 
 	DeviceInfoCl(DeviceType type, int64_t maxPixel)
 		: DeviceInfo(type, maxPixel)
@@ -51,8 +53,8 @@ namespace cl {
 
 	void inputData(int64_t frameIdx, const CoreData& core, const ImageYuv& inputFrame);
 	void createPyramid(int64_t frameIdx, const CoreData& core);
-	void computePartOne();
-	void computePartTwo();
+	void computePartOne(int64_t frameIdx, const CoreData& core);
+	void computePartTwo(int64_t frameIdx, const CoreData& core);
 	void computeTerminate(int64_t frameIdx, const CoreData& core, std::vector<PointResult>& results);
 	void outputData(int64_t frameIdx, const CoreData& core, OutputContext outCtx, std::array<double, 6> trf);
 

@@ -111,7 +111,7 @@ public:
 			for (int k = 0; k < 100; k++) {
 				//generate points
 				std::vector<PointResult> points(siz);
-				for (size_t i = 0; i < siz; i++) {
+				for (int i = 0; i < siz; i++) {
 					int x = distrib(gen);
 					int y = distrib(gen);
 					double u = distrib(gen) / 50.0;

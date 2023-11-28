@@ -170,6 +170,7 @@ public:
 	std::ostream* console = &std::cout;
 	OutputType videoOutputType = OutputType::NONE;
 	DecideYNA overwriteOutput = DecideYNA::ASK;
+	uint8_t crf = 22;
 
 	bool showHeader = true;
 

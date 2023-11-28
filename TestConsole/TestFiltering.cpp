@@ -23,12 +23,12 @@ ThreadPool pool(4);
 void filter() {
 	int w = 2000;
 	int h = 1000;
-	Mat m = Mat<double>::generate(h, w, [&] (size_t r, size_t c) { return (r + 1.0) / h * (c + 1.0) / w; });
-	Mat x = Mat<double>::allocate(h, w);
+	Matd m = Matd::generate(h, w, [&] (size_t r, size_t c) { return (r + 1.0) / h * (c + 1.0) / w; });
+	Matd x = Matd::allocate(h, w);
 	std::vector<double> k = { 0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f };
 
 	auto t1 = std::chrono::high_resolution_clock::now();
-	m.filter1D_h(k.data(), k.size(), x, pool);
+	m.filter1D(k.data(), k.size(), Matd::Direction::HORIZONTAL, x, pool);
 	auto t2 = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double> sec = t2 - t1;
 	std::cout << "elapsed " << sec * 1000 << std::endl;

@@ -55,10 +55,10 @@ public:
 class ResultDetailsFile : std::ofstream, public DiagnosticItem {
 
 private:
-	std::string delimiter;
+	std::string delimiter = ";";
 
 public:
-	ResultDetailsFile(const std::string& filename, const char delimiter);
+	ResultDetailsFile(const std::string& filename);
 
 	void write(const std::vector<PointResult>& results, int64_t frameIndex);
 

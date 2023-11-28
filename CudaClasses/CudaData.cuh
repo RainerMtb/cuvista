@@ -43,8 +43,12 @@ struct CudaData : public CoreData {
 	int strideFloat4N = 0;   //number of float4 values
 
 	int outBufferCount = 6;     //number of images to hold as buffers for output generation
-
-	//numeric constants used in compute kernel, will be initialized once
-	double dmin = 0.0, dmax = 0.0, deps = 0.0, dnan = 0.0;
 };
 
+struct CudaPointResult {
+	double u, v;
+	int idx, ix0, iy0;
+	int xm, ym;
+	PointResultType result;
+	bool computed;
+};

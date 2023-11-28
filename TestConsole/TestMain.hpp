@@ -43,7 +43,6 @@ void cudaInvSimple();
 void cudaInvPerformanceTest();
 void cudaInvEqualityTest();
 void cudaInvParallel();
-void cudaFMAD();
 
 void cudaInvTest(size_t s1, size_t s2);
 void openClInvTest(size_t s1, size_t s2);

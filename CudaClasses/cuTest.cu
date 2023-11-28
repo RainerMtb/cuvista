@@ -26,8 +26,8 @@ __global__ void inv_kernel(double* input, double* outAinv, size_t s) {
 
 	extern __shared__ double mat[];
 	double* ptr = mat;
-	double* temp = ptr; ptr += s;
-	double** Apiv = (double**) ptr;
+	double* temp = ptr;
+	double** Apiv = (double**) (ptr + s);
 
 	luinv(Apiv, input, temp, outAinv, s, r, c, cols);
 }

@@ -108,7 +108,8 @@ __device__ void luinv(double** Apiv, double* A0, double* temp, double* Ainv, int
 			Ainv[r * s + c] = 0.0;
 		}
 		if (ci == 0) {
-			Ainv[1ull * r * s + (Apiv[r] - A0) / s] = 1.0;
+			int pivr = (Apiv[r] - A0) / s;
+			Ainv[1ull * r * s + pivr] = 1.0;
 		}
 
 		//forward substitution

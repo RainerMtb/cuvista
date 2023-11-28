@@ -52,22 +52,18 @@ public:
 };
 
 //parameters for kernel launch
-struct KernelParam {
+struct ComputeKernelParam {
 	int3 blk;
 	int3 thr;
 	size_t shdBytes;
 	cudaStream_t stream;
-};
-
-struct ComputeKernelParam : KernelParam {
 	cu::DebugData* debugData;
 	KernelTimer* kernelTimestamps;
 	int64_t frameIdx;
 	volatile char* d_interrupt;
-	char* d_computed;
 };
 
-void kernelComputeCall(ComputeKernelParam param, ComputeTextures& tex, PointResult* d_results);
+void kernelComputeCall(ComputeKernelParam param, ComputeTextures& tex, CudaPointResult* d_results);
 
 //----------------------------------
 // interface to host callers
@@ -132,7 +128,7 @@ void getNvData(std::vector<unsigned char>& nv12, OutputContext outCtx);
 @brief shutdown cuda device
 @return timing values and debug data
 */
-DebugData cudaShutdown(const CudaData& core);
+DebugData cudaShutdown(const CudaData& core, bool getDebugData);
 
 /*
 @brief get transformed float output for testing

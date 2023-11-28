@@ -70,15 +70,10 @@ void cudaInvTest(size_t s1, size_t s2) {
 		if (!b.equalsIdentity()) {
 			Matd cpuinv = a.inv().value();
 			Matd cpub = cpuinv.times(a);
-			if (!cpub.equalsIdentity()) {
-				std::cout << "FAIL IDENTITIY TEST also on CPU" << std::endl;
-
-			} else {
-				std::cout << "FAIL IDENTITIY TEST" << std::endl;
-				if (s > 10) printf("MAX absolute value %f\n", b.abs().max());
-				else b.toConsole("I");
-				//a.saveAsCSV("c:/video/fail.csv");
-			}
+			std::cout << "FAIL IDENTITIY TEST" << std::endl;
+			if (s > 10) printf("MAX absolute value %f\n", b.abs().max());
+			else b.toConsole("I");
+			//a.saveAsCSV("c:/video/fail.csv");
 
 		} else {
 			std::cout << "OK" << std::endl;
@@ -136,7 +131,7 @@ void cudaInvEqualityTest() {
 	Matd::precision(10);
 	invCpu.toConsole("cpu");
 	invGpu.toConsole("gpu");
-	std::cout << "AinvCpu == AinvGpu: " << std::boolalpha << invCpu.equals(invGpu, 0.0) << std::endl;
+	std::cout << "AinvCpu == AinvGpu: " << std::boolalpha << invCpu.equalsExact(invGpu) << std::endl;
 }
 
 void cudaInvParallel() {
@@ -173,37 +168,6 @@ void cudaInvParallel() {
 
 	delete[] output, input;
 	std::cout << "parallel result: " << (isok ? "ok" : "fail") << ", runtime " << time.count() / 1000.0 << " ms" << std::endl;
-}
-
-void cudaFMAD() {
-	std::cout << "----------------------------" << std::endl << "FMAD Test:" << std::endl;
-	int dim = 6;
-	Matd src = Matd::fromRows(dim, dim, {
-			0.5190191908, 0.554734511666, -0.279658085787, 1.33774798228, 0.631098670842, 0.136308250122,
-			-0.198174314278, 0.560896368225, 0.512723252871, 0.968780516617, 0.178123438854, 1.36943674621,
-			0.290164022862, -0.376174565165, 0.646963172062, -0.282636814666, -0.164510095229, -0.318205238958,
-			0.296907252501, 0.433538232122, 1.27454239024, 0.827192179753, -0.359835208543, 0.870983602104,
-			1.11645514311, 0.553288641361, 0.83733511859, 1.39369706849, -0.402843149795, -0.286130267234,
-			0.548914236748, 1.04112317837, 0.744972004257, -0.0729558143778, -0.107012297344, -0.00469514097982
-		}
-	);
-	//Matd::printPrecision(17);
-	Matd a = src;
-	LUDecompositor<double> lu(a);
-	Matd ai = lu.inv().value();
-	ai.toConsole("inv cpu");
-
-	Matd ai2 = Matd::allocate(dim, dim);
-	cutest::cudaInv(src.data(), ai2.data(), dim);
-	ai2.toConsole("inv cuda");
-
-	std::cout << "expect different result from cuda in release mode when -fmad=true" << std::endl;
-	bool isEqual = ai.equals(ai2, 0.0);
-	std::cout << "inv cpu EQUALS inv gpu: " << (isEqual ? "YES" : "NO") << std::endl;
-	if (!isEqual) {
-		Matd delta = ai.minus(ai2).toConsole("delta", 5);
-	}
-	//ai.times(a).minus(Matd::eye(dim)).toConsole("zero check");
 }
 
 void compare() {

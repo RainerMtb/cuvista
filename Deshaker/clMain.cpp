@@ -58,8 +58,13 @@ OpenClInfo cl::probeRuntime() {
 			cl_bool hasImage = dev.getInfo<CL_DEVICE_IMAGE_SUPPORT>();
 			if (hasImage == false) continue;
 
-			//cl_uint pitch = dev.getInfo<CL_DEVICE_IMAGE_PITCH_ALIGNMENT>();
+			//images from buffer not supported on Nvidia on OpenCL 3.0
+			cl_uint pitch = dev.getInfo<CL_DEVICE_IMAGE_PITCH_ALIGNMENT>();
 
+			//list of device extensions
+			std::vector<cl_name_version> extensions = dev.getInfo<CL_DEVICE_EXTENSIONS_WITH_VERSION>();
+
+			//pixel dimensions
 			int64_t maxPixelWidth = dev.getInfo<CL_DEVICE_IMAGE2D_MAX_WIDTH>();
 			int64_t maxPixelHeight = dev.getInfo<CL_DEVICE_IMAGE2D_MAX_HEIGHT>();
 
@@ -68,7 +73,6 @@ OpenClInfo cl::probeRuntime() {
 			if ((doubleConfig & minDoubleConfig) == 0) continue;
 
 			cl_ulong localMemSize = dev.getInfo<CL_DEVICE_LOCAL_MEM_SIZE>();
-
 			int64_t maxPixel = localMemSize / sizeof(float);
 			if (maxPixelWidth < maxPixel) maxPixel = maxPixelWidth;
 			if (maxPixelHeight < maxPixel) maxPixel = maxPixelHeight;
@@ -100,12 +104,15 @@ OpenClInfo cl::probeRuntime() {
 
 			//accept only devices of at least version 2.0
 			if (versionDevice < 2000) continue;
+			if (versionC < 2000) continue;
 
 			//we have a valid device
 			DeviceInfoCl devInfo(DeviceType::OPEN_CL, maxPixel);
 			devInfo.device = dev;
 			devInfo.versionDevice = versionDevice;
 			devInfo.versionC = versionC;
+			devInfo.pitch = pitch;
+			devInfo.extensions = extensions;
 			info.devices.push_back(devInfo);
 		}
 	}
@@ -116,9 +123,20 @@ OpenClInfo cl::probeRuntime() {
 void cl::init(CoreData& core, ImageYuv& inputFrame, OpenClInfo clinfo, const DeviceInfo* device) {
 	assert(device->type == DeviceType::OPEN_CL && "device type must be OpenCL here");
 	const DeviceInfoCl* devInfo = static_cast<const DeviceInfoCl*>(device);
+
 	try {
 		clData.context = Context(devInfo->device);
 		clData.queue = CommandQueue(clData.context, devInfo->device);
+
+		//supported image formats
+		std::vector<ImageFormat> fmts;
+		clData.context.getSupportedImageFormats(CL_MEM_READ_WRITE, CL_MEM_OBJECT_IMAGE2D, &fmts);
+
+		//constant core data structure
+		KernelData data = { core.compMaxTol, core.deps, core.dmin, core.dmax, core.dnan, 
+			core.w, core.h, core.ir, core.iw, core.zMin, core.zMax, core.compMaxIter, core.pyramidRowCount };
+		clData.core = Buffer(clData.context, CL_MEM_READ_ONLY, sizeof(KernelData));
+		clData.queue.enqueueWriteBuffer(clData.core, CL_FALSE, 0, sizeof(KernelData), &data);
 
 		//allocate yuv data
 		ImageFormat fmt8(CL_R, CL_UNSIGNED_INT8);
@@ -127,15 +145,18 @@ void cl::init(CoreData& core, ImageYuv& inputFrame, OpenClInfo clinfo, const Dev
 			clData.yuv.push_back(yuv);
 		}
 
-		//check supported image formats
-		std::vector<ImageFormat> fmts;
-		clData.context.getSupportedImageFormats(CL_MEM_READ_WRITE, CL_MEM_OBJECT_IMAGE2D, &fmts);
+		//output images
 		ImageFormat outFmt(CL_RGBA, CL_FLOAT);
-		bool hasFormatSupport = std::count(fmts.cbegin(), fmts.cend(), outFmt) > 0;
-		if (!hasFormatSupport) throw Error(-1, "image format not supported");
+		for (Image2D& im : clData.out) {
+			im = Image2D(clData.context, CL_MEM_READ_WRITE, outFmt, core.w, core.h);
+			cl_float4 bg = { core.bgcol_yuv.colors[0], core.bgcol_yuv.colors[1], core.bgcol_yuv.colors[2], 0.0f };
+			clData.queue.enqueueFillImage(im, bg, Size2(), Size2(core.w, core.h));
+		}
+		clData.yuvOut = Buffer(clData.context, CL_MEM_WRITE_ONLY, 3ull * core.cpupitch * core.h);
+		clData.rgbOut = Buffer(clData.context, CL_MEM_WRITE_ONLY, 3ull * core.w * core.h);
 
 		//image format gray single channel float
-		ImageFormat fmt32(CL_R, CL_FLOAT);
+		ImageFormat fmt32(CL_DEPTH, CL_FLOAT);
 
 		//buffer pyramid for filtering
 		for (int z = 0; z < core.pyramidLevels; z++) {
@@ -155,22 +176,13 @@ void cl::init(CoreData& core, ImageYuv& inputFrame, OpenClInfo clinfo, const Dev
 			clData.pyramid.push_back(im);
 		}
 
-		//output images
-		for (Image2D& im : clData.out) {
-			im = Image2D(clData.context, CL_MEM_READ_WRITE, outFmt, core.w, core.h);
-			cl_float4 bg = { core.bgcol_yuv.colors[0], core.bgcol_yuv.colors[1], core.bgcol_yuv.colors[2], 0.0f };
-			clData.queue.enqueueFillImage(im, bg, Size2(), Size2(core.w, core.h));
-		}
-		clData.yuvOut = Buffer(clData.context, CL_MEM_WRITE_ONLY, 3ull * core.cpupitch * core.h);
-		clData.rgbOut = Buffer(clData.context, CL_MEM_WRITE_ONLY, 3ull * core.w * core.h);
-
 		//point results
 		clData.results = Buffer(clData.context, CL_MEM_WRITE_ONLY, sizeof(cl_PointResult) * core.resultCount);
 		clData.cl_results.resize(core.resultCount);
 
 		//compile device code
 		Program::Sources sources;
-		std::string kernelNames[] = { kernelsInputOutput, kernelCompute };
+		std::string kernelNames[] = { kernelsInputOutput, luinvFunction, norm1Function, kernelCompute };
 		for (const std::string& str : kernelNames) {
 			sources.emplace_back(str.c_str(), str.size());
 		}
@@ -236,9 +248,11 @@ void cl::createPyramid(int64_t frameIdx, const CoreData& core) {
 		for (size_t z = 1; z < core.pyramidLevels; z++) {
 			Image& src = clData.buffer[z - 1].result;
 			Image& dest = clData.buffer[z].result;
-			filter_32f_h1(src, clData.buffer[z - 1].filterH, 0, clData);
-			filter_32f_v1(clData.buffer[z - 1].filterH, clData.buffer[z - 1].filterV, 0, clData);
-			remap_downsize_32f(clData.buffer[z - 1].filterV, dest, clData);
+			Image& buf1 = clData.buffer[z - 1].filterH;
+			Image& buf2 = clData.buffer[z - 1].filterV;
+			filter_32f_h1(src, buf1, 0, clData);
+			filter_32f_v1(buf1, buf2, 0, clData);
+			remap_downsize_32f(buf2, dest, clData);
 			int ww = w >> z;
 			int hh = h >> z;
 			clData.queue.enqueueCopyImage(dest, clData.pyramid[pyrIdx], Size2(), Size2(0ull, row), Size2(ww, hh));
@@ -254,8 +268,8 @@ void cl::createPyramid(int64_t frameIdx, const CoreData& core) {
 //-------- COMPUTE -----------------
 //----------------------------------
 
-void cl::computePartOne() {}
-void cl::computePartTwo() {}
+void cl::computePartOne(int64_t frameIdx, const CoreData& core) {}
+void cl::computePartTwo(int64_t frameIdx, const CoreData& core) {}
 
 void cl::computeTerminate(int64_t frameIdx, const CoreData& core, std::vector<PointResult>& results) {
 	assert(frameIdx > 0 && "invalid pyramid index");
@@ -263,12 +277,21 @@ void cl::computeTerminate(int64_t frameIdx, const CoreData& core, std::vector<Po
 	int64_t pyrIdxPrev = (frameIdx - 1) % core.pyramidCount;
 
 	try {
-		Kernel kernel = clData.kernel("compute");
-		kernel.setArg(0, clData.pyramid[pyrIdxPrev]);
-		kernel.setArg(1, clData.pyramid[pyrIdx]);
-		kernel.setArg(2, clData.results);
+		//set up compute kernel
+		Kernel& kernel = clData.kernel("compute");
+		kernel.setArg(0, (cl_long) frameIdx);
+		kernel.setArg(1, clData.pyramid[pyrIdxPrev]);
+		kernel.setArg(2, clData.pyramid[pyrIdx]);
+		kernel.setArg(3, clData.results);
+		kernel.setArg(4, clData.core);
+
+		//local memory
+		int memsiz = (core.iw * core.iw * 7 + 108) * sizeof(cl_double) + 6 * sizeof(cl_double*);
+		kernel.setArg(5, memsiz, nullptr);
+
+		//threads
 		NDRange ndglobal = NDRange(1ull * core.iw * core.ixCount, core.iyCount);
-		NDRange ndlocal = NDRange(core.iw, 1);
+		NDRange ndlocal = NDRange(core.iw, 32 / core.iw); //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 		clData.queue.enqueueNDRangeKernel(kernel, NullRange, ndglobal, ndlocal);
 
 		//copy from device to host buffer in cl_PointResult

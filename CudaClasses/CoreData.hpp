@@ -62,40 +62,38 @@ protected:
 	int MAX_POINTS_COUNT = 150;		//max number of points in x or y direction
 
 public:
+	int w = 0;                  //frame width
+	int h = 0;					//frame height
+	int ir = 3;					//integration window, radius around point to integrate
+	int iw = 7;					//integration window, 2 * ir + 1
+	int ixCount = -1;
+	int iyCount = -1;
 	int zMin = -1;
-	int zMax = -1;				    //pyramid steps used for actual computing
-	int zCount = 3;			        //number of pyramid levels to use for stabilization
-	int pyramidLevels = -1;         //number of pyramid levels to create
-	int pyramidRowCount = -1;	    //number of rows for one pyramid, for example all the rows of Y data
-	size_t pyramidCount = 2;	    //number of pyramids to allocate in memory
+	int zMax = -1;				//pyramid steps used for actual computing
+	int zCount = 3;			    //number of pyramid levels to use for stabilization
+	int pyramidLevels = -1;     //number of pyramid levels to create
+	int pyramidRowCount = -1;	//number of rows for one pyramid, for example all the rows of Y data
+	size_t pyramidCount = 2;	//number of pyramids to allocate in memory
+	int resultCount = 0;		//number of points to compute in a frame
 
 	int cpupitch = 0;
-	int compMaxIter = 20;			//max loop iterations
-	double compMaxTol = 0.05;		//tolerance to stop window pattern matching
+	int compMaxIter = 20;		//max loop iterations
+	double compMaxTol = 0.05;	//tolerance to stop window pattern matching
+
+	//numeric constants used in compute kernel, will be initialized once
+	double dmin = 0.0, dmax = 0.0, deps = 0.0, dnan = 0.0;
 
 	Triplet unsharp = { 0.6f, 0.3f, 0.3f };	//ffmpeg unsharp=5:5:0.6:3:3:0.3
 	ColorNorm bgcol_yuv = {};				//background fill colors in yuv
 	BlendInput blendInput = {};
 	BackgroundMode bgmode = BackgroundMode::BLEND;
 
-	int ir = 3;					//integration window, radius around point to integrate
-	int iw = 7;					//integration window, 2 * ir + 1
+	int radius = -1;			//number of frames before and after used for smoothing
 	double imZoom = 1.05;		//additional zoom
 	double radsec = 0.5;		//radius in senconds
-	int radius = -1;			//number of frames before and after used for smoothing
 
-	int w = 0;                  //frame width
-	int h = 0;					//frame height
 	int64_t frameCount = -1;
-
 	int bufferCount = -1;		//number of frames to read before starting to average out trajectory
-
-	int ixCount = -1;
-	int iyCount = -1;
-	int resultCount = 0;		//number of points to compute in a frame
-
-	uint8_t crf = 22;
-	char fileDelimiter = ';';
 };
 
 //result type of one computed point
