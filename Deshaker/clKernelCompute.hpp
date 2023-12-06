@@ -38,12 +38,12 @@ __constant struct ArrayIndex sidx[] = {
 };
 
 //result type of one computed point
-char FAIL_SINGULAR = -3;
-char FAIL_ITERATIONS = -2;
-char FAIL_ETA_NAN = -1;
-char RUNNING = 0;
-char SUCCESS_ABSOLUTE_ERR = 1;
-char SUCCESS_STABLE_ITER = 2;
+__constant char FAIL_SINGULAR = -3;
+__constant char FAIL_ITERATIONS = -2;
+__constant char FAIL_ETA_NAN = -1;
+__constant char RUNNING = 0;
+__constant char SUCCESS_ABSOLUTE_ERR = 1;
+__constant char SUCCESS_STABLE_ITER = 2;
 
 //result of one computed point in a frame
 struct PointResult {
@@ -147,9 +147,101 @@ __kernel void compute(long frameIndex, __read_only image2d_depth_t Yprev, __read
 		double ng = norm1(g, 6, 6, temp);
 		double rcond = 1 / (ns * ng);
 
-if (frameIndex == 1 && ix0 == 63 && iy0 == 1 && r == 0 && ci == 0) printf("%d %.14f\n", z, rcond);
-	}
+		result = (isnan(rcond) || rcond < d_core->deps) ? FAIL_SINGULAR : RUNNING;
+		//init loop limit counter
+		int iter = 0;
+		//init error measure to stop loop
+		double bestErr = d_core->dmax;
+		//main loop to find transformation of image patch
+		while (result == RUNNING) {
+			//interpolate image patch
+			if (r < iw) {
+				for (int c = ci; c < iw; c += cols) {
+					double ix = xm + (c - ir) * wp[0] + (r - ir) * wp[3] + wp[2];
+					double iy = ym + (c - ir) * wp[1] + (r - ir) * wp[4] + wp[5];
 
+					//compute difference between image patches
+					//store delta in transposed order [c * iw + r]
+					if (ix < 0.0 || ix > wz - 1.0 || iy < 0.0 || iy > hz - 1.0) {
+						delta[c * iw + r] = d_core->dnan;
+
+					} else {
+						double im = read_imagef(Yprev, (int2)(xm - ir + c, rowOffset + ym + r - ir));
+
+						double flx = floor(ix), fly = floor(iy);
+						double dx = ix - flx, dy = iy - fly;
+						int x0 = (int) flx, y0 = (int) fly;
+
+						double f00 = read_imagef(Ycur, (int2)(x0, rowOffset + y0));
+						double f01 = read_imagef(Ycur, (int2)(x0 + 1, rowOffset + y0));
+						double f10 = read_imagef(Ycur, (int2)(x0, rowOffset + y0 + 1));
+						double f11 = read_imagef(Ycur, (int2)(x0 + 1, rowOffset + y0 + 1));
+						double jm = (1.0 - dx) * (1.0 - dy) * f00 + (1.0 - dx) * dy * f10 + dx * (1.0 - dy) * f01 + dx * dy * f11;
+
+						delta[c * iw + r] = im - jm;
+					}
+				}
+			}
+
+			//eta [6 x 1]
+			if (r < 6 && ci == 0) {
+				//init eta to [0 0 1 0 0 1]
+				eta[r] = eta0[r];
+				//init b to [0 0 0 0 0 0]
+				double bval = 0.0;
+				//sd * delta_flat
+				for (double* sdptr = sd + r * iw * iw, *deltaptr = delta; deltaptr != delta + iw * iw; sdptr++, deltaptr++) {
+					bval += (*sdptr) * (*deltaptr);
+				}
+				b[r] = bval;
+				//g * (sd * delta)
+				for (double* gptr = g + r * 6, *bptr = b; bptr != b + 6; gptr++, bptr++) {
+					eta[r] += (*gptr) * (*bptr);
+				}
+			}
+
+			//update transform matrix
+			if (r < 2 && ci == 0) {
+				//update wp to dwp
+				dwp[r * 3]     = wp[r * 3] * eta[2] + wp[r * 3 + 1] * eta[4];
+				dwp[r * 3 + 1] = wp[r * 3] * eta[3] + wp[r * 3 + 1] * eta[5];
+				dwp[r * 3 + 2] = wp[r * 3] * eta[0] + wp[r * 3 + 1] * eta[1] + wp[r * 3 + 2];
+
+				//update wp
+				wp[r * 3]     = dwp[r * 3];
+				wp[r * 3 + 1] = dwp[r * 3 + 1];
+				wp[r * 3 + 2] = dwp[r * 3 + 2];
+			}
+
+			//analyse result, decide on continuing loop
+			double err = eta[0] * eta[0] + eta[1] * eta[1];
+			result = 0;
+			result += (int) isnan(err) * -1; //leave loop with fail message FAIL_ETA_NAN
+			result += (int) (err < d_core->compMaxTol) * 1; //leave loop with success SUCCESS_ABSOLUTE_ERR
+			result += (int) (fabs(err - bestErr) / bestErr < d_core->compMaxTol * d_core->compMaxTol) * 2; //SUCCESS_STABLE_ITER
+
+			bestErr = min(err, bestErr);
+			iter++;
+
+			if (iter == d_core->compMaxIter && result == RUNNING) {
+				result = FAIL_ITERATIONS; //leave with fail
+			}
+		}
+
+		//displacement * 2 for next level
+		if (r == 0 && ci == 0) wp[2] *= 2.0;
+		if (r == 1 && ci == 0) wp[5] *= 2.0;
+
+		//center of integration window on next level
+		xm *= 2;
+		ym *= 2;
+
+		//new texture row offset
+		int delta = d_core->h >> (z - 1);
+		rowOffset -= delta;
+
+		//if (frameIndex == 1 && ix0 == 63 && iy0 == 1 && r == 0 && ci == 0) printf("%d %.14f\n", z, wp[2]);
+	}
 
 	//first thread writes into result structure
 	if (get_local_id(0) == 0 && get_local_id(1) == 0) {

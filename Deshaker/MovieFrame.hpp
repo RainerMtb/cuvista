@@ -86,10 +86,8 @@ public:
 	//set up image pyramid
 	virtual void createPyramid() = 0;
 	//start computation asynchronously for some part of a frame
-	virtual void computePartOne() = 0;
-	//start computation asynchronously for second part
-	virtual void computePartTwo() = 0;
-	//return displacement for each point
+	virtual void computeStart() = 0;
+	//start computation asynchronously for second part and get results
 	virtual void computeTerminate() = 0;
 	//prepare data for output to writer
 	virtual void outputData(const AffineTransform& trf, OutputContext outCtx) = 0;
@@ -97,7 +95,7 @@ public:
 	/*
 	call transform calculation
 	*/
-	const AffineTransform& computeTransform(std::vector<PointResult> resultPoints);
+	virtual const AffineTransform& computeTransform(std::vector<PointResult> resultPoints) final;
 
 	/*
 	* get transformed image as Mat<float> where YUV color planes are stacked vertically for debugging
@@ -129,12 +127,17 @@ public:
 	/*
 	* read transforms from previous pass
 	*/
-	std::map<int64_t, TransformValues> readTransforms();
+	virtual std::map<int64_t, TransformValues> readTransforms() final;
 
 	/*
 	* run list of attached diagnostic methods
 	*/
-	void runDiagnostics(int64_t frameIndex);
+	virtual void runDiagnostics(int64_t frameIndex) final;
+
+	/*
+	* name MovieFrame used
+	*/
+	virtual std::string name() const { return "None"; }
 
 protected:
 	//only constructor for Frame class
@@ -149,7 +152,7 @@ protected:
 		mPool(data.cpuThreads)
 	{
 		//open and attach sinks for diagnostics
-		if (data.pass == DeshakerPass::FIRST_PASS && data.trajectoryFile.empty() == false) {
+		if (data.pass != DeshakerPass::SECOND_PASS && data.trajectoryFile.empty() == false) {
 			diagsList.push_back(std::make_unique<TransformsFile>(data.trajectoryFile, std::ios::out | std::ios::binary));
 		}
 		if (!data.resultsFile.empty()) {
@@ -159,204 +162,6 @@ protected:
 			diagsList.push_back(std::make_unique<ResultImage>(data, [&] (int64_t idx) { return getInput(idx); }));
 		}
 	}
-};
-
-
-//---------------------------------------------------------------------
-//---------- CUDA FRAME -----------------------------------------------
-//---------------------------------------------------------------------
-
-
-class CudaFrame : public MovieFrame {
-
-private:
-	DeviceInfoCuda* device;
-
-public:
-	CudaFrame(MainData& data) : MovieFrame(data) {
-		DeviceInfo* dev = data.deviceList[data.deviceSelected];
-		assert(dev->type == DeviceType::CUDA && "device type must be CUDA here");
-		device = static_cast<DeviceInfoCuda*>(dev);
-		cudaInit(data, device->cudaIndex, device->props, inputFrame);
-	}
-
-	~CudaFrame() {
-		//retrieve debug data from device
-		DebugData data = cudaShutdown(mData, false);
-		std::vector<double>& debugData = data.debugData;
-		size_t siz = (size_t) debugData[0];
-		double* ptr = debugData.data() + 1;
-		double* ptrEnd = debugData.data() + siz + 1;
-		while (ptr != ptrEnd) {
-			size_t h = (size_t) *ptr++;
-			size_t w = (size_t) *ptr++;
-			std::cout << std::endl << "Debug Data found, mat [" << h << " x " << w << "]" << std::endl;
-			//Mat<double>::fromArray(h, w, ptr).saveAsCSV("f:/gpu.txt", true);
-			Mat<double>::fromArray(h, w, ptr, false).toConsole("", 16);
-			ptr += h * w;
-		}
-
-		//data.kernelTimings.saveAsBMP("f:/kernel.bmp");
-	}
-
-	void inputData(ImageYuv& frame) override {
-		cudaReadFrame(mStatus.frameInputIndex, mData, frame);
-	}
-
-	void createPyramid() override {
-		cudaCreatePyramid(mStatus.frameInputIndex, mData);
-	}
-
-	void computePartOne() override {
-		cudaCompute1(mStatus.frameInputIndex, mData, device->props);
-	}
-
-	void computePartTwo() override {
-		cudaCompute2(mStatus.frameInputIndex, mData);
-	}
-
-	void computeTerminate() override {
-		cudaComputeTerminate(mData, resultPoints);
-	}
-
-	void outputData(const AffineTransform& trf, OutputContext outCtx) override {
-		cudaOutput(mStatus.frameWriteIndex, mData, outCtx, trf.toArray());
-	}
-
-	Mat<float> getTransformedOutput() const override {
-		Mat<float> warped = Mat<float>::allocate(3LL * mData.h, mData.w);
-		cudaGetTransformedOutput(warped.data(), mData);
-		return warped;
-	}
-
-	Mat<float> getPyramid(size_t idx) const override {
-		Mat<float> out = Mat<float>::allocate(mData.pyramidRowCount, mData.w);
-		cudaGetPyramid(out.data(), idx, mData);
-		return out;
-	}
-
-	ImageYuv getInput(int64_t index) const override {
-		return cudaGetInput(index, mData);
-	}
-
-	void getCurrentInputFrame(ImagePPM& image) override {
-		cudaGetCurrentInputFrame(image, mData, mStatus.frameReadIndex - 1);
-	}
-
-	void getCurrentOutputFrame(ImagePPM& image) override {
-		cudaGetCurrentOutputFrame(image, mData);
-	}
-};
-
-
-//---------------------------------------------------------------------
-//---------- OPENCL FRAME ---------------------------------------------
-//---------------------------------------------------------------------
-
-class OpenClFrame : public MovieFrame {
-
-public:
-	OpenClFrame(MainData& data) : MovieFrame(data) {
-		DeviceInfo* dev = data.deviceList[data.deviceSelected];
-		cl::init(data, inputFrame, data.clinfo, dev);
-	}
-
-	~OpenClFrame() {
-		cl::shutdown(mData);
-	}
-
-	void inputData(ImageYuv& frame) override { 
-		cl::inputData(mStatus.frameInputIndex, mData, frame);
-	}
-
-	void createPyramid() override { 
-		cl::createPyramid(mStatus.frameInputIndex, mData);
-	}
-
-	void computePartOne() override { 
-		cl::computePartOne(mStatus.frameInputIndex, mData);
-	}
-
-	void computePartTwo() override { 
-		cl::computePartTwo(mStatus.frameInputIndex, mData);
-	}
-
-	void computeTerminate() override { 
-		cl::computeTerminate(mStatus.frameInputIndex, mData, resultPoints);
-	}
-
-	void outputData(const AffineTransform& trf, OutputContext outCtx) override { 
-		cl::outputData(mStatus.frameWriteIndex, mData, outCtx, trf.toArray());
-	}
-
-	Mat<float> getPyramid(size_t idx) const override {
-		Mat<float> out = Mat<float>::zeros(mData.pyramidRowCount, mData.w);
-		cl::getPyramid(out.data(), idx, mData);
-		return out;
-	}
-
-	Mat<float> getTransformedOutput() const override { 
-		return cl::getTransformedOutput(mData); 
-	}
-
-	ImageYuv getInput(int64_t idx) const override { 
-		return cl::getInput(idx, mData); 
-	}
-
-	void getCurrentInputFrame(ImagePPM& image) override { 
-		cl::getCurrentInputFrame(image, mStatus.frameReadIndex - 1);
-	}
-
-	void getCurrentOutputFrame(ImagePPM& image) override { 
-		cl::getCurrentOutputFrame(image); 
-	}
-};
-
-
-//---------------------------------------------------------------------
-//---------- CPU FRAME ------------------------------------------------
-//---------------------------------------------------------------------
-
-class CpuFrame : public MovieFrame {
-
-public:
-	CpuFrame(MainData& data);
-
-	void inputData(ImageYuv& frame) override;
-	void createPyramid() override;
-	void computePartOne() override {}
-	void computePartTwo() override {}
-	void computeTerminate() override;
-	void outputData(const AffineTransform& trf, OutputContext outCtx) override;
-	Mat<float> getTransformedOutput() const override;
-	Mat<float> getPyramid(size_t idx) const override;
-	ImageYuv getInput(int64_t index) const override;
-	void getCurrentInputFrame(ImagePPM& image) override;
-	void getCurrentOutputFrame(ImagePPM& image) override;
-
-protected:
-
-	class CpuFrameItem {
-
-	public:
-		int64_t frameIndex = -1;
-		std::vector<Mat<float>> mY;
-
-		CpuFrameItem(MainData& data);
-	};
-
-	//frame input buffer, number of frames = frameBufferCount
-	std::vector<ImageYuv> mYUV;
-
-	//holds image pyramids
-	std::vector<CpuFrameItem> mPyr;
-
-	//buffers the last output frame, 3 mats, to be used to blend background of next frame
-	std::vector<Mat<float>> mPrevOut;
-
-	//buffer for generating output from input yuv and transformation
-	std::vector<Mat<float>> mBuffer;
-	Mat<float> mYuv, mFilterBuffer, mFilterResult;
 };
 
 
@@ -377,8 +182,7 @@ public:
 
 	void inputData(ImageYuv& frame) override;
 	void createPyramid() override {}
-	void computePartOne() override {}
-	void computePartTwo() override {}
+	void computeStart() override {}
 	void computeTerminate() override {}
 	void outputData(const AffineTransform& trf, OutputContext outCtx) override;
 	ImageYuv getInput(int64_t index) const override;
@@ -392,10 +196,9 @@ public:
 class DefaultFrame : public MovieFrame {
 public:
 	DefaultFrame(MainData& data) : MovieFrame(data) {}
-	void inputData(ImageYuv& frame) {}
-	void createPyramid() {}
-	void computePartOne() {}
-	void computePartTwo() {}
-	void computeTerminate() {}
-	void outputData(const AffineTransform& trf, OutputContext outCtx) {};
+	void inputData(ImageYuv& frame) override {}
+	void createPyramid() override {}
+	void computeStart() override {}
+	void computeTerminate() override {}
+	void outputData(const AffineTransform& trf, OutputContext outCtx) override {};
 };

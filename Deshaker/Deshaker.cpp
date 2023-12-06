@@ -18,6 +18,9 @@
 
 #include "Deshaker.hpp"
 #include "MovieFrame.hpp"
+#include "CpuFrame.hpp"
+#include "CudaFrame.hpp"
+#include "OpenClFrame.hpp"
 #include "FrameResult.hpp"
 #include "ProgressDisplayConsole.hpp"
 #include "UserInputConsole.hpp"
@@ -73,24 +76,27 @@ int deshake(int argsCount, char** args) {
 		} else if (data.deviceList[data.deviceSelected]->type == DeviceType::CUDA) {
 			//use CUDA GPU
 			frame = std::make_unique<CudaFrame>(data);
-			if (errorLogger.hasError()) throw AVException("cannot setup cuda: " + errorLogger.getErrorMessage());
 
 		} else if (data.deviceList[data.deviceSelected]->type == DeviceType::OPEN_CL) {
+			//use OpenCL
 			frame = std::make_unique<OpenClFrame>(data);
 		}
 
-	} catch (const CancelException& ce) {
-		*data.console << ce.what() << std::endl;
+	} catch (const CancelException& e) {
+		*data.console << e.what() << std::endl;
 		return -1;
 
 	} catch (const AVException& e) {
-		errorLogger.logError("ERROR: ", e.what());
+		*data.console << "error: " << e.what() << std::endl;
+		return -2;
 
 	} catch (const std::invalid_argument& e) {
-		errorLogger.logError("ERROR: invalid value: ", e.what());
+		*data.console << "invalid value: " << e.what() << std::endl;
+		return -3;
 
 	} catch (...) {
-		errorLogger.logError("ERROR: invalid parameter");
+		*data.console << "error setting up the system" << std::endl;
+		return -4;
 	}
 
 	//setup progress output

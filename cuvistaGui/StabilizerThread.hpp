@@ -22,6 +22,9 @@
 #include <QPixmap>
 #include "UserInputGui.hpp"
 #include "MovieFrame.hpp"
+#include "CpuFrame.hpp"
+#include "OpenClFrame.hpp"
+#include "CudaFrame.hpp"
 
 //background thread to work the stabilization
 class StabilizerThread : public QThread {

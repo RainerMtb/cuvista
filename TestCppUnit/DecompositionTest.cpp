@@ -188,12 +188,12 @@ public:
 
 	TEST_METHOD(cholesky) {
 		for (int i = 0; i < 30; i++) {
-			Matd a = Matd::rand(5, 5);
+			Matd a = Matd::rand(5, 5, 0, 1, 1000);
 			a = a.times(a.trans()); // symmetric and positive definit
 			CholeskyDecompositor<double> dec(a);
 			Matd L = dec.getL();
 			Assert::AreEqual(a, L.times(L.trans()));
-			Matd b = Matd::rand(5, 1);
+			Matd b = Matd::rand(5, 1, 0, 1, 1000);
 			Matd x = dec.solve(b).value();
 			Assert::IsTrue(b.equals(a.times(x), 1e-8));
 		}

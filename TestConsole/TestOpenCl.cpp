@@ -112,8 +112,7 @@ template <class T> Result runPyramid(MainData& data) {
 	frame->inputData(frame->bufferFrame);
 	frame->createPyramid();
 
-	frame->computePartOne();
-	frame->computePartTwo();
+	frame->computeStart();
 	frame->computeTerminate();
 
 	Result result;
@@ -123,7 +122,7 @@ template <class T> Result runPyramid(MainData& data) {
 	} else {
 		AffineTransform trf;
 		trf.addRotation(0.2).addTranslation(-40, 30);
-		frame->outputData(trf, writer.getOutputData());
+		frame->outputData(trf, writer.getOutputContext());
 		result = { frame->getPyramid(0), frame->getTransformedOutput(), frame->resultPoints };
 	}
 

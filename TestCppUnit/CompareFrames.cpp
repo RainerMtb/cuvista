@@ -19,6 +19,9 @@
 #include "pch.h"
 #include "CppUnitTest.h"
 #include "MovieFrame.hpp"
+#include "CudaFrame.hpp"
+#include "OpenClFrame.hpp"
+#include "CpuFrame.hpp"
 #include "MainData.hpp"
 #include "Utils.hpp"
 #include "ProgressDisplayConsole.hpp"
@@ -93,8 +96,7 @@ private:
 		frame.createPyramid();
 
 		//compute
-		frame.computePartOne();
-		frame.computePartTwo();
+		frame.computeStart();
 		frame.computeTerminate();
 		Assert::IsTrue(errorLogger.hasNoError());
 		return frame.resultPoints;
@@ -235,10 +237,9 @@ public:
 			frame.inputData(frame.inputFrame);
 			frame.createPyramid();
 			pyrGpu = frame.getPyramid(0);
-			frame.computePartOne();
-			frame.computePartTwo();
+			frame.computeStart();
 			frame.computeTerminate();
-			frame.outputData(trf, writer.getOutputData());
+			frame.outputData(trf, writer.getOutputContext());
 			outGpu = frame.getTransformedOutput();
 			imGpu = writer.outputFrame;
 
@@ -268,10 +269,9 @@ public:
 			frame.inputData(frame.inputFrame);
 			frame.createPyramid();
 			pyrCpu = frame.getPyramid(0);
-			frame.computePartOne();
-			frame.computePartTwo();
+			frame.computeStart();
 			frame.computeTerminate();
-			frame.outputData(trf, writer.getOutputData());
+			frame.outputData(trf, writer.getOutputContext());
 			outCpu = frame.getTransformedOutput();
 			imCpu = writer.outputFrame;
 

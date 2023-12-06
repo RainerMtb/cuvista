@@ -64,14 +64,12 @@ __kernel void scale_32f8u_3(__read_only image2d_t src, __global uchar* dest, int
 	dest[idx] = (uchar)(val.z);
 }
 
-const int maxSize = 8;
-
 struct FilterKernel {
 	int siz;
-	float k[maxSize];
+	float k[8];
 };
 
-__constant struct FilterKernel filterKernels[4] = {
+__constant struct FilterKernel filterKernels[] = {
 	{5, {0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f}},
 	{5, {0.0f, 0.25f, 0.5f, 0.25f, 0.0f}},
 	{5, {0.0f, 0.25f, 0.5f, 0.25f, 0.0f}},

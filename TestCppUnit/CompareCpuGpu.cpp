@@ -20,6 +20,9 @@
 #include "CppUnitTest.h"
 #include "Utils.hpp"
 #include "MovieFrame.hpp"
+#include "CpuFrame.hpp"
+#include "OpenClFrame.hpp"
+#include "CudaFrame.hpp"
 
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
@@ -58,10 +61,9 @@ private:
 		reader.read(frame->bufferFrame, status);
 		frame->inputData(frame->bufferFrame);
 		frame->createPyramid();
-		frame->computePartOne();
-		frame->computePartTwo();
+		frame->computeStart();
 		frame->computeTerminate();
-		frame->outputData(trf, writer.getOutputData());
+		frame->outputData(trf, writer.getOutputContext());
 		return frame;
 	}
 	

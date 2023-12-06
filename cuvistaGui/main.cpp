@@ -19,7 +19,6 @@
 #include <QApplication>
 #include <QSplashScreen>
 
-#include "Deshaker.hpp"
 #include "cuvistaGui.h"
 #include "Eula.h"
 

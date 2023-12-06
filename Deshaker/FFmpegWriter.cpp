@@ -17,6 +17,7 @@
  */
 
 #include "MovieWriter.hpp"
+#include "Util.hpp"
 #include <filesystem>
 
 //construct ffmpeg encoder
@@ -42,7 +43,7 @@ void FFmpegWriter::open(EncodingOption videoCodec) {
     codec_ctx->time_base = { (int) mData.inputCtx.timeBaseNum, (int) mData.inputCtx.timeBaseDen };
     codec_ctx->gop_size = GOP_SIZE;
     codec_ctx->max_b_frames = 4;
-    av_opt_set(codec_ctx->priv_data, "preset", "slow", 0);
+    //av_opt_set(codec_ctx->priv_data, "preset", "slow", 0);
     av_opt_set(codec_ctx->priv_data, "profile", "main", 0);
     av_opt_set(codec_ctx->priv_data, "x265-params", "log-level=error", 0);
     av_opt_set(codec_ctx->priv_data, "crf", std::to_string(mData.crf).c_str(), 0); //?????
@@ -50,6 +51,7 @@ void FFmpegWriter::open(EncodingOption videoCodec) {
     if (fmt_ctx->oformat->flags & AVFMT_GLOBALHEADER)
         codec_ctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
 
+    //open encoder
     result = avcodec_open2(codec_ctx, codec, NULL);
     if (result < 0) 
         throw AVException(av_make_error(result, "error opening codec"));
@@ -97,6 +99,7 @@ void FFmpegWriter::open(EncodingOption videoCodec) {
 
 
 int FFmpegWriter::sendFFmpegFrame(AVFrame* frame) {
+    //util::ConsoleTimer timer("write");
     int result = avcodec_send_frame(codec_ctx, frame);
     if (result < 0)
         ffmpeg_log_error(result, "error encoding #1");
@@ -130,7 +133,7 @@ void FFmpegWriter::write() {
     int strides[] = { fr.stride, fr.stride, fr.stride, 0 }; //if only three values are provided, we get a warning "data not aligned"
     int sliceHeight = sws_scale(sws_scaler_ctx, src, strides, 0, fr.h, frame->data, frame->linesize);
 
-    //set pts into frame to later identify packet
+    //set pts into frame to later name packet
     frame->pts = mStatus.frameWriteIndex;
     //frame->coded_picture_number = status.frameWriteIndex; //will not be set in output??
 

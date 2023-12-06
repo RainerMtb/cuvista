@@ -27,7 +27,7 @@ public:
 	virtual ~CudaFFmpegWriter() override;
 
 	void open(EncodingOption videoCodec) override;
-	OutputContext getOutputData() override;
+	OutputContext getOutputContext() override;
 	void write() override;
 	std::future<void> writeAsync() override;
 	bool terminate(bool init) override;

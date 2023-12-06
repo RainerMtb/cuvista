@@ -72,7 +72,7 @@
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(SolutionDir)lib\$(Platform);$(SolutionDir)bin\$(Platform)\$(Configuration);$(CUDA_PATH)\lib\$(Platform)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>OpenCL.lib;Matrix.lib;Deshaker.lib;CudaClasses.lib;cudart_static.lib;cuda.lib;nvencodeapi.lib;avcodec.lib;avformat.lib;avutil.lib;swscale.lib;swresample.lib;ws2_32.lib;nvapi64.lib;$(Qt_LIBS_)</AdditionalDependencies>
+      <AdditionalDependencies>OpenCL.lib;Matrix.lib;Deshaker.lib;CudaClasses.lib;cudart_static.lib;cuda.lib;nvencodeapi.lib;avcodec.lib;avformat.lib;avutil.lib;swscale.lib;swresample.lib;ws2_32.lib;nvapi64.lib;DelayImp.lib;$(Qt_LIBS_)</AdditionalDependencies>
       <DelayLoadDLLs>nvcuda.dll;nvEncodeAPI64.dll;OpenCL.dll</DelayLoadDLLs>
       <IgnoreSpecificDefaultLibraries>libcmt.lib; msvcrt.lib; libcmtd.lib</IgnoreSpecificDefaultLibraries>
     </Link>
@@ -85,7 +85,7 @@
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(SolutionDir)lib\$(Platform);$(SolutionDir)bin\$(Platform)\$(Configuration);$(CUDA_PATH)\lib\$(Platform)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>OpenCL.lib;Matrix.lib;Deshaker.lib;CudaClasses.lib;cudart_static.lib;cuda.lib;nvencodeapi.lib;avcodec.lib;avformat.lib;avutil.lib;swscale.lib;swresample.lib;ws2_32.lib;nvapi64.lib;$(Qt_LIBS_)</AdditionalDependencies>
+      <AdditionalDependencies>OpenCL.lib;Matrix.lib;Deshaker.lib;CudaClasses.lib;cudart_static.lib;cuda.lib;nvencodeapi.lib;avcodec.lib;avformat.lib;avutil.lib;swscale.lib;swresample.lib;ws2_32.lib;nvapi64.lib;DelayImp.lib;$(Qt_LIBS_)</AdditionalDependencies>
       <DelayLoadDLLs>nvcuda.dll;nvEncodeAPI64.dll;OpenCL.dll</DelayLoadDLLs>
       <IgnoreSpecificDefaultLibraries>libcmt.lib;</IgnoreSpecificDefaultLibraries>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>

@@ -62,7 +62,7 @@ private:
     QFileInfo mFileOutput;
 
     ProgressWindow* mProgressWindow;
-    StabilizerThread* mThread;
+    StabilizerThread* mThread = nullptr;
 
     MainData mData;
     InputContext mInputCtx;
@@ -81,4 +81,5 @@ private:
     void updateInputImage();
     void setInputFile(const QString& filename);
     void showMessage(const QString& msg);
+    void setColorIcon(QPushButton* btn, QColor& color);
 };

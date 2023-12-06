@@ -162,6 +162,7 @@
     <ClCompile Include="clFunctions.cpp" />
     <ClCompile Include="clMain.cpp" />
     <ClCompile Include="clTest.cpp" />
+    <ClCompile Include="CpuFrame.cpp" />
     <ClCompile Include="CudaWriter.cpp" />
     <ClCompile Include="Deshaker.cpp" />
     <ClCompile Include="DeshakerLoop.cpp" />
@@ -194,6 +195,8 @@
     <ClInclude Include="clKernels.hpp" />
     <ClInclude Include="clMain.hpp" />
     <ClInclude Include="clTest.hpp" />
+    <ClInclude Include="CpuFrame.hpp" />
+    <ClInclude Include="CudaFrame.hpp" />
     <ClInclude Include="CudaWriter.hpp" />
     <ClInclude Include="Deshaker.hpp" />
     <ClInclude Include="Diagnostics.hpp" />
@@ -203,10 +206,10 @@
     <ClInclude Include="DeshakerHelpText.hpp" />
     <ClInclude Include="MovieWriter.hpp" />
     <ClInclude Include="NvidiaDriver.hpp" />
+    <ClInclude Include="OpenClFrame.hpp" />
     <ClInclude Include="ProgressDisplay.hpp" />
     <ClInclude Include="ProgressDisplayConsole.hpp" />
     <ClInclude Include="Stats.hpp" />
-    <ClInclude Include="NullStream.hpp" />
     <ClInclude Include="RandomSource.hpp" />
     <ClInclude Include="MovieFrame.hpp" />
     <ClInclude Include="FrameResult.hpp" />

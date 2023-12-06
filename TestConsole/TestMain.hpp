@@ -22,6 +22,9 @@
 
 #include "Mat.h"
 #include "MovieFrame.hpp"
+#include "CpuFrame.hpp"
+#include "CudaFrame.hpp"
+#include "OpenClFrame.hpp"
 #include "FrameResult.hpp"
 #include "cuTest.cuh"
 

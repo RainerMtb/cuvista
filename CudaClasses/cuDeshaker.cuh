@@ -26,7 +26,19 @@
 #include <iostream>
 
 
- //textures per pyramid
+class CudaPointResult {
+
+public:
+	int64_t timeStart; //nanos
+	int64_t timeStop;  //nanos
+	double u, v;
+	int idx, ix0, iy0;
+	int xm, ym;
+	PointResultType result;
+	bool computed;
+};
+
+//textures per pyramid
 class ComputeTextures {
 
 public:
@@ -37,28 +49,14 @@ public:
 	__host__ void destroy();
 };
 
-//collect timestamps from kernel for each thread
-class KernelTimer {
-
-public:
-	dim3 block;
-	dim3 thread;
-	int64_t timeStart = 0; //nanos
-	int64_t timeStop = 0;  //nanos
-
-	__device__ void start();
-
-	__device__ void stop();
-};
-
 //parameters for kernel launch
 struct ComputeKernelParam {
+	double* debugData;
+	size_t debugDataSize;
 	int3 blk;
 	int3 thr;
 	size_t shdBytes;
 	cudaStream_t stream;
-	cu::DebugData* debugData;
-	KernelTimer* kernelTimestamps;
 	int64_t frameIdx;
 	volatile char* d_interrupt;
 };
@@ -97,17 +95,12 @@ void cudaCreatePyramid(int64_t frameIdx, const CudaData& core);
 /*
 @brief compute displacements between frame and previous frame in video for part of a frame
 */
-void cudaCompute1(int64_t frameIdx, const CudaData& core, const cudaDeviceProp& props);
-
-/*
-@brief compute second part of frame
-*/
-void cudaCompute2(int64_t frameIdx, const CudaData& core);
+void cudaCompute(int64_t frameIdx, const CudaData& core, const cudaDeviceProp& props);
 
 /*
 @brief return vector of results from async computation
 */
-void cudaComputeTerminate(const CudaData& core, std::vector<PointResult>& results);
+void cudaComputeTerminate(int64_t frameIdx, const CudaData& core, std::vector<PointResult>& results);
 
 /*
 @brief transform a frame and output pixel data to host and/or device memory
@@ -126,9 +119,14 @@ void getNvData(std::vector<unsigned char>& nv12, OutputContext outCtx);
 
 /*
 @brief shutdown cuda device
+*/
+void cudaShutdown(const CudaData& core);
+
+/*
+@brief get debug data from device
 @return timing values and debug data
 */
-DebugData cudaShutdown(const CudaData& core, bool getDebugData);
+void getDebugData(const CudaData& core, const std::string& imageFile, std::function<void(size_t,size_t,double*)> fcn);
 
 /*
 @brief get transformed float output for testing

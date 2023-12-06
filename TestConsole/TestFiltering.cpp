@@ -47,10 +47,9 @@ void runInit(MainData& data, std::unique_ptr<MovieFrame>& frame, AffineTransform
 	frame->inputData(frame->bufferFrame);
 	frame->createPyramid();
 
-	frame->computePartOne();
-	frame->computePartTwo();
+	frame->computeStart();
 	frame->computeTerminate();
-	frame->outputData(trf, writer->getOutputData());
+	frame->outputData(trf, writer->getOutputContext());
 }
 
 void filterCompare() {

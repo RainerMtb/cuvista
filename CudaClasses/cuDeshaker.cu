@@ -60,29 +60,12 @@ void* registeredMemPtr = nullptr;
 //textures used in compute kernel
 ComputeTextures compTex;
 
-//array of time captures for compute kernel
-KernelTimer* d_kernelTimer = nullptr;
-
 //signal to interrupt compute kernel
 char* d_interrupt;
 
 //parameter structure
 __constant__ CudaData d_core;
 
-
-__device__ void KernelTimer::start() {
-	block = blockIdx;
-	thread = threadIdx;
-	cu::globaltimer(&timeStart);
-}
-
-__device__ void KernelTimer::stop() {
-	cu::globaltimer(&timeStop);
-}
-
-__device__ const CudaData& getCudaData() {
-	return d_core;
-}
 
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------- HOST CODE ------------------------------------------------------
@@ -210,14 +193,14 @@ int align(size_t base, size_t alignment) {
 
 //check for cuda runtime installation, this only needs link to cudart_static.lib
 std::vector<cudaDeviceProp> cudaProbeRuntime(CudaInfo& cudaInfo) {
-	//do not check cudaError_t here, absence of cuda will report error "CUDA driver is insufficient for CUDA runtime version"
+	//absence of cuda will report error "CUDA driver is insufficient for CUDA runtime version"
 	cudaRuntimeGetVersion(&cudaInfo.cudaRuntimeVersion);
 	cudaDriverGetVersion(&cudaInfo.cudaDriverVersion);
 
 	//if we found a proper cuda installation, ask for list of devices
 	int deviceCount = 0;
 	std::vector<cudaDeviceProp> props;
-	if (cudaInfo.cudaRuntimeVersion > 0) {
+	if (cudaInfo.cudaDriverVersion > 0) {
 		handleStatus(cudaGetDeviceCount(&deviceCount), "error probing cuda devices");
 		for (int i = 0; i < deviceCount; i++) {
 			cudaDeviceProp devProp;
@@ -265,9 +248,6 @@ void cudaInit(CudaData& core, int devIdx, const cudaDeviceProp& prop, ImageYuv& 
 	int ws = prop.warpSize;
 	core.computeThreads = { ws / rows, rows };
 
-	//allocate storage for compute timings
-	handleStatus(cudaMalloc(&d_kernelTimer, sizeof(KernelTimer) * core.computeBlocks.x * core.computeBlocks.y), "error @int #5");
-	
 	//determine memory requirements
 	//size_t texAlign = prop.texturePitchAlignment;
 	size_t pitch = 0;
@@ -436,7 +416,7 @@ void cudaCreatePyramid(int64_t frameIdx, const CudaData& core) {
 //-------- COMPUTE
 //----------------------------------
 
-void cudaCompute1(int64_t frameIdx, const CudaData& core, const cudaDeviceProp& props) {
+void cudaCompute(int64_t frameIdx, const CudaData& core, const cudaDeviceProp& props) {
 	assert(frameIdx > 0 && "invalid pyramid index");
 	int64_t pyrIdx = frameIdx % core.pyramidCount;
 	int64_t pyrIdxPrev = (frameIdx - 1) % core.pyramidCount;
@@ -447,13 +427,15 @@ void cudaCompute1(int64_t frameIdx, const CudaData& core, const cudaDeviceProp& 
 
 	//reset computed flags
 	handleStatus(cudaMemsetAsync(d_results, 0, sizeof(CudaPointResult) * core.resultCount, cs[0]), "error @compute #20");
+
+	//issue the call
 	ComputeKernelParam param = { 
+		debugData.d_data,
+		debugData.maxSize,
 		core.computeBlocks, 
 		core.computeThreads, 
 		core.computeSharedMem, 
 		cs[0], 
-		&debugData, 
-		d_kernelTimer, 
 		frameIdx, 
 		d_interrupt
 	};
@@ -463,26 +445,23 @@ void cudaCompute1(int64_t frameIdx, const CudaData& core, const cudaDeviceProp& 
 	handleStatus(cudaGetLastError(), "error @compute #20");
 }
 
-void cudaCompute2(int64_t frameIdx, const CudaData& core) {
+void cudaComputeTerminate(int64_t frameIdx, const CudaData& core, std::vector<PointResult>& results) {
 	//reset interrupt signal
 	handleStatus(cudaMemsetAsync(d_interrupt, 0, sizeof(char), cs[1]), "error @compute #50");
 
 	//restart kernel
 	ComputeKernelParam param = {
+		debugData.d_data,
+		debugData.maxSize,
 		core.computeBlocks,
 		core.computeThreads,
 		core.computeSharedMem,
 		cs[0],
-		&debugData,
-		d_kernelTimer,
 		frameIdx,
 		d_interrupt
 	};
 	kernelComputeCall(param, compTex, d_results);
-	handleStatus(cudaGetLastError(), "error @compute #30");
-}
 
-void cudaComputeTerminate(const CudaData& core, std::vector<PointResult>& results) {
 	//get results from device
 	handleStatus(cudaMemcpy(h_results, d_results, sizeof(CudaPointResult) * core.resultCount, cudaMemcpyDefault), "error @compute #100");
 
@@ -619,45 +598,48 @@ void cudaSynchronize() {
 //-------- SHUTDOWN
 //----------------------------------
 
-DebugData cudaShutdown(const CudaData& core, bool getDebugData) {
-	std::vector<double> outDebug(debugData.maxSize / sizeof(double));
-	ImageBGR kernelTimerImage;
+void getDebugData(const CudaData& core, const std::string& imageFile, std::function<void(size_t, size_t, double*)> fcn) {
+	std::vector<double> data(debugData.maxSize / sizeof(double));
+	handleStatus(cudaMemcpy(data.data(), debugData.d_data, debugData.maxSize, cudaMemcpyDefault), "error @shutdown #5 copy debug data");
 
-	//get debug data
-	if (getDebugData) {
-		handleStatus(cudaMemcpy(outDebug.data(), debugData.d_data, debugData.maxSize, cudaMemcpyDeviceToHost), "error @shutdown #5 copy debug data");
+	double* ptr = data.data() + 1;
+	double* ptrEnd = data.data() + size_t(data[0]) + 1;
+	while (ptr != ptrEnd) {
+		size_t h = (size_t) *ptr++;
+		size_t w = (size_t) *ptr++;
+		fcn(h, w, ptr);
+		ptr += h * w;
+	}
 
-		//get image of kernel timing values
-		int siz = core.computeBlocks.x * core.computeBlocks.y;
-		std::vector<KernelTimer> kernelTimer(siz);
-		int h = (int) kernelTimer.size();
-		int w = 8'000;
-		kernelTimerImage = ImageBGR(h, w);
-
-		handleStatus(cudaMemcpy(kernelTimer.data(), d_kernelTimer, sizeof(KernelTimer) * kernelTimer.size(), cudaMemcpyDefault), "error @shutdown #110");
-
-		auto fcnMin = [] (KernelTimer& kt1, KernelTimer& kt2) { return kt1.timeStart < kt2.timeStart; };
-		auto minTime = std::min_element(kernelTimer.begin(), kernelTimer.end(), fcnMin);
-		auto fcnMax = [] (KernelTimer& kt1, KernelTimer& kt2) { return kt1.timeStop < kt2.timeStop; };
-		auto maxTime = std::max_element(kernelTimer.begin(), kernelTimer.end(), fcnMax);
-		int64_t delta = maxTime->timeStop - minTime->timeStart;
-		if (delta > 0) {
-			double f = delta / (w - 1.0);
-			for (int i = 0; i < core.computeBlocks.x * core.computeBlocks.y; i++) {
-				KernelTimer& kt = kernelTimer[i];
-				int t1 = int((kt.timeStart - minTime->timeStart) / f);
-				int t2 = int((kt.timeStop - minTime->timeStart) / f);
-				for (int k = t1; k <= t2; k++) {
-					kernelTimerImage.at(0, i, k) = 255;
-				}
+	//get image of kernel timing values
+	int h = core.resultCount;
+	int w = 6'000;
+	ImageBGR kernelTimerImage = ImageBGR(h, w);
+	auto fcnMin = [] (CudaPointResult& r1, CudaPointResult& r2) { return r1.timeStart < r2.timeStart; };
+	auto minTime = std::min_element(h_results, h_results + core.resultCount, fcnMin);
+	auto fcnMax = [] (CudaPointResult& r1, CudaPointResult& r2) { return r1.timeStop < r2.timeStop; };
+	auto maxTime = std::max_element(h_results, h_results + core.resultCount, fcnMax);
+	int64_t delta = maxTime->timeStop - minTime->timeStart;
+	if (delta > 0) {
+		double f = delta / (w - 1.0);
+		for (int i = 0; i < h; i++) {
+			CudaPointResult& r = h_results[i];
+			int t1 = int((r.timeStart - minTime->timeStart) / f);
+			int t2 = int((r.timeStop - minTime->timeStart) / f);
+			for (int k = t1; k <= t2; k++) {
+				kernelTimerImage.at(0, i, k) = 255;
 			}
 		}
 	}
+	kernelTimerImage.saveAsBMP(imageFile);
+}
+
+void cudaShutdown(const CudaData& core) {
 	
 	//delete device memory
 	void* d_arr[] = { d_results, d_yuvOut, d_rgb, d_yuvData, d_yuvRows, d_yuvPlanes, 
 		out.data, d_bufferH, d_bufferV, d_pyrData, d_pyrRows, 
-		debugData.d_data, d_kernelTimer, d_interrupt
+		debugData.d_data, d_interrupt
 	};
 
 	for (void* ptr : d_arr) {
@@ -677,6 +659,4 @@ DebugData cudaShutdown(const CudaData& core, bool getDebugData) {
 	//do not reset device while nvenc is still active
 	//handleStatus(cudaDeviceReset(), "error @shutdown #90", errorList);
 	handleStatus(cudaGetLastError(), "error @shutdown #100");
-
-	return { outDebug, kernelTimerImage };
 }

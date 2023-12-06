@@ -85,13 +85,12 @@ void readAndWriteOneFrame() {
 		frame.inputFrame.readFromPGM("D:/VideoTest/v01.pgm");
 		frame.inputData(frame.inputFrame);
 		frame.createPyramid();
-		frame.computePartOne();
-		frame.computePartTwo();
+		frame.computeStart();
 		frame.computeTerminate();
 
 		AffineTransform trf;
 		trf.addRotation(0.3).addTranslation(-200, 100);
-		OutputContext oc = writer.getOutputData();
+		OutputContext oc = writer.getOutputContext();
 		frame.outputData(trf, oc);
 		std::string fileOut = "D:/VideoTest/out/test.bmp";
 		std::cout << "writing file " << fileOut << std::endl;

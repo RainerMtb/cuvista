@@ -42,8 +42,10 @@ void handleResult(CUresult result, std::string&& msg) {
 
 void NvEncoder::probeEncoding(CudaInfo& cudaInfo) {
 	//check supported encoder version on this system
-	cudaInfo.nvencVersionApi = (NVENCAPI_MAJOR_VERSION << 4) | NVENCAPI_MINOR_VERSION; //api version for the libraries
-	handleResult(NvEncodeAPIGetMaxSupportedVersion(&cudaInfo.nvencVersionDriver), "cannot get max supported version"); //max version supported by driver
+	cudaInfo.nvencVersionApi = NVENCAPI_MAJOR_VERSION * 1000 + NVENCAPI_MINOR_VERSION * 10; //api version for the libraries
+	uint32_t versionDriver = 0;
+	handleResult(NvEncodeAPIGetMaxSupportedVersion(&versionDriver), "cannot get max supported version"); //max version supported by driver
+	cudaInfo.nvencVersionDriver = versionDriver / 16 * 1000 + versionDriver % 16 * 10;
 }
 
 

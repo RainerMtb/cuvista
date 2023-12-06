@@ -40,7 +40,7 @@ protected:
 
 public:
 	virtual ~MovieWriter() = default;
-	virtual OutputContext getOutputData();
+	virtual OutputContext getOutputContext();
 	virtual void write() {}
 	virtual std::future<void> writeAsync();
 	virtual void open(EncodingOption videoCodec) {}

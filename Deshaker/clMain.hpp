@@ -30,15 +30,13 @@ public:
 	int versionDevice = 0;
 	int versionC = 0;
 	int pitch = 0;
-	std::vector<cl_name_version> extensions;
+	std::vector<std::string> extensions;
 
 	DeviceInfoCl(DeviceType type, int64_t maxPixel)
 		: DeviceInfo(type, maxPixel)
 	{}
 
 	std::string getName() const override;
-
-	friend std::ostream& operator << (std::ostream& os, const DeviceInfoCl& info);
 };
 
 struct OpenClInfo {
@@ -48,13 +46,12 @@ struct OpenClInfo {
 
 namespace cl {
 	OpenClInfo probeRuntime(); //called on startup
-	void init(CoreData& core, ImageYuv& inputFrame, OpenClInfo clinfo, const DeviceInfo* device); //called from constructor of MovieFrame
+	void init(CoreData& core, ImageYuv& inputFrame, const DeviceInfo* device); //called from constructor of MovieFrame
 	void shutdown(const CoreData& core); //called from destructor of MovieFrame
 
 	void inputData(int64_t frameIdx, const CoreData& core, const ImageYuv& inputFrame);
 	void createPyramid(int64_t frameIdx, const CoreData& core);
-	void computePartOne(int64_t frameIdx, const CoreData& core);
-	void computePartTwo(int64_t frameIdx, const CoreData& core);
+	void compute(int64_t frameIdx, const CoreData& core);
 	void computeTerminate(int64_t frameIdx, const CoreData& core, std::vector<PointResult>& results);
 	void outputData(int64_t frameIdx, const CoreData& core, OutputContext outCtx, std::array<double, 6> trf);
 

@@ -20,7 +20,6 @@
 #include "clMain.hpp"
 #include "clKernels.hpp"
 #include "clKernelCompute.hpp"
-#include "AVException.hpp"
 
 #include <format>
 #include <algorithm>
@@ -43,7 +42,7 @@ OpenClInfo cl::probeRuntime() {
 	for (Platform& platform : platforms) {
 		info.version = platform.getInfo<CL_PLATFORM_VERSION>();
 		std::vector<Device> devices;
-		platform.getDevices(CL_DEVICE_TYPE_ALL, &devices);
+		platform.getDevices(CL_DEVICE_TYPE_GPU, &devices);
 
 		for (Device& dev : devices) {
 			cl_bool avail = dev.getInfo<CL_DEVICE_AVAILABLE>();
@@ -57,12 +56,6 @@ OpenClInfo cl::probeRuntime() {
 
 			cl_bool hasImage = dev.getInfo<CL_DEVICE_IMAGE_SUPPORT>();
 			if (hasImage == false) continue;
-
-			//images from buffer not supported on Nvidia on OpenCL 3.0
-			cl_uint pitch = dev.getInfo<CL_DEVICE_IMAGE_PITCH_ALIGNMENT>();
-
-			//list of device extensions
-			std::vector<cl_name_version> extensions = dev.getInfo<CL_DEVICE_EXTENSIONS_WITH_VERSION>();
 
 			//pixel dimensions
 			int64_t maxPixelWidth = dev.getInfo<CL_DEVICE_IMAGE2D_MAX_WIDTH>();
@@ -106,6 +99,16 @@ OpenClInfo cl::probeRuntime() {
 			if (versionDevice < 2000) continue;
 			if (versionC < 2000) continue;
 
+			//images from buffer not supported on Nvidia on OpenCL 3.0
+			cl_uint pitch = dev.getInfo<CL_DEVICE_IMAGE_PITCH_ALIGNMENT>();
+
+			//list of device extensions
+			string str = dev.getInfo<CL_DEVICE_EXTENSIONS>();
+			std::regex delimiter(" ");
+			auto iter = std::sregex_token_iterator(str.begin(), str.end(), delimiter, -1);
+			std::vector<std::string> extensions(iter, {});
+			//std::vector<cl_name_version> extensions = dev.getInfo<CL_DEVICE_EXTENSIONS_WITH_VERSION>(); //Missing before version 3.0.
+
 			//we have a valid device
 			DeviceInfoCl devInfo(DeviceType::OPEN_CL, maxPixel);
 			devInfo.device = dev;
@@ -120,7 +123,7 @@ OpenClInfo cl::probeRuntime() {
 }
 
 //set up device to use
-void cl::init(CoreData& core, ImageYuv& inputFrame, OpenClInfo clinfo, const DeviceInfo* device) {
+void cl::init(CoreData& core, ImageYuv& inputFrame, const DeviceInfo* device) {
 	assert(device->type == DeviceType::OPEN_CL && "device type must be OpenCL here");
 	const DeviceInfoCl* devInfo = static_cast<const DeviceInfoCl*>(device);
 
@@ -181,8 +184,8 @@ void cl::init(CoreData& core, ImageYuv& inputFrame, OpenClInfo clinfo, const Dev
 		clData.cl_results.resize(core.resultCount);
 
 		//compile device code
-		Program::Sources sources;
 		std::string kernelNames[] = { kernelsInputOutput, luinvFunction, norm1Function, kernelCompute };
+		Program::Sources sources;
 		for (const std::string& str : kernelNames) {
 			sources.emplace_back(str.c_str(), str.size());
 		}
@@ -190,7 +193,7 @@ void cl::init(CoreData& core, ImageYuv& inputFrame, OpenClInfo clinfo, const Dev
 		//build program to latest C version
 		std::string compilerFlag = std::format("-cl-std=CL{}.{}", devInfo->versionC / 1000, devInfo->versionC % 1000);
 		Program program(clData.context, sources);
-		program.build();
+		program.build(compilerFlag.c_str());
 
 		//assign kernels to map
 		for (auto& entry : clData.kernelMap) {
@@ -268,8 +271,7 @@ void cl::createPyramid(int64_t frameIdx, const CoreData& core) {
 //-------- COMPUTE -----------------
 //----------------------------------
 
-void cl::computePartOne(int64_t frameIdx, const CoreData& core) {}
-void cl::computePartTwo(int64_t frameIdx, const CoreData& core) {}
+void cl::compute(int64_t frameIdx, const CoreData& core) {}
 
 void cl::computeTerminate(int64_t frameIdx, const CoreData& core, std::vector<PointResult>& results) {
 	assert(frameIdx > 0 && "invalid pyramid index");
@@ -290,8 +292,8 @@ void cl::computeTerminate(int64_t frameIdx, const CoreData& core, std::vector<Po
 		kernel.setArg(5, memsiz, nullptr);
 
 		//threads
-		NDRange ndglobal = NDRange(1ull * core.iw * core.ixCount, core.iyCount);
 		NDRange ndlocal = NDRange(core.iw, 32 / core.iw); //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+		NDRange ndglobal = NDRange(ndlocal[0] * core.ixCount, ndlocal[1] * core.iyCount);
 		clData.queue.enqueueNDRangeKernel(kernel, NullRange, ndglobal, ndlocal);
 
 		//copy from device to host buffer in cl_PointResult
@@ -341,7 +343,7 @@ void cl::outputData(int64_t frameIdx, const CoreData& core, OutputContext outCtx
 
 		//copy output to host
 		if (outCtx.encodeCpu) {
-			clData.queue.enqueueReadBuffer(clData.yuvOut, CL_FALSE, 0, 3ull * core.cpupitch * core.h, outCtx.outputFrame->data());
+			clData.queue.enqueueReadBuffer(clData.yuvOut, CL_TRUE, 0, 3ull * core.cpupitch * core.h, outCtx.outputFrame->data());
 		}
 
 	} catch (const Error& err) {

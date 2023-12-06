@@ -17,16 +17,24 @@
  */
 
 #include "MovieReader.hpp"
+#include "Util.hpp"
 
 #include <fstream>
 #include <iostream>
+
+ //----------------------------------
+ //-------- Movie Reader Main
+ //----------------------------------
 
 std::future<void> MovieReader::readAsync(ImageYuv& inputFrame, Stats& status) {
     return std::async(std::launch::async, [&] () { read(inputFrame, status); });
 }
 
 
-//placeholder class NullReader, does nothing
+//----------------------------------
+//-------- Placeholder Class
+//----------------------------------
+
 InputContext NullReader::open(std::string_view source) {
     return {};
 }
@@ -88,6 +96,11 @@ InputContext FFmpegReader::open(std::string_view source) {
         throw AVException("could not create AVCodecContext");
     if (avcodec_parameters_to_context(av_codec_ctx, av_stream->codecpar) < 0) 
         throw AVException("could not initialize AVCodecContext");
+
+    //enable multi threading for decoder
+    av_codec_ctx->thread_count = 0;
+
+    //open decoder
     if (avcodec_open2(av_codec_ctx, av_codec, NULL) < 0) 
         throw AVException("could not open codec");
 
@@ -114,6 +127,7 @@ InputContext FFmpegReader::open(std::string_view source) {
 
 //read one frame from ffmpeg
 void FFmpegReader::read(ImageYuv& frame, Stats& status) {
+    //util::ConsoleTimer timer("read");
     status.endOfInput = true;
     while (true) {
         av_packet_unref(av_packet); //unref old packet
@@ -189,7 +203,7 @@ void FFmpegReader::read(ImageYuv& frame, Stats& status) {
         sws_scale(sws_scaler_ctx, av_frame->data, av_frame->linesize, 0, av_frame->height, frame_buffer, linesizes);
 
         //store parameters for writer
-        status.packetList.emplace_back(status.frameReadIndex, idx, av_frame->pts, av_frame->pkt_dts, av_frame->duration, av_frame->pkt_pos);
+        status.packetList.emplace_back(status.frameReadIndex, idx, av_frame->pts, av_frame->pkt_dts, av_frame->duration);
 
         //in some cases pts values are not in proper sequence, but actual footage seems to be in order
         //in that case just reorder pts values

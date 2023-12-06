@@ -20,7 +20,7 @@
 #include "Stats.hpp"
 
 
-OutputContext MovieWriter::getOutputData() {
+OutputContext MovieWriter::getOutputContext() {
 	return { true, false, &outputFrame, nullptr };
 }
 

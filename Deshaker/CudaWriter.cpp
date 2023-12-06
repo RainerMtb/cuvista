@@ -49,7 +49,7 @@ void CudaFFmpegWriter::open(EncodingOption videoCodec) {
 }
 
 
-OutputContext CudaFFmpegWriter::getOutputData() {
+OutputContext CudaFFmpegWriter::getOutputContext() {
     return { false, true, &outputFrame, reinterpret_cast<unsigned char*>(nvenc.getNextInputFramePtr()), nvenc.cudaPitch };
 }
 

@@ -35,7 +35,8 @@ bool PointResult::equals(const PointResult& other, double tol) const {
 	bool checkIndex = idx == other.idx && ix0 == other.ix0 && iy0 == other.iy0 && px == other.px && py == other.py && x == other.x && y == other.y;
 	bool checkU = equal(u, other.u, tol); //displacement in X
 	bool checkV = equal(v, other.v, tol); //displacement in Y
-	return checkType && checkIndex && checkU && checkV;
+	bool result = checkType && checkIndex && checkU && checkV;
+	return result;
 }
 
 bool PointResult::operator == (const PointResult& other) const {

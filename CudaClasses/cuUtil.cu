@@ -18,8 +18,10 @@
 
 #include "cuUtil.cuh"
 
-__device__ void cu::globaltimer(int64_t* time) {
-	asm volatile ("mov.u64 %0, %%globaltimer;" : "=l"(*time));
+__device__ int64_t cu::globaltimer() {
+	int64_t time = 0;
+	asm volatile ("mov.u64 %0, %%globaltimer;" : "=l"(time));
+	return time;
 }
 
 __device__ bool cu::firstThread() {

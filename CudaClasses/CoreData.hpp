@@ -136,20 +136,3 @@ public:
 
 	friend std::ostream& operator << (std::ostream& out, const PointResult& res);
 };
-
-//simple class to measure runtime
-class ConsoleTimer {
-
-	std::chrono::steady_clock::time_point t1;
-
-public:
-	ConsoleTimer() {
-		t1 = std::chrono::high_resolution_clock::now();
-	}
-
-	~ConsoleTimer() {
-		auto t2 = std::chrono::high_resolution_clock::now();
-		auto delta = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
-		std::printf("elapsed %zd us\n", delta);
-	}
-};

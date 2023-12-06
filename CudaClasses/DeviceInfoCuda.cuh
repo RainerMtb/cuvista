@@ -59,11 +59,19 @@ struct CudaInfo {
 		return std::to_string(nvidiaDriverVersion / 100) + "." + std::to_string(nvidiaDriverVersion % 100);
 	}
 
-	std::string cudaRuntimeToString() const {
+	std::string runtimeToString() const {
 		return std::to_string(cudaRuntimeVersion / 1000) + "." + std::to_string(cudaRuntimeVersion % 1000 / 10);
 	}
 
-	std::string cudaDriverToString() const {
+	std::string driverToString() const {
 		return std::to_string(cudaDriverVersion / 1000) + "." + std::to_string(cudaDriverVersion % 1000 / 10);
+	}
+
+	std::string nvencApiToString() const {
+		return std::to_string(nvencVersionApi / 1000) + "." + std::to_string(nvencVersionApi % 1000 / 10);
+	}
+
+	std::string nvencDriverToString() const {
+		return std::to_string(nvencVersionDriver / 1000) + "." + std::to_string(nvencVersionDriver % 1000 / 10);
 	}
 };

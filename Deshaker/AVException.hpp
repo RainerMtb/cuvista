@@ -36,7 +36,7 @@ class CancelException : public AVException {
 
 public:
 
-    CancelException() : AVException("aborting...") {}
+    CancelException() : AVException("") {}
 
     CancelException(const std::string& msg) : AVException(msg) {}
 };

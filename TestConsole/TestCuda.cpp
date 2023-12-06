@@ -48,8 +48,7 @@ void check() {
 		reader.read(frame.inputFrame, data.status);
 		frame.inputData(frame.inputFrame);
 		frame.createPyramid();
-		frame.computePartOne();
-		frame.computePartTwo();
+		frame.computeStart();
 		frame.computeTerminate();
 		const AffineTransform& trf = frame.computeTransform(frame.resultPoints);
 		std::string fname = std::format("c:/temp/im{:03d}.bmp", i);
@@ -189,8 +188,7 @@ void compare() {
 		frame.inputFrame.readFromPGM("D:/VideoTest/v01.pgm");
 		frame.inputData(frame.inputFrame);
 		frame.createPyramid();
-		frame.computePartOne();
-		frame.computePartTwo();
+		frame.computeStart();
 		frame.computeTerminate();
 		//frame.getTransformedOutput().saveAsBinary("f:/test.dat");
 		std::cout << cudaGetErrorString(cudaGetLastError()) << std::endl;
@@ -212,8 +210,7 @@ void compare() {
 		frame.inputFrame.readFromPGM("D:/VideoTest/v01.pgm");
 		frame.inputData(frame.inputFrame);
 		frame.createPyramid();
-		frame.computePartOne();
-		frame.computePartTwo();
+		frame.computeStart();
 		frame.computeTerminate();
 	}
 }

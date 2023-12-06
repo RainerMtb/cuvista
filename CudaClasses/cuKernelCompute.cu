@@ -51,7 +51,7 @@ __global__ void kernelCompute(ComputeTextures tex, CudaPointResult* results, Com
 	int iy0 = blockIdx.y;
 	int blockIndex = iy0 * gridDim.x + ix0;
 	if (*param.d_interrupt || results[blockIndex].computed) return;
-	param.kernelTimestamps[blockIndex].start();
+	int64_t timeStart = cu::globaltimer();
 
 	int ir = d_core.ir;
 	int iw = d_core.iw;
@@ -116,7 +116,7 @@ __global__ void kernelCompute(ComputeTextures tex, CudaPointResult* results, Com
 				sd[idx] = y * (c - ir);
 			}
 		}
-		//if (frameIdx == 1 && ix0 == 63 && iy0 == 1 && cu::firstThread()) cu::storeDebugData(debugData, 6, 49, sd);
+		//if (param.frameIdx == 1 && ix0 == 63 && iy0 == 1 && cu::firstThread()) cu::storeDebugData(param.debugData, param.debugDataSize, 6, 49, sd);
 
 		//S = sd * sd' [6 x 6]
 		//compute upper triangle and mirror value to write all values for S
@@ -129,7 +129,7 @@ __global__ void kernelCompute(ComputeTextures tex, CudaPointResult* results, Com
 			//copy symmetric value
 			s[ai.c * 6 + ai.r] = s[ai.r * 6 + ai.c] = sval;
 		}
-		//if (frameIdx == 1 && ix0 == 20 && iy0 == 20 && cu::firstThread()) cu::storeDebugData(debugData, 6, 6, s);
+		//if (param.frameIdx == 1 && ix0 == 63 && iy0 == 1 && cu::firstThread()) cu::storeDebugData(param.debugData, param.debugDataSize, 6, 6, s);
 
 		//compute norm before starting inverse, s will be overwritten
 		double ns = norm1(s, 6, 6, temp);
@@ -140,7 +140,7 @@ __global__ void kernelCompute(ComputeTextures tex, CudaPointResult* results, Com
 		double rcond = 1 / (ns * ng);
 		result = (isnan(rcond) || rcond < d_core.deps) ? PointResultType::FAIL_SINGULAR : PointResultType::RUNNING;
 
-		//if (frameIdx == 1 && ix0 == 63 && iy0 == 1 && cu::firstThread()) cu::storeDebugData(debugData, 6, 6, g);
+		//if (param.frameIdx == 1 && ix0 == 63 && iy0 == 1 && cu::firstThread()) cu::storeDebugData(param.debugData, param.debugDataSize, 6, 6, g);
 
 		//init loop limit counter
 		int iter = 0;
@@ -197,16 +197,16 @@ __global__ void kernelCompute(ComputeTextures tex, CudaPointResult* results, Com
 			//update transform matrix
 			if (r < 2 && ci == 0) {
 				//update wp to dwp
-				dwp[r * 3 + 0] = wp[r * 3] * eta[2] + wp[r * 3 + 1] * eta[4];
+				dwp[r * 3]     = wp[r * 3] * eta[2] + wp[r * 3 + 1] * eta[4];
 				dwp[r * 3 + 1] = wp[r * 3] * eta[3] + wp[r * 3 + 1] * eta[5];
 				dwp[r * 3 + 2] = wp[r * 3] * eta[0] + wp[r * 3 + 1] * eta[1] + wp[r * 3 + 2];
 
 				//update wp
-				wp[r * 3 + 0] = dwp[r * 3];
+				wp[r * 3]     = dwp[r * 3];
 				wp[r * 3 + 1] = dwp[r * 3 + 1];
 				wp[r * 3 + 2] = dwp[r * 3 + 2];
 			}
-			//if (frameIdx == 1 && ix0 == 27 && iy0 == 1 && cu::firstThread()) cu::storeDebugData(debugData, 3, 3, wp); //--------------------------
+			//if (param.frameIdx == 1 && ix0 == 63 && iy0 == 1 && cu::firstThread()) cu::storeDebugData(param.debugData, param.debugDataSize, 3, 3, wp);
 
 			//analyse result, decide on continuing loop
 			double err = eta[0] * eta[0] + eta[1] * eta[1];
@@ -219,13 +219,11 @@ __global__ void kernelCompute(ComputeTextures tex, CudaPointResult* results, Com
 			bestErr = min(err, bestErr);
 			iter++;
 
-			//typeIndex = (int) (iter == d_core.compMaxIter && result == PointResultType::RUNNING) * 4; //FAIL_ITERATIONS
-			//result = resultTypes[typeIndex];
 			if (iter == d_core.compMaxIter && result == PointResultType::RUNNING) {
 				result = PointResultType::FAIL_ITERATIONS; //leave with fail
 			}
 		}
-		//if (frameIdx == 1 && ix0 == 63 && iy0 == 1 && cu::firstThread()) cu::storeDebugData(debugData, 6, 1, eta);
+		//if (param.frameIdx == 1 && ix0 == 63 && iy0 == 1 && cu::firstThread()) cu::storeDebugData(param.debugData, param.debugDataSize, 6, 1, eta);
 
 		//displacement * 2 for next level
 		if (r == 0 && ci == 0) wp[2] *= 2.0;
@@ -248,10 +246,9 @@ __global__ void kernelCompute(ComputeTextures tex, CudaPointResult* results, Com
 		while (z < 0) { xm /= 2; ym /= 2; u /= 2; v /= 2; z++; }
 		while (z > 0) { xm *= 2; ym *= 2; u *= 2; v *= 2; z--; }
 		//store results object
-		results[blockIndex] = { u, v, blockIndex, ix0, iy0, xm, ym, result, 1 };
+		int64_t timeStop = cu::globaltimer();
+		results[blockIndex] = { timeStart, timeStop, u, v, blockIndex, ix0, iy0, xm, ym, result, true };
 	}
-
-	param.kernelTimestamps[blockIndex].stop();
 }
 
 void kernelComputeCall(ComputeKernelParam param, ComputeTextures& tex, CudaPointResult* d_results) {

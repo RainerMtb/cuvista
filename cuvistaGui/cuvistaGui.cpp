@@ -27,12 +27,6 @@
 #include "MainData.hpp"
 #include "UserInput.hpp"
 
-void setColorIcon(QPushButton* btn, QColor& color) {
-    QPixmap icon(btn->iconSize());
-    icon.fill(color);
-    btn->setIcon(icon);
-}
-
 cuvistaGui::cuvistaGui(QWidget *parent) : QMainWindow(parent) {
     ui.setupUi(this);
     mProgressWindow = new ProgressWindow(this); //destructs when parent destructs
@@ -42,10 +36,10 @@ cuvistaGui::cuvistaGui(QWidget *parent) : QMainWindow(parent) {
     QString version = QString("Version %1").arg(CUVISTA_VERSION.c_str());
     ui.labelVersion->setText(version);
 
-    mData.console = &nullStream; //suppress any console output
+    mData.console = &mData.nullStream;
     mData.probeCuda();
     mData.probeOpenCl();
-    mData.collectDeviceInfo();
+    mData.collectDeviceInfo(); 
 
     //devices
     for (int i = 0; i < mData.deviceList.size(); i++) {
@@ -325,4 +319,10 @@ void cuvistaGui::showInfo() {
     layout->addWidget(textBox, 1, 0, 1, layout->columnCount());
     layout->addItem(spacer, layout->rowCount(), 0, 1, layout->columnCount());
     msgBox.exec();
+}
+
+void cuvistaGui::setColorIcon(QPushButton* btn, QColor& color) {
+    QPixmap icon(btn->iconSize());
+    icon.fill(color);
+    btn->setIcon(icon);
 }

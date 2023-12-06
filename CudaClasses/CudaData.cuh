@@ -44,11 +44,3 @@ struct CudaData : public CoreData {
 
 	int outBufferCount = 6;     //number of images to hold as buffers for output generation
 };
-
-struct CudaPointResult {
-	double u, v;
-	int idx, ix0, iy0;
-	int xm, ym;
-	PointResultType result;
-	bool computed;
-};

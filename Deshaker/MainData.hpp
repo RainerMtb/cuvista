@@ -22,13 +22,12 @@
 #include "AVException.hpp"
 #include "FFmpegUtil.hpp"
 #include "Stats.hpp"
-#include "NullStream.hpp"
 #include "RandomSource.hpp"
 #include "cuDeshaker.cuh"
 #include "clMain.hpp"
 #include "DeviceInfoCuda.cuh"
 
-inline std::string CUVISTA_VERSION = "0.9.7";
+inline std::string CUVISTA_VERSION = "0.9.10";
 
 enum class DeshakerPass {
 	NONE, 
@@ -71,6 +70,14 @@ public:
 	{}
 
 	std::string getName() const override;
+};
+
+class NullStream : public std::ostream {
+
+public:
+	NullStream() : std::ostream(nullptr) {}
+
+	template <class T> NullStream& operator << (const T& value) { return *this; }
 };
 
 
@@ -165,6 +172,7 @@ public:
 	DeshakerPass pass = DeshakerPass::COMBINED;
 
 	//output related
+	NullStream nullStream;
 	EncodingOption requestedEncoding = { EncodingDevice::AUTO, Codec::AUTO };
 	EncodingOption selectedEncoding = { EncodingDevice::AUTO, Codec::AUTO };
 	std::ostream* console = &std::cout;
@@ -193,9 +201,7 @@ public:
 	int cpuThreads = std::max(1u, std::thread::hardware_concurrency() * 3 / 4);
 
 	int64_t maxFrames = std::numeric_limits<int32_t>::max();
-
 	std::unique_ptr<RNGbase> rng = std::make_unique<RNG<RandomSource>>();
-
 	ColorRgb bgcol_rgb { 0, 50, 0 };
 
 	//------------------------------------
@@ -212,7 +218,7 @@ public:
 
 	void validate();
 
-	void showIntro() const;
+	void showIntro(const std::string& deviceName) const;
 
 	void showBasicInfo() const;
 

@@ -74,7 +74,6 @@ struct VideoPacketContext {
 	int64_t pts;
 	int64_t dts;
 	int64_t duration;
-	int64_t pos;
 };
 
 //structure holding timing infos

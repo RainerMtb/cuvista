@@ -29,6 +29,7 @@
 #include <filesystem>
 
 
+//CUDA Info
 std::ostream& operator << (std::ostream& os, const DeviceInfoCuda& info) {
 	os << "Device Name:          " << info.props.name << std::endl;
 	os << "Compute Version:      " << info.props.major << "." << info.props.minor << std::endl;
@@ -49,6 +50,7 @@ std::string DeviceInfoCuda::getName() const {
 	return std::format("Cuda: {}, Compute {}.{}", props.name, props.major, props.minor);
 }
 
+//OPENCL Info
 std::string DeviceInfoCl::getName() const {
 	std::string name = device.getInfo<CL_DEVICE_NAME>();
 	std::string vendor = device.getInfo<CL_DEVICE_VENDOR>();
@@ -469,7 +471,7 @@ void MainData::validate() {
 }
 
 //show info about input and output
-void MainData::showIntro() const {
+void MainData::showIntro(const std::string& deviceName) const {
 	//input source
 	*console << "FILE IN: " << fileIn << std::endl;
 
@@ -503,11 +505,15 @@ void MainData::showIntro() const {
 	if (trajectoryFile.empty() == false) *console << "TRAJECTORY FILE: " << trajectoryFile << std::endl;
 	if (resultsFile.empty() == false) *console << "CALCULATION DETAILS OUT: " << resultsFile << std::endl;
 	if (resultImageFile.empty() == false) *console << "CALCULATION DETAILS IMAGES: " << resultImageFile << std::endl;
+
+	//device info
+	*console << "USING DEVICE: " << deviceName << std::endl;
 }
 
 //default output when no arguments are given
 void MainData::showBasicInfo() const {
-	*console << "usage: cuvista [-i inputfile -o outputfile] [options...]" << std::endl << "use -h to get full help" << std::endl;
+	*console << "usage: cuvista [-i inputfile -o outputfile] [options...]" << std::endl;
+	*console << "use -h to get full help" << std::endl;
 }
 
 //output info about system to stream
@@ -535,21 +541,26 @@ std::ostream& MainData::showDeviceInfo(std::ostream& os) const {
 	//display cuda info
 	os << std::endl;
 	if (deviceCountCuda() > 0) {
-		os << "Cuda Runtime:  " << cudaInfo.cudaRuntimeToString() << std::endl;
-		os << "Cuda Driver:   " << cudaInfo.cudaDriverToString() << std::endl;
+		os << "Cuda Runtime:  " << cudaInfo.runtimeToString() << std::endl;
+		os << "Cuda Driver:   " << cudaInfo.driverToString() << std::endl;
+		os << "Nvenc Api:     " << cudaInfo.nvencApiToString() << std::endl;
+		os << "Nvenc Driver:  " << cudaInfo.nvencDriverToString() << std::endl;
 	}
-	
+	os << std::endl;
+
 	for (auto& info : cudaInfo.devices) {
-		os << std::endl << "Cuda Device:" << std::endl;
-		os << info;
+		os << "Cuda Device:" << std::endl;
+		os << info << std::endl;
 	}
 
 	//display OpenCL info
-	if (clinfo.devices.size() == 0) os << "OpenCL devices not found" << std::endl;
+	if (clinfo.devices.size() == 0) {
+		os << "OpenCL devices not found" << std::endl;
+	}
 
 	for (auto& info : clinfo.devices) {
-		os << std::endl << "OpenCL Device:" << std::endl;
-		os << info;
+		os << "OpenCL Device:" << std::endl;
+		os << info << std::endl;
 	}
 	return os;
 }
@@ -557,9 +568,7 @@ std::ostream& MainData::showDeviceInfo(std::ostream& os) const {
 //show info about system
 void MainData::showDeviceInfo() {
 	collectDeviceInfo();
-
 	showDeviceInfo(*console);
-	*console << std::endl;
 
 	//force termination
 	throw CancelException();
@@ -602,16 +611,19 @@ void MainData::probeCuda() {
 	//check present cuda devices
 	std::vector<cudaDeviceProp> props = cudaProbeRuntime(cudaInfo);
 	if (props.size() > 0) {
-		//check nvenc present
+		//check if nvenc available
 		NvEncoder::probeEncoding(cudaInfo);
-		//check supported codecs
-		if (cudaInfo.nvencVersionDriver >= cudaInfo.nvencVersionApi) {
-			for (int i = 0; i < props.size(); i++) {
-				cudaDeviceProp& prop = props[i];
-				DeviceInfoCuda cuda(DeviceType::CUDA, prop.sharedMemPerBlock / sizeof(float), prop, i);
+
+		for (int i = 0; i < props.size(); i++) {
+			cudaDeviceProp& prop = props[i];
+
+			//create device info struct
+			DeviceInfoCuda cuda(DeviceType::CUDA, prop.sharedMemPerBlock / sizeof(float), prop, i);
+			if (cudaInfo.nvencVersionDriver >= cudaInfo.nvencVersionApi) {
+				//check supported codecs
 				NvEncoder::probeSupportedCodecs(cuda);
-				cudaInfo.devices.push_back(cuda);
 			}
+			cudaInfo.devices.push_back(cuda);
 		}
 	}
 }

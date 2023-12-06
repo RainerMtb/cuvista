@@ -42,7 +42,7 @@ namespace cu {
 	__device__ bool firstThread();
 
 	//get time from register
-	__device__ void globaltimer(int64_t* time);
+	__device__ int64_t globaltimer();
 
 	//memory copy on device
 	__device__ void memcpy(void* dest, const void* src, size_t count);
@@ -154,21 +154,19 @@ namespace cu {
 
 	//store data from device for debugging on host
 	struct DebugData {
-		int64_t* d_timestamps;
-		size_t n_timestamps = 0;
 		double* d_data;
-		size_t maxSize = 1024 * 128;
+		size_t maxSize = 1024 * 256; //number of doubles
 	};
 
 
 	//store data for later debugging
-	template <class T> __device__ bool storeDebugData(DebugData& debugData, size_t h, size_t w, T* data) {
-		double siz = *debugData.d_data; //first value contains size in byte in double
-		if (siz + h * w + 2 > debugData.maxSize) return false; //check max allowed size
-		double* ptr = debugData.d_data + (size_t) siz + 1; //pointer to write this data
+	template <class T> __device__ bool storeDebugData(double* debugData, size_t maxSize, size_t h, size_t w, T* data) {
+		double siz = debugData[0]; //first value contains size in byte in double
+		if (siz + h * w + 2 > maxSize) return false; //check max allowed size
+		double* ptr = debugData + (size_t) siz + 1; //pointer to start this data at
 		*ptr++ = h; //first value per dataset is height
 		*ptr++ = w; //second value per dataset is width
 		for (int i = 0; i < h * w; i++) *ptr++ = data[i]; //actual data
-		*debugData.d_data += h * w + 2; //update size
+		debugData[0] += h * w + 2; //update size
 	}
 }
