@@ -20,7 +20,9 @@
 
 #include <fstream>
 #include "MainData.hpp"
+#include "Trajectory.hpp"
 
+class MovieFrame;
 
 //-----------------------------------------------------------------------------------
 class MovieWriter {
@@ -177,6 +179,7 @@ private:
 };
 
 
+//-----------------------------------------------------------------------------------
 class FFmpegWriter : public FFmpegFormatWriter {
 
 private:
@@ -188,6 +191,10 @@ private:
 	int sendFFmpegFrame(AVFrame* frame);
 	int writeFFmpegPacket();
 
+protected:
+	void open(EncodingOption videoCodec, int w, int h);
+	void write(ImageYuv& frame);
+
 public:
 	FFmpegWriter(MainData& data) : FFmpegFormatWriter(data) {}
 	~FFmpegWriter() override;
@@ -196,3 +203,89 @@ public:
 	bool terminate(bool init) override;
 };
 
+
+//-------------- writer to combine input and output side by side -------------------
+class CombinerWriter : public FFmpegWriter {
+
+private:
+	int widthTotal;
+	ImageYuv combinedFrame; //frame that holds input and output side by side
+	ImageYuv inputFrame;
+	std::vector<unsigned char> bg;
+
+public:
+	CombinerWriter(MainData& data) : 
+		FFmpegWriter(data), 
+		widthTotal { data.w * 3 / 2 }, 
+		combinedFrame(data.h, widthTotal, widthTotal),
+		inputFrame(data.h, data.w, data.cpupitch)
+	{}
+
+	void open(EncodingOption videoCodec) override;
+	OutputContext getOutputContext() override;
+	void write() override;
+};
+
+
+//-------------- superclass for secondary writers -----------------------------------
+class SecondaryWriter : public MovieWriter {
+
+public:
+	SecondaryWriter(MainData& data) : MovieWriter(data) {}
+
+	virtual void write(MovieFrame* mf, int64_t frameIndex) = 0;
+};
+
+
+//------------- write binary transformation file ------------------------------------
+class TransformsWriter : public SecondaryWriter {
+
+private:
+	inline static std::string id = "CUVI";
+	std::ofstream file;
+
+	template <class T> void writeValue(T val) {
+		file.write(reinterpret_cast<const char*>(&val), sizeof(val));
+	}
+
+public:
+	static std::map<int64_t, TransformValues> readTransformMap(const std::string& trajectoryFile);
+
+	TransformsWriter(MainData& data);
+
+	void writeTransform(const Affine2D& transform, int64_t frameIndex);
+
+	virtual void write(MovieFrame* mf, int64_t frameIndex) override;
+};
+
+
+//--------------- write point results as large text file ----------------------------
+class ResultDetailsWriter : public SecondaryWriter {
+
+private:
+	std::string delimiter = ";";
+	std::ofstream file;
+
+public:
+	ResultDetailsWriter(MainData& data);
+
+	void write(const std::vector<PointResult>& results, int64_t frameIndex);
+
+	virtual void write(MovieFrame* mf, int64_t frameIndex) override;
+};
+
+
+//--------------- write individual images to show point results ---------------------
+class ResultImageWriter : public SecondaryWriter {
+
+private:
+	ImageBGR bgr;
+	const MainData& data;
+
+public:
+	ResultImageWriter(MainData& data) : SecondaryWriter(data), bgr(data.h, data.w), data { data } {}
+
+	void write(const FrameResult& fr, int64_t idx, const ImageYuv& yuv, const std::string& fname);
+
+	virtual void write(MovieFrame* mf, int64_t frameIndex) override;
+};

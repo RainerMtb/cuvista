@@ -20,7 +20,7 @@
 
 #include "Affine2D.h"
 #include "CudaData.cuh"
-#include "Instrumentor.h"
+#include "Cherno/Instrumentor.h"
 #include "ThreadPool.h"
 
 class AffineTransform : public Affine2D {

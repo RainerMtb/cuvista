@@ -59,5 +59,5 @@ namespace cl {
 	Matf getTransformedOutput(const CoreData& core);
 	void getPyramid(float* pyramid, size_t idx, const CoreData& core);
 	void getCurrentInputFrame(ImagePPM& image, int64_t idx);
-	void getCurrentOutputFrame(ImagePPM& image);
+	void getTransformedOutput(ImagePPM& image);
 }

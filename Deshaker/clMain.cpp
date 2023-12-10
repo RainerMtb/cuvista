@@ -204,7 +204,11 @@ void cl::init(CoreData& core, ImageYuv& inputFrame, const DeviceInfo* device) {
 		for (auto& data : err.getBuildLog()) {
 			Device dev = data.first;
 			std::string msg = data.second;
-			errorLogger.logError("OpenCL init error: ", msg);
+			size_t maxLen = 150;
+			if (msg.length() > maxLen) {
+				msg = msg.substr(0, maxLen) + "...\n[total " + std::to_string(msg.length()) + " chars]";
+			}
+			errorLogger.logError("OpenCL build error:\n", msg);
 		}
 
 	} catch (const Error& err) {
@@ -345,6 +349,10 @@ void cl::outputData(int64_t frameIdx, const CoreData& core, OutputContext outCtx
 		if (outCtx.encodeCpu) {
 			clData.queue.enqueueReadBuffer(clData.yuvOut, CL_TRUE, 0, 3ull * core.cpupitch * core.h, outCtx.outputFrame->data());
 		}
+		//copy input if requested
+		if (outCtx.requestInput) {
+			readImage(clData.yuv[frIdx], core.cpupitch, outCtx.inputFrame->data(), clData.queue);
+		}
 
 	} catch (const Error& err) {
 		errorLogger.logError("OpenCL output error: ", err.what());
@@ -398,6 +406,6 @@ void cl::getCurrentInputFrame(ImagePPM& image, int64_t idx) {
 	yuv_to_rgb("yuv8u_to_rgb", clData.yuv[fridx], image.data(), clData, image.w, image.h);
 }
 
-void cl::getCurrentOutputFrame(ImagePPM& image) {
+void cl::getTransformedOutput(ImagePPM& image) {
 	yuv_to_rgb("yuv32f_to_rgb", clData.out[1], image.data(), clData, image.w, image.h);
 }

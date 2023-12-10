@@ -76,7 +76,7 @@ __constant struct FilterKernel filterKernels[] = {
 	{3, {-0.5f, 0.0f, 0.5f}},
 };
 
-__kernel void filter_32f_1(__read_only image2d_t src, __write_only image2d_t dest, int filterIndex, int dx, int dy) {
+__kernel void filter_32f_1(__read_only image2d_depth_t src, __write_only image2d_t dest, int filterIndex, int dx, int dy) {
 	int c = get_global_id(0);
 	int r = get_global_id(1);
 
@@ -86,7 +86,7 @@ __kernel void filter_32f_1(__read_only image2d_t src, __write_only image2d_t des
 	int x = c - dx * siz / 2;
 	int y = r - dy * siz / 2;
 	for (int i = 0; i < siz; i++) {
-		float val = read_imagef(src, sampler, (int2)(x, y)).x;
+		float val = read_imagef(src, sampler, (int2)(x, y));
 		result += val * k[i];
 		x += dx;
 		y += dy;

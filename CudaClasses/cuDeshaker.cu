@@ -509,22 +509,22 @@ void cudaOutput(int64_t frameIdx, const CudaData& core, OutputContext outCtx, st
 	cu::filter_32f_v_3(out.filterH, out.filterV, core.strideFloat4N, w, h, cs[1]);
 	//combine unsharp mask
 	cu::unsharp_32f_3(out.warped, out.filterV, out.final, core.strideFloat4N, w, h, cs[1]);
-	//blend input frame on top of output when requested
-	const BlendInput& bi = core.blendInput;
-	if (bi.blendWidth > 0) {
-		cu::copy_32f_3(out.start + bi.blendStart, core.strideFloat4N, out.final + bi.blendStart, core.strideFloat4N, bi.blendWidth, h, cs[1]);
-		cu::copy_32f_3(out.background + bi.separatorStart, core.strideFloat4N, out.final + bi.separatorStart, core.strideFloat4N, bi.separatorWidth, h, cs[1]);
-	}
-	//output to host
+
+	//output to host if requested
 	if (outCtx.encodeCpu) {
 		cu::outputHost(out.final, core.strideFloat4N, d_yuvOut, core.strideChar, w, h, cs[1]);
 		ImageYuv* im = outCtx.outputFrame;
 		cu::copy_32f_3(d_yuvOut, core.strideChar, im->data(), im->stride, w, h * 3, cs[1]);
 		outCtx.outputFrame->frameIdx = frameIdx;
 	}
-	//output to nvenc
+	//output to nvenc if requested
 	if (outCtx.encodeCuda) {
 		cu::outputNvenc(out.final, core.strideFloat4N, outCtx.cudaNv12ptr, outCtx.cudaPitch, w, h, cs[1]);
+	}
+	//provide input if requested
+	if (outCtx.requestInput) {
+		ImageYuv* im = outCtx.inputFrame;
+		cudaMemcpy2D(im->data(), im->stride, yuvSrc, core.strideChar, w, h * 3ll, cudaMemcpyDefault);
 	}
 
 	//writeText(std::to_string(frameIdx), 10, 10, 2, 3, bufferFrames[18], core);
@@ -578,7 +578,7 @@ void cudaGetCurrentInputFrame(ImagePPM& image, const CudaData& core, int64_t idx
 	handleStatus(cudaMemcpy(image.data(), d_rgb, 3ull * core.w * core.h, cudaMemcpyDefault), "error @progress input");
 }
 
-void cudaGetCurrentOutputFrame(ImagePPM& image, const CudaData& core) {
+void cudaGetTransformedOutput(ImagePPM& image, const CudaData& core) {
 	cu::yuv_to_rgb(out.warped, core.strideFloat4N, d_rgb, core.w, core.w, core.h);
 	handleStatus(cudaMemcpy(image.data(), d_rgb, 3ull * core.w * core.h, cudaMemcpyDefault), "error @progress output");
 }

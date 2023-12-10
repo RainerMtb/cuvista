@@ -65,10 +65,12 @@ other output options:
                 default: 0
 -frames n       maximum number of frames to encode
                 program will terminate when this number is reached
--blendsource x  blend input image over stabilized footage
-                value must be between -1.0 and 1.0
-                positive value puts input to left, negative to right side
-                example 0.25: left 25% of video will show input
+-blendsource x  combine source and stabilized frames side by side
+                final output video is 3/2 the input width
+                2/3 of input and 2/3 of output are displayed
+                parameter value must be between -1.0 and 1.0 and
+                specifies which part of images is shown
+                -1 takes leftmost part, 0 shows the middle, +1 takes the right
                 default: 0
 
 quality and performance settings:

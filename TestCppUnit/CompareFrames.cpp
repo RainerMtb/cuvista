@@ -117,8 +117,8 @@ public:
 			TestWriter writer(data);
 			CpuFrame frame(data);
 			reader.read(frame.bufferFrame, data.status);
-			MovieFrame::DeshakerLoopCombined loop;
-			loop.run(frame, progress, reader, writer, input);
+			Writers writers;
+			frame.runLoop(DeshakerPass::COMBINED, progress, reader, writer, input, writers);
 			cpuImages = writer.outputFrames;
 			Assert::IsTrue(errorLogger.hasNoError());
 		}
@@ -136,8 +136,8 @@ public:
 			TestWriter writer(data);
 			CudaFrame frame(data);
 			reader.read(frame.bufferFrame, data.status);
-			MovieFrame::DeshakerLoopCombined loop;
-			loop.run(frame, progress, reader, writer, input);
+			Writers writers;
+			frame.runLoop(DeshakerPass::COMBINED, progress, reader, writer, input, writers);
 			gpuImages = writer.outputFrames;
 			Assert::IsTrue(errorLogger.hasNoError());
 		}

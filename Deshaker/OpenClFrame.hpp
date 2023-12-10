@@ -73,8 +73,8 @@ public:
 		cl::getCurrentInputFrame(image, mStatus.frameReadIndex - 1);
 	}
 
-	void getCurrentOutputFrame(ImagePPM& image) override {
-		cl::getCurrentOutputFrame(image);
+	void getTransformedOutput(ImagePPM& image) override {
+		cl::getTransformedOutput(image);
 	}
 
 	std::string name() const override {

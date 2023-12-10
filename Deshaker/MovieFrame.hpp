@@ -22,13 +22,12 @@
 #include "CudaWriter.hpp"
 #include "ThreadPool.h"
 #include "ProgressDisplay.hpp"
-#include "Diagnostics.hpp"
-#include "Instrumentor.h"
-#include "Diagnostics.hpp"
 #include "UserInput.hpp"
 
 #include "cuDeshaker.cuh"
 #include "clMain.hpp"
+
+using Writers = std::vector<std::unique_ptr<SecondaryWriter>>;
 
 
 //---------------------------------------------------------------------
@@ -37,49 +36,12 @@
 
 class MovieFrame {
 
-public:
-	class DeshakerLoop {
-	public:
-		virtual void run(MovieFrame& mf, ProgressDisplay& progress, MovieReader& reader, MovieWriter& writer, UserInput& input) {}
-	};
-
-	class DeshakerLoopCombined : public DeshakerLoop {
-	public:
-		void run(MovieFrame& mf, ProgressDisplay& progress, MovieReader& reader, MovieWriter& writer, UserInput& input) override;
-	};
-
-	class DeshakerLoopFirst : public DeshakerLoop {
-	public:
-		void run(MovieFrame& mf, ProgressDisplay& progress, MovieReader& reader, MovieWriter& writer, UserInput& input) override;
-	};
-
-	class DeshakerLoopSecond : public DeshakerLoop {
-	public:
-		void run(MovieFrame& mf, ProgressDisplay& progress, MovieReader& reader, MovieWriter& writer, UserInput& input) override;
-	};
-
-	class DeshakerLoopClassic : public DeshakerLoop {
-	public:
-		void run(MovieFrame& mf, ProgressDisplay& progress, MovieReader& reader, MovieWriter& writer, UserInput& input) override;
-	};
-
 protected:
 	const MainData& mData;
 	Stats& mStatus;
 	Trajectory mTrajectory;
-	std::list<std::unique_ptr<DiagnosticItem>> diagsList;
 
 public:
-	FrameResult mFrameResult;
-	ImageYuv inputFrame;
-	ImageYuv bufferFrame;
-	std::vector<PointResult> resultPointsOld;
-	ThreadPool mPool;
-	std::vector<PointResult> resultPoints;
-
-	MovieFrame(const MovieFrame& other) = delete;
-	MovieFrame(MovieFrame&& other) = delete;
-	virtual ~MovieFrame();
 
 	//get frame data from reader into frame object
 	virtual void inputData(ImageYuv& frame) = 0;
@@ -93,18 +55,23 @@ public:
 	virtual void outputData(const AffineTransform& trf, OutputContext outCtx) = 0;
 
 	/*
-	call transform calculation
+	* run the stabilizing loop
+	*/
+	virtual void runLoop(DeshakerPass pass, ProgressDisplay& progress, MovieReader& reader, MovieWriter& writer, UserInput& input, Writers& secondaryWriters);
+
+	/*
+	* call transform calculation
 	*/
 	virtual const AffineTransform& computeTransform(std::vector<PointResult> resultPoints) final;
 
 	/*
-	* get transformed image as Mat<float> where YUV color planes are stacked vertically for debugging
-	* warped output before unsharping
+	* get transformed image as Mat<float> where YUV color planes are stacked vertically
+	* image is warped output before unsharping, useful for debugging
 	*/
 	virtual Mat<float> getTransformedOutput() const { return {}; }
 
 	/*
-	* get image pyramid as single Mat<float> where pyramids for Y, DX, DY are stacked vertically
+	* get image pyramid as single Mat<float> where images are stacked vertically from large to small
 	* useful for debugging
 	*/
 	virtual Mat<float> getPyramid(size_t idx) const { return {}; }
@@ -115,14 +82,17 @@ public:
 	virtual ImageYuv getInput(int64_t index) const { return {}; }
 
 	/*
-	* get most recently read input frame to show progress
+	* get most recently read input frame
+	* use to show progress
 	*/
 	virtual void getCurrentInputFrame(ImagePPM& image) {}
 
 	/*
-	* get most resently processed output frame, after warping, before unsharping
+	* get most resently processed output frame
+	* image is warped output before unsharping
+	* use to show progress
 	*/
-	virtual void getCurrentOutputFrame(ImagePPM& image) {}
+	virtual void getTransformedOutput(ImagePPM& image) {}
 
 	/*
 	* read transforms from previous pass
@@ -132,12 +102,23 @@ public:
 	/*
 	* run list of attached diagnostic methods
 	*/
-	virtual void runDiagnostics(int64_t frameIndex) final;
+	virtual void outputSecondary(Writers& writers, int64_t frameIndex) final;
 
 	/*
 	* name MovieFrame used
 	*/
 	virtual std::string name() const { return "None"; }
+
+	FrameResult mFrameResult;
+	ImageYuv inputFrame;
+	ImageYuv bufferFrame;
+	std::vector<PointResult> resultPointsOld;
+	ThreadPool mPool;
+	std::vector<PointResult> resultPoints;
+
+	MovieFrame(const MovieFrame& other) = delete;
+	MovieFrame(MovieFrame&& other) = delete;
+	virtual ~MovieFrame();
 
 protected:
 	//only constructor for Frame class
@@ -150,18 +131,13 @@ protected:
 		resultPointsOld(data.resultCount), 
 		resultPoints(data.resultCount),
 		mPool(data.cpuThreads)
-	{
-		//open and attach sinks for diagnostics
-		if (data.pass != DeshakerPass::SECOND_PASS && data.trajectoryFile.empty() == false) {
-			diagsList.push_back(std::make_unique<TransformsFile>(data.trajectoryFile, std::ios::out | std::ios::binary));
-		}
-		if (!data.resultsFile.empty()) {
-			diagsList.push_back(std::make_unique<ResultDetailsFile>(data.resultsFile));
-		}
-		if (!data.resultImageFile.empty()) {
-			diagsList.push_back(std::make_unique<ResultImage>(data, [&] (int64_t idx) { return getInput(idx); }));
-		}
-	}
+	{}
+
+private:
+	void runLoopCombined(ProgressDisplay& progress, MovieReader& reader, MovieWriter& writer, UserInput& input, Writers& secondaryWriters);
+	void runLoopFirst(ProgressDisplay& progress, MovieReader& reader, MovieWriter& writer, UserInput& input, Writers& secondaryWriters);
+	void runLoopSecond(ProgressDisplay& progress, MovieReader& reader, MovieWriter& writer, UserInput& input, Writers& secondaryWriters);
+	void runLoopConsecutive(ProgressDisplay& progress, MovieReader& reader, MovieWriter& writer, UserInput& input, Writers& secondaryWriters);
 };
 
 

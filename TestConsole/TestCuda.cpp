@@ -31,7 +31,7 @@ void check() {
 	NullWriter writer(data);
 	CudaFrame frame(data);
 	OutputContext oc = { true, false, &writer.outputFrame, nullptr, 0 };
-	ResultImage resim(data, {});
+	ResultImageWriter resim(data);
 
 	for (int i = 0; i < frameSkip; i++) {
 		reader.read(frame.inputFrame, data.status);

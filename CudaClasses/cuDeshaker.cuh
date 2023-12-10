@@ -151,4 +151,4 @@ void cudaGetCurrentInputFrame(ImagePPM& image, const CudaData& core, int64_t idx
 /*
 @brief get current output frame for progress display
 */
-void cudaGetCurrentOutputFrame(ImagePPM& image, const CudaData& core);
+void cudaGetTransformedOutput(ImagePPM& image, const CudaData& core);

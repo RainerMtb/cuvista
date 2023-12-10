@@ -21,15 +21,6 @@
 #include "ErrorLogger.hpp"
 #include "Image.hpp"
 
-//how to put original and stabilized video side by side
-struct BlendInput {
-	double percent = 0.0;
-	int blendStart = 0;
-	int blendWidth = 0;
-	int separatorStart = 0;
-	int separatorWidth = 0;
-};
-
 struct Triplet {
 	float y, u, v;
 
@@ -47,6 +38,8 @@ struct OutputContext {
 	ImageYuv* outputFrame;
 	unsigned char* cudaNv12ptr;
 	int cudaPitch;
+	bool requestInput;
+	ImageYuv* inputFrame;
 };
 
 //how to deal with background when frame does not cover complete output canvas
@@ -85,7 +78,6 @@ public:
 
 	Triplet unsharp = { 0.6f, 0.3f, 0.3f };	//ffmpeg unsharp=5:5:0.6:3:3:0.3
 	ColorNorm bgcol_yuv = {};				//background fill colors in yuv
-	BlendInput blendInput = {};
 	BackgroundMode bgmode = BackgroundMode::BLEND;
 
 	int radius = -1;			//number of frames before and after used for smoothing

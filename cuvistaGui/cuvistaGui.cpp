@@ -237,7 +237,7 @@ void cuvistaGui::stabilize() {
     mData.bgmode = ui.radioBlend->isChecked() ? BackgroundMode::BLEND : BackgroundMode::COLOR;
 
     double val = ui.spinBlend->value() / 100.0;
-    mData.blendInput.percent = ui.radioBlendLeft->isChecked() ? val : -val;
+    //mData.blendInput.percent = ui.radioBlendLeft->isChecked() ? val : -val;
 
     using uchar = unsigned char;
     mData.bgcol_rgb = { (uchar) mBackgroundColor.red(), (uchar) mBackgroundColor.green(), (uchar) mBackgroundColor.blue() };
@@ -293,7 +293,7 @@ void cuvistaGui::showMessage(const QString& msg) {
 
 void cuvistaGui::showInfo() {
     int boxHeight = 250;
-    int boxWidth = 450;
+    int boxWidth = 500;
 
     QMessageBox msgBox(this);
     msgBox.setWindowTitle(QString("Cuvista Info"));
@@ -312,7 +312,8 @@ void cuvistaGui::showInfo() {
     textBox->setPlainText(qstr);
     textBox->setMinimumHeight(boxHeight);
     textBox->setReadOnly(true);
-    textBox->setFont(QFont("Lucida Console"));
+    textBox->setFont(QFont("Consolas"));
+    textBox->setLineWrapMode(QPlainTextEdit::LineWrapMode::NoWrap);
 
     QSpacerItem* spacer = new QSpacerItem(boxWidth, 0, QSizePolicy::Minimum, QSizePolicy::Minimum);
     QGridLayout* layout = (QGridLayout*) msgBox.layout();

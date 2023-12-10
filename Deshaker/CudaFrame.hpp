@@ -80,8 +80,8 @@ public:
 		cudaGetCurrentInputFrame(image, mData, mStatus.frameReadIndex - 1);
 	}
 
-	void getCurrentOutputFrame(ImagePPM& image) override {
-		cudaGetCurrentOutputFrame(image, mData);
+	void getTransformedOutput(ImagePPM& image) override {
+		cudaGetTransformedOutput(image, mData);
 	}
 
 	std::string name() const override {

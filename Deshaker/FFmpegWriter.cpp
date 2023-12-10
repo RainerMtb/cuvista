@@ -20,8 +20,13 @@
 #include "Util.hpp"
 #include <filesystem>
 
-//construct ffmpeg encoder
+//set up ffmpeg encoder
 void FFmpegWriter::open(EncodingOption videoCodec) {
+    open(videoCodec, mData.w, mData.h);
+}
+
+//set up ffmpeg encoder
+void FFmpegWriter::open(EncodingOption videoCodec, int w, int h) {
     int result = 0;
 
     const AVCodec* codec = avcodec_find_encoder(codecMap[videoCodec.codec]);
@@ -36,8 +41,8 @@ void FFmpegWriter::open(EncodingOption videoCodec) {
     //open container format
     FFmpegFormatWriter::open(videoCodec);
 
-    codec_ctx->width = mData.w;
-    codec_ctx->height = mData.h;
+    codec_ctx->width = w;
+    codec_ctx->height = h;
     codec_ctx->pix_fmt = pixfmt;
     //codec_ctx->framerate = { data.inputCtx.fpsNum, data.inputCtx.fpsDen };
     codec_ctx->time_base = { (int) mData.inputCtx.timeBaseNum, (int) mData.inputCtx.timeBaseDen };
@@ -92,7 +97,7 @@ void FFmpegWriter::open(EncodingOption videoCodec) {
     if (result < 0) 
         throw AVException("Could not make frame writable");
 
-    sws_scaler_ctx = sws_getContext(mData.w, mData.h, AV_PIX_FMT_YUV444P, mData.w, mData.h, pixfmt, SWS_BICUBIC, NULL, NULL, NULL);
+    sws_scaler_ctx = sws_getContext(w, h, AV_PIX_FMT_YUV444P, w, h, pixfmt, SWS_BICUBIC, NULL, NULL, NULL);
     if (!sws_scaler_ctx) 
         throw AVException("Could not get scaler context");
 }
@@ -127,8 +132,11 @@ int FFmpegWriter::writeFFmpegPacket() {
 
 
 void FFmpegWriter::write() {
-    //outputFrame.writeText(std::to_string(status.frameWriteIndex), 10, 10, 2, 3, ColorYuv::BLACK, ColorYuv::WHITE);
-    ImageYuv& fr = outputFrame;
+    write(outputFrame);
+}
+
+void FFmpegWriter::write(ImageYuv& fr) {
+    //fr.writeText(std::to_string(status.frameWriteIndex), 10, 10, 2, 3, ColorYuv::BLACK, ColorYuv::WHITE);
     uint8_t* src[] = { fr.plane(0), fr.plane(1), fr.plane(2), nullptr };
     int strides[] = { fr.stride, fr.stride, fr.stride, 0 }; //if only three values are provided, we get a warning "data not aligned"
     int sliceHeight = sws_scale(sws_scaler_ctx, src, strides, 0, fr.h, frame->data, frame->linesize);

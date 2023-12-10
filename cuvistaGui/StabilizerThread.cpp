@@ -20,7 +20,7 @@
 #include "ProgressDisplayGui.hpp"
 
 void StabilizerThread::run() {
-    auto t1 = std::chrono::high_resolution_clock::now();
+    mData.status.timeStart();
     std::unique_ptr<MovieWriter> writer;
     std::unique_ptr<MovieFrame> frame;
 
@@ -53,22 +53,21 @@ void StabilizerThread::run() {
         }
 
         writer->open(mData.requestedEncoding);
-        MovieFrame::DeshakerLoopCombined loop;
         ProgressDisplayGui progress(mData, this, frame.get());
-        loop.run(*frame, progress, mReader, *writer, inputHandler);
+        Writers writers;
+        frame->runLoop(DeshakerPass::COMBINED, progress, mReader, *writer, inputHandler, writers);
 
     } catch (const AVException& e) {
         errorLogger.logError(e.what());
     }
 
-    //make sure to destruct writer before frame
+    //always destruct writer before frame
     writer.reset();
     frame.reset();
 
     //stopwatch
-    auto t2 = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> elapsedSec = t2 - t1;
-    double fps = mData.status.frameWriteIndex / elapsedSec.count();
+    double secs = mData.status.timeElapsedSeconds();
+    double fps = mData.status.frameWriteIndex / secs;
 
     //emit signals to report result back to main thread
     if (errorLogger.hasError())
@@ -76,5 +75,5 @@ void StabilizerThread::run() {
     else if (inputHandler.current != UserInputEnum::CONTINUE)
         cancelled("Operation was cancelled");
     else
-        succeeded(mData.fileOut, std::format(" written in {:.1f} min at {:.1f} fps", elapsedSec.count() / 60.0, fps));
+        succeeded(mData.fileOut, std::format(" written in {:.1f} min at {:.1f} fps", secs / 60.0, fps));
 }

@@ -26,13 +26,11 @@
 
 class DeviceInfoCuda : public DeviceInfo {
 public:
-	cudaDeviceProp props;
-	int cudaIndex;
+	cudaDeviceProp props = {};
+	int cudaIndex = 0;
 
-	DeviceInfoCuda(DeviceType type, int64_t maxPixel, cudaDeviceProp props, int cudaIndex)
-		: DeviceInfo(type, maxPixel)
-		, props { props } 
-		, cudaIndex { cudaIndex }
+	DeviceInfoCuda(DeviceType type, int64_t maxPixel) 
+		: DeviceInfo(type, maxPixel) 
 	{}
 
 	std::string getName() const override;

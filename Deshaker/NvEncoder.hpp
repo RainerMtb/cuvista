@@ -20,7 +20,7 @@
 
 #include "AVException.hpp"
 #include "DeviceInfoCuda.cuh"
-#include "nvEncodeAPI.h"
+#include "nvenc/nvEncodeAPI.h"
 
 #undef min
 #undef max

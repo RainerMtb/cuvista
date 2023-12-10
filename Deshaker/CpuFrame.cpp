@@ -286,18 +286,13 @@ void CpuFrame::outputData(const AffineTransform& trf, OutputContext outCtx) {
 		mPool.add(func2, 0, mData.h);
 
 		//blend input if requested
-		if (mData.blendInput.blendWidth > 0) {
-			const BlendInput& bi = mData.blendInput;
-			const unsigned char* src = input.plane(z) + bi.blendStart;
-			unsigned char* dest = out->plane(z) + bi.blendStart;
-			unsigned char* sep = out->plane(z) + bi.separatorStart;
+		if (outCtx.requestInput) {
 			for (size_t r = 0; r < mData.h; r++) {
-				std::copy(src, src + bi.blendWidth, dest);
+				const unsigned char* src = input.plane(z);
+				unsigned char* dest = outCtx.inputFrame->plane(z);
+				std::copy(src, src + mData.w, dest);
 				src += input.stride;
-				dest += out->stride;
-
-				std::fill(sep, sep + bi.separatorWidth, (char) (mData.bgcol_yuv.colors[z] * 255));
-				sep += out->stride;
+				dest += outCtx.inputFrame->stride;
 			}
 		}
 	}
@@ -331,7 +326,7 @@ void CpuFrame::getCurrentInputFrame(ImagePPM& image) {
 	mYUV[idxIn].toPPM(image, mPool);
 }
 
-void CpuFrame::getCurrentOutputFrame(ImagePPM& image) {
+void CpuFrame::getTransformedOutput(ImagePPM& image) {
 	ImageYuvMat(mData.h, mData.w, mBuffer[0], mBuffer[1], mBuffer[2]).toPPM(image, mPool);
 }
 

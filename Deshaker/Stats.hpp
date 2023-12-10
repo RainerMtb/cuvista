@@ -20,10 +20,14 @@
 
 #include "FFmpegUtil.hpp"
 #include "ErrorLogger.hpp"
+#include <chrono>
 
 
 //status of progress, singleton class
 class Stats {
+
+private:
+	std::chrono::steady_clock::time_point timePoint;
 
 public:
 	int64_t frameReadIndex;
@@ -75,5 +79,15 @@ public:
 
 	bool doContinue() const {
 		return errorLogger.hasNoError() && endOfInput == false;
+	}
+
+	void timeStart() {
+		timePoint = std::chrono::high_resolution_clock::now();
+	}
+
+	double timeElapsedSeconds() const {
+		auto timeNow = std::chrono::high_resolution_clock::now();
+		std::chrono::duration<double> secs = timeNow - timePoint;
+		return secs.count();
 	}
 };

@@ -37,7 +37,7 @@ void ProgressDisplayGui::update(bool force) {
     }
     if (imageDue && data.status.frameWriteIndex > 0) {
         tp = tnow;
-        frame->getCurrentOutputFrame(ppmOutput);
+        frame->getTransformedOutput(ppmOutput);
         QPixmap im(data.w, data.h);
         im.loadFromData(ppmOutput.header(), ppmInput.sizeTotal(), "PPM");
         thread->updateOutput(im);

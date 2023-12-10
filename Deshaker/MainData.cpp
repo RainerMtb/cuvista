@@ -41,11 +41,6 @@ std::ostream& operator << (std::ostream& os, const DeviceInfoCuda& info) {
 	return os;
 }
 
-//implement getName for all subclasses
-std::string DeviceInfoCpu::getName() const {
-	return std::string("CPU: Software only, ") + std::to_string(std::thread::hardware_concurrency()) + " threads";
-}
-
 std::string DeviceInfoCuda::getName() const {
 	return std::format("Cuda: {}, Compute {}.{}", props.name, props.major, props.minor);
 }
@@ -276,8 +271,13 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 
 		} else if (args.nextArg("blendsource", next)) {
 			double val = std::stod(next);
-			if (val >= -1.0 && val <= 1.0) blendInput.percent = val;
-			else throw AVException("invalid value for input blending: " + next);
+			if (val >= -1.0 && val <= 1.0) {
+				blendInput.enabled = true;
+				blendInput.position = val;
+
+			} else {
+				throw AVException("invalid value for combining frames: " + next);
+			}
 
 		} else {
 			throw AVException("invalid parameter '" + args.str() + "'");
@@ -331,7 +331,7 @@ void MainData::collectDeviceInfo() {
 	};
 
 	//CPU device
-	deviceInfoCpu = DeviceInfoCpu(DeviceType::CPU, 16384);
+	deviceInfoCpu = DeviceInfoCpu();
 	deviceInfoCpu.encodingOptions = cpuEncoders;
 	if (cudaInfo.devices.size() > 0) {
 		DeviceInfoCuda& dic = cudaInfo.devices.front();
@@ -389,22 +389,6 @@ void MainData::validate() {
 	//number of frames to buffer
 	this->radius = (int) std::round(radsec * inputCtx.fpsNum / inputCtx.fpsDen);
 	this->bufferCount = radius + 3;
-
-	//columns of original image to blend over stabilized frame
-	double p = blendInput.percent;
-	double sw = w * 0.005;
-	if (p > 0.0 && p <= 1.0) {
-		blendInput.blendStart = 0;
-		blendInput.blendWidth = (int) (w * p - sw / 2);
-		blendInput.separatorStart = blendInput.blendWidth;
-		blendInput.separatorWidth = (int) sw;
-
-	} else if (p >= -1.0 && p < 0.0) {
-		blendInput.blendWidth = (int) (-p * w - sw / 2);
-		blendInput.blendStart = w - blendInput.blendWidth;
-		blendInput.separatorWidth = (int) sw;
-		blendInput.separatorStart = blendInput.blendStart - blendInput.separatorWidth;
-	}
 
 	//pyramid levels to compute
 	this->zMax = this->zCount - 1;
@@ -618,7 +602,9 @@ void MainData::probeCuda() {
 			cudaDeviceProp& prop = props[i];
 
 			//create device info struct
-			DeviceInfoCuda cuda(DeviceType::CUDA, prop.sharedMemPerBlock / sizeof(float), prop, i);
+			DeviceInfoCuda cuda(DeviceType::CUDA, prop.sharedMemPerBlock / sizeof(float));
+			cuda.props = prop;
+			cuda.cudaIndex = i;
 			if (cudaInfo.nvencVersionDriver >= cudaInfo.nvencVersionApi) {
 				//check supported codecs
 				NvEncoder::probeSupportedCodecs(cuda);

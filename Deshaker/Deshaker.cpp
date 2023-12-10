@@ -35,6 +35,7 @@ int deshake(int argsCount, char** args) {
 	std::unique_ptr<MovieFrame> frame = std::make_unique<DefaultFrame>(data);
 	std::unique_ptr<MovieReader> reader = std::make_unique<FFmpegReader>();
 	std::unique_ptr<MovieWriter> writer = std::make_unique<NullWriter>(data);
+	Writers secondaryWriters;
 
 	try {
 		data.probeOpenCl();
@@ -48,6 +49,8 @@ int deshake(int argsCount, char** args) {
 		//----------- create appropriate MovieWriter
 		if (data.pass == DeshakerPass::FIRST_PASS)
 			writer = std::make_unique<NullWriter>(data);
+		else if (data.blendInput.enabled)
+			writer = std::make_unique<CombinerWriter>(data);
 		else if (data.videoOutputType == OutputType::PIPE)
 			writer = std::make_unique<PipeWriter>(data);
 		else if (data.videoOutputType == OutputType::TCP)
@@ -63,6 +66,17 @@ int deshake(int argsCount, char** args) {
 		else writer = std::make_unique<NullWriter>(data);
 
 		writer->open(data.requestedEncoding);
+
+		//----------- create secondary Writers
+		if (data.pass != DeshakerPass::SECOND_PASS && data.trajectoryFile.empty() == false) {
+			secondaryWriters.push_back(std::make_unique<TransformsWriter>(data));
+		}
+		if (!data.resultsFile.empty()) {
+			secondaryWriters.push_back(std::make_unique<ResultDetailsWriter>(data));
+		}
+		if (!data.resultImageFile.empty()) {
+			secondaryWriters.push_back(std::make_unique<ResultImageWriter>(data));
+		}
 
 		//----------- create Frame Handler Class
 		if (data.dummyFrame) {
@@ -106,22 +120,14 @@ int deshake(int argsCount, char** args) {
 	else if (data.progressType == ProgressType::DETAILED) progress = std::make_unique<ProgressDisplayDetailed>(data);
 	else progress = std::make_unique<ProgressDisplayNone>(data);
 
-	//setup loop worker
-	std::unique_ptr<MovieFrame::DeshakerLoop> loop;
-	if (data.pass == DeshakerPass::COMBINED) loop = std::make_unique<MovieFrame::DeshakerLoopCombined>();
-	else if (data.pass == DeshakerPass::FIRST_PASS) loop = std::make_unique<MovieFrame::DeshakerLoopFirst>();
-	else if (data.pass == DeshakerPass::SECOND_PASS) loop = std::make_unique<MovieFrame::DeshakerLoopSecond>();
-	else if (data.pass == DeshakerPass::CONSECUTIVE) loop = std::make_unique<MovieFrame::DeshakerLoopClassic>();
-	else loop = std::make_unique<MovieFrame::DeshakerLoop>();
-
 	// --------------------------------------------------------------
 	// --------------- main loop start ------------------------------
 	// --------------------------------------------------------------
-	auto t1 = std::chrono::high_resolution_clock::now();
+	data.status.timeStart();
 	UserInputConsole inputHandler(*data.console);
 
 	if (errorLogger.hasNoError()) {
-		loop->run(*frame, *progress, *reader, *writer, inputHandler);
+		frame->runLoop(data.pass, *progress, *reader, *writer, inputHandler, secondaryWriters);
 	}
 
 	// --------------------------------------------------------------
@@ -134,9 +140,7 @@ int deshake(int argsCount, char** args) {
 	frame.reset();
 
 	//stopwatch
-	auto t2 = std::chrono::high_resolution_clock::now();
-	std::chrono::duration nanos = t2 - t1;
-	double secs = nanos.count() / 1e9;
+	double secs = data.status.timeElapsedSeconds();
 
 	//final console messages
 	Stats& status = data.status;

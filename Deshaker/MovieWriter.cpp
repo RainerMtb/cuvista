@@ -18,6 +18,7 @@
 
 #include "MovieWriter.hpp"
 #include "Stats.hpp"
+#include "MovieFrame.hpp"
 
 
 OutputContext MovieWriter::getOutputContext() {
@@ -120,4 +121,147 @@ void RawWriter::packYuv() {
 		yuv += outputFrame.stride;
 		dest += outputFrame.w;
 	}
+}
+
+
+//-----------------------------------------------------------------------------------
+// secondary writers 
+//-----------------------------------------------------------------------------------
+
+std::map<int64_t, TransformValues> TransformsWriter::readTransformMap(const std::string& trajectoryFile) {
+	std::map<int64_t, TransformValues> transformsMap;
+	std::ifstream file(trajectoryFile, std::ios::binary);
+	if (file.is_open()) {
+		//read and check signature
+		std::string str = "    ";
+		file.get(str.data(), 5);
+		if (str != id) {
+			errorLogger.logError("transforms file '" + trajectoryFile + "' is not valid");
+
+		} else {
+			while (!file.eof()) {
+				int64_t frameIdx = 0;
+				double s = 0, dx = 0, dy = 0, da = 0;
+				file.read(reinterpret_cast<char*>(&frameIdx), sizeof(frameIdx));
+				file.read(reinterpret_cast<char*>(&s), sizeof(s));
+				file.read(reinterpret_cast<char*>(&dx), sizeof(dx));
+				file.read(reinterpret_cast<char*>(&dy), sizeof(dy));
+				file.read(reinterpret_cast<char*>(&da), sizeof(da));
+
+				transformsMap[frameIdx] = { s, dx, dy, da / 3600.0 * std::numbers::pi / 180.0 };
+			}
+		}
+	}
+	return transformsMap;
+}
+
+TransformsWriter::TransformsWriter(MainData& data) : 
+	file { std::ofstream(data.trajectoryFile, std::ios::binary) }, 
+	SecondaryWriter(data) 
+{
+	if (file.is_open()) {
+		//write signature
+		file << id;
+
+	} else {
+		throw AVException("error opening file '" + data.trajectoryFile + "'");
+	}
+}
+
+void TransformsWriter::writeTransform(const Affine2D& transform, int64_t frameIndex) {
+	writeValue(frameIndex);
+	writeValue(transform.scale());
+	writeValue(transform.dX());
+	writeValue(transform.dY());
+	writeValue(transform.rotMilliDegrees());
+}
+
+void TransformsWriter::write(MovieFrame* mf, int64_t frameIndex) {
+	writeTransform(mf->mFrameResult.mTransform, frameIndex);
+}
+
+ResultDetailsWriter::ResultDetailsWriter(MainData& data) : 
+	file { std::ofstream(data.resultsFile) }, 
+	SecondaryWriter(data)
+{
+	if (file.is_open()) {
+		file << "frameIdx" << delimiter << "ix0" << delimiter << "iy0"
+			<< delimiter << "px" << delimiter << "py" << delimiter << "u" << delimiter << "v"
+			<< delimiter << "isValid" << delimiter << "isConsens" << std::endl;
+
+	} else {
+		throw AVException("cannot open file '" + data.resultsFile + "'");
+	}
+}
+
+void ResultDetailsWriter::write(const std::vector<PointResult>& results, int64_t frameIndex) {
+	//for better performace first write into buffer string
+	std::stringstream ss;
+	for (auto& item : results) {
+		ss << frameIndex << delimiter << item.ix0 << delimiter << item.iy0 << delimiter << item.px << delimiter << item.py << delimiter
+			<< item.u << delimiter << item.v << delimiter << item.resultValue() << std::endl;
+	}
+	//write buffer to file
+	file << ss.str();
+}
+
+void ResultDetailsWriter::write(MovieFrame* mf, int64_t frameIndex) {
+	write(mf->mFrameResult.mFiniteResults, frameIndex);
+}
+
+void ResultImageWriter::write(const FrameResult& fr, int64_t idx, const ImageYuv& yuv, const std::string& fname) {
+	const AffineTransform& trf = fr.mTransform;
+
+	//copy and scale Y plane to first color plane of bgr
+	yuv.scaleTo(0, bgr, 0);
+	//copy planes in bgr image making it grayscale bgr
+	for (int z = 1; z < 3; z++) {
+		for (int r = 0; r < bgr.h; r++) {
+			for (int c = 0; c < bgr.w; c++) {
+				bgr.at(z, r, c) = bgr.at(0, r, c);
+			}
+		}
+	}
+
+	//draw lines
+	//green line -> consensus point
+	//red line -> out of consens
+	//blue line -> computed transform
+	int numValid = (int) fr.mCountFinite;
+	int numConsens = (int) fr.mCountConsens;
+	for (int i = 0; i < numValid; i++) {
+		const PointResult& pr = fr.mFiniteResults[i];
+		double x2 = pr.px + pr.u;
+		double y2 = pr.py + pr.v;
+
+		//red or green if point is consens
+		ImageColor col = i < numConsens ? ColorBgr::GREEN : ColorBgr::RED;
+		bgr.drawLine(pr.px, pr.py, x2, y2, col);
+		bgr.drawDot(x2, y2, 1.25, 1.25, col);
+
+		//blue line to computed transformation
+		auto [tx, ty] = trf.transform(pr.x, pr.y);
+		bgr.drawLine(pr.px, pr.py, tx + bgr.w / 2.0, ty + bgr.h / 2.0, ColorBgr::BLUE);
+	}
+
+	//write text info
+	int textScale = bgr.h / 540;
+	double frac = numValid == 0 ? 0.0 : 100.0 * numConsens / numValid;
+	std::string s1 = std::format("index {}, consensus {}/{} ({:.0f}%)", idx, numConsens, numValid, frac);
+	bgr.writeText(s1, 0, bgr.h - textScale * 20, textScale, textScale, ColorBgr::WHITE, ColorBgr::BLACK);
+	std::string s2 = std::format("transform dx={:.1f}, dy={:.1f}, scale={:.5f}, rot={:.1f}", trf.dX(), trf.dY(), trf.scale(), trf.rotMilliDegrees());
+	bgr.writeText(s2, 0, bgr.h - textScale * 10, textScale, textScale, ColorBgr::WHITE, ColorBgr::BLACK);
+
+	//save image to file
+	bool result = bgr.saveAsBMP(fname);
+	if (result == false) {
+		errorLogger.logError("cannot write file '" + fname + "'");
+	}
+}
+
+void ResultImageWriter::write(MovieFrame* mf, int64_t frameIndex) {
+	//get input image from buffers
+	ImageYuv yuv = mf->getInput(frameIndex);
+	std::string fname = ImageWriter::makeFilename(data.resultImageFile, frameIndex);
+	write(mf->mFrameResult, frameIndex, yuv, fname);
 }

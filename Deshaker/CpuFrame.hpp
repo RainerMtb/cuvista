@@ -38,7 +38,7 @@ public:
 	Mat<float> getPyramid(size_t idx) const override;
 	ImageYuv getInput(int64_t index) const override;
 	void getCurrentInputFrame(ImagePPM& image) override;
-	void getCurrentOutputFrame(ImagePPM& image) override;
+	void getTransformedOutput(ImagePPM& image) override;
 	std::string name() const override { return "Cpu Only"; }
 
 protected:

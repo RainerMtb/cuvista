@@ -56,14 +56,8 @@
     <ClCompile Include="FFmpegUtil.cpp">
       <Filter>Util</Filter>
     </ClCompile>
-    <ClCompile Include="DeshakerLoop.cpp">
-      <Filter>Main</Filter>
-    </ClCompile>
     <ClCompile Include="FrameResult.cpp">
       <Filter>Transformation</Filter>
-    </ClCompile>
-    <ClCompile Include="Diagnostics.cpp">
-      <Filter>Main</Filter>
     </ClCompile>
     <ClCompile Include="RandomSource.cpp">
       <Filter>Transformation</Filter>
@@ -86,9 +80,6 @@
     <ClCompile Include="TCPWriter.cpp">
       <Filter>Windows</Filter>
     </ClCompile>
-    <ClCompile Include="PipeWriter.cpp">
-      <Filter>Windows</Filter>
-    </ClCompile>
     <ClCompile Include="KeyboardInput.cpp">
       <Filter>Windows</Filter>
     </ClCompile>
@@ -109,6 +100,15 @@
     </ClCompile>
     <ClCompile Include="CpuFrame.cpp">
       <Filter>Frame</Filter>
+    </ClCompile>
+    <ClCompile Include="DeviceInfoCpu.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
+    <ClCompile Include="PipeWriter.cpp">
+      <Filter>Writer</Filter>
+    </ClCompile>
+    <ClCompile Include="CombinerWriter.cpp">
+      <Filter>Writer</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -139,9 +139,6 @@
     <ClInclude Include="FrameResult.hpp">
       <Filter>Transformation</Filter>
     </ClInclude>
-    <ClInclude Include="Diagnostics.hpp">
-      <Filter>Main</Filter>
-    </ClInclude>
     <ClInclude Include="Stats.hpp">
       <Filter>Main</Filter>
     </ClInclude>
@@ -168,9 +165,6 @@
     </ClInclude>
     <ClInclude Include="ProgressDisplayConsole.hpp">
       <Filter>Main</Filter>
-    </ClInclude>
-    <ClInclude Include="CudaWriter.hpp">
-      <Filter>Writer</Filter>
     </ClInclude>
     <ClInclude Include="NvidiaDriver.hpp">
       <Filter>Util</Filter>
@@ -207,6 +201,12 @@
     </ClInclude>
     <ClInclude Include="CpuFrame.hpp">
       <Filter>Frame</Filter>
+    </ClInclude>
+    <ClInclude Include="DeviceInfoCpu.hpp">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="CudaWriter.hpp">
+      <Filter>Writer</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

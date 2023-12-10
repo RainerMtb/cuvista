@@ -26,6 +26,7 @@
 #include "cuDeshaker.cuh"
 #include "clMain.hpp"
 #include "DeviceInfoCuda.cuh"
+#include "DeviceInfoCpu.hpp"
 
 inline std::string CUVISTA_VERSION = "0.9.10";
 
@@ -59,25 +60,17 @@ enum class DecideYNA {
 	ASK,
 };
 
-class DeviceInfoCpu : public DeviceInfo {
-public:
-	DeviceInfoCpu(DeviceType type, int64_t maxPixel)
-		: DeviceInfo(type, maxPixel) 
-	{}
-
-	DeviceInfoCpu() 
-		: DeviceInfoCpu(DeviceType::CPU, 16384) 
-	{}
-
-	std::string getName() const override;
-};
-
 class NullStream : public std::ostream {
 
 public:
 	NullStream() : std::ostream(nullptr) {}
 
 	template <class T> NullStream& operator << (const T& value) { return *this; }
+};
+
+struct BlendInput {
+	double position = 0.0;
+	bool enabled = false;
 };
 
 
@@ -179,6 +172,7 @@ public:
 	OutputType videoOutputType = OutputType::NONE;
 	DecideYNA overwriteOutput = DecideYNA::ASK;
 	uint8_t crf = 22;
+	BlendInput blendInput;
 
 	bool showHeader = true;
 

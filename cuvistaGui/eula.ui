@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>640</width>
+    <width>580</width>
     <height>480</height>
    </rect>
   </property>
@@ -34,7 +34,7 @@
        <widget class="QPlainTextEdit" name="plainTextEdit">
         <property name="font">
          <font>
-          <family>Lucida Console</family>
+          <family>Consolas</family>
          </font>
         </property>
         <property name="lineWrapMode">
