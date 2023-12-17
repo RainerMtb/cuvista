@@ -34,19 +34,19 @@ namespace CudaTest {
 	class TestReader : public MovieReader {
 
 	private:
-		int w = 200;
-		int h = 100;
-		int64_t frameCount = 20;
-		int64_t readIndex = 0;
+		int64_t testFrameCount = 20;
 
 	public:
-		InputContext open(std::string_view source) override {
-			return { h, w, 10, 1, -1, -1, frameCount };
+		void open(std::string_view source) override {
+			frameCount = testFrameCount;
+			h = 100;
+			w = 200;
 		}
 
-		void read(ImageYuv& frame, Stats& status) override {
+		void read(ImageYuv& frame) override {
+			frameIndex++;
 			for (int64_t z = 0; z < 3; z++) {
-				int64_t base = readIndex * 2 + z * 5 + 30;
+				int64_t base = this->frameIndex * 2 + z * 5 + 30;
 				unsigned char* plane = frame.plane(z);
 				for (int64_t r = 0; r < frame.h; r++) {
 					for (int64_t c = 0; c < frame.w; c++) {
@@ -55,9 +55,8 @@ namespace CudaTest {
 					}
 				}
 			}
-			frame.frameIdx = readIndex;
-			status.endOfInput = readIndex == frameCount;
-			readIndex++;
+			frame.index = this->frameIndex;
+			endOfInput = this->frameIndex == testFrameCount;
 		}
 	};
 
@@ -67,9 +66,12 @@ namespace CudaTest {
 	public:
 		std::vector<ImageYuv> outputFrames;
 
-		TestWriter(MainData& data) : MovieWriter(data) {}
+		TestWriter(MainData& data, MovieReader& reader) : 
+			MovieWriter(data, reader) 
+		{}
 
 		void write() override {
+			this->frameIndex++;
 			outputFrames.push_back(outputFrame);
 		}
 	};
@@ -79,25 +81,20 @@ namespace CudaTest {
 
 private:
 
-	std::vector<PointResult> run(MovieFrame& frame, MainData& data, MovieReader& reader) {
-		Stats& status = data.status;
-		status.reset();
-
+	std::vector<PointResult> run(MovieFrame& frame, MainData& data) {
 		//read first frame
-		reader.read(frame.bufferFrame, status);
-		status.frameReadIndex++;
-		frame.inputData(frame.bufferFrame);
-		frame.createPyramid();
-		status.frameInputIndex++;
+		frame.mReader.read(frame.bufferFrame);
+		frame.inputData();
+		frame.createPyramid(frame.mReader.frameIndex);
 
 		//read second frame
-		reader.read(frame.bufferFrame, status);
-		frame.inputData(frame.bufferFrame);
-		frame.createPyramid();
+		frame.mReader.read(frame.bufferFrame);
+		frame.inputData();
+		frame.createPyramid(frame.mReader.frameIndex);
 
 		//compute
-		frame.computeStart();
-		frame.computeTerminate();
+		frame.computeStart(frame.mReader.frameIndex);
+		frame.computeTerminate(frame.mReader.frameIndex);
 		Assert::IsTrue(errorLogger.hasNoError());
 		return frame.resultPoints;
 	}
@@ -109,16 +106,15 @@ public:
 		{
 			//cpu test run
 			MainData data;
-			ProgressDisplayNone progress(data);
 			TestReader reader;
-			data.inputCtx = reader.open("");
+			reader.open("");
 			data.collectDeviceInfo();
-			data.validate();
-			TestWriter writer(data);
-			CpuFrame frame(data);
-			reader.read(frame.bufferFrame, data.status);
-			Writers writers;
-			frame.runLoop(DeshakerPass::COMBINED, progress, reader, writer, input, writers);
+			data.validate(reader);
+			TestWriter writer(data, reader);
+			CpuFrame frame(data, reader, writer);
+			ProgressDisplayNone progress(frame);
+			AuxWriters writers;
+			frame.runLoop(DeshakerPass::COMBINED, progress, input, writers);
 			cpuImages = writer.outputFrames;
 			Assert::IsTrue(errorLogger.hasNoError());
 		}
@@ -127,17 +123,16 @@ public:
 		{
 			//gpu test run
 			MainData data;
-			ProgressDisplayNone progress(data);
 			data.probeCuda();
 			TestReader reader;
-			data.inputCtx = reader.open("");
+			reader.open("");
 			data.collectDeviceInfo();
-			data.validate();
-			TestWriter writer(data);
-			CudaFrame frame(data);
-			reader.read(frame.bufferFrame, data.status);
-			Writers writers;
-			frame.runLoop(DeshakerPass::COMBINED, progress, reader, writer, input, writers);
+			data.validate(reader);
+			TestWriter writer(data, reader);
+			CudaFrame frame(data, reader, writer);
+			ProgressDisplayNone progress(frame);
+			AuxWriters writers;
+			frame.runLoop(DeshakerPass::COMBINED, progress, input, writers);
 			gpuImages = writer.outputFrames;
 			Assert::IsTrue(errorLogger.hasNoError());
 		}
@@ -162,12 +157,13 @@ public:
 			MainData data;
 			data.fileIn = file;
 			FFmpegReader reader;
-			data.inputCtx = reader.open(file);
+			reader.open(file);
 			data.collectDeviceInfo();
-			data.validate();
-			CpuFrame frame(data);
+			data.validate(reader);
+			NullWriter writer(data, reader);
+			CpuFrame frame(data, reader, writer);
 
-			resCpu = run(frame, data, reader);
+			resCpu = run(frame, data);
 			pyramids.push_back(frame.getPyramid(0));
 			pyramids.push_back(frame.getPyramid(1));
 		}
@@ -177,12 +173,13 @@ public:
 			data.probeCuda();
 			data.fileIn = file;
 			FFmpegReader reader;
-			data.inputCtx = reader.open(file);
+			reader.open(file);
 			data.collectDeviceInfo();
-			data.validate();
-			CudaFrame frame(data);
+			data.validate(reader);
+			NullWriter writer(data, reader);
+			CudaFrame frame(data, reader, writer);
 
-			resGpu = run(frame, data, reader);
+			resGpu = run(frame, data);
 			pyramids.push_back(frame.getPyramid(0));
 			pyramids.push_back(frame.getPyramid(1));
 		}
@@ -211,87 +208,86 @@ public:
 		}
 	}
 
+private:
+	struct Result {
+		std::vector<PointResult> res;
+		Matf pyr, out;
+		ImageYuv im;
+	};
+
+	template <class T> Result compareFrame2func(MainData& data) {
+		Result res;
+
+		AffineTransform trf(0, 0.95, 0.3, 2, 3);
+		data.collectDeviceInfo();
+		NullReader reader;
+		reader.w = 1920;
+		reader.h = 1080;
+		data.validate(reader);
+		NullWriter writer(data, reader);
+		std::unique_ptr<MovieFrame> frame = std::make_unique<T>(data, reader, writer);
+
+		frame->bufferFrame.readFromPGM("d:/VideoTest/v00.pgm");
+		frame->bufferFrame.index = 0;
+		reader.frameIndex = 0;
+		frame->inputData();
+		frame->createPyramid(frame->mReader.frameIndex);
+
+		frame->bufferFrame.readFromPGM("D:/VideoTest/v01.pgm");
+		frame->bufferFrame.index = 1;
+		reader.frameIndex = 1;
+		frame->inputData();
+		frame->createPyramid(frame->mReader.frameIndex);
+		res.pyr = frame->getPyramid(0);
+		frame->computeStart(frame->mReader.frameIndex);
+		frame->computeTerminate(frame->mReader.frameIndex);
+		frame->outputData(trf, writer.getOutputContext());
+		res.out = frame->getTransformedOutput();
+		res.im = writer.outputFrame;
+
+		res.res = frame->resultPoints;
+		Assert::IsTrue(errorLogger.hasNoError());
+
+		return res;
+	}
+
+public:
+
 	TEST_METHOD(compareFrames2) {
-		AffineTransform trf(0.95, 0.3, 2, 3);
-
-		//gpu
-		std::vector<PointResult> resGpu;
-		Matf pyrGpu, outGpu;
-		ImageYuv imGpu;
-		{
-			MainData data;
-			data.probeCuda();
-			data.inputCtx = { 1080, 1920, 2, 1 };
-			data.collectDeviceInfo();
-			data.validate();
-			NullReader reader;
-			NullWriter writer(data);
-			CudaFrame frame(data);
-
-			frame.inputFrame.readFromPGM("d:/VideoTest/v00.pgm");
-			frame.inputData(frame.inputFrame);
-			frame.createPyramid();
-			data.status.frameInputIndex++;
-
-			frame.inputFrame.readFromPGM("D:/VideoTest/v01.pgm");
-			frame.inputData(frame.inputFrame);
-			frame.createPyramid();
-			pyrGpu = frame.getPyramid(0);
-			frame.computeStart();
-			frame.computeTerminate();
-			frame.outputData(trf, writer.getOutputContext());
-			outGpu = frame.getTransformedOutput();
-			imGpu = writer.outputFrame;
-
-			resGpu = frame.resultPoints;
-			Assert::IsTrue(errorLogger.hasNoError());
-		}
-
-		//cpu
-		std::vector<PointResult> resCpu;
-		Matf pyrCpu, outCpu;
-		ImageYuv imCpu;
-		{
-			MainData data;
-			data.inputCtx = { 1080, 1920, 2, 1 };
-			data.collectDeviceInfo();
-			data.validate();
-			NullReader reader;
-			NullWriter writer(data);
-			CpuFrame frame(data);
-
-			frame.inputFrame.readFromPGM("d:/VideoTest/v00.pgm");
-			frame.inputData(frame.inputFrame);
-			frame.createPyramid();
-			data.status.frameInputIndex++;
-
-			frame.inputFrame.readFromPGM("D:/VideoTest/v01.pgm");
-			frame.inputData(frame.inputFrame);
-			frame.createPyramid();
-			pyrCpu = frame.getPyramid(0);
-			frame.computeStart();
-			frame.computeTerminate();
-			frame.outputData(trf, writer.getOutputContext());
-			outCpu = frame.getTransformedOutput();
-			imCpu = writer.outputFrame;
-
-			resCpu = frame.resultPoints;
-			Assert::IsTrue(errorLogger.hasNoError());
-		}
+		MainData dataCpu;
+		Result resCpu = compareFrame2func<CpuFrame>(dataCpu);
+		MainData dataCuda;
+		dataCuda.probeCuda();
+		Result resGpu = compareFrame2func<CudaFrame>(dataCuda);
+		MainData dataOcl;
+		dataOcl.probeOpenCl();
+		Result resOcl = compareFrame2func<OpenClFrame>(dataOcl);
 
 		//check pyramid
-		Assert::IsTrue(pyrCpu.equalsExact(pyrGpu), L"pyramids are not equal");
+		Assert::IsTrue(resCpu.pyr.equalsExact(resGpu.pyr), L"pyramids Cuda are not equal");
+		Assert::IsTrue(resCpu.pyr.equalsExact(resOcl.pyr), L"pyramids OpenCl are not equal");
 
 		//check output mats
-		Assert::IsTrue(outCpu.equalsExact(outGpu), L"output mats are not equal");
+		Assert::IsTrue(resCpu.out.equalsExact(resGpu.out), L"output mats Cuda are not equal");
+		Assert::IsTrue(resCpu.out.equalsExact(resOcl.out), L"output mats OpenCl are not equal");
 
 		//check output images
-		Assert::IsTrue(imCpu == imGpu, L"images are not equal");
+		//imCpu.saveAsBMP("f:/imcpu.bmp");
+		//imGpu.saveAsBMP("f:/imgpu.bmp");
+		Assert::IsTrue(resCpu.im == resGpu.im, L"images Cuda are not equal");
+		Assert::IsTrue(resCpu.im == resOcl.im, L"images OpenCl are not equal");
 
-		//check results
-		for (int i = 0; i < resGpu.size(); i++) {
-			const PointResult& cpu = resCpu[i];
-			const PointResult& gpu = resGpu[i];
+		//check results Cuda
+		for (int i = 0; i < resCpu.res.size(); i++) {
+			const PointResult& cpu = resCpu.res[i];
+			const PointResult& gpu = resGpu.res[i];
+			Assert::AreEqual(cpu, gpu);
+		}
+
+		//check results OpenCl
+		for (int i = 0; i < resCpu.res.size(); i++) {
+			const PointResult& cpu = resCpu.res[i];
+			const PointResult& gpu = resOcl.res[i];
 			Assert::AreEqual(cpu, gpu);
 		}
 	}

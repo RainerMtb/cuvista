@@ -24,21 +24,21 @@ void ProgressDisplayGui::update(bool force) {
         thread->progress(isFinite(), progressPercent());
     }
 
-    auto tnow = std::chrono::steady_clock::now();
-    std::chrono::nanoseconds delta = tnow - tp;
+    auto timePointNow = std::chrono::steady_clock::now();
+    std::chrono::nanoseconds delta = timePointNow - timePoint;
     bool imageDue = delta.count() / 1'000'000 > 250;
 
-    if (imageDue && data.status.frameReadIndex > 0) {
-        tp = tnow;
-        frame->getCurrentInputFrame(ppmInput);
-        QPixmap im(data.w, data.h);
+    if (imageDue && frame.mReader.frameIndex > 0) {
+        timePoint = timePointNow;
+        frame.getInputFrame(frame.mReader.frameIndex - 1, ppmInput);
+        QPixmap im(ppmInput.w, ppmInput.h);
         im.loadFromData(ppmInput.header(), ppmInput.sizeTotal(), "PPM");
         thread->updateInput(im);
     }
-    if (imageDue && data.status.frameWriteIndex > 0) {
-        tp = tnow;
-        frame->getTransformedOutput(ppmOutput);
-        QPixmap im(data.w, data.h);
+    if (imageDue && frame.mWriter.frameIndex > 0) {
+        timePoint = timePointNow;
+        frame.getTransformedOutput(frame.mWriter.frameIndex - 1, ppmOutput);
+        QPixmap im(ppmOutput.w, ppmOutput.h);
         im.loadFromData(ppmOutput.header(), ppmInput.sizeTotal(), "PPM");
         thread->updateOutput(im);
     }

@@ -55,4 +55,4 @@ void openClnorm1Test();
 void compare();
 void pyramid();
 
-void check();
+void imageOutput();

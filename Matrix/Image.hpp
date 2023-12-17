@@ -39,7 +39,7 @@ template <class T> class ImageBase {
 public:
 
 	int h, w, stride, numPlanes;
-	int64_t frameIdx = -1;
+	int64_t index = -1;
 
 protected:
 
@@ -174,8 +174,6 @@ public:
 class ImageYuv : public ImagePlanar<unsigned char> {
 
 public:
-	int64_t index = -1;
-
 	//allocate frame given height, width, and stride
 	ImageYuv(int h, int w, int stride, int planes) : ImagePlanar(h, w, stride, planes) {}
 

@@ -27,18 +27,18 @@
 class CpuFrame : public MovieFrame {
 
 public:
-	CpuFrame(MainData& data);
+	CpuFrame(MainData& data, MovieReader& reader, MovieWriter& writer);
 
-	void inputData(ImageYuv& frame) override;
-	void createPyramid() override;
-	void computeStart() override;
-	void computeTerminate() override;
+	void inputData() override;
+	void createPyramid(int64_t frameIndex) override;
+	void computeStart(int64_t frameIndex) override;
+	void computeTerminate(int64_t frameIndex) override;
 	void outputData(const AffineTransform& trf, OutputContext outCtx) override;
 	Mat<float> getTransformedOutput() const override;
 	Mat<float> getPyramid(size_t idx) const override;
 	ImageYuv getInput(int64_t index) const override;
-	void getCurrentInputFrame(ImagePPM& image) override;
-	void getTransformedOutput(ImagePPM& image) override;
+	void getInputFrame(int64_t frameIndex, ImagePPM& image) override;
+	void getTransformedOutput(int64_t frameIndex, ImagePPM& image) override;
 	std::string name() const override { return "Cpu Only"; }
 
 protected:

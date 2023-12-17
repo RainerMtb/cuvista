@@ -19,12 +19,14 @@
 #include <format>
 #include "ProgressDisplayConsole.hpp"
 #include "Util.hpp"
+#include "MovieReader.hpp"
+#include "MovieWriter.hpp"
 
 //print a new line to the console
 void ProgressDisplayConsole::update(bool force) {
 	if (isDue(force)) {
 		double done = progressPercent();
-		out << "frames in " << data.status.frameInputIndex << ", frames out " << data.status.frameWriteIndex;
+		out << "frames in " << frame.mReader.frameIndex << ", frames out " << frame.mWriter.frameIndex;
 		if (done >= 0) out << done << " %";
 		out << std::endl;
 	}
@@ -34,7 +36,10 @@ void ProgressDisplayConsole::writeMessage(const std::string& str) {
 	*outstream << str;
 }
 
-ProgressDisplayConsole::ProgressDisplayConsole(MainData& data) : ProgressDisplay(data, 500), outstream { data.console } {
+ProgressDisplayConsole::ProgressDisplayConsole(MovieFrame& frame, std::ostream* outstream) :
+	ProgressDisplay(frame, 500), 
+	outstream { outstream } 
+{
 	out.precision(1);
 	out << std::showpoint;
 	out << std::fixed;
@@ -81,9 +86,9 @@ void ProgressDisplayRewriteLine::update(bool force) {
 		//new line
 		double done = progressPercent();
 		if (isfinite(done)) line = std::format("\rframes in {}, out {}, done {:.1f}%, data written {}",
-			data.status.frameInputIndex, data.status.frameWriteIndex, done, util::byteSizeToString(data.status.outputBytesWritten));
+			frame.mReader.frameIndex, frame.mWriter.frameIndex, done, util::byteSizeToString(frame.mWriter.outputBytesWritten));
 		else line = std::format("\rframes in {}, out {}, data written {}",
-			data.status.frameInputIndex, data.status.frameWriteIndex, util::byteSizeToString(data.status.outputBytesWritten));
+			frame.mReader.frameIndex, frame.mWriter.frameIndex, util::byteSizeToString(frame.mWriter.outputBytesWritten));
 		*outstream << line;
 	}
 }
@@ -101,17 +106,16 @@ void ProgressDisplayDetailed::update(bool force) {
 	std::vector<std::string> strings;
 
 	//input stats
-	if (data.status.frameReadIndex != lastReadFrame && data.status.endOfInput == false) {
-		VideoPacketContext stats = data.status.packetList.back();
-		strings.push_back(std::format("read idx={}, dts={}, pts={}, duration={}",
-			data.status.frameReadIndex, stats.dts, stats.pts, stats.duration));
-		lastReadFrame = data.status.frameReadIndex;
+	if (frame.mReader.frameIndex != lastReadFrame && frame.mReader.endOfInput == false) {
+		VideoPacketContext stats = frame.mReader.packetList.back();
+		strings.push_back(std::format("read idx={}, dts={}, pts={}, duration={}", frame.mReader.frameIndex, stats.dts, stats.pts, stats.duration));
+		lastReadFrame = frame.mReader.frameIndex;
 	}
 
 	//encoding stats
-	if (data.status.frameEncodeIndex != lastEncodedFrame) {
-		strings.push_back(std::format("encode idx={}, dts={}, pts={}", data.status.frameEncodeIndex - 1, data.status.encodedDts, data.status.encodedPts));
-		lastEncodedFrame = data.status.frameEncodeIndex;
+	if (frame.mWriter.frameEncoded != lastEncodedFrame) {
+		strings.push_back(std::format("encode idx={}, dts={}, pts={}", frame.mWriter.frameEncoded, frame.mWriter.encodedDts, frame.mWriter.encodedPts));
+		lastEncodedFrame = frame.mWriter.frameEncoded;
 	}
 
 	//send to display

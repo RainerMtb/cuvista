@@ -84,7 +84,6 @@ public:
 	double imZoom = 1.05;		//additional zoom
 	double radsec = 0.5;		//radius in senconds
 
-	int64_t frameCount = -1;
 	int bufferCount = -1;		//number of frames to read before starting to average out trajectory
 };
 

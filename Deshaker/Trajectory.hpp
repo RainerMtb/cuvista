@@ -33,8 +33,10 @@ struct TrajectoryItem {
 	Mat<double> sum = Mat<double>::zeros(1, 3);
 	//frame is identical to previous frame
 	bool isDuplicateFrame;
+	//frame index for debugging
+	int64_t frameIndex;
 
-	TrajectoryItem(double u, double v, double a);
+	TrajectoryItem(double u, double v, double a, int64_t frameIndex);
 };
 
 class Trajectory {
@@ -50,11 +52,11 @@ private:
 	AffineTransform out;
 
 public:
-	const TrajectoryItem& addTrajectoryTransform(double dx, double dy, double da);
-	const TrajectoryItem& addTrajectoryTransform(const Affine2D& transform, int64_t frameIdx);
+	const TrajectoryItem& addTrajectoryTransform(double dx, double dy, double da, int64_t frameIndex);
+	const TrajectoryItem& addTrajectoryTransform(const AffineTransform& transform);
 
 	//create affine transformation
-	const AffineTransform& computeTransformForFrame(const MainData& data, int64_t frameWriteIndex);
+	const AffineTransform& computeSmoothTransform(const MainData& data, int64_t frameWriteIndex);
 
 	//read transforms
 	void readTransforms(std::map<int64_t, TransformValues> transformsMap);

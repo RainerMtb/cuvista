@@ -19,17 +19,21 @@
 #pragma once
 
 #include "AVException.hpp"
-#include "MainData.hpp"
-#include "FFmpegUtil.hpp"
+#include "Stats.hpp"
+#include "Image.hpp"
 
-class MovieReader {
+class MovieReader : public ReaderStats {
 
 public:
+	std::list<VideoPacketContext> packetList;
+	std::vector<StreamContext> inputStreams;
+	bool storePackets = true;
+
 	virtual ~MovieReader() = default;
 
-	virtual InputContext open(std::string_view source) = 0;
-	virtual void read(ImageYuv& inputFrame, Stats& status) = 0;
-	virtual std::future<void> readAsync(ImageYuv& inputFrame, Stats& status);
+	virtual void open(std::string_view source) = 0;
+	virtual void read(ImageYuv& inputFrame) = 0;
+	virtual std::future<void> readAsync(ImageYuv& inputFrame);
 	virtual void close() {}
 	virtual void rewind() {}
 	virtual void seek(double fraction) {}
@@ -48,9 +52,9 @@ private:
 
 public:
 	virtual ~FFmpegReader() override;
-	virtual InputContext open(std::string_view source) override;
+	virtual void open(std::string_view source) override;
 
-	virtual void read(ImageYuv& frame, Stats& status) override;
+	virtual void read(ImageYuv& frame) override;
 	virtual void close() override;
 	virtual void rewind() override;
 	virtual void seek(double fraction);
@@ -60,6 +64,6 @@ public:
 class NullReader : public MovieReader {
 
 public:
-	virtual InputContext open(std::string_view source) override;
-	virtual void read(ImageYuv& frame, Stats& status) override;
+	virtual void open(std::string_view source) override {};
+	virtual void read(ImageYuv& frame) override;
 };

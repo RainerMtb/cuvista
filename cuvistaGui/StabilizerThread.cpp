@@ -20,54 +20,53 @@
 #include "ProgressDisplayGui.hpp"
 
 void StabilizerThread::run() {
-    mData.status.timeStart();
+    mData.timeStart();
     std::unique_ptr<MovieWriter> writer;
     std::unique_ptr<MovieFrame> frame;
 
     try {
         //rewind reader to beginning of input
         mReader.rewind();
-        //clear all previous errors
-
-        mData.reset();
         //check input parameters
-        mData.validate();
-        //select frame handler and writer
-        if (mData.deviceList[mData.deviceSelected]->type == DeviceType::CPU) {
-            frame = std::make_unique<CpuFrame>(mData);
-            if (mData.requestedEncoding.device == EncodingDevice::NVENC)
-                writer = std::make_unique<CudaFFmpegWriter>(mData);
-            else
-                writer = std::make_unique<FFmpegWriter>(mData);
+        mData.validate(mReader);
 
-        } else if (mData.deviceList[mData.deviceSelected]->type == DeviceType::CUDA) {
-            frame = std::make_unique<CudaFrame>(mData);
-            if (mData.requestedEncoding.device == EncodingDevice::NVENC)
-                writer = std::make_unique<CudaFFmpegWriter>(mData);
-            else
-                writer = std::make_unique<FFmpegWriter>(mData);
-
-        } else if (mData.deviceList[mData.deviceSelected]->type == DeviceType::OPEN_CL) {
-            frame = std::make_unique<OpenClFrame>(mData);
-            writer = std::make_unique<FFmpegWriter>(mData);
-        }
-
+        //select frame writer
+        if (mData.blendInput.enabled)
+            writer = std::make_unique<StackedWriter>(mData, mReader);
+        else if (mData.requestedEncoding.device == EncodingDevice::NVENC)
+            writer = std::make_unique<CudaFFmpegWriter>(mData, mReader);
+        else 
+            writer = std::make_unique<FFmpegWriter>(mData, mReader);
+        //open writer
         writer->open(mData.requestedEncoding);
-        ProgressDisplayGui progress(mData, this, frame.get());
-        Writers writers;
-        frame->runLoop(DeshakerPass::COMBINED, progress, mReader, *writer, inputHandler, writers);
+
+        //select frame handler class
+        DeviceType devtype = mData.deviceList[mData.deviceSelected]->type;
+        if (devtype == DeviceType::CPU)
+            frame = std::make_unique<CpuFrame>(mData, mReader, *writer);
+        else if (devtype == DeviceType::CUDA)
+            frame = std::make_unique<CudaFrame>(mData, mReader, *writer);
+        else if (devtype == DeviceType::OPEN_CL)
+            frame = std::make_unique<OpenClFrame>(mData, mReader, *writer);
+
+        //open process handler
+        ProgressDisplayGui progress(mData, this, *frame);
+        //no secondary writers
+        AuxWriters writers;
+        //run processing loop
+        frame->runLoop(DeshakerPass::COMBINED, progress, inputHandler, writers);
 
     } catch (const AVException& e) {
         errorLogger.logError(e.what());
     }
 
+    //stopwatch
+    double secs = mData.timeElapsedSeconds();
+    double fps = writer->frameEncoded / secs;
+
     //always destruct writer before frame
     writer.reset();
     frame.reset();
-
-    //stopwatch
-    double secs = mData.status.timeElapsedSeconds();
-    double fps = mData.status.frameWriteIndex / secs;
 
     //emit signals to report result back to main thread
     if (errorLogger.hasError())

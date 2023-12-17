@@ -31,7 +31,7 @@ private:
 public:
 	UserInputConsole(std::ostream& console) : console { console } {}
 
-	void setCurrentState() override {
+	void checkState() override {
 		std::optional<char> key = getKeyboardInput();
 		if (key) {
 			switch (*key) {

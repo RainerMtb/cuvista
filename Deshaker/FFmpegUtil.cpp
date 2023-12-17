@@ -20,44 +20,6 @@
 #include "FFmpegUtil.hpp"
 #include "ErrorLogger.hpp"
 
-double InputContext::fps() const { 
-    return 1.0 * fpsNum / fpsDen; 
-}
-
-StreamInfo InputContext::streamInfo(AVStream* stream) const {
-    std::string tstr;
-    if (stream->duration != AVERROR(AV_NOPTS_VALUE))
-        tstr = timeString(stream->duration * stream->time_base.num * 1000 / stream->time_base.den);
-    else if (avformatDuration != AVERROR(AV_NOPTS_VALUE))
-        tstr = timeString(avformatDuration * stream->time_base.num / stream->time_base.den);
-    else
-        tstr = "unknown";
-    
-    AVCodecParameters* param = stream->codecpar;
-    return { av_get_media_type_string(param->codec_type), avcodec_get_name(param->codec_id), tstr };
-}
-
-StreamInfo InputContext::videoStreamInfo() const {
-    return streamInfo(videoStream);
-}
-
-std::string timeString(int64_t millis) {
-    int64_t sign = millis < 0 ? -1 : 1;
-    millis = std::abs(millis);
-    int64_t sec = millis / 1000;
-    int64_t min = sec / 60;
-    int64_t hrs = min / 60;
-    millis %= 1000;
-    sec %= 60;
-    min %= 60;
-    hrs %= 60;
-
-    std::string timeString = "";
-    if (hrs > 0) timeString = std::format("{}:{:02}:{:02}.{:03}", hrs * sign, min, sec, millis);
-    else if (min > 0) timeString = std::format("{}:{:02}.{:03}", min * sign, sec, millis);
-    else timeString = std::format("{}.{:03}", sec * sign, millis);
-    return timeString;
-}
 
 std::string av_make_error(int errnum, const char* msg) {
     char av_errbuf[AV_ERROR_MAX_STRING_SIZE];
@@ -94,4 +56,22 @@ void ffmpeg_log(void* avclass, int level, const char* fmt, va_list args) {
 std::ostream& operator << (std::ostream& ostream, const Timings& t) {
     ostream << "pts=" << t.pts << ", dts=" << t.dts << ", dur=" << t.duration;
     return ostream;
+}
+
+std::string timeString(int64_t millis) {
+    int64_t sign = millis < 0 ? -1 : 1;
+    millis = std::abs(millis);
+    int64_t sec = millis / 1000;
+    int64_t min = sec / 60;
+    int64_t hrs = min / 60;
+    millis %= 1000;
+    sec %= 60;
+    min %= 60;
+    hrs %= 60;
+
+    std::string timeString = "";
+    if (hrs > 0) timeString = std::format("{}:{:02}:{:02}.{:03}", hrs * sign, min, sec, millis);
+    else if (min > 0) timeString = std::format("{}:{:02}.{:03}", min * sign, sec, millis);
+    else timeString = std::format("{}.{:03}", sec * sign, millis);
+    return timeString;
 }

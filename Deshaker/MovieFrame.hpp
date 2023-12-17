@@ -18,51 +18,51 @@
 
 #pragma once
 
-#include "MovieReader.hpp"
 #include "CudaWriter.hpp"
 #include "ThreadPool.h"
-#include "ProgressDisplay.hpp"
 #include "UserInput.hpp"
-
+#include "MainData.hpp"
+#include "Trajectory.hpp"
 #include "cuDeshaker.cuh"
 #include "clMain.hpp"
-
-using Writers = std::vector<std::unique_ptr<SecondaryWriter>>;
 
 
 //---------------------------------------------------------------------
 //---------- MOVIE FRAME BASE CLASS -----------------------------------
 //---------------------------------------------------------------------
 
+class ProgressDisplay;
+
 class MovieFrame {
 
 protected:
 	const MainData& mData;
-	Stats& mStatus;
 	Trajectory mTrajectory;
 
 public:
+	MovieReader& mReader;
+	MovieWriter& mWriter;
 
 	//get frame data from reader into frame object
-	virtual void inputData(ImageYuv& frame) = 0;
+	virtual void inputData() = 0;
 	//set up image pyramid
-	virtual void createPyramid() = 0;
+	virtual void createPyramid(int64_t frameIndex) = 0;
 	//start computation asynchronously for some part of a frame
-	virtual void computeStart() = 0;
+	virtual void computeStart(int64_t frameIndex) = 0;
 	//start computation asynchronously for second part and get results
-	virtual void computeTerminate() = 0;
+	virtual void computeTerminate(int64_t frameIndex) = 0;
 	//prepare data for output to writer
 	virtual void outputData(const AffineTransform& trf, OutputContext outCtx) = 0;
 
 	/*
 	* run the stabilizing loop
 	*/
-	virtual void runLoop(DeshakerPass pass, ProgressDisplay& progress, MovieReader& reader, MovieWriter& writer, UserInput& input, Writers& secondaryWriters);
+	virtual void runLoop(DeshakerPass pass, ProgressDisplay& progress, UserInput& input, AuxWriters& secondaryWriters);
 
 	/*
 	* call transform calculation
 	*/
-	virtual const AffineTransform& computeTransform(std::vector<PointResult> resultPoints) final;
+	virtual const AffineTransform& computeTransform(int64_t frameIndex) final;
 
 	/*
 	* get transformed image as Mat<float> where YUV color planes are stacked vertically
@@ -85,14 +85,14 @@ public:
 	* get most recently read input frame
 	* use to show progress
 	*/
-	virtual void getCurrentInputFrame(ImagePPM& image) {}
+	virtual void getInputFrame(int64_t frameIndex, ImagePPM& image) {}
 
 	/*
 	* get most resently processed output frame
 	* image is warped output before unsharping
 	* use to show progress
 	*/
-	virtual void getTransformedOutput(ImagePPM& image) {}
+	virtual void getTransformedOutput(int64_t frameIndex, ImagePPM& image) {}
 
 	/*
 	* read transforms from previous pass
@@ -100,19 +100,12 @@ public:
 	virtual std::map<int64_t, TransformValues> readTransforms() final;
 
 	/*
-	* run list of attached diagnostic methods
-	*/
-	virtual void outputSecondary(Writers& writers, int64_t frameIndex) final;
-
-	/*
 	* name MovieFrame used
 	*/
 	virtual std::string name() const { return "None"; }
 
 	FrameResult mFrameResult;
-	ImageYuv inputFrame;
 	ImageYuv bufferFrame;
-	std::vector<PointResult> resultPointsOld;
 	ThreadPool mPool;
 	std::vector<PointResult> resultPoints;
 
@@ -122,22 +115,24 @@ public:
 
 protected:
 	//only constructor for Frame class
-	MovieFrame(MainData& data) :
-		mData { data }, 
-		mStatus { data.status },
+	MovieFrame(MainData& data, MovieReader& reader, MovieWriter& writer) :
+		mData { data },
+		mReader { reader },
+		mWriter { writer },
 		mFrameResult(data),
-		inputFrame(data.h, data.w, data.cpupitch),
 		bufferFrame(data.h, data.w, data.cpupitch),
-		resultPointsOld(data.resultCount), 
 		resultPoints(data.resultCount),
 		mPool(data.cpuThreads)
 	{}
 
 private:
-	void runLoopCombined(ProgressDisplay& progress, MovieReader& reader, MovieWriter& writer, UserInput& input, Writers& secondaryWriters);
-	void runLoopFirst(ProgressDisplay& progress, MovieReader& reader, MovieWriter& writer, UserInput& input, Writers& secondaryWriters);
-	void runLoopSecond(ProgressDisplay& progress, MovieReader& reader, MovieWriter& writer, UserInput& input, Writers& secondaryWriters);
-	void runLoopConsecutive(ProgressDisplay& progress, MovieReader& reader, MovieWriter& writer, UserInput& input, Writers& secondaryWriters);
+	void runLoopCombined(ProgressDisplay& progress, UserInput& input, AuxWriters& auxWriters);
+	void runLoopFirst(ProgressDisplay& progress, UserInput& input, AuxWriters& auxWriters);
+	void runLoopSecond(ProgressDisplay& progress, UserInput& input, AuxWriters& auxWriters);
+	void runLoopConsecutive(ProgressDisplay& progress, UserInput& input, AuxWriters& auxWriters);
+
+	void loopInit(ProgressDisplay& progress, const std::string& message = "");
+	void loopTerminate(ProgressDisplay& progress, UserInput& input, AuxWriters& auxWriters);
 };
 
 
@@ -151,15 +146,15 @@ private:
 	std::vector<ImageYuv> frames;
 
 public:
-	DummyFrame(MainData& data) :
-		MovieFrame(data), 
+	DummyFrame(MainData& data, MovieReader& reader, MovieWriter& writer) :
+		MovieFrame(data, reader, writer),
 		frames(data.bufferCount, { data.h, data.w, data.w })
 	{}
 
-	void inputData(ImageYuv& frame) override;
-	void createPyramid() override {}
-	void computeStart() override {}
-	void computeTerminate() override {}
+	void inputData() override;
+	void createPyramid(int64_t frameIndex) override {}
+	void computeStart(int64_t frameIndex) override {}
+	void computeTerminate(int64_t frameIndex) override {}
 	void outputData(const AffineTransform& trf, OutputContext outCtx) override;
 	ImageYuv getInput(int64_t index) const override;
 };
@@ -171,10 +166,12 @@ public:
 
 class DefaultFrame : public MovieFrame {
 public:
-	DefaultFrame(MainData& data) : MovieFrame(data) {}
-	void inputData(ImageYuv& frame) override {}
-	void createPyramid() override {}
-	void computeStart() override {}
-	void computeTerminate() override {}
+	DefaultFrame(MainData& data, MovieReader& reader, MovieWriter& writer) : 
+		MovieFrame(data, reader, writer) 
+	{}
+	void inputData() override {}
+	void createPyramid(int64_t frameIndex) override {}
+	void computeStart(int64_t frameIndex) override {}
+	void computeTerminate(int64_t frameIndex) override {}
 	void outputData(const AffineTransform& trf, OutputContext outCtx) override {};
 };

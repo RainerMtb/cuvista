@@ -18,22 +18,24 @@
 
 #pragma once
 
-#include <iostream>
 #include <chrono>
-#include "MainData.hpp"
-#include "Stats.hpp"
+#include "MovieFrame.hpp"
 
 //base class
 class ProgressDisplay {
 
 protected:
-	MainData& data;
-	std::chrono::steady_clock::time_point timePoint;
+	MovieFrame& frame;
 	std::chrono::milliseconds interval;
+	std::chrono::steady_clock::time_point timePoint;
 
-	ProgressDisplay(MainData& data, int interval) : 
-		data { data }, 
+	ProgressDisplay(MovieFrame& frame, int interval) :
+		frame { frame },
 		interval { interval } 
+	{}
+
+	ProgressDisplay(MovieFrame& frame) :
+		ProgressDisplay(frame, 0) 
 	{}
 
 	bool isDue(bool forceUpdate);

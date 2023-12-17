@@ -18,42 +18,34 @@
 
 #include "TestMain.hpp"
 
-void check() {
-	int frameSkip = 0;
+void imageOutput() {
 	int frameOut = 20;
 
 	MainData data;
 	FFmpegReader reader;
 	data.probeCuda();
 	data.collectDeviceInfo();
-	data.inputCtx = reader.open("//READYNAS/Data/Documents/x.orig/bikini.1.1.avi");
-	data.validate();
-	NullWriter writer(data);
-	CudaFrame frame(data);
+	reader.open("//READYNAS/Data/Documents/x.orig/bikini.1.1.avi");
+	data.validate(reader);
+	NullWriter writer(data, reader);
+	CudaFrame frame(data, reader, writer);
 	OutputContext oc = { true, false, &writer.outputFrame, nullptr, 0 };
-	ResultImageWriter resim(data);
+	ResultImageWriter resim(data, frame);
 
-	for (int i = 0; i < frameSkip; i++) {
-		reader.read(frame.inputFrame, data.status);
-		if (i % 25 == 0)
-			std::cout << "skipping " << i << std::endl;
-	}
-
-	frame.inputData(frame.inputFrame);
-	frame.createPyramid();
-	data.status.frameInputIndex++;
+	reader.read(frame.bufferFrame);
+	frame.inputData();
+	frame.createPyramid(frame.mReader.frameIndex);
 
 	for (int i = 0; i < frameOut; i++) {
-		std::cout << "reading " << data.status.frameInputIndex << std::endl;
-		reader.read(frame.inputFrame, data.status);
-		frame.inputData(frame.inputFrame);
-		frame.createPyramid();
-		frame.computeStart();
-		frame.computeTerminate();
-		const AffineTransform& trf = frame.computeTransform(frame.resultPoints);
-		std::string fname = std::format("c:/temp/im{:03d}.bmp", i);
+		std::cout << "reading " << frame.mReader.frameIndex << std::endl;
+		reader.read(frame.bufferFrame);
+		frame.inputData();
+		frame.createPyramid(frame.mReader.frameIndex);
+		frame.computeStart(frame.mReader.frameIndex);
+		frame.computeTerminate(frame.mReader.frameIndex);
+		const AffineTransform& trf = frame.computeTransform(frame.mReader.frameIndex);
+		std::string fname = std::format("f:/im{:03d}.bmp", i);
 		resim.write(frame.mFrameResult, i, frame.getInput(i), fname);
-		data.status.frameInputIndex++;
 	}
 
 }
@@ -174,43 +166,43 @@ void compare() {
 		MainData data;
 		data.probeCuda();
 		data.collectDeviceInfo();
-		data.inputCtx = { 1080, 1920, 2, 1 };
-		data.validate();
 		NullReader reader;
-		NullWriter writer(data);
-		CudaFrame frame(data);
+		reader.h = 1080;
+		reader.w = 1920;
+		data.validate(reader);
+		NullWriter writer(data, reader);
+		CudaFrame frame(data, reader, writer);
 
-		frame.inputFrame.readFromPGM("d:/VideoTest/v00.pgm");
-		frame.inputData(frame.inputFrame);
-		frame.createPyramid();
-		data.status.frameInputIndex++;
+		frame.bufferFrame.readFromPGM("d:/VideoTest/v00.pgm");
+		frame.inputData();
+		frame.createPyramid(frame.mReader.frameIndex);
 
-		frame.inputFrame.readFromPGM("D:/VideoTest/v01.pgm");
-		frame.inputData(frame.inputFrame);
-		frame.createPyramid();
-		frame.computeStart();
-		frame.computeTerminate();
+		frame.bufferFrame.readFromPGM("D:/VideoTest/v01.pgm");
+		frame.inputData();
+		frame.createPyramid(frame.mReader.frameIndex);
+		frame.computeStart(frame.mReader.frameIndex);
+		frame.computeTerminate(frame.mReader.frameIndex);
 		//frame.getTransformedOutput().saveAsBinary("f:/test.dat");
 		std::cout << cudaGetErrorString(cudaGetLastError()) << std::endl;
 	}
 
 	{
 		MainData data;
-		data.inputCtx = { 1080, 1920, 2, 1 };
-		data.validate();
 		NullReader reader;
-		NullWriter writer(data);
-		CpuFrame frame(data);
+		reader.h = 1080;
+		reader.w = 1920;
+		data.validate(reader);
+		NullWriter writer(data, reader);
+		CpuFrame frame(data, reader, writer);
 
-		frame.inputFrame.readFromPGM("d:/VideoTest/v00.pgm");
-		frame.inputData(frame.inputFrame);
-		frame.createPyramid();
-		data.status.frameInputIndex++;
+		frame.bufferFrame.readFromPGM("d:/VideoTest/v00.pgm");
+		frame.inputData();
+		frame.createPyramid(frame.mReader.frameIndex);
 
-		frame.inputFrame.readFromPGM("D:/VideoTest/v01.pgm");
-		frame.inputData(frame.inputFrame);
-		frame.createPyramid();
-		frame.computeStart();
-		frame.computeTerminate();
+		frame.bufferFrame.readFromPGM("D:/VideoTest/v01.pgm");
+		frame.inputData();
+		frame.createPyramid(frame.mReader.frameIndex);
+		frame.computeStart(frame.mReader.frameIndex);
+		frame.computeTerminate(frame.mReader.frameIndex);
 	}
 }

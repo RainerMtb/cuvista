@@ -21,22 +21,24 @@
 #include <fstream>
 #include "MainData.hpp"
 #include "Trajectory.hpp"
+#include "Stats.hpp"
 
 class MovieFrame;
 
 //-----------------------------------------------------------------------------------
-class MovieWriter {
+class MovieWriter : public WriterStats {
 
 public:
 	ImageYuv outputFrame; //frame to write in YUV444 format
+	VideoPacketContext encodedFrame = {};
 
 protected:
-	Stats& mStatus;
 	const MainData& mData; //central metadata structure
+	MovieReader& mReader;
 
-	MovieWriter(MainData& data) : 
+	MovieWriter(MainData& data, MovieReader& reader) : 
 		outputFrame(data.h, data.w, data.cpupitch), 
-		mStatus { data.status }, 
+		mReader { reader },
 		mData { data } 
 	{}
 
@@ -46,7 +48,8 @@ public:
 	virtual void write() {}
 	virtual std::future<void> writeAsync();
 	virtual void open(EncodingOption videoCodec) {}
-	virtual bool terminate(bool init = false) { return false; }
+	virtual bool startFlushing() { return false; }
+	virtual bool flush() { return false; }
 };
 
 
@@ -54,7 +57,9 @@ public:
 class NullWriter : public MovieWriter {
 
 public:
-	NullWriter(MainData& data) : MovieWriter(data) {}
+	NullWriter(MainData& data, MovieReader& reader) : 
+		MovieWriter(data, reader) 
+	{}
 };
 
 
@@ -62,7 +67,10 @@ public:
 class ImageWriter : public MovieWriter {
 
 protected:
-	ImageWriter(MainData& data) : MovieWriter(data) {}
+	ImageWriter(MainData& data, MovieReader& reader) : 
+		MovieWriter(data, reader) 
+	{}
+
 	std::string makeFilename() const;
 
 public:
@@ -76,7 +84,11 @@ private:
 	ImageBGR image;
 
 public:
-	BmpImageWriter(MainData& data) : ImageWriter(data), image(data.h, data.w) {}
+	BmpImageWriter(MainData& data, MovieReader& reader) : 
+		ImageWriter(data, reader), 
+		image(data.h, data.w) 
+	{}
+
 	void write() override;
 };
 
@@ -90,7 +102,10 @@ private:
 	AVPacket* packet = nullptr;
 
 public:
-	JpegImageWriter(MainData& data) : ImageWriter(data) {}
+	JpegImageWriter(MainData& data, MovieReader& reader) : 
+		ImageWriter(data, reader) 
+	{}
+
 	~JpegImageWriter() override;
 	void open(EncodingOption videoCodec) override;
 	void write() override;
@@ -104,8 +119,8 @@ protected:
 	std::vector<char> yuvPacked;
 
 	//constructor
-	RawWriter(MainData& data) : 
-		MovieWriter(data), 
+	RawWriter(MainData& data, MovieReader& reader) :
+		MovieWriter(data, reader), 
 		yuvPacked(3ull * data.h * data.w) 
 	{}
 
@@ -118,7 +133,10 @@ protected:
 class PipeWriter : public RawWriter {
 
 public:
-	PipeWriter(MainData& data) : RawWriter(data) {}
+	PipeWriter(MainData& data, MovieReader& reader) : 
+		RawWriter(data, reader) 
+	{}
+
 	~PipeWriter() override;
 	void open(EncodingOption videoCodec) override;
 	void write() override;
@@ -141,7 +159,7 @@ protected:
 	std::unique_ptr<Sockets> sockets;
 
 public:
-	TCPWriter(MainData& data);
+	TCPWriter(MainData& data, MovieReader& reader);
 	~TCPWriter() override;
 	void open(EncodingOption videoCodec) override;
 	void write() override;
@@ -167,7 +185,7 @@ protected:
 	AVPacket* videoPacket = nullptr;
 	bool headerWritten = false;
 
-	FFmpegFormatWriter(MainData& data) : MovieWriter(data) {}
+	FFmpegFormatWriter(MainData& data, MovieReader& reader) : MovieWriter(data, reader) {}
 	~FFmpegFormatWriter() override;
 	void open(EncodingOption videoCodec) override;
 	int writePacket(AVPacket* packet);
@@ -196,16 +214,17 @@ protected:
 	void write(ImageYuv& frame);
 
 public:
-	FFmpegWriter(MainData& data) : FFmpegFormatWriter(data) {}
+	FFmpegWriter(MainData& data, MovieReader& reader) : FFmpegFormatWriter(data, reader) {}
 	~FFmpegWriter() override;
 	void open(EncodingOption videoCodec) override;
 	void write() override;
-	bool terminate(bool init) override;
+	bool startFlushing() override;
+	bool flush() override;
 };
 
 
 //-------------- writer to combine input and output side by side -------------------
-class CombinerWriter : public FFmpegWriter {
+class StackedWriter : public FFmpegWriter {
 
 private:
 	int widthTotal;
@@ -214,8 +233,8 @@ private:
 	std::vector<unsigned char> bg;
 
 public:
-	CombinerWriter(MainData& data) : 
-		FFmpegWriter(data), 
+	StackedWriter(MainData& data, MovieReader& reader) :
+		FFmpegWriter(data, reader), 
 		widthTotal { data.w * 3 / 2 }, 
 		combinedFrame(data.h, widthTotal, widthTotal),
 		inputFrame(data.h, data.w, data.cpupitch)
@@ -228,17 +247,24 @@ public:
 
 
 //-------------- superclass for secondary writers -----------------------------------
-class SecondaryWriter : public MovieWriter {
+class AuxiliaryWriter : public MovieWriter {
+
+private:
+	NullReader nullReader;
+
+protected:
+	MovieFrame& frame;
 
 public:
-	SecondaryWriter(MainData& data) : MovieWriter(data) {}
-
-	virtual void write(MovieFrame* mf, int64_t frameIndex) = 0;
+	AuxiliaryWriter(MainData& data, MovieFrame& frame) :
+		MovieWriter(data, nullReader),
+		frame { frame }
+	{}
 };
 
 
 //------------- write binary transformation file ------------------------------------
-class TransformsWriter : public SecondaryWriter {
+class TransformsWriter : public AuxiliaryWriter {
 
 private:
 	inline static std::string id = "CUVI";
@@ -251,41 +277,51 @@ private:
 public:
 	static std::map<int64_t, TransformValues> readTransformMap(const std::string& trajectoryFile);
 
-	TransformsWriter(MainData& data);
+	TransformsWriter(MainData& data, MovieFrame& frame);
 
 	void writeTransform(const Affine2D& transform, int64_t frameIndex);
 
-	virtual void write(MovieFrame* mf, int64_t frameIndex) override;
+	virtual void write() override;
 };
 
 
 //--------------- write point results as large text file ----------------------------
-class ResultDetailsWriter : public SecondaryWriter {
+class ResultDetailsWriter : public AuxiliaryWriter {
 
 private:
 	std::string delimiter = ";";
 	std::ofstream file;
 
 public:
-	ResultDetailsWriter(MainData& data);
+	ResultDetailsWriter(MainData& data, MovieFrame& frame);
 
 	void write(const std::vector<PointResult>& results, int64_t frameIndex);
 
-	virtual void write(MovieFrame* mf, int64_t frameIndex) override;
+	virtual void write() override;
 };
 
 
 //--------------- write individual images to show point results ---------------------
-class ResultImageWriter : public SecondaryWriter {
+class ResultImageWriter : public AuxiliaryWriter {
 
 private:
 	ImageBGR bgr;
-	const MainData& data;
 
 public:
-	ResultImageWriter(MainData& data) : SecondaryWriter(data), bgr(data.h, data.w), data { data } {}
+	ResultImageWriter(MainData& data, MovieFrame& frame) :
+		AuxiliaryWriter(data, frame), 
+		bgr(data.h, data.w) 
+	{}
 
 	void write(const FrameResult& fr, int64_t idx, const ImageYuv& yuv, const std::string& fname);
 
-	virtual void write(MovieFrame* mf, int64_t frameIndex) override;
+	virtual void write() override;
+};
+
+
+//--------------- collection of auxiliary writer instances
+class AuxWriters : public std::vector<std::unique_ptr<AuxiliaryWriter>> {
+
+public:
+	void writeAll();
 };

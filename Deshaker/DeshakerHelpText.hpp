@@ -65,13 +65,12 @@ other output options:
                 default: 0
 -frames n       maximum number of frames to encode
                 program will terminate when this number is reached
--blendsource x  combine source and stabilized frames side by side
-                final output video is 3/2 the input width
-                2/3 of input and 2/3 of output are displayed
+-stack x        stack part of source and stabilized frames side by side
                 parameter value must be between -1.0 and 1.0 and
                 specifies which part of images is shown
+                final output video is 3/2 the input width
+                3/4 of input and 3/4 of output are displayed
                 -1 takes leftmost part, 0 shows the middle, +1 takes the right
-                default: 0
 
 quality and performance settings:
 -radius sec     the temporal radius where frames will be considered for 

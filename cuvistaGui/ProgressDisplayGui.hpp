@@ -29,14 +29,14 @@ class ProgressDisplayGui : public ProgressDisplay {
 
 private:
     StabilizerThread* thread;
-    MovieFrame* frame;
+    MovieFrame& frame;
     ImagePPM ppmInput;
     ImagePPM ppmOutput;
-    std::chrono::steady_clock::time_point tp = std::chrono::steady_clock::now();
+    std::chrono::steady_clock::time_point timePoint = std::chrono::steady_clock::now();
 
 public:
-    ProgressDisplayGui(MainData& data, StabilizerThread* thread, MovieFrame* frame) :
-        ProgressDisplay(data, 50),
+    ProgressDisplayGui(MainData& data, StabilizerThread* thread, MovieFrame& frame) :
+        ProgressDisplay(frame, 50),
         thread { thread },
         frame { frame },
         ppmInput(data.h, data.w),

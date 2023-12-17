@@ -17,9 +17,14 @@
  */
 
 #include "MovieWriter.hpp"
-#include "Stats.hpp"
 #include "MovieFrame.hpp"
 
+
+void AuxWriters::writeAll() {
+	for (auto& writer : *this) {
+		writer->write();
+	}
+}
 
 OutputContext MovieWriter::getOutputContext() {
 	return { true, false, &outputFrame, nullptr };
@@ -37,7 +42,7 @@ std::string ImageWriter::makeFilename(const std::string& pattern, int64_t index)
 }
 
 std::string ImageWriter::makeFilename() const {
-	return makeFilename(mData.fileOut, mStatus.frameWriteIndex);
+	return makeFilename(mData.fileOut, this->frameIndex);
 }
 
 //-----------------------------------------------------------------------------------
@@ -46,7 +51,8 @@ std::string ImageWriter::makeFilename() const {
 
 void BmpImageWriter::write() {
 	outputFrame.toBGR(image).saveAsBMP(makeFilename());
-	mStatus.outputBytesWritten += image.dataSizeInBytes();
+	outputBytesWritten += image.dataSizeInBytes();
+	this->frameIndex++;
 }
 
 //-----------------------------------------------------------------------------------
@@ -83,7 +89,7 @@ void JpegImageWriter::open(EncodingOption videoCodec) {
 }
 
 void JpegImageWriter::write() {
-	frame->pts = mStatus.frameWriteIndex;
+	frame->pts = this->frameIndex;
 	int result = avcodec_send_frame(ctx, frame);
 	if (result < 0)
 		errorLogger.logError(av_make_error(result, "error sending frame"));
@@ -99,8 +105,9 @@ void JpegImageWriter::write() {
 	else
 		errorLogger.logError("error opening file '" + fname + "'");
 
-	mStatus.outputBytesWritten += packet->size;
+	outputBytesWritten += packet->size;
 	av_packet_unref(packet);
+	this->frameIndex++;
 }
 
 JpegImageWriter::~JpegImageWriter() {
@@ -125,7 +132,7 @@ void RawWriter::packYuv() {
 
 
 //-----------------------------------------------------------------------------------
-// secondary writers 
+// Computed Transformation Values
 //-----------------------------------------------------------------------------------
 
 std::map<int64_t, TransformValues> TransformsWriter::readTransformMap(const std::string& trajectoryFile) {
@@ -155,9 +162,9 @@ std::map<int64_t, TransformValues> TransformsWriter::readTransformMap(const std:
 	return transformsMap;
 }
 
-TransformsWriter::TransformsWriter(MainData& data) : 
-	file { std::ofstream(data.trajectoryFile, std::ios::binary) }, 
-	SecondaryWriter(data) 
+TransformsWriter::TransformsWriter(MainData& data, MovieFrame& frame) :
+	AuxiliaryWriter(data, frame),
+	file { std::ofstream(data.trajectoryFile, std::ios::binary) }
 {
 	if (file.is_open()) {
 		//write signature
@@ -176,13 +183,19 @@ void TransformsWriter::writeTransform(const Affine2D& transform, int64_t frameIn
 	writeValue(transform.rotMilliDegrees());
 }
 
-void TransformsWriter::write(MovieFrame* mf, int64_t frameIndex) {
-	writeTransform(mf->mFrameResult.mTransform, frameIndex);
+void TransformsWriter::write() {
+	writeTransform(frame.mFrameResult.mTransform, frameIndex);
+	this->frameIndex++;
 }
 
-ResultDetailsWriter::ResultDetailsWriter(MainData& data) : 
-	file { std::ofstream(data.resultsFile) }, 
-	SecondaryWriter(data)
+
+//-----------------------------------------------------------------------------------
+// Computed Results per Point
+//-----------------------------------------------------------------------------------
+
+ResultDetailsWriter::ResultDetailsWriter(MainData& data, MovieFrame& frame) :
+	AuxiliaryWriter(data, frame),
+	file { std::ofstream(data.resultsFile) }
 {
 	if (file.is_open()) {
 		file << "frameIdx" << delimiter << "ix0" << delimiter << "iy0"
@@ -205,9 +218,15 @@ void ResultDetailsWriter::write(const std::vector<PointResult>& results, int64_t
 	file << ss.str();
 }
 
-void ResultDetailsWriter::write(MovieFrame* mf, int64_t frameIndex) {
-	write(mf->mFrameResult.mFiniteResults, frameIndex);
+void ResultDetailsWriter::write() {
+	write(frame.mFrameResult.mFiniteResults, frameIndex);
+	this->frameIndex++;
 }
+
+
+//-----------------------------------------------------------------------------------
+// Result Images
+//-----------------------------------------------------------------------------------
 
 void ResultImageWriter::write(const FrameResult& fr, int64_t idx, const ImageYuv& yuv, const std::string& fname) {
 	const AffineTransform& trf = fr.mTransform;
@@ -259,9 +278,10 @@ void ResultImageWriter::write(const FrameResult& fr, int64_t idx, const ImageYuv
 	}
 }
 
-void ResultImageWriter::write(MovieFrame* mf, int64_t frameIndex) {
+void ResultImageWriter::write() {
 	//get input image from buffers
-	ImageYuv yuv = mf->getInput(frameIndex);
-	std::string fname = ImageWriter::makeFilename(data.resultImageFile, frameIndex);
-	write(mf->mFrameResult, frameIndex, yuv, fname);
+	ImageYuv yuv = frame.getInput(frameIndex);
+	std::string fname = ImageWriter::makeFilename(mData.resultImageFile, frameIndex);
+	write(frame.mFrameResult, frameIndex, yuv, fname);
+	this->frameIndex++;
 }

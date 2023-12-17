@@ -45,7 +45,7 @@ void FFmpegWriter::open(EncodingOption videoCodec, int w, int h) {
     codec_ctx->height = h;
     codec_ctx->pix_fmt = pixfmt;
     //codec_ctx->framerate = { data.inputCtx.fpsNum, data.inputCtx.fpsDen };
-    codec_ctx->time_base = { (int) mData.inputCtx.timeBaseNum, (int) mData.inputCtx.timeBaseDen };
+    codec_ctx->time_base = { (int) mReader.timeBaseNum, (int) mReader.timeBaseDen };
     codec_ctx->gop_size = GOP_SIZE;
     codec_ctx->max_b_frames = 4;
     //av_opt_set(codec_ctx->priv_data, "preset", "slow", 0);
@@ -142,7 +142,7 @@ void FFmpegWriter::write(ImageYuv& fr) {
     int sliceHeight = sws_scale(sws_scaler_ctx, src, strides, 0, fr.h, frame->data, frame->linesize);
 
     //set pts into frame to later name packet
-    frame->pts = mStatus.frameWriteIndex;
+    frame->pts = this->frameIndex;
     //frame->coded_picture_number = status.frameWriteIndex; //will not be set in output??
 
     //generate and write packet
@@ -150,19 +150,19 @@ void FFmpegWriter::write(ImageYuv& fr) {
     while (result >= 0) {
         result = writeFFmpegPacket();
     }
+    this->frameIndex++;
 }
 
 
 //flush encoder buffer
-bool FFmpegWriter::terminate(bool init) {
-    int result = 0;
-    if (init) {
-        result = sendFFmpegFrame(nullptr);
-
-    } else {
-        result = writeFFmpegPacket();
-    }
+bool FFmpegWriter::startFlushing() {
+    int result = sendFFmpegFrame(nullptr);
     return result >= 0;
+}
+
+
+bool FFmpegWriter::flush() {
+    return writeFFmpegPacket() >= 0;
 }
 
 

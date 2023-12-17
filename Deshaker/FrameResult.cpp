@@ -19,7 +19,7 @@
 #include "FrameResult.hpp"
 #include "Util.hpp"
 
-const AffineTransform& FrameResult::computeTransform(const std::vector<PointResult>& results, const MainData& data, ThreadPool& threadPool, RNGbase* rng) {
+const AffineTransform& FrameResult::computeTransform(const std::vector<PointResult>& results, const MainData& data, ThreadPool& threadPool, int64_t frameIndex) {
 	const ptrdiff_t cMinConsensPoints = 8;	     //min numbers of points for consensus set
 	const int cConsLoopCount = 8;			     //max number of loops when searching for consensus set
 	const int cConsLoopPercent = 95;		     //percentage of points for next loop 0..100
@@ -30,6 +30,7 @@ const AffineTransform& FrameResult::computeTransform(const std::vector<PointResu
 
 	//util::ConsoleTimer ic("transform");
 	mTransform.reset();
+	mTransform.frameIndex = frameIndex;
 	mTransformsList.clear();
 	mCountConsens = 0;
 

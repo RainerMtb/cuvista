@@ -95,25 +95,21 @@ struct Result {
 
 template <class T> Result runPyramid(MainData& data) {
 	FFmpegReader reader;
-	data.inputCtx = reader.open(data.fileIn);
+	reader.open(data.fileIn);
 	data.collectDeviceInfo();
-	data.validate();
-	NullWriter writer(data);
-	std::unique_ptr<MovieFrame> frame = std::make_unique<T>(data);
-	Stats& status = data.status;
-	status.reset();
-	reader.read(frame->bufferFrame, status);
-	status.frameReadIndex++;
-	frame->inputData(frame->bufferFrame);
-	frame->createPyramid();
-	status.frameInputIndex++;
+	data.validate(reader);
+	NullWriter writer(data, reader);
+	std::unique_ptr<MovieFrame> frame = std::make_unique<T>(data, reader, writer);
+	reader.read(frame->bufferFrame);
+	frame->inputData();
+	frame->createPyramid(frame->mReader.frameIndex);
 
-	reader.read(frame->bufferFrame, status);
-	frame->inputData(frame->bufferFrame);
-	frame->createPyramid();
+	reader.read(frame->bufferFrame);
+	frame->inputData();
+	frame->createPyramid(frame->mReader.frameIndex);
 
-	frame->computeStart();
-	frame->computeTerminate();
+	frame->computeStart(frame->mReader.frameIndex);
+	frame->computeTerminate(frame->mReader.frameIndex);
 
 	Result result;
 	if (errorLogger.hasError()) {
@@ -122,6 +118,7 @@ template <class T> Result runPyramid(MainData& data) {
 	} else {
 		AffineTransform trf;
 		trf.addRotation(0.2).addTranslation(-40, 30);
+		trf.frameIndex = 0;
 		frame->outputData(trf, writer.getOutputContext());
 		result = { frame->getPyramid(0), frame->getTransformedOutput(), frame->resultPoints };
 	}
@@ -131,9 +128,6 @@ template <class T> Result runPyramid(MainData& data) {
 
 void pyramid() {
 	std::cout << "comparing platforms..." << std::endl;
-
-	AffineTransform trf;
-	trf.addRotation(0.2).addTranslation(-40, 30);
 	Result cpu, ocl, cuda;
 
 	{

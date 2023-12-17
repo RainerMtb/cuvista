@@ -24,6 +24,7 @@
 #include <mutex>
 #include <vector>
 #include <queue>
+#include <cassert>
 
 //base class directly executes job in the same thread
 class ThreadPoolBase {

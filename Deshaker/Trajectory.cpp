@@ -21,22 +21,22 @@
 #include "Trajectory.hpp"
 
 //create new item and append to list, transformation u, v, a
-TrajectoryItem::TrajectoryItem(double u, double v, double a) {
-	values.set(0, 0, u);
-	values.set(0, 1, v);
-	values.set(0, 2, a);
+TrajectoryItem::TrajectoryItem(double u, double v, double a, int64_t frameIndex) :
+	values { Matd::fromRow({u, v, a}) },
+	frameIndex { frameIndex }
+{
 	currentSum += values;	   //sum to this point
 	sum.setData(currentSum);   //store sum for this point
-	isDuplicateFrame = std::abs(u) < 0.5 && std::abs(v) < 0.5 && std::abs(a) < 0.001;
+	isDuplicateFrame = frameIndex > 0 && std::abs(u) < 0.5 && std::abs(v) < 0.5 && std::abs(a) < 0.001;
 }
 
-const TrajectoryItem& Trajectory::addTrajectoryTransform(double dx, double dy, double da) {
-	return trajectory.emplace_back(dx, dy, da);
+const TrajectoryItem& Trajectory::addTrajectoryTransform(double dx, double dy, double da, int64_t frameIndex) {
+	return trajectory.emplace_back(dx, dy, da, frameIndex);
 }
 
 //append new result to list
-const TrajectoryItem& Trajectory::addTrajectoryTransform(const Affine2D& transform, int64_t frameIdx) {
-	return addTrajectoryTransform(transform.dX(), transform.dY(), transform.rot());
+const TrajectoryItem& Trajectory::addTrajectoryTransform(const AffineTransform& transform) {
+	return addTrajectoryTransform(transform.dX(), transform.dY(), transform.rot(), transform.frameIndex);
 }
 
 int64_t Trajectory::getTrajectorySize() {
@@ -49,7 +49,7 @@ int64_t clamp(int64_t val, int64_t lo, int64_t hi) {
 	return val;
 }
 
-const AffineTransform& Trajectory::computeTransformForFrame(const MainData& data, int64_t frameWriteIndex) {
+const AffineTransform& Trajectory::computeSmoothTransform(const MainData& data, int64_t frameWriteIndex) {
 	//compute average movements over current window
 	double sig = data.radius * data.cSigmaParam;
 	double sumWeight = 0.0;
@@ -85,6 +85,7 @@ const AffineTransform& Trajectory::computeTransformForFrame(const MainData& data
 		.addZoom(data.imZoom)								//zoom as set
 		.addTranslation(data.w / -2.0, data.h / -2.0)		//translate back to center
 		;
+	out.frameIndex = frameWriteIndex;
 	return out;
 }
 
@@ -95,6 +96,6 @@ void Trajectory::readTransforms(std::map<int64_t, TransformValues> transformsMap
 	for (int i = 0; i <= maxFrame; i++) {
 		auto item = transformsMap.find(i);
 		if (item != transformsMap.end()) trf = item->second;
-		addTrajectoryTransform(trf.dx, trf.dy, trf.da);
+		addTrajectoryTransform(trf.dx, trf.dy, trf.da, i);
 	}
 }

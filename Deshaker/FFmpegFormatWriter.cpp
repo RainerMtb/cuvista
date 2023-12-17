@@ -40,8 +40,8 @@ void FFmpegFormatWriter::open(EncodingOption videoCodec) {
         throw AVException(av_make_error(result));
 
     //setup streams
-    AVStream* videoIn = mData.inputCtx.videoStream;
-    for (StreamContext& sc : mStatus.inputStreams) {
+    AVStream* videoIn = mReader.videoStream;
+    for (StreamContext& sc : mReader.inputStreams) {
         AVStream* inStream = sc.inputStream;
 
         if (inStream->index == videoIn->index) {
@@ -183,7 +183,7 @@ FFmpegFormatWriter::~FFmpegFormatWriter() {
             errorLogger.logError(av_make_error(result, "error closing output"));
     }
 
-    for (StreamContext& sc : mStatus.inputStreams) {
+    for (StreamContext& sc : mReader.inputStreams) {
         if (sc.audioInCtx) {
             avcodec_close(sc.audioInCtx);
             avcodec_free_context(&sc.audioInCtx);
@@ -220,7 +220,7 @@ FFmpegFormatWriter::~FFmpegFormatWriter() {
 
 //write packet to output
 int FFmpegFormatWriter::writePacket(AVPacket* packet) {
-    StreamContext sc = mStatus.inputStreams[packet->stream_index];
+    StreamContext sc = mReader.inputStreams[packet->stream_index];
     //std::printf("stream %d pts [sec] %.5f\n", packet->stream_index, 1.0 * packet->pts * sc.outputStream->time_base.num / sc.outputStream->time_base.den);
     
     int result = av_interleaved_write_frame(fmt_ctx, packet); //write_frame also does unref packet
@@ -338,7 +338,7 @@ void FFmpegFormatWriter::transcodeAudio(AVPacket* pkt, StreamContext& sc, bool t
 
 //write packets to output
 void FFmpegFormatWriter::writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsIdx, bool terminate) {
-    AVStream* videoInputStream = mData.inputCtx.videoStream;
+    AVStream* videoInputStream = mReader.videoStream;
     
     /*
     overall plan:
@@ -350,8 +350,8 @@ void FFmpegFormatWriter::writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsI
     //STEP 1: looking at input stream
     //set pts and dts with respect to input timebase
     auto compareFunc = [&] (const VideoPacketContext& ctx) { return ctx.readIndex == ptsIdx; }; //sometimes wrong, check for increasing pts values
-    auto vpc = std::find_if(mStatus.packetList.cbegin(), mStatus.packetList.cend(), compareFunc);
-    mStatus.encodedFrame = *vpc; //store for debugging
+    auto vpc = std::find_if(mReader.packetList.cbegin(), mReader.packetList.cend(), compareFunc);
+    encodedFrame = *vpc; //store for debugging
 
     int64_t pts = vpc->pts - videoInputStream->start_time;
     //offset pts to always start at 0
@@ -370,7 +370,7 @@ void FFmpegFormatWriter::writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsI
 
     //process secondary streams
     double dtsTime = 1.0 * pkt->dts * videoStream->time_base.num / videoStream->time_base.den;
-    for (StreamContext& sc : mStatus.inputStreams) {
+    for (StreamContext& sc : mReader.inputStreams) {
         for (auto it = sc.packets.begin(); it != sc.packets.end(); ) {
             AVPacket* sidePacket = *it;
             int comp = av_compare_ts(sidePacket->dts, sc.inputStream->time_base, vpc->dts, videoInputStream->time_base);
@@ -407,18 +407,18 @@ void FFmpegFormatWriter::writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsI
     //testFile.write(reinterpret_cast<char*>(videoPacket->data), videoPacket->size);
 
     //delete from input list
-    mStatus.packetList.erase(vpc);
+    mReader.packetList.erase(vpc);
 
     //store stats
-    mStatus.encodedBytes = pkt->size;
-    mStatus.encodedDts = pkt->dts;
-    mStatus.encodedPts = pkt->pts;
+    encodedBytes = pkt->size;
+    encodedDts = pkt->dts;
+    encodedPts = pkt->pts;
 
     //write packet to output
     writePacket(pkt);
-    mStatus.encodedBytesTotal += mStatus.encodedBytes;
-    mStatus.outputBytesWritten = mStatus.encodedBytesTotal; //how to get proper progress from AVFormatContext
+    encodedBytesTotal += encodedBytes;
+    outputBytesWritten = encodedBytesTotal; //how to get proper progress from AVFormatContext
 
-    //advance encoder counter
-    mStatus.frameEncodeIndex++;
+    //advance encoded counter
+    this->frameEncoded++;
 }

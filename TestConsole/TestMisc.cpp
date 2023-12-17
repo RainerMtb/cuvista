@@ -68,31 +68,34 @@ void readAndWriteOneFrame() {
 	MainData data;
 	data.probeCuda();
 	data.collectDeviceInfo();
-	data.inputCtx = { 1080, 1920, 2, 1 };
-	data.validate();
-	Stats& status = data.status;
 	{
-		status.reset();
 		NullReader reader;
-		NullWriter writer(data);
-		CudaFrame frame(data);
+		reader.w = 1920;
+		reader.h = 1080;
+		data.validate(reader);
+		NullWriter writer(data, reader);
+		CudaFrame frame(data, reader, writer);
 
-		frame.inputFrame.readFromPGM("d:/VideoTest/v00.pgm");
-		frame.inputData(frame.inputFrame);
-		frame.createPyramid();
-		status.frameInputIndex++;
+		frame.bufferFrame.readFromPGM("d:/VideoTest/v00.pgm");
+		frame.bufferFrame.index = 0;
+		frame.mReader.frameIndex = 0;
+		frame.inputData();
+		frame.createPyramid(frame.mReader.frameIndex);
 
-		frame.inputFrame.readFromPGM("D:/VideoTest/v01.pgm");
-		frame.inputData(frame.inputFrame);
-		frame.createPyramid();
-		frame.computeStart();
-		frame.computeTerminate();
+		frame.bufferFrame.readFromPGM("D:/VideoTest/v01.pgm");
+		frame.bufferFrame.index = 1;
+		frame.mReader.frameIndex = 1;
+		frame.inputData();
+		frame.createPyramid(frame.mReader.frameIndex);
+		frame.computeStart(frame.mReader.frameIndex);
+		frame.computeTerminate(frame.mReader.frameIndex);
 
 		AffineTransform trf;
 		trf.addRotation(0.3).addTranslation(-200, 100);
+		trf.frameIndex = 0;
 		OutputContext oc = writer.getOutputContext();
 		frame.outputData(trf, oc);
-		std::string fileOut = "D:/VideoTest/out/test.bmp";
+		std::string fileOut = "f:/test.bmp";
 		std::cout << "writing file " << fileOut << std::endl;
 		oc.outputFrame->saveAsBMP(fileOut);
 	}

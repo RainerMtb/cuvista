@@ -26,33 +26,35 @@ private:
 	DeviceInfo* device;
 
 public:
-	OpenClFrame(MainData& data) : MovieFrame(data) {
+	OpenClFrame(MainData& data, MovieReader& reader, MovieWriter& writer) : 
+		MovieFrame(data, reader, writer) 
+	{
 		device = data.deviceList[data.deviceSelected];
-		cl::init(data, inputFrame, device);
+		cl::init(data, bufferFrame, device);
 	}
 
 	~OpenClFrame() {
 		cl::shutdown(mData);
 	}
 
-	void inputData(ImageYuv& frame) override {
-		cl::inputData(mStatus.frameInputIndex, mData, frame);
+	void inputData() override {
+		cl::inputData(bufferFrame.index, mData, bufferFrame);
 	}
 
-	void createPyramid() override {
-		cl::createPyramid(mStatus.frameInputIndex, mData);
+	void createPyramid(int64_t frameIndex) override {
+		cl::createPyramid(frameIndex, mData);
 	}
 
-	void computeStart() override {
-		cl::compute(mStatus.frameInputIndex, mData);
+	void computeStart(int64_t frameIndex) override {
+		cl::compute(frameIndex, mData);
 	}
 
-	void computeTerminate() override {
-		cl::computeTerminate(mStatus.frameInputIndex, mData, resultPoints);
+	void computeTerminate(int64_t frameIndex) override {
+		cl::computeTerminate(frameIndex, mData, resultPoints);
 	}
 
 	void outputData(const AffineTransform& trf, OutputContext outCtx) override {
-		cl::outputData(mStatus.frameWriteIndex, mData, outCtx, trf.toArray());
+		cl::outputData(trf.frameIndex, mData, outCtx, trf.toArray());
 	}
 
 	Mat<float> getPyramid(size_t idx) const override {
@@ -69,11 +71,11 @@ public:
 		return cl::getInput(idx, mData);
 	}
 
-	void getCurrentInputFrame(ImagePPM& image) override {
-		cl::getCurrentInputFrame(image, mStatus.frameReadIndex - 1);
+	void getInputFrame(int64_t frameIndex, ImagePPM& image) override {
+		cl::getCurrentInputFrame(image, frameIndex);
 	}
 
-	void getTransformedOutput(ImagePPM& image) override {
+	void getTransformedOutput(int64_t frameIndex, ImagePPM& image) override {
 		cl::getTransformedOutput(image);
 	}
 

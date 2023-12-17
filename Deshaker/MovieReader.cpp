@@ -18,6 +18,7 @@
 
 #include "MovieReader.hpp"
 #include "Util.hpp"
+#include "ErrorLogger.hpp"
 
 #include <fstream>
 #include <iostream>
@@ -26,8 +27,8 @@
  //-------- Movie Reader Main
  //----------------------------------
 
-std::future<void> MovieReader::readAsync(ImageYuv& inputFrame, Stats& status) {
-    return std::async(std::launch::async, [&] () { read(inputFrame, status); });
+std::future<void> MovieReader::readAsync(ImageYuv& inputFrame) {
+    return std::async(std::launch::async, [&] () { read(inputFrame); });
 }
 
 
@@ -35,13 +36,10 @@ std::future<void> MovieReader::readAsync(ImageYuv& inputFrame, Stats& status) {
 //-------- Placeholder Class
 //----------------------------------
 
-InputContext NullReader::open(std::string_view source) {
-    return {};
-}
-
-void NullReader::read(ImageYuv& frame, Stats& status) {
+void NullReader::read(ImageYuv& frame) {
+    frameIndex++;
+    endOfInput = false;
     frame.setValues(ColorYuv { 0, 0, 0 });
-    status.endOfInput = false;
 }
 
 
@@ -51,10 +49,9 @@ void NullReader::read(ImageYuv& frame, Stats& status) {
 
 
 //constructor opens ffmpeg file
-InputContext FFmpegReader::open(std::string_view source) {
+void FFmpegReader::open(std::string_view source) {
     //av_log_set_level(AV_LOG_ERROR);
     av_log_set_callback(ffmpeg_log);
-    InputContext input = {};
 
     // Allocate format context
     av_format_ctx = avformat_alloc_context();
@@ -80,12 +77,12 @@ InputContext FFmpegReader::open(std::string_view source) {
             //store first video stream
             av_codec = avcodec_find_decoder(stream->codecpar->codec_id);
             if (av_codec) {
-                input.videoStream = av_stream = stream;
+                videoStream = av_stream = stream;
             }
         }
 
         //store every stream found in input
-        input.inputStreams.push_back(stream);
+        inputStreams.push_back({ stream });
     }
     //continue only when there is a video stream to decode
     if (av_stream == nullptr || av_codec == nullptr) 
@@ -112,30 +109,30 @@ InputContext FFmpegReader::open(std::string_view source) {
         throw AVException("could not allocate AVPacket");
 
     //set values in InputContext object
-    input.avformatDuration = av_format_ctx->duration;
-    input.fpsNum = av_stream->avg_frame_rate.num;
-    input.fpsDen = av_stream->avg_frame_rate.den;
-    input.timeBaseNum = av_stream->time_base.num;
-    input.timeBaseDen = av_stream->time_base.den;
-    input.h = av_codec_ctx->height;
-    input.w = av_codec_ctx->width;
-    input.frameCount = av_stream->nb_frames;
-    input.source = source;
+    avformatDuration = av_format_ctx->duration;
+    fpsNum = av_stream->avg_frame_rate.num;
+    fpsDen = av_stream->avg_frame_rate.den;
+    timeBaseNum = av_stream->time_base.num;
+    timeBaseDen = av_stream->time_base.den;
+    h = av_codec_ctx->height;
+    w = av_codec_ctx->width;
+    sourceName = source;
+    frameCount = av_stream->nb_frames;
     //av_dump_format(av_format_ctx, av_stream->index, av_format_ctx->url, 0); //uses av_log
-    return input;
 }
 
 //read one frame from ffmpeg
-void FFmpegReader::read(ImageYuv& frame, Stats& status) {
+void FFmpegReader::read(ImageYuv& frame) {
     //util::ConsoleTimer timer("read");
-    status.endOfInput = true;
+    frameIndex++;
+    endOfInput = true;
     while (true) {
         av_packet_unref(av_packet); //unref old packet
 
         int response = av_read_frame(av_format_ctx, av_packet); //read new packet from input format
         if (av_packet->size > 0) {
             int sidx = av_packet->stream_index;
-            StreamHandling sh = sidx < status.inputStreams.size() ? status.inputStreams[sidx].handling : StreamHandling::STREAM_IGNORE;
+            StreamHandling sh = sidx < inputStreams.size() ? inputStreams[sidx].handling : StreamHandling::STREAM_IGNORE;
 
             if (sidx == av_stream->index) {
                 //we have a video packet
@@ -154,14 +151,17 @@ void FFmpegReader::read(ImageYuv& frame, Stats& status) {
                     break;
 
                 } else { //we got a frame
-                    status.endOfInput = false;
+                    endOfInput = false;
                     break;
                 }
+
+            } else if (storePackets == false) {
+                //do not store any secondary packets
 
             } else if (sh == StreamHandling::STREAM_COPY || sh == StreamHandling::STREAM_TRANSCODE) {
                 //we should store a packet from a secondary stream for processing
                 AVPacket* pktcopy = av_packet_clone(av_packet);
-                status.inputStreams[sidx].packets.push_back(pktcopy);
+                inputStreams[sidx].packets.push_back(pktcopy);
             }
 
         } else { //nothing left in input format, terminate the process, dump frames from decoder buffer
@@ -175,17 +175,15 @@ void FFmpegReader::read(ImageYuv& frame, Stats& status) {
                 break;
 
             } else { //we still got a frame
-                status.endOfInput = false;
+                endOfInput = false;
                 break;
             }
         }
     }
 
-    if (!status.endOfInput) {
+    if (endOfInput == false) {
         //convert to YUV444 data
-        int64_t idx = -1;
-        frame.frameIdx = -1; // av_frame->coded_picture_number; //deprecated
-        frame.index = status.frameReadIndex;
+        frame.index = this->frameIndex;
         int w = av_codec_ctx->width;
         int h = av_codec_ctx->height;
 
@@ -203,14 +201,14 @@ void FFmpegReader::read(ImageYuv& frame, Stats& status) {
         sws_scale(sws_scaler_ctx, av_frame->data, av_frame->linesize, 0, av_frame->height, frame_buffer, linesizes);
 
         //store parameters for writer
-        status.packetList.emplace_back(status.frameReadIndex, idx, av_frame->pts, av_frame->pkt_dts, av_frame->duration);
+        packetList.emplace_back(frameIndex, this->frameIndex, av_frame->pts, av_frame->pkt_dts, av_frame->duration);
 
         //in some cases pts values are not in proper sequence, but actual footage seems to be in order
         //in that case just reorder pts values
         //maybe this is a bug in ffmpeg?
-        auto it = status.packetList.end();
+        auto it = packetList.end();
         it--;
-        while (it != status.packetList.begin() && it->pts < std::prev(it)->pts) {
+        while (it != packetList.begin() && it->pts < std::prev(it)->pts) {
             std::swap(it->pts, std::prev(it)->pts);
             it--;
         }
@@ -233,6 +231,12 @@ void FFmpegReader::seek(double fraction) {
 
 void FFmpegReader::rewind() {
     seek(0.0);
+    frameIndex = -1;
+    packetList.clear();
+
+    for (auto& s : inputStreams) {
+        s.packets.clear();
+    }
 }
 
 void FFmpegReader::close() {

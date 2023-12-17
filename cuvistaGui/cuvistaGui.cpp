@@ -48,7 +48,7 @@ cuvistaGui::cuvistaGui(QWidget *parent) : QMainWindow(parent) {
 
     //combo box for encoding options for selected device
     auto fcnEncoding = [&] (int index) {
-        encoderSettings.clear();
+        mEncoderSettings.clear();
         ui.comboEncoding->clear();
 
         std::vector<EncodingOption>& options = mData.deviceList[index]->encodingOptions;
@@ -56,7 +56,7 @@ cuvistaGui::cuvistaGui(QWidget *parent) : QMainWindow(parent) {
             std::string str = std::format("{} - {}", mData.mapDeviceToString[e.device], mData.mapCodecToString[e.codec]);
             QString qs = QString::fromStdString(str);
 
-            encoderSettings.emplace_back(qs, e);
+            mEncoderSettings.emplace_back(qs, e);
             ui.comboEncoding->addItem(qs);
         }
     };
@@ -136,6 +136,23 @@ cuvistaGui::cuvistaGui(QWidget *parent) : QMainWindow(parent) {
     };
     connect(statusLinkLabel, &QLabel::linkActivated, this, fileOpener);
     statusBar()->addWidget(statusLinkLabel);
+
+    //enabling stacked output disables encoder selection and sets cpu encoding
+    auto stackEnable = [&] (int state) {
+        if (state == Qt::Checked) {
+            ui.comboEncoding->setEnabled(false);
+            EncoderSetting es = mEncoderSettings[ui.comboEncoding->currentIndex()];
+            if (es.encoder.device != EncodingDevice::CPU) {
+                int idx = 0;
+                while (mEncoderSettings[idx].encoder.device != EncodingDevice::CPU) idx++;
+                ui.comboEncoding->setCurrentIndex(idx);
+            }
+
+        } else {
+            ui.comboEncoding->setEnabled(true);
+        }
+    };
+    connect(ui.chkStack, &QCheckBox::stateChanged, this, stackEnable);
 }
 
 //open and read new input file
@@ -143,17 +160,16 @@ void cuvistaGui::setInputFile(const QString& filePath) {
     try {
         mReader.close();
         errorLogger.clearErrors();
-        mInputCtx = mReader.open(filePath.toStdString());
-        mInputYUV = ImageYuv(mInputCtx.h, mInputCtx.w);
+        mReader.open(filePath.toStdString());
+        mInputYUV = ImageYuv(mReader.h, mReader.w);
 
-        Stats status;
-        mReader.read(mInputYUV, status); //read first image
+        mReader.read(mInputYUV); //read first image
 
         if (errorLogger.hasNoError()) {
-            mReader.read(mInputYUV, status); //try to read again for second image
+            mReader.read(mInputYUV); //try to read again for second image
         }
 
-        if (errorLogger.hasNoError() && status.endOfInput == false) {
+        if (errorLogger.hasNoError() && mReader.endOfInput == false) {
             mReader.seek(0.1); //try to seek to 10%
         }
 
@@ -164,10 +180,10 @@ void cuvistaGui::setInputFile(const QString& filePath) {
         mInputReady = true;
         updateInputImage();
         statusBar()->showMessage({});
-        StreamInfo info = mInputCtx.videoStreamInfo();
-        std::string frameCount = mInputCtx.frameCount == 0 ? "unknown" : std::to_string(mInputCtx.frameCount);
+        StreamInfo info = mReader.videoStreamInfo();
+        std::string frameCount = mReader.frameCount == 0 ? "unknown" : std::to_string(mReader.frameCount);
         std::string str = std::format("video: {} x {} px @{:.3f} fps ({}:{})\ncodec: {}, duration: {}, frames: {}",
-            mInputCtx.w, mInputCtx.h, mInputCtx.fps(), mInputCtx.fpsNum, mInputCtx.fpsDen, info.codec, info.durationString, frameCount);
+            mReader.w, mReader.h, mReader.fps(), mReader.fpsNum, mReader.fpsDen, info.codec, info.durationString, frameCount);
         ui.texInput->setPlainText(QString::fromStdString(str));
 
     } catch (const AVException& ex) {
@@ -185,7 +201,7 @@ void cuvistaGui::setInputFile(const QString& filePath) {
 void cuvistaGui::seek(double frac) {
     if (mInputReady) {
         mReader.seek(frac);
-        mReader.read(mInputYUV, mData.status);
+        mReader.read(mInputYUV);
         updateInputImage();
     }
 }
@@ -226,18 +242,17 @@ void cuvistaGui::stabilize() {
     mOutputDir = outFile;
 
     //set parameters
-    mData.inputCtx = mInputCtx;
     mData.fileOut = outFile.toStdString();
     mData.deviceRequested = true;
     mData.deviceSelected = ui.comboDevice->currentIndex();
-    EncoderSetting settings = encoderSettings[ui.comboEncoding->currentIndex()];
+    EncoderSetting settings = mEncoderSettings[ui.comboEncoding->currentIndex()];
     mData.requestedEncoding = settings.encoder;
     mData.radsec = ui.spinRadius->value();
     mData.imZoom = ui.spinZoom->value();
     mData.bgmode = ui.radioBlend->isChecked() ? BackgroundMode::BLEND : BackgroundMode::COLOR;
 
-    double val = ui.spinBlend->value() / 100.0;
-    //mData.blendInput.percent = ui.radioBlendLeft->isChecked() ? val : -val;
+    mData.blendInput.enabled = ui.chkStack->isChecked();
+    mData.blendInput.position = ui.slideStack->value() / 100.0;
 
     using uchar = unsigned char;
     mData.bgcol_rgb = { (uchar) mBackgroundColor.red(), (uchar) mBackgroundColor.green(), (uchar) mBackgroundColor.blue() };

@@ -33,7 +33,9 @@ FilterKernel filterKernels[4] = {
 
 
 //constructor
-CpuFrame::CpuFrame(MainData& data) : MovieFrame(data) {
+CpuFrame::CpuFrame(MainData& data, MovieReader& reader, MovieWriter& writer) : 
+	MovieFrame(data, reader, writer) 
+{
 	//buffer to hold input frames in yuv format
 	mYUV.assign(data.bufferCount, ImageYuv(data.h, data.w, data.w));
 
@@ -63,19 +65,19 @@ CpuFrame::CpuFrameItem::CpuFrameItem(MainData& data) {
 }
 
 //read input frame and put into buffer
-void CpuFrame::inputData(ImageYuv& frame) {
-	size_t idx = mStatus.frameInputIndex % mYUV.size();
-	mYUV[idx] = frame;
+void CpuFrame::inputData() {
+	size_t idx = bufferFrame.index % mYUV.size();
+	mYUV[idx] = bufferFrame;
 }
 
-void CpuFrame::createPyramid() {
+void CpuFrame::createPyramid(int64_t frameIndex) {
 	//ConsoleTimer ic("pyramid");
-	size_t pyrIdx = mStatus.frameInputIndex % mPyr.size();
+	size_t pyrIdx = frameIndex % mPyr.size();
 	CpuFrameItem& frame = mPyr[pyrIdx];
-	frame.frameIndex = mStatus.frameInputIndex;
+	frame.frameIndex = frameIndex;
 
 	//fill topmost level of pyramid
-	size_t yuvIdx = mStatus.frameInputIndex % mYUV.size();
+	size_t yuvIdx = frameIndex % mYUV.size();
 	ImageYuv& yuv = mYUV[yuvIdx];
 	float f = 1.0f / 255.0f;
 	Matf& y0 = frame.mY[0];
@@ -101,11 +103,11 @@ void CpuFrame::createPyramid() {
 	//if (status.frameInputIndex == 1) frame.Y[1].saveAsBinary("f:/cpu.dat");
 }
 
-void CpuFrame::computeStart() {}
+void CpuFrame::computeStart(int64_t frameIndex) {}
 
-void CpuFrame::computeTerminate() {
-	size_t pyrIdx = mStatus.frameInputIndex % mPyr.size();
-	size_t pyrIdxPrev = (mStatus.frameInputIndex - 1) % mPyr.size();
+void CpuFrame::computeTerminate(int64_t frameIndex) {
+	size_t pyrIdx = frameIndex % mPyr.size();
+	size_t pyrIdxPrev = (frameIndex - 1) % mPyr.size();
 	CpuFrameItem& frame = mPyr[pyrIdx];
 	CpuFrameItem& previous = mPyr[pyrIdxPrev];
 	assert(frame.frameIndex > 0 && frame.frameIndex == previous.frameIndex + 1 && "wrong frames to compute");
@@ -248,7 +250,7 @@ void CpuFrame::computeTerminate() {
 //}
 
 void CpuFrame::outputData(const AffineTransform& trf, OutputContext outCtx) {
-	size_t yuvidx = mStatus.frameWriteIndex % mYUV.size();
+	size_t yuvidx = trf.frameIndex % mYUV.size();
 	const ImageYuv& input = mYUV[yuvidx];
 	for (size_t z = 0; z < 3; z++) {
 		float f = 1.0f / 255.0f;
@@ -296,7 +298,7 @@ void CpuFrame::outputData(const AffineTransform& trf, OutputContext outCtx) {
 			}
 		}
 	}
-	outCtx.outputFrame->frameIdx = mStatus.frameWriteIndex;
+	outCtx.outputFrame->index = trf.frameIndex;
 
 	//when encoding on gpu is selected
 	if (outCtx.encodeCuda) {
@@ -321,12 +323,12 @@ Matf CpuFrame::getPyramid(size_t idx) const {
 	return out;
 }
 
-void CpuFrame::getCurrentInputFrame(ImagePPM& image) {
-	size_t idxIn = (mStatus.frameReadIndex - 1) % mYUV.size();
+void CpuFrame::getInputFrame(int64_t frameIndex, ImagePPM& image) {
+	size_t idxIn = (frameIndex) % mYUV.size();
 	mYUV[idxIn].toPPM(image, mPool);
 }
 
-void CpuFrame::getTransformedOutput(ImagePPM& image) {
+void CpuFrame::getTransformedOutput(int64_t frameIndex, ImagePPM& image) {
 	ImageYuvMat(mData.h, mData.w, mBuffer[0], mBuffer[1], mBuffer[2]).toPPM(image, mPool);
 }
 

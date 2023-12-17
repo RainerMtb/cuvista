@@ -33,8 +33,10 @@ public:
 	std::vector<AffineTransform> mTransformsList;
 	AffineTransform mTransform;
 
-	FrameResult(const MainData& data) : mFiniteResults(data.resultCount) {}
+	FrameResult(const MainData& data) : 
+		mFiniteResults(data.resultCount) 
+	{}
 
 	//compute resulting transformation for this frame
-	const AffineTransform& computeTransform(const std::vector<PointResult>& results, const MainData& data, ThreadPool& threadPool, RNGbase* rng);
+	const AffineTransform& computeTransform(const std::vector<PointResult>& results, const MainData& data, ThreadPool& threadPool, int64_t frameIndex);
 };

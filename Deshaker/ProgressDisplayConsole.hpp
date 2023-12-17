@@ -27,7 +27,7 @@ protected:
 	std::stringstream out;
 	std::ostream* outstream;
 
-	ProgressDisplayConsole(MainData& data);
+	ProgressDisplayConsole(MovieFrame& frame, std::ostream* outstream);
 	void writeMessage(const std::string& str) override;
 
 public:
@@ -42,7 +42,9 @@ private:
 	int numPrinted = 0;
 
 public:
-	ProgressDisplayGraph(MainData& data) : ProgressDisplayConsole(data) {}
+	ProgressDisplayGraph(MovieFrame& frame, std::ostream* outstream) :
+		ProgressDisplayConsole(frame, outstream) 
+	{}
 	void init() override;
 	void update(bool force) override;
 	void terminate() override;
@@ -56,7 +58,9 @@ private:
 	std::string line;
 
 public:
-	ProgressDisplayRewriteLine(MainData& data) : ProgressDisplayConsole(data) {}
+	ProgressDisplayRewriteLine(MovieFrame& frame, std::ostream* outstream) :
+		ProgressDisplayConsole(frame, outstream) 
+	{}
 	void update(bool force) override;
 	void terminate() override;
 };
@@ -69,7 +73,9 @@ private:
 	int64_t lastEncodedFrame = 0;
 
 public:
-	ProgressDisplayDetailed(MainData& data) : ProgressDisplayConsole(data) {}
+	ProgressDisplayDetailed(MovieFrame& frame, std::ostream* outstream) :
+		ProgressDisplayConsole(frame, outstream)
+	{}
 	void update(bool force) override;
 };
 
@@ -77,6 +83,8 @@ public:
 class ProgressDisplayNone : public ProgressDisplay {
 
 public:
-	ProgressDisplayNone(MainData& data) : ProgressDisplay(data, 0) {}
+	ProgressDisplayNone(MovieFrame& frame) :
+		ProgressDisplay(frame) 
+	{}
 	void update(bool force) override {}
 };

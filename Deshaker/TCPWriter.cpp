@@ -27,7 +27,9 @@ struct Sockets {
 	SOCKET mConn {};
 };
 
-TCPWriter::TCPWriter(MainData& data) : RawWriter(data) {
+TCPWriter::TCPWriter(MainData& data, MovieReader& reader) : 
+	RawWriter(data, reader) 
+{
 	sockets = std::make_unique<Sockets>();
 }
 
@@ -68,7 +70,8 @@ void TCPWriter::write() {
 	if (retval < 0 || retval != yuvPacked.size()) {
 		errorLogger.logError(std::format("error sending TCP data #{}", WSAGetLastError()));
 	}
-	mStatus.outputBytesWritten += retval;
+	outputBytesWritten += retval;
+	this->frameIndex++;
 }
 
 TCPWriter::~TCPWriter() {

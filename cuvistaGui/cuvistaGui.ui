@@ -200,7 +200,7 @@
       <property name="minimumSize">
        <size>
         <width>0</width>
-        <height>250</height>
+        <height>240</height>
        </size>
       </property>
       <property name="maximumSize">
@@ -489,7 +489,7 @@
           </sizepolicy>
          </property>
          <property name="text">
-          <string>Blend Source</string>
+          <string>Stack Input/Output</string>
          </property>
         </widget>
        </item>
@@ -499,50 +499,63 @@
           <number>15</number>
          </property>
          <item>
-          <widget class="QRadioButton" name="radioBlendLeft">
+          <widget class="QCheckBox" name="chkStack">
            <property name="toolTip">
-            <string>show original footage on left side</string>
+            <string>stack 3/4 of input and output horizontally</string>
            </property>
            <property name="text">
-            <string>on left side</string>
+            <string>Enable</string>
            </property>
-           <property name="checked">
-            <bool>true</bool>
-           </property>
-           <attribute name="buttonGroup">
-            <string notr="true">buttonGroupBlendSide</string>
-           </attribute>
           </widget>
          </item>
          <item>
-          <widget class="QRadioButton" name="radioBlendRight">
-           <property name="toolTip">
-            <string>show original footage on right side</string>
+          <spacer name="horizontalSpacer_2">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
            </property>
-           <property name="text">
-            <string>on right side</string>
+           <property name="sizeType">
+            <enum>QSizePolicy::Fixed</enum>
            </property>
-           <attribute name="buttonGroup">
-            <string notr="true">buttonGroupBlendSide</string>
-           </attribute>
-          </widget>
-         </item>
-         <item>
-          <widget class="QSpinBox" name="spinBlend">
-           <property name="minimumSize">
+           <property name="sizeHint" stdset="0">
             <size>
-             <width>60</width>
+             <width>10</width>
              <height>0</height>
             </size>
            </property>
-           <property name="toolTip">
-            <string>percentage of width covered by original footage</string>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QSlider" name="slideStack">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
            </property>
-           <property name="suffix">
-            <string> %</string>
+           <property name="maximumSize">
+            <size>
+             <width>16777215</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;indicates what section of input and output is used for stacking&lt;/p&gt;&lt;p&gt;left ... middle ... rightmost part of video&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="minimum">
+            <number>-100</number>
            </property>
            <property name="maximum">
             <number>100</number>
+           </property>
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="lblStack">
+           <property name="text">
+            <string>Position Left/Right</string>
            </property>
           </widget>
          </item>
@@ -686,7 +699,6 @@
  </resources>
  <connections/>
  <buttongroups>
-  <buttongroup name="buttonGroupBlendSide"/>
   <buttongroup name="buttonGroupBackground"/>
  </buttongroups>
 </ui>

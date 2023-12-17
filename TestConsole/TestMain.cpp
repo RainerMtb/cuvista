@@ -23,7 +23,7 @@
 
 int main() {
 	std::cout << "----------------------------" << std::endl << "TestMain:" << std::endl;
-	//check();
+	//imageOutput();
 	//qrdec();
 	//text();
 	//filterCompare();

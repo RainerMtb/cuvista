@@ -16,33 +16,26 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
+#include "Stats.hpp"
 #include <format>
-#include "ProgressDisplay.hpp"
-#include "Util.hpp"
-#include "MovieReader.hpp"
-#include "MovieWriter.hpp"
 
-double ProgressDisplay::progressPercent() {
-	double percentage = std::numeric_limits<double>::quiet_NaN();
-	int64_t frameCount = frame.mReader.frameCount;
-	if (frameCount != 0) {
-		double p = std::abs((300.0 * frame.mReader.frameIndex + 100.0 * frame.mWriter.frameIndex) / 4.0 / frameCount);
-		percentage = std::clamp(p, 0.0, 100.0);
-	}
-	return percentage;
+double ReaderStats::fps() const {
+    return 1.0 * fpsNum / fpsDen;
 }
 
-bool ProgressDisplay::isDue(bool forceUpdate) {
-	auto t = std::chrono::steady_clock::now();
-	if (forceUpdate || t - timePoint > interval) {
-		timePoint = t;
-		return true;
+StreamInfo ReaderStats::streamInfo(AVStream* stream) const {
+    std::string tstr;
+    if (stream->duration != AVERROR(AV_NOPTS_VALUE))
+        tstr = timeString(stream->duration * stream->time_base.num * 1000 / stream->time_base.den);
+    else if (avformatDuration != AVERROR(AV_NOPTS_VALUE))
+        tstr = timeString(avformatDuration * stream->time_base.num / stream->time_base.den);
+    else
+        tstr = "unknown";
 
-	} else {
-		return false;
-	}
+    AVCodecParameters* param = stream->codecpar;
+    return { av_get_media_type_string(param->codec_type), avcodec_get_name(param->codec_id), tstr };
 }
 
-bool ProgressDisplay::isFinite() {
-	return frame.mReader.frameCount != 0;
+StreamInfo ReaderStats::videoStreamInfo() const {
+    return streamInfo(videoStream);
 }

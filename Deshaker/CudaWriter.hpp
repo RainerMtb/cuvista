@@ -41,12 +41,17 @@ private:
 	void encodePackets();
 
 public:
-	CudaFFmpegWriter(MainData& data) : FFmpegFormatWriter(data), nvenc { NvEncoder(data.w, data.h) } {}
+	CudaFFmpegWriter(MainData& data, MovieReader& reader) :
+		FFmpegFormatWriter(data, reader), 
+		nvenc { NvEncoder(data.w, data.h) } 
+	{}
+
 	virtual ~CudaFFmpegWriter() override;
 
 	void open(EncodingOption videoCodec) override;
 	OutputContext getOutputContext() override;
 	void write() override;
 	std::future<void> writeAsync() override;
-	bool terminate(bool init) override;
+	bool startFlushing() override;
+	bool flush() override;
 };

@@ -29,13 +29,28 @@ private:
 	Mat A = Mat<double>::zeros(6, 6);
 	Mat b = Mat<double>::zeros(6, 1);
 
+	static void savePointResults(std::vector<PointResult>::iterator begin, size_t count);
+
 protected:
-	AffineTransform(double m00, double m01, double m02, double m10, double m11, double m12) : Affine2D(m00, m01, m02, m10, m11, m12) {}
+	AffineTransform(int64_t frameIndex, double m00, double m01, double m02, double m10, double m11, double m12) : 
+		Affine2D(m00, m01, m02, m10, m11, m12),
+		frameIndex { frameIndex }
+	{}
+
+	AffineTransform(double m00, double m01, double m02, double m10, double m11, double m12) :
+		AffineTransform(-1, m00, m01, m02, m10, m11, m12) 
+	{}
 
 public:
-	AffineTransform(double scale, double rot, double dx, double dy) : AffineTransform(scale, rot, dx, -rot, scale, dy) {}
+	int64_t frameIndex;
 
-	AffineTransform() : AffineTransform(1, 0, 0, 0) {}
+	AffineTransform(int64_t frameIndex, double scale, double rot, double dx, double dy) :
+		AffineTransform(frameIndex, scale, rot, dx, -rot, scale, dy) 
+	{}
+
+	AffineTransform() : 
+		AffineTransform(-1, 1, 0, 0, 0) 
+	{}
 
 	//compute parameters from gives points
 	void computeAffine(std::vector<PointResult>& points);
@@ -51,7 +66,4 @@ public:
 
 	//convert to cuda struct
 	std::array<double, 6> toArray() const;
-
-private:
-	static void savePointResults(std::vector<PointResult>::iterator begin, size_t count);
 };

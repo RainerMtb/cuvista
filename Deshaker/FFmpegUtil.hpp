@@ -84,25 +84,6 @@ struct Timings {
 	friend std::ostream& operator << (std::ostream& ostream, const Timings& t);
 };
 
-//parameters describing input
-class InputContext {
-
-public:
-	int h = 0, w = 0;
-	int fpsNum = -1, fpsDen = -1;
-	int64_t timeBaseNum = -1, timeBaseDen = -1;
-	int64_t frameCount = 0;
-	int64_t avformatDuration = -1;
-	std::string_view source;
-
-	std::vector<AVStream*> inputStreams;
-	AVStream* videoStream = nullptr;
-
-	double fps() const;
-	StreamInfo videoStreamInfo() const;
-	StreamInfo streamInfo(AVStream* stream) const;
-};
-
 std::string timeString(int64_t millis);
 
 std::string av_make_error(int errnum, const char* msg = "");

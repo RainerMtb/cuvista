@@ -33,7 +33,8 @@ void PipeWriter::write() {
 	if (siz != yuvPacked.size()) {
 		errorLogger.logError("Pipe: error writing data");
 	}
-	mStatus.outputBytesWritten += siz;
+	outputBytesWritten += siz;
+	this->frameIndex++;
 
 	//static std::ofstream out("f:/test.yuv", std::ios::binary);
 	//out.write(yuvPacked.data(), yuvPacked.size());

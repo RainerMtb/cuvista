@@ -65,7 +65,6 @@ private:
     StabilizerThread* mThread = nullptr;
 
     MainData mData;
-    InputContext mInputCtx;
     ImageYuv mInputYUV;
     FFmpegReader mReader;
 
@@ -76,7 +75,7 @@ private:
     bool mInputReady = false;
     bool mOutputReady = false;
 
-    std::vector<EncoderSetting> encoderSettings;
+    std::vector<EncoderSetting> mEncoderSettings;
 
     void updateInputImage();
     void setInputFile(const QString& filename);

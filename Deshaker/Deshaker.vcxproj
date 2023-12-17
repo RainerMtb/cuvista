@@ -162,7 +162,8 @@
     <ClCompile Include="clFunctions.cpp" />
     <ClCompile Include="clMain.cpp" />
     <ClCompile Include="clTest.cpp" />
-    <ClCompile Include="CombinerWriter.cpp" />
+    <ClCompile Include="MainData.cpp" />
+    <ClCompile Include="StackedWriter.cpp" />
     <ClCompile Include="CpuFrame.cpp" />
     <ClCompile Include="CudaWriter.cpp" />
     <ClCompile Include="Deshaker.cpp" />
@@ -170,7 +171,6 @@
     <ClCompile Include="FFmpegFormatWriter.cpp" />
     <ClCompile Include="FFmpegUtil.cpp" />
     <ClCompile Include="KeyboardInput.cpp" />
-    <ClCompile Include="MainData.cpp" />
     <ClCompile Include="NvidiaDriver.cpp" />
     <ClCompile Include="PipeWriter.cpp" />
     <ClCompile Include="ProgressDisplayConsole.cpp" />
@@ -182,6 +182,7 @@
     <ClCompile Include="NvEncoder.cpp" />
     <ClCompile Include="ProgressDisplay.cpp" />
     <ClCompile Include="MovieWriter.cpp" />
+    <ClCompile Include="Stats.cpp" />
     <ClCompile Include="TCPWriter.cpp" />
     <ClCompile Include="Trajectory.cpp" />
     <ClCompile Include="Util.cpp" />
@@ -202,8 +203,8 @@
     <ClInclude Include="DeviceInfoCpu.hpp" />
     <ClInclude Include="FFmpegUtil.hpp" />
     <ClInclude Include="KeyboardInput.hpp" />
-    <ClInclude Include="MainData.hpp" />
     <ClInclude Include="DeshakerHelpText.hpp" />
+    <ClInclude Include="MainData.hpp" />
     <ClInclude Include="MovieWriter.hpp" />
     <ClInclude Include="NvidiaDriver.hpp" />
     <ClInclude Include="OpenClFrame.hpp" />

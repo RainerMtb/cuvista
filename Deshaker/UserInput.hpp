@@ -31,11 +31,11 @@ public:
 		return current == UserInputEnum::CONTINUE;
 	}
 
-	virtual void setCurrentState() = 0;
+	virtual void checkState() = 0;
 };
 
 class UserInputDefault : public UserInput {
 
 public:
-	void setCurrentState() override {}
+	void checkState() override {}
 };

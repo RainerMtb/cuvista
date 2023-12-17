@@ -17,7 +17,7 @@ void CudaFFmpegWriter::open(EncodingOption videoCodec) {
     FFmpegFormatWriter::open(videoCodec);
 
     //setup nvenc class
-    nvenc.createEncoder(mData.inputCtx.fpsNum, mData.inputCtx.fpsDen, GOP_SIZE, mData.crf, guid, dic->cudaIndex);
+    nvenc.createEncoder(mReader.fpsNum, mReader.fpsDen, GOP_SIZE, mData.crf, guid, dic->cudaIndex);
 
     //setup codec parameters for ffmpeg format output
     AVCodecParameters* params = videoStream->codecpar;
@@ -90,6 +90,7 @@ void CudaFFmpegWriter::write() {
     for (NvPacket& nvpkt : nvPackets) {
         writePacketToFile(nvpkt, false);
     }
+    this->frameIndex++;
 }
 
 
@@ -102,20 +103,20 @@ std::future<void> CudaFFmpegWriter::writeAsync() {
             writePacketToFile(nvpkt, false);
         }
     };
+    this->frameIndex++;
     return std::async(std::launch::async, fcn);
 }
 
 
 //flush encoder buffer
-bool CudaFFmpegWriter::terminate(bool init) {
-    if (init) {
-        //notify encoder to flush
-        nvenc.endEncode();
+bool CudaFFmpegWriter::startFlushing() {
+    nvenc.endEncode();
+    return nvenc.hasBufferedFrame();
+}
 
-    } else {
-        //get remaining frames one by one
-        writePacketToFile(nvenc.getBufferedFrame(), true);
-    }
+
+bool CudaFFmpegWriter::flush() {
+    writePacketToFile(nvenc.getBufferedFrame(), true);
     return nvenc.hasBufferedFrame();
 }
 

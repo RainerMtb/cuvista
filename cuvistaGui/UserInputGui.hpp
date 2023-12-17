@@ -23,5 +23,5 @@
 class UserInputGui : public UserInput {
 
 public:
-    void setCurrentState() override;
+    void checkState() override;
 };

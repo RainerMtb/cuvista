@@ -21,6 +21,7 @@
 #include "KeyboardInput.hpp"
 #include "NvidiaDriver.hpp"
 #include "NvEncoder.hpp"
+#include "MovieReader.hpp"
 
 #include <algorithm>
 #include <regex>
@@ -29,7 +30,7 @@
 #include <filesystem>
 
 
-//CUDA Info
+ //CUDA Info
 std::ostream& operator << (std::ostream& os, const DeviceInfoCuda& info) {
 	os << "Device Name:          " << info.props.name << std::endl;
 	os << "Compute Version:      " << info.props.major << "." << info.props.minor << std::endl;
@@ -91,6 +92,18 @@ bool MainData::checkFileForWriting(const std::string& file, DecideYNA permission
 	return true;
 }
 
+//start overall timing
+void MainData::timeStart() {
+	timePoint = std::chrono::high_resolution_clock::now();
+}
+
+//elapsed time in seconds
+double MainData::timeElapsedSeconds() const {
+	auto timeNow = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double> secs = timeNow - timePoint;
+	return secs.count();
+}
+
 void MainData::probeInput(std::vector<std::string> argsInput) {
 	//vector args contains command line parameters
 	Parameters args(argsInput);
@@ -149,11 +162,7 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 
 		} else if (args.nextArg("pass", next)) {
 			int p = std::stoi(next);
-			if (p == 0) { pass = DeshakerPass::COMBINED; } 
-			else if (p == 1) { pass = DeshakerPass::FIRST_PASS; } 
-			else if (p == 2) { pass = DeshakerPass::SECOND_PASS; } 
-			else if (p == 12) { pass = DeshakerPass::CONSECUTIVE; } 
-			else throw AVException("invalid value for pass: " + next);
+			if (p == 0) { pass = DeshakerPass::COMBINED; } else if (p == 1) { pass = DeshakerPass::FIRST_PASS; } else if (p == 2) { pass = DeshakerPass::SECOND_PASS; } else if (p == 12) { pass = DeshakerPass::CONSECUTIVE; } else throw AVException("invalid value for pass: " + next);
 
 		} else if (args.nextArg("radius", next)) {
 			//temporal radius in seconds before and after current frame
@@ -269,7 +278,7 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 			else if (std::stoi(next) == 3) rng = std::make_unique<RNG<std::default_random_engine>>();
 			else throw AVException("invalid random generator selection: " + next);
 
-		} else if (args.nextArg("blendsource", next)) {
+		} else if (args.nextArg("stack", next)) {
 			double val = std::stod(next);
 			if (val >= -1.0 && val <= 1.0) {
 				blendInput.enabled = true;
@@ -367,11 +376,7 @@ void MainData::collectDeviceInfo() {
 	}
 }
 
-void MainData::validate() {
-	status.inputStreams.clear();
-	for (AVStream* st : inputCtx.inputStreams) {
-		status.inputStreams.push_back({ st });
-	}
+void MainData::validate(const MovieReader& reader) {
 	//get numeric limits
 	this->deps = std::numeric_limits<double>::epsilon();
 	this->dmax = std::numeric_limits<double>::max();
@@ -379,16 +384,15 @@ void MainData::validate() {
 	this->dnan = std::numeric_limits<double>::quiet_NaN();
 
 	//main metrics
-	this->w = inputCtx.w;
-	this->h = inputCtx.h;
-	this->frameCount = inputCtx.frameCount;
+	this->w = reader.w;
+	this->h = reader.h;
 
 	//no output to console if frame output through pipe
 	if (videoOutputType == OutputType::PIPE) progressType = ProgressType::NONE;
 
 	//number of frames to buffer
-	this->radius = (int) std::round(radsec * inputCtx.fpsNum / inputCtx.fpsDen);
-	this->bufferCount = radius + 3;
+	this->radius = (int) std::round(radsec * reader.fpsNum / reader.fpsDen);
+	this->bufferCount = radius + 2;
 
 	//pyramid levels to compute
 	this->zMax = this->zCount - 1;
@@ -444,7 +448,7 @@ void MainData::validate() {
 	if (radius < limits.radiusMin || radius > limits.radiusMax) throw AVException("invalid image radius: " + std::to_string(radius));
 	if (w < limits.wMin) throw AVException("invalid input video width: " + std::to_string(w));
 	if (h < limits.hMin) throw AVException("invalid input video height: " + std::to_string(h));
-	if (deviceSelected >= deviceList.size()) throw AVException("invalid device selected: "  + std::to_string(deviceSelected));
+	if (deviceSelected >= deviceList.size()) throw AVException("invalid device selected: " + std::to_string(deviceSelected));
 	size_t mp = deviceList[deviceSelected]->maxPixel;
 	if (w > mp) throw AVException("frame width exceeds maximum of " + std::to_string(mp) + " px");
 	if (h > mp) throw AVException("frame height exceeds maximum of " + std::to_string(mp) + " px");
@@ -455,7 +459,7 @@ void MainData::validate() {
 }
 
 //show info about input and output
-void MainData::showIntro(const std::string& deviceName) const {
+void MainData::showIntro(const std::string& deviceName, const MovieReader& reader) const {
 	//input source
 	*console << "FILE IN: " << fileIn << std::endl;
 
@@ -466,21 +470,21 @@ void MainData::showIntro(const std::string& deviceName) const {
 		{StreamHandling::STREAM_STABILIZE, "stabilize"},
 		{StreamHandling::STREAM_TRANSCODE, "transcode"},
 	};
-	for (size_t i = 0; i < status.inputStreams.size(); i++) {
-		StreamContext sc = status.inputStreams[i];
-		StreamInfo info = inputCtx.streamInfo(sc.inputStream);
-		*console << "  Stream " << i 
-			<< ": type: " << info.streamType 
-			<< ", codec: " << info.codec 
-			<< ", duration: " << info.durationString 
+	for (size_t i = 0; i < reader.inputStreams.size(); i++) {
+		StreamContext sc = reader.inputStreams[i];
+		StreamInfo info = reader.streamInfo(sc.inputStream);
+		*console << "  Stream " << i
+			<< ": type: " << info.streamType
+			<< ", codec: " << info.codec
+			<< ", duration: " << info.durationString
 			<< " --> " << handlerMap.at(sc.handling)
 			<< std::endl;
 	}
 
 	//video info
 	*console << "VIDEO w=" << w << ", h=" << h
-		<< ", frames total=" << (frameCount == 0 ? "unknown" : std::to_string(frameCount))
-		<< ", fps=" << inputCtx.fps() << " (" << inputCtx.fpsNum << ":" << inputCtx.fpsDen << ")" 
+		<< ", frames total=" << (reader.frameCount == 0 ? "unknown" : std::to_string(reader.frameCount))
+		<< ", fps=" << reader.fps() << " (" << reader.fpsNum << ":" << reader.fpsDen << ")"
 		<< ", radius=" << radius
 		<< std::endl;
 
@@ -624,8 +628,4 @@ void MainData::probeOpenCl() {
 
 size_t MainData::deviceCountOpenCl() const {
 	return clinfo.devices.size();
-}
-
-void MainData::reset() {
-	status.reset();
 }

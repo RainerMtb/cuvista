@@ -45,24 +45,20 @@ private:
 
 		data.fileIn = file;
 		FFmpegReader reader;
-		data.inputCtx = reader.open(file);
-		data.validate();
-		NullWriter writer(data);
-		std::unique_ptr<MovieFrame> frame = std::make_unique<T>(data);
+		reader.open(file);
+		data.validate(reader);
+		NullWriter writer(data, reader);
+		std::unique_ptr<MovieFrame> frame = std::make_unique<T>(data, reader, writer);
 
-		Stats& status = data.status;
-		status.reset();
-		reader.read(frame->bufferFrame, status);
-		status.frameReadIndex++;
-		frame->inputData(frame->bufferFrame);
-		frame->createPyramid();
-		status.frameInputIndex++;
+		reader.read(frame->bufferFrame);
+		frame->inputData();
+		frame->createPyramid(reader.frameIndex);
 
-		reader.read(frame->bufferFrame, status);
-		frame->inputData(frame->bufferFrame);
-		frame->createPyramid();
-		frame->computeStart();
-		frame->computeTerminate();
+		reader.read(frame->bufferFrame);
+		frame->inputData();
+		frame->createPyramid(reader.frameIndex);
+		frame->computeStart(reader.frameIndex);
+		frame->computeTerminate(reader.frameIndex);
 		frame->outputData(trf, writer.getOutputContext());
 		return frame;
 	}
@@ -143,7 +139,7 @@ public:
 		for (int i = 0; i < siz; i++) {
 			FrameResult frameResult(dataCpu);
 			std::unique_ptr<RNGbase> rng = std::make_unique<RNG<RandomSource>>();
-			frameResult.computeTransform(frameCpu->resultPointsOld, dataCpu, pool, rng.get());
+			frameResult.computeTransform(frameCpu->resultPoints, dataCpu, pool, -1);
 			trfs[i] = frameResult.mTransform;
 		}
 
@@ -163,7 +159,7 @@ public:
 		std::unique_ptr<RNGbase> rng = std::make_unique<RNG<std::default_random_engine>>();
 		for (int i = 0; i < siz; i++) {
 			FrameResult frameResult(dataCpu);
-			frameResult.computeTransform(frameCpu->resultPointsOld, dataCpu, pool, rng.get());
+			frameResult.computeTransform(frameCpu->resultPoints, dataCpu, pool, -1);
 			trfs[i] = frameResult.mTransform;
 		}
 

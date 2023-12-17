@@ -34,22 +34,18 @@ void filter() {
 	std::cout << "elapsed " << sec * 1000 << std::endl;
 }
 
-void runInit(MainData& data, std::unique_ptr<MovieFrame>& frame, AffineTransform& trf, MovieReader* reader, MovieWriter* writer) {
-	Stats& status = data.status;
-	status.reset();
-	reader->read(frame->bufferFrame, status);
-	status.frameReadIndex++;
-	frame->inputData(frame->bufferFrame);
-	frame->createPyramid();
-	status.frameInputIndex++;
+void runInit(MainData& data, std::unique_ptr<MovieFrame>& frame, AffineTransform& trf) {
+	frame->mReader.read(frame->bufferFrame);
+	frame->inputData();
+	frame->createPyramid(frame->mReader.frameIndex);
 
-	reader->read(frame->bufferFrame, status);
-	frame->inputData(frame->bufferFrame);
-	frame->createPyramid();
+	frame->mReader.read(frame->bufferFrame);
+	frame->inputData();
+	frame->createPyramid(frame->mReader.frameIndex);
 
-	frame->computeStart();
-	frame->computeTerminate();
-	frame->outputData(trf, writer->getOutputContext());
+	frame->computeStart(frame->mReader.frameIndex);
+	frame->computeTerminate(frame->mReader.frameIndex);
+	frame->outputData(trf, frame->mWriter.getOutputContext());
 }
 
 void filterCompare() {
@@ -59,6 +55,7 @@ void filterCompare() {
 	std::unique_ptr<MovieFrame> gpu, cpu;
 	AffineTransform trf;
 	trf.addRotation(0.2).addTranslation(-40, 30);
+	trf.frameIndex = 0;
 	Matd::precision(16);
 
 	{
@@ -67,23 +64,24 @@ void filterCompare() {
 		dataGpu.collectDeviceInfo();
 		dataGpu.fileIn = file;
 		FFmpegReader reader;
-		dataGpu.inputCtx = reader.open(file);
-		dataGpu.validate();
-		NullWriter writer(dataGpu);
-		gpu = std::make_unique<CudaFrame>(dataGpu);
-		runInit(dataGpu, gpu, trf, &reader, &writer);
+		reader.open(file);
+		dataGpu.validate(reader);
+		NullWriter writer(dataGpu, reader);
+		gpu = std::make_unique<CudaFrame>(dataGpu, reader, writer);
+		runInit(dataGpu, gpu, trf);
 	}
 	{
 		//CPU
+		dataCpu.collectDeviceInfo();
 		dataCpu.deviceRequested = true;
 		dataCpu.deviceSelected = 0;
 		dataCpu.fileIn = file;
 		FFmpegReader reader;
-		dataCpu.inputCtx = reader.open(file);
-		dataCpu.validate();
-		NullWriter writer(dataCpu);
-		cpu = std::make_unique<CpuFrame>(dataCpu);
-		runInit(dataCpu, cpu, trf, &reader, &writer);
+		reader.open(file);
+		dataCpu.validate(reader);
+		NullWriter writer(dataCpu, reader);
+		cpu = std::make_unique<CpuFrame>(dataCpu, reader, writer);
+		runInit(dataCpu, cpu, trf);
 	}
 
 	std::vector pc = cpu->resultPoints;

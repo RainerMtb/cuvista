@@ -19,7 +19,7 @@
 #include "UserInputGui.hpp"
 #include <QThread>
 
-void UserInputGui::setCurrentState() {
+void UserInputGui::checkState() {
     //listen for interruption request from ui, set user input enum to be handled later by deshaker loop
     if (QThread::currentThread()->isInterruptionRequested()) {
         current = UserInputEnum::QUIT;

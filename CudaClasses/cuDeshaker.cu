@@ -515,7 +515,7 @@ void cudaOutput(int64_t frameIdx, const CudaData& core, OutputContext outCtx, st
 		cu::outputHost(out.final, core.strideFloat4N, d_yuvOut, core.strideChar, w, h, cs[1]);
 		ImageYuv* im = outCtx.outputFrame;
 		cu::copy_32f_3(d_yuvOut, core.strideChar, im->data(), im->stride, w, h * 3, cs[1]);
-		outCtx.outputFrame->frameIdx = frameIdx;
+		outCtx.outputFrame->index = frameIdx;
 	}
 	//output to nvenc if requested
 	if (outCtx.encodeCuda) {

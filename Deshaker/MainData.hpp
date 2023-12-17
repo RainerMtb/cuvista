@@ -21,7 +21,7 @@
 #include "Mat.h"
 #include "AVException.hpp"
 #include "FFmpegUtil.hpp"
-#include "Stats.hpp"
+#include "MovieReader.hpp"
 #include "RandomSource.hpp"
 #include "cuDeshaker.cuh"
 #include "clMain.hpp"
@@ -31,10 +31,10 @@
 inline std::string CUVISTA_VERSION = "0.9.10";
 
 enum class DeshakerPass {
-	NONE, 
-	COMBINED, 
-	FIRST_PASS, 
-	SECOND_PASS, 
+	NONE,
+	COMBINED,
+	FIRST_PASS,
+	SECOND_PASS,
 	CONSECUTIVE
 };
 
@@ -153,7 +153,6 @@ public:
 		int irMin = 0, irMax = 7;
 	} limits;
 
-	Stats status;
 	DeviceInfoCpu deviceInfoCpu;
 	std::vector<DeviceInfo*> deviceList;
 	CudaInfo cudaInfo;
@@ -161,7 +160,6 @@ public:
 	bool deviceRequested = false;
 	size_t deviceSelected = 0;
 
-	InputContext inputCtx;
 	DeshakerPass pass = DeshakerPass::COMBINED;
 
 	//output related
@@ -198,6 +196,8 @@ public:
 	std::unique_ptr<RNGbase> rng = std::make_unique<RNG<RandomSource>>();
 	ColorRgb bgcol_rgb { 0, 50, 0 };
 
+	std::chrono::steady_clock::time_point timePoint;
+
 	//------------------------------------
 	// METHODS
 	//------------------------------------
@@ -210,19 +210,21 @@ public:
 
 	void collectDeviceInfo();
 
-	void validate();
-
-	void showIntro(const std::string& deviceName) const;
-
+	void validate(const MovieReader& reader);
+	
 	void showBasicInfo() const;
 
 	void showDeviceInfo();
-	
+
+	void showIntro(const std::string& deviceName, const MovieReader& reader) const;
+
 	std::ostream& showDeviceInfo(std::ostream& os) const;
 
 	size_t deviceCountCuda() const;
 
 	size_t deviceCountOpenCl() const;
 
-	void reset();
+	void timeStart();
+
+	double timeElapsedSeconds() const;
 };

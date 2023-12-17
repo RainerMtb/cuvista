@@ -18,7 +18,7 @@
 
 #include "MovieWriter.hpp"
 
-void CombinerWriter::open(EncodingOption videoCodec) {
+void StackedWriter::open(EncodingOption videoCodec) {
 	FFmpegWriter::open(videoCodec, widthTotal, mData.h);
 
 	ColorYuv bgcol = mData.bgcol_rgb.toYuv();
@@ -27,12 +27,12 @@ void CombinerWriter::open(EncodingOption videoCodec) {
 	}
 }
 
-OutputContext CombinerWriter::getOutputContext() {
+OutputContext StackedWriter::getOutputContext() {
 	return { true, false, &outputFrame, nullptr, 0, true, &inputFrame };
 }
 
-void CombinerWriter::write() {
-	int offset = int(mData.w * (1 + mData.blendInput.position) / 6);
+void StackedWriter::write() {
+	int offset = int(mData.w * (1 + mData.blendInput.position) / 8);
 	unsigned char* in = inputFrame.data() + offset;
 	unsigned char* out = outputFrame.data() + offset;
 	unsigned char* dest = combinedFrame.data();
@@ -42,7 +42,7 @@ void CombinerWriter::write() {
 		std::copy(in, in + combinedFrame.w / 2, dest);
 		//output frame on right side
 		std::copy(out, out + combinedFrame.w / 2, dest + combinedFrame.w / 2);
-		//separator in background color
+		//middle 1% of width in background color
 		for (int col = combinedFrame.w * 99 / 200; col < combinedFrame.w * 101 / 200; col++) {
 			dest[col] = bg[row];
 		}
@@ -53,4 +53,5 @@ void CombinerWriter::write() {
 	}
 
 	FFmpegWriter::write(combinedFrame);
+	this->frameIndex++;
 }

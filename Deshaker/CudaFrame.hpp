@@ -27,11 +27,13 @@ private:
 	DeviceInfoCuda* device;
 
 public:
-	CudaFrame(MainData& data) : MovieFrame(data) {
+	CudaFrame(MainData& data, MovieReader& reader, MovieWriter& writer) : 
+		MovieFrame(data, reader, writer) 
+	{
 		DeviceInfo* dev = data.deviceList[data.deviceSelected];
 		assert(dev->type == DeviceType::CUDA && "device type must be CUDA here");
 		device = static_cast<DeviceInfoCuda*>(dev);
-		cudaInit(data, device->cudaIndex, device->props, inputFrame);
+		cudaInit(data, device->cudaIndex, device->props, bufferFrame);
 	}
 
 	~CudaFrame() {
@@ -40,24 +42,24 @@ public:
 		cudaShutdown(mData);
 	}
 
-	void inputData(ImageYuv& frame) override {
-		cudaReadFrame(mStatus.frameInputIndex, mData, frame);
+	void inputData() override {
+		cudaReadFrame(bufferFrame.index, mData, bufferFrame);
 	}
 
-	void createPyramid() override {
-		cudaCreatePyramid(mStatus.frameInputIndex, mData);
+	void createPyramid(int64_t frameIndex) override {
+		cudaCreatePyramid(frameIndex, mData);
 	}
 
-	void computeStart() override {
-		cudaCompute(mStatus.frameInputIndex, mData, device->props);
+	void computeStart(int64_t frameIndex) override {
+		cudaCompute(frameIndex, mData, device->props);
 	}
 
-	void computeTerminate() override {
-		cudaComputeTerminate(mStatus.frameInputIndex, mData, resultPoints);
+	void computeTerminate(int64_t frameIndex) override {
+		cudaComputeTerminate(frameIndex, mData, resultPoints);
 	}
 
 	void outputData(const AffineTransform& trf, OutputContext outCtx) override {
-		cudaOutput(mStatus.frameWriteIndex, mData, outCtx, trf.toArray());
+		cudaOutput(trf.frameIndex, mData, outCtx, trf.toArray());
 	}
 
 	Mat<float> getTransformedOutput() const override {
@@ -76,11 +78,11 @@ public:
 		return cudaGetInput(index, mData);
 	}
 
-	void getCurrentInputFrame(ImagePPM& image) override {
-		cudaGetCurrentInputFrame(image, mData, mStatus.frameReadIndex - 1);
+	void getInputFrame(int64_t frameIndex, ImagePPM& image) override {
+		cudaGetCurrentInputFrame(image, mData, frameIndex);
 	}
 
-	void getTransformedOutput(ImagePPM& image) override {
+	void getTransformedOutput(int64_t frameIndex, ImagePPM& image) override {
 		cudaGetTransformedOutput(image, mData);
 	}
 

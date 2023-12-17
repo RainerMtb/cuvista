@@ -17,19 +17,14 @@
  */
 
 #include "MovieFrame.hpp"
+#include "ProgressDisplay.hpp"
 
 MovieFrame::~MovieFrame() {
 	mPool.shutdown(); //shutdown threads
 }
 
-const AffineTransform& MovieFrame::computeTransform(std::vector<PointResult> resultPoints) {
-	return mFrameResult.computeTransform(resultPoints, mData, mPool, mData.rng.get());
-}
-
-void MovieFrame::outputSecondary(Writers& writers, int64_t frameIndex) {
-	for (auto& writer : writers) {
-		writer->write(this, frameIndex);
-	}
+const AffineTransform& MovieFrame::computeTransform(int64_t frameIndex) {
+	return mFrameResult.computeTransform(resultPoints, mData, mPool, frameIndex);
 }
 
 std::map<int64_t, TransformValues> MovieFrame::readTransforms() {
@@ -41,13 +36,13 @@ std::map<int64_t, TransformValues> MovieFrame::readTransforms() {
 //---------- DUMMY FRAME ----------------------------------------------
 //---------------------------------------------------------------------
 
-void DummyFrame::inputData(ImageYuv& frame) {
-	size_t idx = mStatus.frameInputIndex % frames.size();
-	frames[idx] = frame;
+void DummyFrame::inputData() {
+	size_t idx = bufferFrame.index % frames.size();
+	frames[idx] = bufferFrame;
 }
 
 void DummyFrame::outputData(const AffineTransform& trf, OutputContext outCtx) {
-	ImageYuv& frameToEncode = frames[mStatus.frameWriteIndex % frames.size()];
+	ImageYuv& frameToEncode = frames[trf.frameIndex % frames.size()];
 
 	if (outCtx.encodeCpu) {
 		*outCtx.outputFrame = frameToEncode;
@@ -67,246 +62,220 @@ ImageYuv DummyFrame::getInput(int64_t index) const {
 //---------- DESHAKER LOOPS  ------------------------------------------
 //---------------------------------------------------------------------
 
-void MovieFrame::runLoop(DeshakerPass pass, ProgressDisplay& progress, MovieReader& reader, MovieWriter& writer, UserInput& input, Writers& writers) {
-	if (pass == DeshakerPass::COMBINED) runLoopCombined(progress, reader, writer, input, writers);
-	else if (pass == DeshakerPass::FIRST_PASS) runLoopFirst(progress, reader, writer, input, writers);
-	else if (pass == DeshakerPass::SECOND_PASS) runLoopSecond(progress, reader, writer, input, writers);
-	else if (pass == DeshakerPass::CONSECUTIVE) runLoopConsecutive(progress, reader, writer, input, writers);
+void MovieFrame::runLoop(DeshakerPass pass, ProgressDisplay& progress, UserInput& input, AuxWriters& auxWriters) {
+	if (pass == DeshakerPass::COMBINED) runLoopCombined(progress, input, auxWriters);
+	else if (pass == DeshakerPass::FIRST_PASS) runLoopFirst(progress, input, auxWriters);
+	else if (pass == DeshakerPass::SECOND_PASS) runLoopSecond(progress, input, auxWriters);
+	else if (pass == DeshakerPass::CONSECUTIVE) runLoopConsecutive(progress, input, auxWriters);
 	else throw AVException("loop not implemented");
 }
 
-void MovieFrame::runLoopCombined(ProgressDisplay& progress, MovieReader& reader, MovieWriter& writer, UserInput& input, Writers& secondaryWriters) {
-	//init
-	if (errorLogger.hasNoError()) reader.read(bufferFrame, mStatus);
-	if (errorLogger.hasNoError() && mData.showHeader) mData.showIntro(name());
+void MovieFrame::loopInit(ProgressDisplay& progress, const std::string& message) {
+	//read first frame from input into buffer
+	if (errorLogger.hasNoError()) mReader.read(bufferFrame);
+	//show program header on console
+	if (errorLogger.hasNoError() && mData.showHeader) mData.showIntro(name(), mReader);
+	//init progress display
 	progress.init();
+	progress.writeMessage(message);
 	progress.update();
 
 	//first pyramid
-	if (errorLogger.hasNoError() && mStatus.endOfInput == false) {
-		inputData(bufferFrame); //input first frame
-		createPyramid();
-		mStatus.frameReadIndex++;
-		reader.read(bufferFrame, mStatus); //read second frame
-
-		mStatus.frameInputIndex++;
+	if (errorLogger.hasNoError() && mReader.endOfInput == false) {
+		inputData(); //input first frame
+		createPyramid(mReader.frameIndex);
+		mReader.read(bufferFrame); //read second frame
 		progress.update();
 	}
+}
+
+void MovieFrame::loopTerminate(ProgressDisplay& progress, UserInput& input, AuxWriters& auxWriters) {
+	//flush writer buffer
+	bool hasFrame = mWriter.startFlushing();
+	while (errorLogger.hasNoError() && input.current < UserInputEnum::HALT && hasFrame) {
+		hasFrame = mWriter.flush();
+		progress.update();
+	}
+	progress.update(true);
+}
+
+//loop to handle input - stabilization - output in one go
+void MovieFrame::runLoopCombined(ProgressDisplay& progress, UserInput& input, AuxWriters& auxWriters) {
+	loopInit(progress);
 
 	//fill input buffer and compute transformations
-	while (mStatus.doContinue() && input.doContinue() && mStatus.frameReadIndex < mData.maxFrames && mStatus.frameInputIndex + 1 < mData.bufferCount) {
-		inputData(bufferFrame);
-		createPyramid();
-		computeTransform(resultPointsOld);
-		mTrajectory.addTrajectoryTransform(mFrameResult.mTransform, mStatus.frameInputIndex - 1);
-		outputSecondary(secondaryWriters, mStatus.frameInputIndex - 1);
-
-		computeStart();
-		computeTerminate();
-		std::swap(resultPointsOld, resultPoints);
-
-		mStatus.frameReadIndex++;
-		reader.read(bufferFrame, mStatus);
-		mStatus.frameInputIndex++;
-		progress.update();
+	while (errorLogger.hasNoError() && mReader.endOfInput == false && input.doContinue() && mReader.frameIndex < mData.bufferCount - 1) {
+		//process current frame
+		inputData();
+		createPyramid(mReader.frameIndex);
+		//transform for previous frame
+		computeTransform(mReader.frameIndex - 1);
+		mTrajectory.addTrajectoryTransform(mFrameResult.mTransform);
+		auxWriters.writeAll();
+		//compute flow for current frame
+		computeStart(mReader.frameIndex);
+		computeTerminate(mReader.frameIndex);
+		//read next frame into buffer
+		mReader.read(bufferFrame);
 
 		//check if there is input on the console
-		input.setCurrentState();
+		input.checkState();
+		progress.update();
 	}
 
 	//main loop
 	//read data and compute frame results
-	while (mStatus.doContinue() && input.doContinue() && mStatus.frameReadIndex < mData.maxFrames) {
+	while (errorLogger.hasNoError() && mReader.endOfInput == false && input.doContinue()) {
 		//util::ConsoleTimer t_fr("frame");
-		assert(mStatus.frameInputIndex % mData.bufferCount != mStatus.frameWriteIndex % mData.bufferCount && "accessing the same buffer for read and write");
+		assert(mReader.frameIndex % mData.bufferCount != mWriter.frameIndex % mData.bufferCount && "accessing the same buffer for read and write");
 		std::vector<std::future<void>> futures;
-		std::swap(bufferFrame, inputFrame);
-		mStatus.frameReadIndex++;
-		futures.push_back(reader.readAsync(bufferFrame, mStatus));
+		//process current frame
+		inputData();
+		createPyramid(mReader.frameIndex);
+		computeStart(mReader.frameIndex);
+		//transform for previous frame while results for current frame are computed
+		computeTransform(mReader.frameIndex - 1);
+		mTrajectory.addTrajectoryTransform(mFrameResult.mTransform);
+		const AffineTransform& finalTransform = mTrajectory.computeSmoothTransform(mData, mWriter.frameIndex);
+		outputData(finalTransform, mWriter.getOutputContext());
 
-		inputData(inputFrame);
-		createPyramid();
-		computeStart();
-		computeTransform(resultPointsOld);
-		mTrajectory.addTrajectoryTransform(mFrameResult.mTransform, mStatus.frameInputIndex - 1);
-		const AffineTransform& finalTransform = mTrajectory.computeTransformForFrame(mData, mStatus.frameWriteIndex);
-		outputData(finalTransform, writer.getOutputContext());
-		outputSecondary(secondaryWriters, mStatus.frameInputIndex - 1);
-		futures.push_back(writer.writeAsync());
-
-		computeTerminate();
+		futures.push_back(mWriter.writeAsync());
+		auxWriters.writeAll();
+		//get computed flow for current frame
+		computeTerminate(mReader.frameIndex);
 
 		futures.clear(); //wait for futures to terminate
-		std::swap(resultPointsOld, resultPoints);
-		mStatus.frameWriteIndex++;
-		mStatus.frameInputIndex++;
-		progress.update();
+		//read next frame into buffer
+		mReader.read(bufferFrame);
 
 		//check if there is input on the console
-		input.setCurrentState();
+		input.checkState();
+		progress.update();
 	}
 
 	//process last frame in buffer
 	if (errorLogger.hasNoError() && input.current <= UserInputEnum::END) {
-		computeTransform(resultPointsOld);
-		mTrajectory.addTrajectoryTransform(mFrameResult.mTransform, mStatus.frameInputIndex - 1);
-
-		assert(mStatus.frameInputIndex % mData.bufferCount != mStatus.frameWriteIndex % mData.bufferCount && "accessing the same buffer for read and write");
-		const AffineTransform& finalTransform = mTrajectory.computeTransformForFrame(mData, mStatus.frameWriteIndex);
-		outputData(finalTransform, writer.getOutputContext());
-		outputSecondary(secondaryWriters, mStatus.frameInputIndex - 1);
-		writer.write();
-		mStatus.frameWriteIndex++;
+		computeTransform(mReader.frameIndex);
+		mTrajectory.addTrajectoryTransform(mFrameResult.mTransform);
+		const AffineTransform& finalTransform = mTrajectory.computeSmoothTransform(mData, mWriter.frameIndex);
+		outputData(finalTransform, mWriter.getOutputContext());
+		mWriter.write();
+		auxWriters.writeAll();
 		progress.update();
 	}
 
 	//write remaining frames
-	while (errorLogger.hasNoError() && mStatus.frameWriteIndex < mStatus.frameInputIndex && input.current <= UserInputEnum::END) {
-		assert(mStatus.frameInputIndex % mData.bufferCount != mStatus.frameWriteIndex % mData.bufferCount && "accessing the same buffer for read and write");
-		const AffineTransform& tf = mTrajectory.computeTransformForFrame(mData, mStatus.frameWriteIndex);
-		outputData(tf, writer.getOutputContext());
-		writer.write();
-		mStatus.frameWriteIndex++;
-		progress.update();
+	while (errorLogger.hasNoError() && mWriter.frameIndex < mReader.frameIndex && input.current <= UserInputEnum::END) {
+		const AffineTransform& tf = mTrajectory.computeSmoothTransform(mData, mWriter.frameIndex);
+		outputData(tf, mWriter.getOutputContext());
+		mWriter.write();
 
 		//check if there is input on the console
-		input.setCurrentState();
+		input.checkState();
+		progress.update();
 	}
 
-	//flush writer buffer
-	bool hasFrame = writer.terminate(true);
-	while (errorLogger.hasNoError() && input.current < UserInputEnum::HALT && hasFrame) {
-		hasFrame = writer.terminate();
+	loopTerminate(progress, input, auxWriters);
+}
+
+void MovieFrame::runLoopFirst(ProgressDisplay& progress, UserInput& input, AuxWriters& auxWriters) {
+	mReader.storePackets = false; //do not keep any secondary packets when we do not write output anyway
+	loopInit(progress);
+	mFrameResult.mTransform.frameIndex = 0;
+	mTrajectory.addTrajectoryTransform(mFrameResult.mTransform); //first frame has no transform applied
+	auxWriters.writeAll();
+
+
+	while (errorLogger.hasNoError() && mReader.endOfInput == false && input.doContinue()) {
+		inputData();
+		createPyramid(mReader.frameIndex);
+
+		computeStart(mReader.frameIndex);
+		computeTerminate(mReader.frameIndex);
+		computeTransform(mReader.frameIndex);
+		auxWriters.writeAll();
+		mReader.read(bufferFrame);
+
+		//check if there is input on the console
+		input.checkState();
 		progress.update();
 	}
 	progress.update(true);
 }
 
-void MovieFrame::runLoopFirst(ProgressDisplay& progress, MovieReader& reader, MovieWriter& writer, UserInput& input, Writers& secondaryWriters) {
-	//init
-	if (errorLogger.hasNoError()) reader.read(bufferFrame, mStatus);
-	if (errorLogger.hasNoError() && mData.showHeader) mData.showIntro(name());
-	progress.init();
-	progress.update();
-
-	while (mStatus.doContinue() && input.doContinue() && mStatus.frameReadIndex < mData.maxFrames) {
-		inputData(bufferFrame);
-		createPyramid();
-		mStatus.frameReadIndex++;
-		reader.read(bufferFrame, mStatus);
-
-		computeStart();
-		computeTerminate();
-		computeTransform(resultPoints);
-		outputSecondary(secondaryWriters, mStatus.frameInputIndex);
-
-		mStatus.frameInputIndex++;
-		mStatus.frameWriteIndex++;
-		progress.update();
-
-		//check if there is input on the console
-		input.setCurrentState();
-	}
-	progress.update(true);
-}
-
-void MovieFrame::runLoopSecond(ProgressDisplay& progress, MovieReader& reader, MovieWriter& writer, UserInput& input, Writers& secondaryWriters) {
+void MovieFrame::runLoopSecond(ProgressDisplay& progress, UserInput& input, AuxWriters& auxWriters) {
 	//setup list of transforms from file
 	auto map = readTransforms();
 	mTrajectory.readTransforms(map);
 
 	//init
-	if (errorLogger.hasNoError()) reader.read(bufferFrame, mStatus);
-	if (errorLogger.hasNoError() && mData.showHeader) mData.showIntro(name());
+	if (errorLogger.hasNoError()) mReader.read(bufferFrame);
+	if (errorLogger.hasNoError() && mData.showHeader) mData.showIntro(name(), mReader);
 	progress.init();
 	progress.update();
 
 	//looping for output
-	while (mStatus.doContinue() && input.doContinue() && mStatus.frameReadIndex < mData.maxFrames) {
-		inputData(bufferFrame);
-		mStatus.frameReadIndex++;
-		mStatus.frameInputIndex++;
-		reader.read(bufferFrame, mStatus);
+	while (errorLogger.hasNoError() && mReader.endOfInput == false && input.doContinue()) {
+		inputData();
+		mReader.read(bufferFrame);
 
-		const AffineTransform& tf = mTrajectory.computeTransformForFrame(mData, mStatus.frameWriteIndex);
-		outputData(tf, writer.getOutputContext());
-		writer.write();
-
-		mStatus.frameWriteIndex++;
-		progress.update();
+		const AffineTransform& tf = mTrajectory.computeSmoothTransform(mData, mWriter.frameIndex);
+		outputData(tf, mWriter.getOutputContext());
+		mWriter.write();
 
 		//check if there is input on the console
-		input.setCurrentState();
-	}
-
-	//flush writer buffer
-	bool hasFrame = writer.terminate(true);
-	while (errorLogger.hasNoError() && input.current < UserInputEnum::HALT && hasFrame) {
-		hasFrame = writer.terminate();
+		input.checkState();
 		progress.update();
 	}
-	progress.update(true);
+
+	loopTerminate(progress, input, auxWriters);
 }
 
-void MovieFrame::runLoopConsecutive(ProgressDisplay& progress, MovieReader& reader, MovieWriter& writer, UserInput& input, Writers& secondaryWriters) {
-	//init
-	if (errorLogger.hasNoError()) reader.read(bufferFrame, mStatus);
-	if (errorLogger.hasNoError() && mData.showHeader) mData.showIntro(name());
-	progress.init();
-	progress.writeMessage("first pass - analyzing input\n");
-	progress.update();
+void MovieFrame::runLoopConsecutive(ProgressDisplay& progress, UserInput& input, AuxWriters& auxWriters) {
+	mReader.storePackets = false; //we do not want packets to pile up on first iteration
+	loopInit(progress, "first pass - analyzing input\n");
+	mFrameResult.mTransform.frameIndex = 0;
+	mTrajectory.addTrajectoryTransform(mFrameResult.mTransform); //first frame has no transform applied
+	auxWriters.writeAll();
+
 
 	//first run - analyse
-	while (mStatus.doContinue() && input.doContinue() && mStatus.frameReadIndex < mData.maxFrames) {
-		inputData(bufferFrame);
-		createPyramid();
-		mStatus.frameReadIndex++;
-		reader.read(bufferFrame, mStatus);
+	while (errorLogger.hasNoError() && mReader.endOfInput == false && input.doContinue()) {
+		inputData();
+		createPyramid(mReader.frameIndex);
 
-		computeStart();
-		computeTerminate();
-		computeTransform(resultPoints);
-		mTrajectory.addTrajectoryTransform(mFrameResult.mTransform, mStatus.frameInputIndex);
-		outputSecondary(secondaryWriters, mStatus.frameInputIndex);
-
-		mStatus.frameInputIndex++;
-		progress.update();
+		computeStart(mReader.frameIndex);
+		computeTerminate(mReader.frameIndex);
+		computeTransform(mReader.frameIndex);
+		mTrajectory.addTrajectoryTransform(mFrameResult.mTransform);
+		auxWriters.writeAll();
+		mReader.read(bufferFrame);
 
 		//check if there is input on the console
-		input.setCurrentState();
+		input.checkState();
+		progress.update();
 	}
 	progress.update(true);
 
-	mStatus.reset();
 	//rewind input
-	reader.rewind();
-	//second run - compute transform and write output
+	mReader.rewind();
+	mReader.storePackets = true;
 	progress.writeMessage("\nsecond pass - generating output\n");
 	progress.update();
 
-	reader.read(bufferFrame, mStatus);
-	while (mStatus.doContinue() && input.doContinue() && mStatus.frameReadIndex < mData.maxFrames) {
-		inputData(bufferFrame);
-		mStatus.frameReadIndex++;
-		mStatus.frameInputIndex++;
-		reader.read(bufferFrame, mStatus);
+	mReader.read(bufferFrame);
+	while (errorLogger.hasNoError() && mReader.endOfInput == false && input.doContinue()) {
+		inputData();
 
-		const AffineTransform& tf = mTrajectory.computeTransformForFrame(mData, mStatus.frameWriteIndex);
-		outputData(tf, writer.getOutputContext());
-		writer.write();
-
-		mStatus.frameWriteIndex++;
-		progress.update();
+		const AffineTransform& tf = mTrajectory.computeSmoothTransform(mData, mWriter.frameIndex);
+		outputData(tf, mWriter.getOutputContext());
+		mWriter.write();
+		mReader.read(bufferFrame);
 
 		//check if there is input on the console
-		input.setCurrentState();
-	}
-
-	//flush writer buffer
-	bool hasFrame = writer.terminate(true);
-	while (errorLogger.hasNoError() && input.current < UserInputEnum::HALT && hasFrame) {
-		hasFrame = writer.terminate();
+		input.checkState();
 		progress.update();
 	}
-	progress.update(true);
+
+	loopTerminate(progress, input, auxWriters);
 }

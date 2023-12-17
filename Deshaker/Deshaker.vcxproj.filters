@@ -32,9 +32,6 @@
     <ClCompile Include="ProgressDisplay.cpp">
       <Filter>Main</Filter>
     </ClCompile>
-    <ClCompile Include="MainData.cpp">
-      <Filter>Main</Filter>
-    </ClCompile>
     <ClCompile Include="FFmpegWriter.cpp">
       <Filter>Writer</Filter>
     </ClCompile>
@@ -107,8 +104,14 @@
     <ClCompile Include="PipeWriter.cpp">
       <Filter>Writer</Filter>
     </ClCompile>
-    <ClCompile Include="CombinerWriter.cpp">
+    <ClCompile Include="StackedWriter.cpp">
       <Filter>Writer</Filter>
+    </ClCompile>
+    <ClCompile Include="MainData.cpp">
+      <Filter>Main</Filter>
+    </ClCompile>
+    <ClCompile Include="Stats.cpp">
+      <Filter>Main</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -129,9 +132,6 @@
     </ClInclude>
     <ClInclude Include="Trajectory.hpp">
       <Filter>Transformation</Filter>
-    </ClInclude>
-    <ClInclude Include="MainData.hpp">
-      <Filter>Main</Filter>
     </ClInclude>
     <ClInclude Include="KeyboardInput.hpp">
       <Filter>Util</Filter>
@@ -207,6 +207,9 @@
     </ClInclude>
     <ClInclude Include="CudaWriter.hpp">
       <Filter>Writer</Filter>
+    </ClInclude>
+    <ClInclude Include="MainData.hpp">
+      <Filter>Main</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

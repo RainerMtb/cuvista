@@ -19,75 +19,36 @@
 #pragma once
 
 #include "FFmpegUtil.hpp"
-#include "ErrorLogger.hpp"
-#include <chrono>
 
 
-//status of progress, singleton class
-class Stats {
-
-private:
-	std::chrono::steady_clock::time_point timePoint;
-
+class ReaderStats {
 public:
-	int64_t frameReadIndex;
-	int64_t frameInputIndex;
-	int64_t frameWriteIndex;
-	int frameEncodeIndex;
-	int64_t encodedBytes;
-	int64_t encodedBytesTotal;
-	int64_t outputBytesWritten;
+	int h = 0, w = 0;
+	int fpsNum = -1, fpsDen = -1;
+	int64_t timeBaseNum = -1, timeBaseDen = -1;
+	int64_t avformatDuration = -1;
+	std::string_view sourceName;
 
-	int64_t encodedDts;
-	int64_t encodedPts;
-	VideoPacketContext encodedFrame;
+	int64_t frameIndex = -1;
+	int64_t frameCount = -1;
+	bool endOfInput = true;
 
-	std::list<VideoPacketContext> packetList;
-	bool endOfInput;
-	std::vector<StreamContext> inputStreams;
+	AVStream* videoStream = nullptr;
 
-	//disable copies and assignments, moving is allowed
-	Stats(const Stats& other) = delete;
-	Stats(Stats&& other) = delete;
-	Stats& operator = (const Stats& other) = delete;
+	double fps() const;
+	StreamInfo videoStreamInfo() const;
+	StreamInfo streamInfo(AVStream* stream) const;
+};
 
-	Stats() {
-		reset();
-	}
 
-	void reset() {
-		frameReadIndex = 0;
-		frameInputIndex = 0;
-		frameWriteIndex = 0;
-		frameEncodeIndex = 0;
-		encodedBytes = 0;
-		encodedBytesTotal = 0;
-		outputBytesWritten = 0;
+class WriterStats {
+public:
+	int64_t frameIndex = 0;
+	int frameEncoded = 0;
+	int64_t encodedBytes = 0;
+	int64_t encodedBytesTotal = 0;
+	int64_t outputBytesWritten = 0;
 
-		encodedDts = 0;
-		encodedPts = 0;
-		encodedFrame = {};
-
-		packetList.clear();
-		endOfInput = true;
-
-		for (StreamContext& sc : inputStreams) {
-			sc.packets.clear();
-			sc.packetsWritten = 0;
-		}
-	}
-
-	bool doContinue() const {
-		return errorLogger.hasNoError() && endOfInput == false;
-	}
-
-	void timeStart() {
-		timePoint = std::chrono::high_resolution_clock::now();
-	}
-
-	double timeElapsedSeconds() const {
-		auto timeNow = std::chrono::high_resolution_clock::now();
-		std::chrono::duration<double> secs = timeNow - timePoint;
-		return secs.count();
-	}
+	int64_t encodedDts = 0;
+	int64_t encodedPts = 0;
 };
