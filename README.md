@@ -5,20 +5,25 @@ A small and simple Application to stabilize shaky video footage using the Cuda p
 
 There is the option to only use CPU power to do the all the stabilizing computations, which will be significantly slower but produces the exact same outcome
 
-Have a look at some [sample video footage](https://youtu.be/kD84VqBurZc)
+Have a look at a sample video:
+
+<a href="http://www.youtube.com/watch?feature=player_embedded&v=kD84VqBurZc" target="_blank">
+<img src="http://img.youtube.com/vi/kD84VqBurZc/mqdefault.jpg" alt="Cuvista Demo" width="320" height="160" border="10"/>
+</a>
 
 ## Getting started
 Get the latest version from the [Releases](https://github.com/RainerMtb/cuvista/releases) page, download, unzip and run either ```cuvista.exe``` on the command line or ```cuvistaGui.exe``` for a windowed user interface
 ## Building
-To work on the code yourself and build the application, get the source code and start by opening ```Deshaker.sln```. Use ```Build Solution``` to get everything compiled and built
+To work on the code yourself and build the application, get the source code and start by opening ```Deshaker.sln```
 
-The following resources are used
+## Resources and Dependencies
 - Windows 11 64bit
 - Visual Studio 2022
-- Nvidia Cuda 11.8
-- Nvidia Video Codec SDK 11.0.10
-- Nvidia NvApi R530
+- Nvidia Cuda 12.3
+- Nvidia Video Codec SDK 12.1.14
+- Nvidia NvApi https://github.com/NVIDIA/nvapi.git
+- Google Cpu Features https://github.com/google/cpu_features.git
 - FFmpeg 6.0
 
 For the GUI
-- Qt 6.5.2
+- Qt 6.6.1
