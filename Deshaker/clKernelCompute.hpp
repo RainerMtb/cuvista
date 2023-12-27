@@ -141,13 +141,16 @@ __kernel void compute(long frameIndex, __read_only image2d_depth_t Yprev, __read
 
 		//compute norm before starting inverse, s will be overwritten
 		double ns = norm1(s, 6, 6, temp);
+		//if (frameIndex == 1 && ix0 == 29 && iy0 == 2) printf("ocl %d %d %.14f\n", r, ci, ns);
+
 		//compute inverse
 		luinv(Apiv, s, temp, g, 6, r, ci, cols);
+
 		//compute reciprocal condition, see if result is valid
 		double ng = norm1(g, 6, 6, temp);
 		double rcond = 1 / (ns * ng);
-
 		result = (isnan(rcond) || rcond < d_core->deps) ? FAIL_SINGULAR : RUNNING;
+
 		//init loop limit counter
 		int iter = 0;
 		//init error measure to stop loop
@@ -199,6 +202,7 @@ __kernel void compute(long frameIndex, __read_only image2d_depth_t Yprev, __read
 					eta[r] += (*gptr) * (*bptr);
 				}
 			}
+			work_group_barrier(CLK_LOCAL_MEM_FENCE);
 
 			//update transform matrix
 			if (r < 2 && ci == 0) {
@@ -212,6 +216,7 @@ __kernel void compute(long frameIndex, __read_only image2d_depth_t Yprev, __read
 				wp[r * 3 + 1] = dwp[r * 3 + 1];
 				wp[r * 3 + 2] = dwp[r * 3 + 2];
 			}
+			work_group_barrier(CLK_LOCAL_MEM_FENCE);
 
 			//analyse result, decide on continuing loop
 			double err = eta[0] * eta[0] + eta[1] * eta[1];
@@ -240,11 +245,11 @@ __kernel void compute(long frameIndex, __read_only image2d_depth_t Yprev, __read
 		int delta = d_core->h >> (z - 1);
 		rowOffset -= delta;
 
-		//if (frameIndex == 1 && ix0 == 63 && iy0 == 1 && r == 0 && ci == 0) printf("%d %.14f\n", z, wp[2]);
+		//if (frameIndex == 1 && ix0 == 29 && iy0 == 2 && r == 0 && ci == 0) printf("ocl %d %.14f\n", z, wp[5]);
 	}
 
 	//first thread writes into result structure
-	if (get_local_id(0) == 0 && get_local_id(1) == 0) {
+	if (get_local_linear_id() == 0) {
 		double u = wp[2];
 		double v = wp[5];
 

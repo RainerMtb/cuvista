@@ -155,16 +155,17 @@ void CpuFrame::computeTerminate(int64_t frameIndex) {
 							sd.at(5, idx) = dy * (c - ir);
 						}
 					}
-					//if (mData.status.frameInputIndex == 1 && ix0 == 63 && iy0 == 1) sd.toConsole(); //----------------
+					//if (frameIndex == 1 && ix0 == 63 && iy0 == 1) sd.toConsole(); //----------------
 					Mat s = sd.timesTransposed();
-					//if (mData.status.frameInputIndex == 1 && ix0 == 63 && iy0 == 1) s.toConsole(); //----------------
+					//if (frameIndex == 1 && ix0 == 63 && iy0 == 1) s.toConsole(); //----------------
 
 					Mat g = s.inv().value();
 					double ns = s.norm1();
 					double gs = g.norm1();
 					double rcond = 1 / (ns * gs); //reciprocal condition number
 
-					//if (mData.status.frameInputIndex == 1 && ix0 == 63 && iy0 == 1) g.toConsole(); //----------------
+					//if (frameIndex == 1 && ix0 == 29 && iy0 == 2) std::printf("cpu %d %.14f\n", z, rcond);
+					//if (frameIndex == 1 && ix0 == 63 && iy0 == 1) g.toConsole(); //----------------
 
 					result = (std::isnan(rcond) || rcond < mData.deps) ? PointResultType::FAIL_SINGULAR : PointResultType::RUNNING;
 					int iter = 0;
@@ -202,7 +203,7 @@ void CpuFrame::computeTerminate(int64_t frameIndex) {
 						double* eta = etaMat.data(); //[6 x 1]
 						dwp.setValuesByRow(0, 0, 2, 3, { eta[2], eta[3], eta[0], eta[4], eta[5], eta[1] }); //set first 6 values
 						wp = wp.times(dwp);
-						//if (mData.status.frameInputIndex == 1 && ix0 == 27 && iy0 == 1) wp.toConsole("cpu"); //------------------------
+						//if (frameIndex == 1 && ix0 == 27 && iy0 == 1) wp.toConsole("cpu"); //------------------------
 
 						double err = eta[0] * eta[0] + eta[1] * eta[1];
 						if (std::isnan(err)) result = PointResultType::FAIL_ETA_NAN;
@@ -212,7 +213,7 @@ void CpuFrame::computeTerminate(int64_t frameIndex) {
 						iter++;
 						if (iter == mData.compMaxIter && result == PointResultType::RUNNING) result = PointResultType::FAIL_ITERATIONS;
 					}
-					//if (mData.status.frameInputIndex == 1 && ix0 == 63 && iy0 == 1) etaMat.toConsole("cpu"); //------------------------
+					//if (frameIndex == 1 && ix0 == 63 && iy0 == 1) etaMat.toConsole("cpu"); //------------------------
 
 					//center of integration window on next level
 					ym *= 2;
@@ -221,8 +222,7 @@ void CpuFrame::computeTerminate(int64_t frameIndex) {
 					wp[0][2] *= 2.0;
 					wp[1][2] *= 2.0;
 
-					//if (mData.status.frameInputIndex == 1 && ix0 == 63 && iy0 == 1) std::printf("%d %.14f\n", z, wp.at(0, 2));
-					//if (mData.status.frameInputIndex == 1 && ix0 == 10 && iy0 == 1) wp.toConsole("cpu");
+					//if (frameIndex == 1 && ix0 == 10 && iy0 == 1) wp.toConsole("cpu");
 				}
 				//bring values to level 0
 				double u = wp.at(0, 2);

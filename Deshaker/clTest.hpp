@@ -38,5 +38,5 @@ namespace cltest {
 
 	bool cl_inv_group(LoadResult& res, double* input, double* invGroup, int groupWidth, size_t s);
 
-	double cl_norm1(LoadResult& res, double* input, int s);
+	std::vector<double> cl_norm1(LoadResult& res, double* input, int s);
 }

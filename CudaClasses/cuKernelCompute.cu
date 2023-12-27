@@ -130,6 +130,7 @@ __global__ void kernelCompute(ComputeTextures tex, CudaPointResult* results, Com
 			s[ai.c * 6 + ai.r] = s[ai.r * 6 + ai.c] = sval;
 		}
 		//if (param.frameIdx == 1 && ix0 == 63 && iy0 == 1 && cu::firstThread()) cu::storeDebugData(param.debugData, param.debugDataSize, 6, 6, s);
+		//if (param.frameIdx == 1 && ix0 == 29 && iy0 == 2) printf("cuda %d %.14f\n", tidx, s[tidx]);
 
 		//compute norm before starting inverse, s will be overwritten
 		double ns = norm1(s, 6, 6, temp);
@@ -139,7 +140,6 @@ __global__ void kernelCompute(ComputeTextures tex, CudaPointResult* results, Com
 		double ng = norm1(g, 6, 6, temp);
 		double rcond = 1 / (ns * ng);
 		result = (isnan(rcond) || rcond < d_core.deps) ? PointResultType::FAIL_SINGULAR : PointResultType::RUNNING;
-
 		//if (param.frameIdx == 1 && ix0 == 63 && iy0 == 1 && cu::firstThread()) cu::storeDebugData(param.debugData, param.debugDataSize, 6, 6, g);
 
 		//init loop limit counter

@@ -215,7 +215,6 @@ private:
 
 	template <class T> Result compareFrame2func(MainData& data) {
 		Result res;
-
 		AffineTransform trf(0, 0.95, 0.3, 2, 3);
 		data.collectDeviceInfo();
 		NullReader reader;
@@ -252,6 +251,8 @@ private:
 public:
 
 	TEST_METHOD(compareFrames2) {
+		//FILE* ptr;
+		//freopen_s(&ptr, "f:/redir.txt", "w", stdout);
 		MainData dataCpu;
 		Result resCpu = compareFrame2func<CpuFrame>(dataCpu);
 		MainData dataCuda;

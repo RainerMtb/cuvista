@@ -285,6 +285,7 @@ double norm1(const double* mat, int m, int n, double* temp) {
 			if (isnan(val) || val > temp[0]) temp[0] = val;
 		}
 	}
+	work_group_barrier(CLK_LOCAL_MEM_FENCE);
 
 	//max is now first item
 	return temp[0];
@@ -323,6 +324,7 @@ __kernel void luinvGroupTest(__global double* input, __global double* output, __
 }
 
 __kernel void norm1Test(__global double* mat, int m, int n, __local double* temp, __global double* result) {
-	*result = norm1(mat, m, n, temp);
+	int idx = get_local_linear_id();	
+	result[idx] = norm1(mat, m, n, temp);
 }
 )";

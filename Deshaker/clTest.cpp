@@ -131,12 +131,12 @@ bool cltest::cl_inv_group(LoadResult& res, double* input, double* invGroup, int 
 	return false;
 }
 
-double cltest::cl_norm1(LoadResult& res, double* input, int s) {
+std::vector<double> cltest::cl_norm1(LoadResult& res, double* input, int s) {
 	size_t siz = sizeof(double) * s * s;
 	cl::Buffer cl_input(res.context, CL_MEM_READ_ONLY, siz);
-	cl::Buffer cl_retval(res.context, CL_MEM_WRITE_ONLY, sizeof(double) * 1);
+	cl::Buffer cl_retval(res.context, CL_MEM_WRITE_ONLY, siz);
 	res.queue.enqueueWriteBuffer(cl_input, CL_TRUE, 0, siz, input);
-	double norm1value = NAN;
+	std::vector<double> normValues(s * s);
 
 	//kernel parameters
 	try {
@@ -147,17 +147,17 @@ double cltest::cl_norm1(LoadResult& res, double* input, int s) {
 		res.kernel.setArg(4, cl_retval);
 
 		//start kernel
-		cl::NDRange ndglob(s, 3);
-		cl::NDRange ndloc(s, 3);
+		cl::NDRange ndglob(s, s);
+		cl::NDRange ndloc(s, s);
 		res.queue.enqueueNDRangeKernel(res.kernel, 0, ndglob, ndloc);
 		res.queue.finish();
 
 		//retrieve results from device
-		res.queue.enqueueReadBuffer(cl_retval, CL_TRUE, 0, sizeof(double) * 1, &norm1value);
+		res.queue.enqueueReadBuffer(cl_retval, CL_TRUE, 0, siz, normValues.data());
 
 	} catch (cl::Error err) {
 		std::cout << "error: " << err.what() << std::endl;
 		//std::cout << clErrorStrings[-err.what] << std::endl;
 	}
-	return norm1value;
+	return normValues;
 }

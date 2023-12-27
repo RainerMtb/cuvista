@@ -74,15 +74,21 @@ void openClnorm1Test() {
 	LoadResult res = cltest::loadKernels({ norm1Function, luinvFunction, testKernels }, "norm1Test");
 	if (res.status != CL_SUCCESS) return;
 
-	int s = 6;
-	for (int i = 0; i < 10; i++) {
-		Matd a = Matd::rand(s, s, -10, 20);
-		double norm1cpu = a.norm1();
-		double norm1ocl = cltest::cl_norm1(res, a.data(), s);
-		if (norm1cpu == norm1ocl) {
-			std::cout << "norm1 test OK" << std::endl;
-		} else {
-			std::cout << "norm1 test FAIL" << std::endl;
+	for (int s = 4; s < 8; s++) {
+		for (int i = 0; i < 10; i++) {
+			Matd a = Matd::rand(s, s, -10, 20);
+			double norm1cpu = a.norm1();
+			std::vector<double> norm1ocl = cltest::cl_norm1(res, a.data(), s);
+			//each element of the vector must match as all threads must get the same value
+			bool check = true;
+			for (double val : norm1ocl) {
+				check &= (val == norm1cpu);
+			}
+			if (check) {
+				std::cout << "norm1 test OK" << std::endl;
+			} else {
+				std::cout << "norm1 test FAIL" << std::endl;
+			}
 		}
 	}
 }
