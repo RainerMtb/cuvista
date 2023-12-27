@@ -33,7 +33,7 @@ public:
 		DeviceInfo* dev = data.deviceList[data.deviceSelected];
 		assert(dev->type == DeviceType::CUDA && "device type must be CUDA here");
 		device = static_cast<DeviceInfoCuda*>(dev);
-		cudaInit(data, device->cudaIndex, device->props, bufferFrame);
+		cudaInit(data, device->cudaIndex, device->props, mBufferFrame);
 	}
 
 	~CudaFrame() {
@@ -43,7 +43,7 @@ public:
 	}
 
 	void inputData() override {
-		cudaReadFrame(bufferFrame.index, mData, bufferFrame);
+		cudaReadFrame(mBufferFrame.index, mData, mBufferFrame);
 	}
 
 	void createPyramid(int64_t frameIndex) override {
@@ -55,7 +55,7 @@ public:
 	}
 
 	void computeTerminate(int64_t frameIndex) override {
-		cudaComputeTerminate(frameIndex, mData, resultPoints);
+		cudaComputeTerminate(frameIndex, mData, mResultPoints);
 	}
 
 	void outputData(const AffineTransform& trf, OutputContext outCtx) override {
@@ -86,7 +86,7 @@ public:
 		cudaGetTransformedOutput(image, mData);
 	}
 
-	std::string name() const override {
+	std::string className() const override {
 		return device->getName();
 	}
 };

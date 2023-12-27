@@ -20,9 +20,9 @@
 #include "MovieFrame.hpp"
 
 
-void AuxWriters::writeAll() {
-	for (auto& writer : *this) {
-		writer->write();
+void AuxWriters::writeAll(const MovieFrame& frame) {
+	for (auto it = begin(); it != end(); it++) {
+		it->get()->write(frame);
 	}
 }
 
@@ -30,8 +30,8 @@ OutputContext MovieWriter::getOutputContext() {
 	return { true, false, &outputFrame, nullptr };
 }
 
-std::future<void> MovieWriter::writeAsync() {
-	return std::async(std::launch::async, [&] () { write(); });
+std::future<void> MovieWriter::writeAsync(const MovieFrame& frame) {
+	return std::async(std::launch::async, [&] () { write(frame); });
 }
 
 std::string ImageWriter::makeFilename(const std::string& pattern, int64_t index) {
@@ -49,7 +49,7 @@ std::string ImageWriter::makeFilename() const {
 // BMP Images
 //-----------------------------------------------------------------------------------
 
-void BmpImageWriter::write() {
+void BmpImageWriter::write(const MovieFrame& frame) {
 	outputFrame.toBGR(image).saveAsBMP(makeFilename());
 	outputBytesWritten += image.dataSizeInBytes();
 	this->frameIndex++;
@@ -73,24 +73,24 @@ void JpegImageWriter::open(EncodingOption videoCodec) {
 	if (ret < 0)
 		throw AVException(av_make_error(ret, "cannot open mjpeg codec"));
 
-	frame = av_frame_alloc();
-	frame->format = ctx->pix_fmt;
-	frame->width = mData.w;
-	frame->height = mData.h;
+	avframe = av_frame_alloc();
+	avframe->format = ctx->pix_fmt;
+	avframe->width = mData.w;
+	avframe->height = mData.h;
 
-	frame->linesize[0] = outputFrame.stride;
-	frame->linesize[1] = outputFrame.stride;
-	frame->linesize[2] = outputFrame.stride;
-	frame->data[0] = outputFrame.plane(0);
-	frame->data[1] = outputFrame.plane(1);
-	frame->data[2] = outputFrame.plane(2);
+	avframe->linesize[0] = outputFrame.stride;
+	avframe->linesize[1] = outputFrame.stride;
+	avframe->linesize[2] = outputFrame.stride;
+	avframe->data[0] = outputFrame.plane(0);
+	avframe->data[1] = outputFrame.plane(1);
+	avframe->data[2] = outputFrame.plane(2);
 
 	packet = av_packet_alloc();
 }
 
-void JpegImageWriter::write() {
-	frame->pts = this->frameIndex;
-	int result = avcodec_send_frame(ctx, frame);
+void JpegImageWriter::write(const MovieFrame& frame) {
+	avframe->pts = this->frameIndex;
+	int result = avcodec_send_frame(ctx, avframe);
 	if (result < 0)
 		errorLogger.logError(av_make_error(result, "error sending frame"));
 
@@ -135,7 +135,7 @@ void RawWriter::packYuv() {
 // Computed Transformation Values
 //-----------------------------------------------------------------------------------
 
-std::map<int64_t, TransformValues> TransformsWriter::readTransformMap(const std::string& trajectoryFile) {
+std::map<int64_t, TransformValues> TransformsWriterMain::readTransformMap(const std::string& trajectoryFile) {
 	std::map<int64_t, TransformValues> transformsMap;
 	std::ifstream file(trajectoryFile, std::ios::binary);
 	if (file.is_open()) {
@@ -162,20 +162,28 @@ std::map<int64_t, TransformValues> TransformsWriter::readTransformMap(const std:
 	return transformsMap;
 }
 
-TransformsWriter::TransformsWriter(MainData& data, MovieFrame& frame) :
-	AuxiliaryWriter(data, frame),
-	file { std::ofstream(data.trajectoryFile, std::ios::binary) }
-{
+void TransformsWriterMain::open(EncodingOption videoCodec) {
+	TransformsFile::open();
+}
+
+void TransformsWriterMain::write(const MovieFrame& frame) {
+	writeTransform(frame.mFrameResult.transform(), frameIndex);
+	this->frameIndex++;
+	this->outputBytesWritten = file.tellp();
+}
+
+void TransformsFile::open() {
+	file = std::ofstream(mData.trajectoryFile, std::ios::binary);
 	if (file.is_open()) {
 		//write signature
 		file << id;
 
 	} else {
-		throw AVException("error opening file '" + data.trajectoryFile + "'");
+		throw AVException("error opening file '" + mData.trajectoryFile + "'");
 	}
 }
 
-void TransformsWriter::writeTransform(const Affine2D& transform, int64_t frameIndex) {
+void TransformsFile::writeTransform(const Affine2D& transform, int64_t frameIndex) {
 	writeValue(frameIndex);
 	writeValue(transform.scale());
 	writeValue(transform.dX());
@@ -183,8 +191,12 @@ void TransformsWriter::writeTransform(const Affine2D& transform, int64_t frameIn
 	writeValue(transform.rotMilliDegrees());
 }
 
-void TransformsWriter::write() {
-	writeTransform(frame.mFrameResult.mTransform, frameIndex);
+void AuxTransformsWriter::open() {
+	TransformsFile::open();
+}
+
+void AuxTransformsWriter::write(const MovieFrame& frame) {
+	writeTransform(frame.mFrameResult.transform(), frameIndex);
 	this->frameIndex++;
 }
 
@@ -193,17 +205,15 @@ void TransformsWriter::write() {
 // Computed Results per Point
 //-----------------------------------------------------------------------------------
 
-ResultDetailsWriter::ResultDetailsWriter(MainData& data, MovieFrame& frame) :
-	AuxiliaryWriter(data, frame),
-	file { std::ofstream(data.resultsFile) }
-{
+void  ResultDetailsWriter::open() {
+	file = std::ofstream(mData.resultsFile);
 	if (file.is_open()) {
 		file << "frameIdx" << delimiter << "ix0" << delimiter << "iy0"
 			<< delimiter << "px" << delimiter << "py" << delimiter << "u" << delimiter << "v"
 			<< delimiter << "isValid" << delimiter << "isConsens" << std::endl;
 
 	} else {
-		throw AVException("cannot open file '" + data.resultsFile + "'");
+		throw AVException("cannot open file '" + mData.resultsFile + "'");
 	}
 }
 
@@ -218,7 +228,7 @@ void ResultDetailsWriter::write(const std::vector<PointResult>& results, int64_t
 	file << ss.str();
 }
 
-void ResultDetailsWriter::write() {
+void ResultDetailsWriter::write(const MovieFrame& frame) {
 	write(frame.mFrameResult.mFiniteResults, frameIndex);
 	this->frameIndex++;
 }
@@ -229,8 +239,8 @@ void ResultDetailsWriter::write() {
 //-----------------------------------------------------------------------------------
 
 void ResultImageWriter::write(const FrameResult& fr, int64_t idx, const ImageYuv& yuv, const std::string& fname) {
-	const AffineTransform& trf = fr.mTransform;
-
+	const AffineTransform& trf = fr.transform();
+	
 	//copy and scale Y plane to first color plane of bgr
 	yuv.scaleTo(0, bgr, 0);
 	//copy planes in bgr image making it grayscale bgr
@@ -278,7 +288,7 @@ void ResultImageWriter::write(const FrameResult& fr, int64_t idx, const ImageYuv
 	}
 }
 
-void ResultImageWriter::write() {
+void ResultImageWriter::write(const MovieFrame& frame) {
 	//get input image from buffers
 	ImageYuv yuv = frame.getInput(frameIndex);
 	std::string fname = ImageWriter::makeFilename(mData.resultImageFile, frameIndex);

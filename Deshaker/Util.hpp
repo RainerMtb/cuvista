@@ -34,7 +34,10 @@ namespace util {
         std::string mName;
 
     public:
-        ConsoleTimer(std::string&& name) : mName { name }, mStart { std::chrono::high_resolution_clock::now() }, mInterval { mStart } {}
+        ConsoleTimer(std::string&& name) : 
+            mName { name }, 
+            mStart { std::chrono::high_resolution_clock::now() }, 
+            mInterval { mStart } {}
 
         void interval(const std::string& name);
 

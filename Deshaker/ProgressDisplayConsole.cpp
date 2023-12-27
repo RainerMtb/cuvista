@@ -22,28 +22,65 @@
 #include "MovieReader.hpp"
 #include "MovieWriter.hpp"
 
-//print a new line to the console
-void ProgressDisplayConsole::update(bool force) {
-	if (isDue(force)) {
-		double done = progressPercent();
-		out << "frames in " << frame.mReader.frameIndex << ", frames out " << frame.mWriter.frameIndex;
-		if (done >= 0) out << done << " %";
-		out << std::endl;
-	}
+ProgressDisplayConsole::ProgressDisplayConsole(MovieFrame& frame, std::ostream* outstream) :
+	ProgressDisplay(frame, 500), 
+	outstream { outstream } 
+{
+	outBuffer.precision(1);
+	outBuffer << std::showpoint;
+	outBuffer << std::fixed;
+	timePoint = std::chrono::steady_clock::now();
 }
 
 void ProgressDisplayConsole::writeMessage(const std::string& str) {
 	*outstream << str;
 }
 
-ProgressDisplayConsole::ProgressDisplayConsole(MovieFrame& frame, std::ostream* outstream) :
-	ProgressDisplay(frame, 500), 
-	outstream { outstream } 
-{
-	out.precision(1);
-	out << std::showpoint;
-	out << std::fixed;
-	timePoint = std::chrono::steady_clock::now();
+std::stringstream& ProgressDisplayConsole::buildMessage() {
+	outBuffer.seekg(0);
+	outBuffer.seekp(0);
+	double donePercent = progressPercent();
+	if (isfinite(donePercent))
+		outBuffer << "done " << donePercent << "% ";
+	if (frame.mReader.frameIndex > 0)
+		outBuffer << "frames in " << frame.mReader.frameIndex;
+	if (frame.mWriter.frameIndex > 0)
+		outBuffer << ", frames out " << frame.mWriter.frameIndex;
+	if (frame.mWriter.outputBytesWritten > 0)
+		outBuffer << ", written " << util::byteSizeToString(frame.mWriter.outputBytesWritten);
+	return outBuffer;
+}
+
+//---------------------------
+// New Line per frame
+//---------------------------
+
+//print a new line to the console
+void ProgressDisplayNewLine::update(bool force) {
+	buildMessage();
+	*outstream << outBuffer.str() << std::endl;
+}
+
+//---------------------------
+// Rewrite same line
+//---------------------------
+
+//rewrite one line on the console
+void ProgressDisplayRewriteLine::update(bool force) {
+	if (isDue(force)) {
+		//overwrite existing line
+		output.assign(output.size(), ' ');
+		output[0] = '\r';
+		*outstream << output;
+
+		//new line
+		output = "\r" + buildMessage().str();
+		*outstream << output;
+	}
+}
+
+void ProgressDisplayRewriteLine::terminate() {
+	*outstream << std::endl;
 }
 
 //---------------------------
@@ -69,32 +106,6 @@ void ProgressDisplayGraph::update(bool force) {
 void ProgressDisplayGraph::terminate() {
 	for (; numPrinted < numStars; numPrinted++) *outstream << "*";
 	*outstream << "|" << std::endl;
-}
-
-//---------------------------
-// Rewrite same line
-//---------------------------
-
-//rewrite one line on the console
-void ProgressDisplayRewriteLine::update(bool force) {
-	if (isDue(force)) {
-		//overwrite existing line
-		line.assign(line.size(), ' ');
-		line[0] = '\r';
-		*outstream << line;
-
-		//new line
-		double done = progressPercent();
-		if (isfinite(done)) line = std::format("\rframes in {}, out {}, done {:.1f}%, data written {}",
-			frame.mReader.frameIndex, frame.mWriter.frameIndex, done, util::byteSizeToString(frame.mWriter.outputBytesWritten));
-		else line = std::format("\rframes in {}, out {}, data written {}",
-			frame.mReader.frameIndex, frame.mWriter.frameIndex, util::byteSizeToString(frame.mWriter.outputBytesWritten));
-		*outstream << line;
-	}
-}
-
-void ProgressDisplayRewriteLine::terminate() {
-	*outstream << std::endl;
 }
 
 //---------------------------

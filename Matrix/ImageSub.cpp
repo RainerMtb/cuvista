@@ -23,8 +23,8 @@
 
 //construct Mat per image plane
 template <class T> ImageMat<T>::ImageMat(T* data, int h, int w, int stride, int planeIdx) : 
-	CoreMat<T>(data, h, stride, false) 
-{}
+	CoreMat<T>(data, h, stride, false) {}
+
 
 //------------------------
 // planar image

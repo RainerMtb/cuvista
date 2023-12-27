@@ -38,7 +38,7 @@ int deshake(int argsCount, char** args) {
 	std::unique_ptr<MovieWriter> writer = std::make_unique<NullWriter>(data, *reader);
 	std::unique_ptr<MovieFrame> frame = std::make_unique<DefaultFrame>(data, *reader, *writer);
 	AuxWriters auxWriters;
-
+	
 	try {
 		data.probeOpenCl();
 		data.probeCuda();
@@ -52,7 +52,7 @@ int deshake(int argsCount, char** args) {
 
 		//----------- create appropriate MovieWriter
 		if (data.pass == DeshakerPass::FIRST_PASS)
-			writer = std::make_unique<NullWriter>(data, *reader);
+			writer = std::make_unique<TransformsWriterMain>(data, *reader);
 		else if (data.blendInput.enabled)
 			writer = std::make_unique<StackedWriter>(data, *reader);
 		else if (data.videoOutputType == OutputType::PIPE)
@@ -91,14 +91,17 @@ int deshake(int argsCount, char** args) {
 		}
 
 		//----------- create secondary Writers
-		if (data.pass != DeshakerPass::SECOND_PASS && data.trajectoryFile.empty() == false) {
-			auxWriters.push_back(std::make_unique<TransformsWriter>(data, *frame));
+		if (data.pass != DeshakerPass::FIRST_PASS && data.pass != DeshakerPass::SECOND_PASS && data.trajectoryFile.empty() == false) {
+			auxWriters.push_back(std::make_unique<AuxTransformsWriter>(data));
 		}
 		if (!data.resultsFile.empty()) {
-			auxWriters.push_back(std::make_unique<ResultDetailsWriter>(data, *frame));
+			auxWriters.push_back(std::make_unique<ResultDetailsWriter>(data));
 		}
 		if (!data.resultImageFile.empty()) {
-			auxWriters.push_back(std::make_unique<ResultImageWriter>(data, *frame));
+			auxWriters.push_back(std::make_unique<ResultImageWriter>(data));
+		}
+		for (auto& aw : auxWriters) {
+			aw->open();
 		}
 
 	} catch (const CancelException& e) {
@@ -121,6 +124,7 @@ int deshake(int argsCount, char** args) {
 	//setup progress output
 	std::unique_ptr<ProgressDisplay> progress;
 	if (data.progressType == ProgressType::REWRITE_LINE) progress = std::make_unique<ProgressDisplayRewriteLine>(*frame, data.console);
+	else if (data.progressType == ProgressType::NEW_LINE) progress = std::make_unique<ProgressDisplayNewLine>(*frame, data.console);
 	else if (data.progressType == ProgressType::GRAPH) progress = std::make_unique<ProgressDisplayGraph>(*frame, data.console);
 	else if (data.progressType == ProgressType::DETAILED) progress = std::make_unique<ProgressDisplayDetailed>(*frame, data.console);
 	else progress = std::make_unique<ProgressDisplayNone>(*frame);

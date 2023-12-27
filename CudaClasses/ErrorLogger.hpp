@@ -56,10 +56,12 @@ public:
 	}
 
 	std::vector<ErrorEntry> getErrors() {
+		std::lock_guard<std::mutex> lock(mMutex);
 		return errorList;
 	}
 
 	std::string getErrorMessage() {
+		std::lock_guard<std::mutex> lock(mMutex);
 		return errorList.empty() ? "no error" : errorList[0].msg;
 	}
 

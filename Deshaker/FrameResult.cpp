@@ -19,7 +19,7 @@
 #include "FrameResult.hpp"
 #include "Util.hpp"
 
-const AffineTransform& FrameResult::computeTransform(const std::vector<PointResult>& results, const MainData& data, ThreadPool& threadPool, int64_t frameIndex) {
+void FrameResult::computeTransform(const std::vector<PointResult>& results, ThreadPool& threadPool, int64_t frameIndex) {
 	const ptrdiff_t cMinConsensPoints = 8;	     //min numbers of points for consensus set
 	const int cConsLoopCount = 8;			     //max number of loops when searching for consensus set
 	const int cConsLoopPercent = 95;		     //percentage of points for next loop 0..100
@@ -29,8 +29,8 @@ const AffineTransform& FrameResult::computeTransform(const std::vector<PointResu
 	auto sortRel = [] (const PointResult& pr1, const PointResult& pr2) { return pr1.distanceRelative < pr2.distanceRelative; };
 
 	//util::ConsoleTimer ic("transform");
-	mTransform.reset();
-	mTransform.frameIndex = frameIndex;
+	mAffineSolver->reset();
+	mAffineSolver->frameIndex = frameIndex;
 	mTransformsList.clear();
 	mCountConsens = 0;
 
@@ -67,14 +67,14 @@ const AffineTransform& FrameResult::computeTransform(const std::vector<PointResu
 			averageLength /= mCountFinite;
 
 			//transform for selected points
-			mTransform.computeSimilarDirect(mFiniteResults.begin(), siz, threadPool);
-			mTransformsList.push_back(mTransform); //save for debugging
+			mAffineSolver->computeSimilar(mFiniteResults.begin(), siz);
+			mTransformsList.push_back(*mAffineSolver); //save for debugging
 
 			int numConsAbsolute = 0;
 			int numConsRelative = 0;
 			//calculate error distance based on transform
 			for (auto it = mFiniteResults.begin(); it != iterEnd; it++) {
-				auto [tx, ty] = mTransform.transform(it->x, it->y);
+				auto [tx, ty] = mAffineSolver->transform(it->x, it->y);
 				it->distance = std::sqrt(sqr(it->x + it->u - tx) + sqr(it->y + it->v - ty));
 				it->distanceRelative = it->distance / it->length;
 
@@ -112,6 +112,14 @@ const AffineTransform& FrameResult::computeTransform(const std::vector<PointResu
 		//mTransform.computeSimilarDirect(mFiniteResults.begin(), numCons, threadPool);
 		//mTransformsList.push_back(mTransform);
 	}
+}
 
-	return mTransform;
+
+const AffineTransform& FrameResult::transform() const {
+	return *mAffineSolver;
+}
+
+void FrameResult::transformReset() {
+	mAffineSolver->reset();
+	mAffineSolver->frameIndex = 0;
 }

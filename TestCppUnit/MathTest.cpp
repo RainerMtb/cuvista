@@ -42,7 +42,9 @@ public:
 			{ 2, 0, 0, 0, 0, 176,  104, -23.5065, -3.3990, PointResultType::SUCCESS_ABSOLUTE_ERR }
 		};
 
-		Affine2D tf = AffineTransform::computeAffine(pr.begin(), 3);
+		AffineTransform tf;
+		bool hasValue = tf.computeAffine(pr.begin(), 3);
+		Assert::IsTrue(hasValue);
 		Assert::IsTrue(checkTransform(tf, pr[0]));
 		Assert::IsTrue(checkTransform(tf, pr[1]));
 		Assert::IsTrue(checkTransform(tf, pr[2]));
@@ -90,13 +92,13 @@ public:
 		for (int i = 0; i < pointSets.size() && i < resultSet.size(); i++) {
 			std::wstring str = L"check " + std::to_wstring(i);
 			auto points = pointSets[i];
-			AffineTransform trf1;
-			trf1.computeSimilarLoop(points.begin(), points.size());
+			AffineSolverSimple trf1;
+			trf1.computeSimilar(points.begin(), points.size());
 			Assert::IsTrue(resultSet[i].equals(trf1, 1e-14), str.c_str());
 
 			ThreadPool pool(2);
-			AffineTransform trf2;
-			trf2.computeSimilarDirect(points.begin(), points.size(), pool);
+			AffineSolverFast trf2(pool);
+			trf2.computeSimilar(points.begin(), points.size());
 			Assert::IsTrue(resultSet[i].equals(trf2, 1e-14), str.c_str());
 		}
 	}
@@ -120,12 +122,12 @@ public:
 				}
 
 				//compute transforms
-				AffineTransform trf1;
-				trf1.computeSimilarLoop(points.begin(), points.size());
+				AffineSolverSimple trf1;
+				trf1.computeSimilar(points.begin(), points.size());
 
 				ThreadPool pool(2);
-				AffineTransform trf2;
-				trf2.computeSimilarDirect(points.begin(), points.size(), pool);
+				AffineSolverFast trf2(pool);
+				trf2.computeSimilar(points.begin(), points.size());
 
 				Assert::IsTrue(trf1.equals(trf2, 1e-12));
 			}

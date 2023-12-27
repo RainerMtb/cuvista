@@ -117,7 +117,9 @@ BmpHeader::BmpHeader(int w, int h, int offset, int bits) {
 	header[37] = bitmapSize >> 24;
 }
 
-BmpGrayHeader::BmpGrayHeader(int w, int h) : BmpHeader(w, h, 1078, 8) {
+BmpGrayHeader::BmpGrayHeader(int w, int h) : 
+	BmpHeader(w, h, 1078, 8) 
+{
 	for (size_t i = 0; i < 1024; ) {
 		char ch = char(i / 4);
 		colorMap[i++] = ch;

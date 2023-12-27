@@ -24,14 +24,12 @@
 class ProgressDisplayConsole : public ProgressDisplay {
 
 protected:
-	std::stringstream out;
+	std::stringstream outBuffer;
 	std::ostream* outstream;
 
 	ProgressDisplayConsole(MovieFrame& frame, std::ostream* outstream);
 	void writeMessage(const std::string& str) override;
-
-public:
-	void update(bool force = false) override;
+	std::stringstream& buildMessage();
 };
 
 //display a character graph between 0% and 100%
@@ -43,24 +41,31 @@ private:
 
 public:
 	ProgressDisplayGraph(MovieFrame& frame, std::ostream* outstream) :
-		ProgressDisplayConsole(frame, outstream) 
-	{}
+		ProgressDisplayConsole(frame, outstream) {}
 	void init() override;
 	void update(bool force) override;
 	void terminate() override;
 	void writeMessage(const std::string& msg) override {}
 };
 
+//new line for every frame
+class ProgressDisplayNewLine : public ProgressDisplayConsole {
+
+public:
+	ProgressDisplayNewLine(MovieFrame& frame, std::ostream* outstream) :
+		ProgressDisplayConsole(frame, outstream) {}
+	void update(bool force = false) override;
+};
+
 //rewrite one line with updated status
 class ProgressDisplayRewriteLine : public ProgressDisplayConsole {
 
 private:
-	std::string line;
+	std::string output;
 
 public:
 	ProgressDisplayRewriteLine(MovieFrame& frame, std::ostream* outstream) :
-		ProgressDisplayConsole(frame, outstream) 
-	{}
+		ProgressDisplayConsole(frame, outstream) {}
 	void update(bool force) override;
 	void terminate() override;
 };
@@ -74,8 +79,7 @@ private:
 
 public:
 	ProgressDisplayDetailed(MovieFrame& frame, std::ostream* outstream) :
-		ProgressDisplayConsole(frame, outstream)
-	{}
+		ProgressDisplayConsole(frame, outstream) {}
 	void update(bool force) override;
 };
 
@@ -84,7 +88,6 @@ class ProgressDisplayNone : public ProgressDisplay {
 
 public:
 	ProgressDisplayNone(MovieFrame& frame) :
-		ProgressDisplay(frame) 
-	{}
+		ProgressDisplay(frame) {}
 	void update(bool force) override {}
 };

@@ -24,7 +24,9 @@
 #include "Eula.h"
 #include "MainData.hpp"
 
-Eula::Eula() : QMainWindow(nullptr) {
+Eula::Eula() : 
+    QMainWindow(nullptr) 
+{
     ui.setupUi(this);
 
     //when declining eula we quit

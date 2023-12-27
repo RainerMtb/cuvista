@@ -53,9 +53,6 @@
     <ClCompile Include="FFmpegUtil.cpp">
       <Filter>Util</Filter>
     </ClCompile>
-    <ClCompile Include="FrameResult.cpp">
-      <Filter>Transformation</Filter>
-    </ClCompile>
     <ClCompile Include="RandomSource.cpp">
       <Filter>Transformation</Filter>
     </ClCompile>
@@ -101,9 +98,6 @@
     <ClCompile Include="DeviceInfoCpu.cpp">
       <Filter>Util</Filter>
     </ClCompile>
-    <ClCompile Include="PipeWriter.cpp">
-      <Filter>Writer</Filter>
-    </ClCompile>
     <ClCompile Include="StackedWriter.cpp">
       <Filter>Writer</Filter>
     </ClCompile>
@@ -112,6 +106,12 @@
     </ClCompile>
     <ClCompile Include="Stats.cpp">
       <Filter>Main</Filter>
+    </ClCompile>
+    <ClCompile Include="FrameResult.cpp">
+      <Filter>Transformation</Filter>
+    </ClCompile>
+    <ClCompile Include="PipeWriter.cpp">
+      <Filter>Windows</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -127,17 +127,11 @@
     <ClInclude Include="AVException.hpp">
       <Filter>Util</Filter>
     </ClInclude>
-    <ClInclude Include="AffineTransform.hpp">
-      <Filter>Transformation</Filter>
-    </ClInclude>
     <ClInclude Include="Trajectory.hpp">
       <Filter>Transformation</Filter>
     </ClInclude>
     <ClInclude Include="KeyboardInput.hpp">
       <Filter>Util</Filter>
-    </ClInclude>
-    <ClInclude Include="FrameResult.hpp">
-      <Filter>Transformation</Filter>
     </ClInclude>
     <ClInclude Include="Stats.hpp">
       <Filter>Main</Filter>
@@ -210,6 +204,12 @@
     </ClInclude>
     <ClInclude Include="MainData.hpp">
       <Filter>Main</Filter>
+    </ClInclude>
+    <ClInclude Include="FrameResult.hpp">
+      <Filter>Transformation</Filter>
+    </ClInclude>
+    <ClInclude Include="AffineTransform.hpp">
+      <Filter>Transformation</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

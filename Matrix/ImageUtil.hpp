@@ -115,7 +115,8 @@ public:
 class BmpColorHeader : public BmpHeader {
 
 public:
-	BmpColorHeader(int w, int h) : BmpHeader(w, h, 54, 24) {}
+	BmpColorHeader(int w, int h) : 
+		BmpHeader(w, h, 54, 24) {}
 };
 
 class BmpGrayHeader : public BmpHeader {
@@ -135,7 +136,9 @@ protected:
 	int h, w;
 
 public:
-	PgmHeader(int w, int h) : h { h }, w { w } {}
+	PgmHeader(int w, int h) : 
+		h { h }, 
+		w { w } {}
 
 	void writeHeader(std::ofstream& os) const override;
 };

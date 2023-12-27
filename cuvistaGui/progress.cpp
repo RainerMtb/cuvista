@@ -18,7 +18,9 @@
 
 #include "progress.h"
 
-ProgressWindow::ProgressWindow(QWidget* parent) : QMainWindow(parent) {
+ProgressWindow::ProgressWindow(QWidget* parent) : 
+	QMainWindow(parent) 
+{
 	ui.setupUi(this);
 	resize(minimumSize());
 	setWindowModality(Qt::ApplicationModal);

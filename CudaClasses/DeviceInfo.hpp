@@ -52,8 +52,7 @@ public:
 	int64_t maxPixel;
 
 	DeviceInfo(DeviceType type, int64_t maxPixel)
-		: type { type }, maxPixel { maxPixel } 
-	{}
+		: type { type }, maxPixel { maxPixel } {}
 
 	virtual std::string getName() const = 0;
 };

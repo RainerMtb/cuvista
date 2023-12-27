@@ -31,12 +31,10 @@ protected:
 
 	ProgressDisplay(MovieFrame& frame, int interval) :
 		frame { frame },
-		interval { interval } 
-	{}
+		interval { interval } {}
 
 	ProgressDisplay(MovieFrame& frame) :
-		ProgressDisplay(frame, 0) 
-	{}
+		ProgressDisplay(frame, 0) {}
 
 	bool isDue(bool forceUpdate);
 	double progressPercent();

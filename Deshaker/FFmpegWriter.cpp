@@ -131,7 +131,7 @@ int FFmpegWriter::writeFFmpegPacket() {
 }
 
 
-void FFmpegWriter::write() {
+void FFmpegWriter::write(const MovieFrame& frame) {
     write(outputFrame);
 }
 

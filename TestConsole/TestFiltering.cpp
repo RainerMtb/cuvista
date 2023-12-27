@@ -35,11 +35,11 @@ void filter() {
 }
 
 void runInit(MainData& data, std::unique_ptr<MovieFrame>& frame, AffineTransform& trf) {
-	frame->mReader.read(frame->bufferFrame);
+	frame->mReader.read(frame->mBufferFrame);
 	frame->inputData();
 	frame->createPyramid(frame->mReader.frameIndex);
 
-	frame->mReader.read(frame->bufferFrame);
+	frame->mReader.read(frame->mBufferFrame);
 	frame->inputData();
 	frame->createPyramid(frame->mReader.frameIndex);
 
@@ -84,8 +84,8 @@ void filterCompare() {
 		runInit(dataCpu, cpu, trf);
 	}
 
-	std::vector pc = cpu->resultPoints;
-	std::vector pg = gpu->resultPoints;
+	std::vector pc = cpu->mResultPoints;
+	std::vector pg = gpu->mResultPoints;
 	bool isEqual = true;
 	for (int i = 0; i < pc.size(); i++) {
 		if (pc[i] != pg[i]) {

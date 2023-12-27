@@ -19,39 +19,26 @@
 #pragma once
 
 #include "MovieWriter.hpp"
-#include "NvEncoder.hpp"
 
-//-----------------------------------------------------------------------------------
+struct NvPacket;
+class NvEncoder; //do not fully include NvEncoder.hpp here
+
 class CudaFFmpegWriter : public FFmpegFormatWriter {
 
 private:
-	class FunctorLess {
-	public:
-		bool operator () (const GUID& g1, const GUID& g2) const;
-	};
-	std::map<GUID, AVCodecID, FunctorLess> guidToCodecMap = {
-		{ NV_ENC_CODEC_H264_GUID, AV_CODEC_ID_H264 },
-		{ NV_ENC_CODEC_HEVC_GUID, AV_CODEC_ID_HEVC },
-	};
-
-	NvEncoder nvenc;
-	std::list<NvPacket> nvPackets; //encoded packets
+	std::unique_ptr<NvEncoder> nvenc;
 
 	void writePacketToFile(const NvPacket& nvpkt, bool terminate);
 	void encodePackets();
 
 public:
-	CudaFFmpegWriter(MainData& data, MovieReader& reader) :
-		FFmpegFormatWriter(data, reader), 
-		nvenc { NvEncoder(data.w, data.h) } 
-	{}
-
-	virtual ~CudaFFmpegWriter() override;
+	CudaFFmpegWriter(MainData& data, MovieReader& reader);
+	~CudaFFmpegWriter() override;
 
 	void open(EncodingOption videoCodec) override;
 	OutputContext getOutputContext() override;
-	void write() override;
-	std::future<void> writeAsync() override;
+	void write(const MovieFrame& frame) override;
+	std::future<void> writeAsync(const MovieFrame& frame) override;
 	bool startFlushing() override;
 	bool flush() override;
 };

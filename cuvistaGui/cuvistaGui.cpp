@@ -27,7 +27,9 @@
 #include "MainData.hpp"
 #include "UserInput.hpp"
 
-cuvistaGui::cuvistaGui(QWidget *parent) : QMainWindow(parent) {
+cuvistaGui::cuvistaGui(QWidget *parent) : 
+    QMainWindow(parent) 
+{
     ui.setupUi(this);
     mProgressWindow = new ProgressWindow(this); //destructs when parent destructs
     mMovieDir = QStandardPaths::locate(QStandardPaths::MoviesLocation, QString(), QStandardPaths::LocateDirectory);

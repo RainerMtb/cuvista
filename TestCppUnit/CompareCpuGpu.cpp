@@ -41,6 +41,7 @@ private:
 	template <class T> static std::unique_ptr<MovieFrame> runInit(MainData& data) {
 		AffineTransform trf;
 		trf.addRotation(0.2).addTranslation(-40, 30);
+		trf.frameIndex = 0;
 		std::string file = "d:/VideoTest/04.ts";
 
 		data.fileIn = file;
@@ -50,11 +51,11 @@ private:
 		NullWriter writer(data, reader);
 		std::unique_ptr<MovieFrame> frame = std::make_unique<T>(data, reader, writer);
 
-		reader.read(frame->bufferFrame);
+		reader.read(frame->mBufferFrame);
 		frame->inputData();
 		frame->createPyramid(reader.frameIndex);
 
-		reader.read(frame->bufferFrame);
+		reader.read(frame->mBufferFrame);
 		frame->inputData();
 		frame->createPyramid(reader.frameIndex);
 		frame->computeStart(reader.frameIndex);
@@ -103,12 +104,12 @@ public:
 	}
 
 	TEST_METHOD(equalPointResultSize) {
-		Assert::AreEqual(frameCpu->resultPoints.size(), frameCuda->resultPoints.size());
+		Assert::AreEqual(frameCpu->mResultPoints.size(), frameCuda->mResultPoints.size());
 	}
 
 	TEST_METHOD(equalPointResults) {
-		std::vector pc = frameCpu->resultPoints;
-		std::vector pg = frameCuda->resultPoints;
+		std::vector pc = frameCpu->mResultPoints;
+		std::vector pg = frameCuda->mResultPoints;
 		for (int i = 0; i < pc.size(); i++) {
 			//only check when both results are numerically stable
 			Assert::AreEqual(pc[i], pg[i], L"results not equal");
@@ -137,10 +138,10 @@ public:
 
 		//compute transformation matrix multiple times
 		for (int i = 0; i < siz; i++) {
-			FrameResult frameResult(dataCpu);
+			FrameResult frameResult(dataCpu, pool);
 			std::unique_ptr<RNGbase> rng = std::make_unique<RNG<RandomSource>>();
-			frameResult.computeTransform(frameCpu->resultPoints, dataCpu, pool, -1);
-			trfs[i] = frameResult.mTransform;
+			frameResult.computeTransform(frameCpu->mResultPoints, pool, -1);
+			trfs[i] = frameResult.transform();
 		}
 
 		//check
@@ -158,9 +159,9 @@ public:
 		//compute transformation matrix multiple times
 		std::unique_ptr<RNGbase> rng = std::make_unique<RNG<std::default_random_engine>>();
 		for (int i = 0; i < siz; i++) {
-			FrameResult frameResult(dataCpu);
-			frameResult.computeTransform(frameCpu->resultPoints, dataCpu, pool, -1);
-			trfs[i] = frameResult.mTransform;
+			FrameResult frameResult(dataCpu, pool);
+			frameResult.computeTransform(frameCpu->mResultPoints, pool, -1);
+			trfs[i] = frameResult.transform();
 		}
 
 		Matd avg = Matd::zeros(1, 4);

@@ -30,8 +30,7 @@ public:
 	int cudaIndex = 0;
 
 	DeviceInfoCuda(DeviceType type, int64_t maxPixel) 
-		: DeviceInfo(type, maxPixel) 
-	{}
+		: DeviceInfo(type, maxPixel) {}
 
 	std::string getName() const override;
 

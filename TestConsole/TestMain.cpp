@@ -31,7 +31,7 @@ int main() {
 	//matTest();
 	//subMat();
 	//iteratorTest();
-	//similarTransformPerformance();
+	similarTransformPerformance();
 	//cudaInvSimple();
 	//cudaInvPerformanceTest();
 	//cudaInvEqualityTest();
@@ -42,7 +42,7 @@ int main() {
 	//transform();
 	//cudaInvTest(1, 32);
 
-	pyramid();
+	//pyramid();
 	//openClInvTest(1, 32);
 	//openClInvGroupTest(1, 9);
 	//openClnorm1Test();

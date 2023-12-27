@@ -39,7 +39,7 @@ public:
 	ImageYuv getInput(int64_t index) const override;
 	void getInputFrame(int64_t frameIndex, ImagePPM& image) override;
 	void getTransformedOutput(int64_t frameIndex, ImagePPM& image) override;
-	std::string name() const override { return "Cpu Only"; }
+	std::string className() const override { return "Cpu Only"; }
 
 protected:
 

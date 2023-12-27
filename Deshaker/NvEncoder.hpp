@@ -65,7 +65,12 @@ public:
 	std::vector<uint8_t> mExtradata;
 	uint32_t mExtradataSize = 0;
 
-	NvEncoder(int w, int h) : h { h }, w { w } {}
+	NvEncoder(int w, int h) :
+		h { h }, 
+		w { w } {}
+
+	NvEncoder() :
+		NvEncoder(0, 0) {}
 
 	static void probeEncoding(CudaInfo& cudaInfo);
 	static void probeSupportedCodecs(DeviceInfoCuda& deviceInfoCuda);

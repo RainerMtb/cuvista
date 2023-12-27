@@ -50,6 +50,7 @@ enum class OutputType {
 enum class ProgressType {
 	NONE,
 	REWRITE_LINE,
+	NEW_LINE,
 	GRAPH,
 	DETAILED,
 };
@@ -63,7 +64,8 @@ enum class DecideYNA {
 class NullStream : public std::ostream {
 
 public:
-	NullStream() : std::ostream(nullptr) {}
+	NullStream() : 
+		std::ostream(nullptr) {}
 
 	template <class T> NullStream& operator << (const T& value) { return *this; }
 };

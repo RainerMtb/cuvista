@@ -39,14 +39,13 @@ protected:
 	MovieWriter(MainData& data, MovieReader& reader) : 
 		outputFrame(data.h, data.w, data.cpupitch), 
 		mReader { reader },
-		mData { data } 
-	{}
+		mData { data } {}
 
 public:
 	virtual ~MovieWriter() = default;
 	virtual OutputContext getOutputContext();
-	virtual void write() {}
-	virtual std::future<void> writeAsync();
+	virtual void write(const MovieFrame& frame) { frameIndex++; }
+	virtual std::future<void> writeAsync(const MovieFrame& frame);
 	virtual void open(EncodingOption videoCodec) {}
 	virtual bool startFlushing() { return false; }
 	virtual bool flush() { return false; }
@@ -58,8 +57,7 @@ class NullWriter : public MovieWriter {
 
 public:
 	NullWriter(MainData& data, MovieReader& reader) : 
-		MovieWriter(data, reader) 
-	{}
+		MovieWriter(data, reader) {}
 };
 
 
@@ -68,8 +66,7 @@ class ImageWriter : public MovieWriter {
 
 protected:
 	ImageWriter(MainData& data, MovieReader& reader) : 
-		MovieWriter(data, reader) 
-	{}
+		MovieWriter(data, reader) {}
 
 	std::string makeFilename() const;
 
@@ -86,10 +83,9 @@ private:
 public:
 	BmpImageWriter(MainData& data, MovieReader& reader) : 
 		ImageWriter(data, reader), 
-		image(data.h, data.w) 
-	{}
+		image(data.h, data.w) {}
 
-	void write() override;
+	void write(const MovieFrame& frame) override;
 };
 
 
@@ -98,17 +94,16 @@ class JpegImageWriter : public ImageWriter {
 
 private:
 	AVCodecContext* ctx = nullptr;
-	AVFrame* frame = nullptr;
+	AVFrame* avframe = nullptr;
 	AVPacket* packet = nullptr;
 
 public:
 	JpegImageWriter(MainData& data, MovieReader& reader) : 
-		ImageWriter(data, reader) 
-	{}
+		ImageWriter(data, reader) {}
 
 	~JpegImageWriter() override;
 	void open(EncodingOption videoCodec) override;
-	void write() override;
+	void write(const MovieFrame& frame) override;
 };
 
 
@@ -121,8 +116,7 @@ protected:
 	//constructor
 	RawWriter(MainData& data, MovieReader& reader) :
 		MovieWriter(data, reader), 
-		yuvPacked(3ull * data.h * data.w) 
-	{}
+		yuvPacked(3ull * data.h * data.w) {}
 
 	//copy strided yuv data into a packed array [w * h * 3]
 	void packYuv();
@@ -134,12 +128,11 @@ class PipeWriter : public RawWriter {
 
 public:
 	PipeWriter(MainData& data, MovieReader& reader) : 
-		RawWriter(data, reader) 
-	{}
+		RawWriter(data, reader) {}
 
 	~PipeWriter() override;
 	void open(EncodingOption videoCodec) override;
-	void write() override;
+	void write(const MovieFrame& frame) override;
 };
 
 
@@ -162,7 +155,7 @@ public:
 	TCPWriter(MainData& data, MovieReader& reader);
 	~TCPWriter() override;
 	void open(EncodingOption videoCodec) override;
-	void write() override;
+	void write(const MovieFrame& frame) override;
 };
 
 
@@ -185,7 +178,8 @@ protected:
 	AVPacket* videoPacket = nullptr;
 	bool headerWritten = false;
 
-	FFmpegFormatWriter(MainData& data, MovieReader& reader) : MovieWriter(data, reader) {}
+	FFmpegFormatWriter(MainData& data, MovieReader& reader) : 
+		MovieWriter(data, reader) {}
 	~FFmpegFormatWriter() override;
 	void open(EncodingOption videoCodec) override;
 	int writePacket(AVPacket* packet);
@@ -214,10 +208,11 @@ protected:
 	void write(ImageYuv& frame);
 
 public:
-	FFmpegWriter(MainData& data, MovieReader& reader) : FFmpegFormatWriter(data, reader) {}
+	FFmpegWriter(MainData& data, MovieReader& reader) : 
+		FFmpegFormatWriter(data, reader) {}
 	~FFmpegWriter() override;
 	void open(EncodingOption videoCodec) override;
-	void write() override;
+	void write(const MovieFrame& frame) override;
 	bool startFlushing() override;
 	bool flush() override;
 };
@@ -237,12 +232,47 @@ public:
 		FFmpegWriter(data, reader), 
 		widthTotal { data.w * 3 / 2 }, 
 		combinedFrame(data.h, widthTotal, widthTotal),
-		inputFrame(data.h, data.w, data.cpupitch)
-	{}
+		inputFrame(data.h, data.w, data.cpupitch) {}
 
 	void open(EncodingOption videoCodec) override;
 	OutputContext getOutputContext() override;
-	void write() override;
+	void write(const MovieFrame& frame) override;
+};
+
+
+//------------- transformation file -------------------------------------------------
+class TransformsFile {
+
+protected:
+	const MainData& mData;
+	inline static std::string id = "CUVI";
+	std::ofstream file;
+
+	template <class T> void writeValue(T val) {
+		file.write(reinterpret_cast<const char*>(&val), sizeof(val));
+	}
+
+public:
+	TransformsFile(const MainData& data) :
+		mData { data } {}
+
+	void open();
+	void writeTransform(const Affine2D& transform, int64_t frameIndex);
+};
+
+
+//------------- write binary transformation file ------------------------------------
+class TransformsWriterMain : public MovieWriter, TransformsFile {
+
+public:
+	static std::map<int64_t, TransformValues> readTransformMap(const std::string& trajectoryFile);
+
+	TransformsWriterMain(MainData& data, MovieReader& reader) :
+		MovieWriter(data, reader),
+		TransformsFile(data) {}
+
+	virtual void open(EncodingOption videoCodec) override; //for use as a main writer
+	virtual void write(const MovieFrame& frame) override;
 };
 
 
@@ -252,38 +282,25 @@ class AuxiliaryWriter : public MovieWriter {
 private:
 	NullReader nullReader;
 
-protected:
-	MovieFrame& frame;
-
 public:
-	AuxiliaryWriter(MainData& data, MovieFrame& frame) :
-		MovieWriter(data, nullReader),
-		frame { frame }
-	{}
+	AuxiliaryWriter(MainData& data) :
+		MovieWriter(data, nullReader) {}
+
+	virtual void open() {}
 };
 
 
-//------------- write binary transformation file ------------------------------------
-class TransformsWriter : public AuxiliaryWriter {
-
-private:
-	inline static std::string id = "CUVI";
-	std::ofstream file;
-
-	template <class T> void writeValue(T val) {
-		file.write(reinterpret_cast<const char*>(&val), sizeof(val));
-	}
+//--------------- write transforms --------------------------------------------------
+class AuxTransformsWriter : public AuxiliaryWriter, TransformsFile {
 
 public:
-	static std::map<int64_t, TransformValues> readTransformMap(const std::string& trajectoryFile);
+	AuxTransformsWriter(MainData& data) :
+		AuxiliaryWriter(data),
+		TransformsFile(data) {}
 
-	TransformsWriter(MainData& data, MovieFrame& frame);
-
-	void writeTransform(const Affine2D& transform, int64_t frameIndex);
-
-	virtual void write() override;
+	virtual void open() override;
+	virtual void write(const MovieFrame& frame) override;
 };
-
 
 //--------------- write point results as large text file ----------------------------
 class ResultDetailsWriter : public AuxiliaryWriter {
@@ -293,11 +310,12 @@ private:
 	std::ofstream file;
 
 public:
-	ResultDetailsWriter(MainData& data, MovieFrame& frame);
+	ResultDetailsWriter(MainData& data) :
+		AuxiliaryWriter(data) {}
 
+	virtual void open() override;
+	virtual void write(const MovieFrame& frame) override;
 	void write(const std::vector<PointResult>& results, int64_t frameIndex);
-
-	virtual void write() override;
 };
 
 
@@ -308,14 +326,13 @@ private:
 	ImageBGR bgr;
 
 public:
-	ResultImageWriter(MainData& data, MovieFrame& frame) :
-		AuxiliaryWriter(data, frame), 
-		bgr(data.h, data.w) 
-	{}
+	ResultImageWriter(MainData& data) :
+		AuxiliaryWriter(data), 
+		bgr(data.h, data.w) {}
 
+	virtual void open() override {}
+	virtual void write(const MovieFrame& frame) override;
 	void write(const FrameResult& fr, int64_t idx, const ImageYuv& yuv, const std::string& fname);
-
-	virtual void write() override;
 };
 
 
@@ -323,5 +340,5 @@ public:
 class AuxWriters : public std::vector<std::unique_ptr<AuxiliaryWriter>> {
 
 public:
-	void writeAll();
+	void writeAll(const MovieFrame& frame);
 };

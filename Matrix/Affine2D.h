@@ -24,22 +24,27 @@
 class Affine2D : public Mat<double> {
 
 protected:
-	virtual void setParam(double m00, double m01, double m02, double m10, double m11, double m12) {
+	void setParam(double m00, double m01, double m02, double m10, double m11, double m12) {
 		array[0] = m00;   array[1] = m01;   array[2] = m02;
 		array[3] = m10;   array[4] = m11;   array[5] = m12;
 		array[6] = 0;     array[7] = 0;     array[8] = 1;
 	}
 
-	Affine2D(double m00, double m01, double m02, double m10, double m11, double m12) : Mat<double>(3, 3) {
+	Affine2D(double m00, double m01, double m02, double m10, double m11, double m12) : 
+		Mat<double>(3, 3) 
+	{
 		setParam(m00, m01, m02, m10, m11, m12);
 	}
 
-	Affine2D(double scale, double rot, double dx, double dy) : Affine2D(scale, rot, dx, -rot, scale, dy) {}
+	Affine2D(double scale, double rot, double dx, double dy) : 
+		Affine2D(scale, rot, dx, -rot, scale, dy) {}
 
-	Affine2D(Mat<double> mat) : Mat<double>(mat.array, mat.rows(), mat.cols(), true) {}
+	Affine2D(Mat<double> mat) : 
+		Mat<double>(mat.array, mat.rows(), mat.cols(), true) {}
 
 public:
-	Affine2D() : Affine2D(1, 0, 0, 0) {}
+	Affine2D() : 
+		Affine2D(1, 0, 0, 0) {}
 
 	//rigid transform parameters
 	static Affine2D fromValues(double scale, double rot, double dx, double dy) { 
@@ -57,8 +62,9 @@ public:
 		return *this;
 	}
 
-	virtual void setParam(double scale, double rot, double dx, double dy) {
+	Affine2D& setParam(double scale, double rot, double dx, double dy) {
 		setParam(scale, rot, dx, -rot, scale, dy);
+		return *this;
 	}
 
 	Affine2D& addTranslation(double dx, double dy) {

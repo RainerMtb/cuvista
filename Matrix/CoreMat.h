@@ -42,8 +42,7 @@ protected:
 		array { array }, 
 		h { rows }, 
 		w { cols }, 
-		ownData { ownData } 
-	{}
+		ownData { ownData } {}
 
 	//create new mat, allocate data array
 	CoreMat<T>(size_t rows, size_t cols) : CoreMat<T>(new T[rows * cols], rows, cols, true) {}

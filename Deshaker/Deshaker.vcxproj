@@ -162,6 +162,7 @@
     <ClCompile Include="clFunctions.cpp" />
     <ClCompile Include="clMain.cpp" />
     <ClCompile Include="clTest.cpp" />
+    <ClCompile Include="FrameResult.cpp" />
     <ClCompile Include="MainData.cpp" />
     <ClCompile Include="StackedWriter.cpp" />
     <ClCompile Include="CpuFrame.cpp" />
@@ -176,7 +177,6 @@
     <ClCompile Include="ProgressDisplayConsole.cpp" />
     <ClCompile Include="RandomSource.cpp" />
     <ClCompile Include="MovieFrame.cpp" />
-    <ClCompile Include="FrameResult.cpp" />
     <ClCompile Include="MovieReader.cpp" />
     <ClCompile Include="FFmpegWriter.cpp" />
     <ClCompile Include="NvEncoder.cpp" />
@@ -202,6 +202,7 @@
     <ClInclude Include="Deshaker.hpp" />
     <ClInclude Include="DeviceInfoCpu.hpp" />
     <ClInclude Include="FFmpegUtil.hpp" />
+    <ClInclude Include="FrameResult.hpp" />
     <ClInclude Include="KeyboardInput.hpp" />
     <ClInclude Include="DeshakerHelpText.hpp" />
     <ClInclude Include="MainData.hpp" />
@@ -213,7 +214,6 @@
     <ClInclude Include="Stats.hpp" />
     <ClInclude Include="RandomSource.hpp" />
     <ClInclude Include="MovieFrame.hpp" />
-    <ClInclude Include="FrameResult.hpp" />
     <ClInclude Include="MovieReader.hpp" />
     <ClInclude Include="NvEncoder.hpp" />
     <ClInclude Include="Trajectory.hpp" />

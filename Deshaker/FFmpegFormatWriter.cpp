@@ -410,7 +410,7 @@ void FFmpegFormatWriter::writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsI
     mReader.packetList.erase(vpc);
 
     //store stats
-    encodedBytes = pkt->size;
+    int encodedBytes = pkt->size;
     encodedDts = pkt->dts;
     encodedPts = pkt->pts;
 

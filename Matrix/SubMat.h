@@ -48,8 +48,7 @@ private:
 		r0 { r0 }, 
 		c0 { c0 }, 
 		hs { hs }, 
-		ws { ws } 
-	{}
+		ws { ws } {}
 
 	//check if given index values are valid to this mat
 	virtual bool isValidIndex(size_t row, size_t col) const override {
@@ -68,7 +67,8 @@ private:
 	}
 
 public:
-	SubMat<T>() : Mat<T>() {}
+	SubMat<T>() : 
+		Mat<T>() {}
 
 	virtual MatRow<T> operator [] (size_t row) override {
 		assert(row < hs && "row index out of bounds");

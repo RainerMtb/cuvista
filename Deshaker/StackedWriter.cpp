@@ -31,7 +31,7 @@ OutputContext StackedWriter::getOutputContext() {
 	return { true, false, &outputFrame, nullptr, 0, true, &inputFrame };
 }
 
-void StackedWriter::write() {
+void StackedWriter::write(const MovieFrame& frame) {
 	int offset = int(mData.w * (1 + mData.blendInput.position) / 8);
 	unsigned char* in = inputFrame.data() + offset;
 	unsigned char* out = outputFrame.data() + offset;

@@ -19,8 +19,7 @@
 #pragma once
 
 #include "Affine2D.h"
-#include "CudaData.cuh"
-#include "Cherno/Instrumentor.h"
+#include "CoreData.hpp"
 #include "ThreadPool.h"
 
 class AffineTransform : public Affine2D {
@@ -29,41 +28,55 @@ private:
 	Mat A = Mat<double>::zeros(6, 6);
 	Mat b = Mat<double>::zeros(6, 1);
 
-	static void savePointResults(std::vector<PointResult>::iterator begin, size_t count);
-
 protected:
-	AffineTransform(int64_t frameIndex, double m00, double m01, double m02, double m10, double m11, double m12) : 
+	AffineTransform(int64_t frameIndex, double m00, double m01, double m02, double m10, double m11, double m12) :
 		Affine2D(m00, m01, m02, m10, m11, m12),
-		frameIndex { frameIndex }
-	{}
+		frameIndex { frameIndex } {}
 
 	AffineTransform(double m00, double m01, double m02, double m10, double m11, double m12) :
-		AffineTransform(-1, m00, m01, m02, m10, m11, m12) 
-	{}
+		AffineTransform(-1, m00, m01, m02, m10, m11, m12) {}
 
 public:
 	int64_t frameIndex;
 
 	AffineTransform(int64_t frameIndex, double scale, double rot, double dx, double dy) :
-		AffineTransform(frameIndex, scale, rot, dx, -rot, scale, dy) 
-	{}
+		AffineTransform(frameIndex, scale, rot, dx, -rot, scale, dy) {}
 
-	AffineTransform() : 
-		AffineTransform(-1, 1, 0, 0, 0) 
-	{}
+	AffineTransform() :
+		AffineTransform(-1, 1, 0, 0, 0) {}
 
 	//compute parameters from gives points
 	void computeAffine(std::vector<PointResult>& points);
 
 	//compute affine transform from given points
-	AffineTransform static computeAffine(std::vector<PointResult>::iterator begin, size_t count);
-
-	//compute similar transform, no shear
-	void computeSimilarLoop(std::vector<PointResult>::iterator it, size_t count);
-
-	//compute similar transform, no shear
-	void computeSimilarDirect(std::vector<PointResult>::iterator it, size_t count, ThreadPool& threadPool);
+	bool computeAffine(std::vector<PointResult>::iterator begin, size_t count);
 
 	//convert to cuda struct
 	std::array<double, 6> toArray() const;
+};
+
+
+class AffineSolver : public AffineTransform {
+
+public:
+	//compute similar transform, no shear
+	virtual void computeSimilar(std::vector<PointResult>::iterator it, size_t count) = 0;
+};
+
+class AffineSolverSimple : public AffineSolver {
+
+public:
+	void computeSimilar(std::vector<PointResult>::iterator it, size_t count) override;
+};
+
+class AffineSolverFast : public AffineSolver {
+
+private:
+	ThreadPool& threadPool;
+
+public:
+	AffineSolverFast(ThreadPool& threadPool) :
+		threadPool { threadPool } {}
+
+	void computeSimilar(std::vector<PointResult>::iterator it, size_t count) override;
 };

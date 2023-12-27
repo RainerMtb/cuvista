@@ -233,8 +233,9 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 			int i = std::stoi(next);
 			if (i == 0) progressType = ProgressType::NONE;
 			else if (i == 1) progressType = ProgressType::REWRITE_LINE;
-			else if (i == 2) progressType = ProgressType::GRAPH;
-			else if (i == 3) progressType = ProgressType::DETAILED;
+			else if (i == 2) progressType = ProgressType::NEW_LINE;
+			else if (i == 3) progressType = ProgressType::GRAPH;
+			else if (i == 4) progressType = ProgressType::DETAILED;
 			else throw AVException("invalid progress type: " + next);
 
 		} else if (args.nextArg("noheader")) {

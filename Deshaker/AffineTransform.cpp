@@ -39,7 +39,7 @@ void AffineTransform::computeAffine(std::vector<PointResult>& points) {
 	ludec.solveAffine(b, *this);
 }
 
-AffineTransform AffineTransform::computeAffine(std::vector<PointResult>::iterator begin, size_t count) {
+bool AffineTransform::computeAffine(std::vector<PointResult>::iterator begin, size_t count) {
 	Mat A = Mat<double>::zeros(count * 2, 6);
 	Mat b = Mat<double>::zeros(count * 2, 1);
 	auto& it = begin;
@@ -61,10 +61,11 @@ AffineTransform AffineTransform::computeAffine(std::vector<PointResult>::iterato
 		it++;
 	}
 	auto res = A.solveInPlace(b);
-	return res.has_value() ? AffineTransform(res->at(0, 0), res->at(1, 0), res->at(2, 0), res->at(3, 0), res->at(4, 0), res->at(5, 0)) : AffineTransform();
+	setParam(res->at(0, 0), res->at(1, 0), res->at(2, 0), res->at(3, 0), res->at(4, 0), res->at(5, 0));
+	return res.has_value();
 }
 
-void AffineTransform::computeSimilarLoop(std::vector<PointResult>::iterator it, size_t count) {
+void AffineSolverSimple::computeSimilar(std::vector<PointResult>::iterator it, size_t count) {
 	assert(count >= 2 && "affine transform needs at least two points");
 	size_t m = count * 2;
 	Mat<double> A = Mat<double>::zeros(m, 4);
@@ -92,7 +93,8 @@ void AffineTransform::computeSimilarLoop(std::vector<PointResult>::iterator it, 
 	setParam(res->at(0, 0), res->at(1, 0), res->at(2, 0), res->at(3, 0));
 }
 
-void AffineTransform::computeSimilarDirect(std::vector<PointResult>::iterator it, size_t count, ThreadPool& threadPool) {
+//void AffineSolverFast::computeSimilar(std::vector<PointResult>::iterator it, size_t count, ThreadPool& threadPool) {
+void AffineSolverFast::computeSimilar(std::vector<PointResult>::iterator it, size_t count) {
 	assert(count >= 2 && "affine transform needs at least two points");
 	size_t m = count * 2;
 	Mat<double> A = Mat<double>::allocate(6, m); //A is transposed when compared to loop version
@@ -226,17 +228,4 @@ void AffineTransform::computeSimilarDirect(std::vector<PointResult>::iterator it
 
 std::array<double, 6> AffineTransform::toArray() const {
 	return { array[0], array[1], array[2], array[3], array[4], array[5] };
-}
-
-void AffineTransform::savePointResults(std::vector<PointResult>::iterator begin, size_t count) {
-	Mat<double> mat = Mat<double>::allocate(count, 4);
-	auto it = begin;
-	for (size_t i = 0; i < count; i++) {
-		mat[i][0] = it->x;
-		mat[i][1] = it->y;
-		mat[i][2] = it->u;
-		mat[i][3] = it->v;
-		it++;
-	}
-	mat.saveAsBinary("f:/points.dat");
 }

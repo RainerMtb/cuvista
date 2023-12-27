@@ -44,34 +44,6 @@ __device__ __host__ size_t cu::clampUnsigned(size_t valueToAdd, size_t valueToSu
 	return (size_t) cu::clamp(int64_t(valueToAdd) - int64_t(valueToSubtract), int64_t(lo), int64_t(hi));
 }
 
-__device__ __host__ double cu::clamp(double val, double lo, double hi) {
-	double out = val;
-	if (val < lo) out = lo;
-	if (val > hi) out = hi;
-	return out;
-}
-
-__device__ __host__ int64_t cu::clamp(int64_t val, int64_t lo, int64_t hi) {
-	int64_t out = val;
-	if (val < lo) out = lo;
-	if (val > hi) out = hi;
-	return out;
-}
-
-__device__ __host__ int cu::clamp(int val, int lo, int hi) {
-	int out = val;
-	if (val < lo) out = lo;
-	if (val > hi) out = hi;
-	return out;
-}
-
-__device__ __host__ float cu::clamp(float val, float lo, float hi) {
-	float out = val;
-	if (val < lo) out = lo;
-	if (val > hi) out = hi;
-	return out;
-}
-
 //-------------------
 //CUDA STRING
 //-------------------

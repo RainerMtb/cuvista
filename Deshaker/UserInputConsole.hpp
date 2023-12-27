@@ -29,7 +29,8 @@ private:
 	std::ostream& console;
 
 public:
-	UserInputConsole(std::ostream& console) : console { console } {}
+	UserInputConsole(std::ostream& console) : 
+		console { console } {}
 
 	void checkState() override {
 		std::optional<char> key = getKeyboardInput();

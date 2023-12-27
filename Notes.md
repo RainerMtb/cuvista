@@ -1,7 +1,3 @@
-# Misc Notes
-Cuda 11.8 is the highest version to support Compute 3.5
-Video Codec 11.0.10 is the highest encoder version to go along with it
-
 # General program flow
 
 1. Create MainData structure
@@ -48,3 +44,7 @@ used to encode when not via nvenc
 get shared build from https://www.gyan.dev/ffmpeg/builds/
 or build with Media Auto Build https://github.com/m-ab-s/media-autobuild_suite
 M-AB-S unfortunately rarely succeeds, always some problem with some package
+
+# Misc Notes
+Cuda 11.8 is the highest version to support Compute 3.5
+Video Codec 11.0.10 is the highest encoder version to go along with it

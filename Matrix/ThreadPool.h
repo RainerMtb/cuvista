@@ -61,7 +61,7 @@ public:
 };
 
 
-//acutual thread pool
+//actual thread pool
 class ThreadPool : public ThreadPoolBase {
 
 private:

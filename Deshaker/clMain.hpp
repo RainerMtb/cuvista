@@ -33,8 +33,7 @@ public:
 	std::vector<std::string> extensions;
 
 	DeviceInfoCl(DeviceType type, int64_t maxPixel)
-		: DeviceInfo(type, maxPixel)
-	{}
+		: DeviceInfo(type, maxPixel) {}
 
 	std::string getName() const override;
 };

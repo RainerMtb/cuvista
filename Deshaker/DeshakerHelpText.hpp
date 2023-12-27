@@ -102,8 +102,9 @@ misc options:
 -progress n     show progress in different ways
 -progress 0     quiet mode, no progress
 -progress 1     frequently rewrite line on the output console
--progress 2     graph indicator
--progress 3     more detailed report
+-progress 2     print new line for every frame
+-progress 3     graph indicator
+-progress 4     detailed report about video packet timings
                 default: 1
 -noheader       do not display headlines at start
 -quiet          same as '-progress 0 -noheader'

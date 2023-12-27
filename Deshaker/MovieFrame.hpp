@@ -62,7 +62,7 @@ public:
 	/*
 	* call transform calculation
 	*/
-	virtual const AffineTransform& computeTransform(int64_t frameIndex) final;
+	virtual void computeTransform(int64_t frameIndex) final;
 
 	/*
 	* get transformed image as Mat<float> where YUV color planes are stacked vertically
@@ -102,12 +102,12 @@ public:
 	/*
 	* name MovieFrame used
 	*/
-	virtual std::string name() const { return "None"; }
+	virtual std::string className() const { return "None"; }
 
-	FrameResult mFrameResult;
-	ImageYuv bufferFrame;
 	ThreadPool mPool;
-	std::vector<PointResult> resultPoints;
+	FrameResult mFrameResult;
+	ImageYuv mBufferFrame;
+	std::vector<PointResult> mResultPoints;
 
 	MovieFrame(const MovieFrame& other) = delete;
 	MovieFrame(MovieFrame&& other) = delete;
@@ -119,13 +119,15 @@ protected:
 		mData { data },
 		mReader { reader },
 		mWriter { writer },
-		mFrameResult(data),
-		bufferFrame(data.h, data.w, data.cpupitch),
-		resultPoints(data.resultCount),
-		mPool(data.cpuThreads)
-	{}
+		mPool(data.cpuThreads),
+		mFrameResult(data, mPool),
+		mBufferFrame(data.h, data.w, data.cpupitch),
+		mResultPoints(data.resultCount) {}
 
 private:
+	void read();
+	void write();
+
 	void runLoopCombined(ProgressDisplay& progress, UserInput& input, AuxWriters& auxWriters);
 	void runLoopFirst(ProgressDisplay& progress, UserInput& input, AuxWriters& auxWriters);
 	void runLoopSecond(ProgressDisplay& progress, UserInput& input, AuxWriters& auxWriters);
@@ -148,8 +150,7 @@ private:
 public:
 	DummyFrame(MainData& data, MovieReader& reader, MovieWriter& writer) :
 		MovieFrame(data, reader, writer),
-		frames(data.bufferCount, { data.h, data.w, data.w })
-	{}
+		frames(data.bufferCount, { data.h, data.w, data.w }) {}
 
 	void inputData() override;
 	void createPyramid(int64_t frameIndex) override {}
@@ -167,8 +168,7 @@ public:
 class DefaultFrame : public MovieFrame {
 public:
 	DefaultFrame(MainData& data, MovieReader& reader, MovieWriter& writer) : 
-		MovieFrame(data, reader, writer) 
-	{}
+		MovieFrame(data, reader, writer) {}
 	void inputData() override {}
 	void createPyramid(int64_t frameIndex) override {}
 	void computeStart(int64_t frameIndex) override {}

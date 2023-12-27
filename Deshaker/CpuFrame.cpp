@@ -66,8 +66,8 @@ CpuFrame::CpuFrameItem::CpuFrameItem(MainData& data) {
 
 //read input frame and put into buffer
 void CpuFrame::inputData() {
-	size_t idx = bufferFrame.index % mYUV.size();
-	mYUV[idx] = bufferFrame;
+	size_t idx = mBufferFrame.index % mYUV.size();
+	mYUV[idx] = mBufferFrame;
 }
 
 void CpuFrame::createPyramid(int64_t frameIndex) {
@@ -237,7 +237,7 @@ void CpuFrame::computeTerminate(int64_t frameIndex) {
 
 				//transformation for points with respect to center of image and level 0 of pyramid
 				int idx = iy0 * mData.ixCount + ix0;
-				resultPoints[idx] = { idx, ix0, iy0, xm, ym, xm - mData.w / 2, ym - mData.h / 2, u, v, result };
+				mResultPoints[idx] = { idx, ix0, iy0, xm, ym, xm - mData.w / 2, ym - mData.h / 2, u, v, result };
 			}
 		}
 	});
@@ -252,6 +252,7 @@ void CpuFrame::computeTerminate(int64_t frameIndex) {
 void CpuFrame::outputData(const AffineTransform& trf, OutputContext outCtx) {
 	size_t yuvidx = trf.frameIndex % mYUV.size();
 	const ImageYuv& input = mYUV[yuvidx];
+	assert(input.index == trf.frameIndex && "invalid frame index");
 	for (size_t z = 0; z < 3; z++) {
 		float f = 1.0f / 255.0f;
 		mYuv.setValues([&] (size_t r, size_t c) { return input.at(z, r, c) * f; }, mPool);

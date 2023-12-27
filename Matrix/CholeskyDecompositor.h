@@ -32,7 +32,11 @@ protected:
 	bool isspd = false;
 
 public:
-	CholeskyDecompositor(Mat<T>& mat) : A { mat }, m { mat.rows() }, n { mat.cols() }, L { Mat<T>::allocate(m, n) } {}
+	CholeskyDecompositor(Mat<T>& mat) : 
+		A { mat }, 
+		m { mat.rows() }, 
+		n { mat.cols() }, 
+		L { Mat<T>::allocate(m, n) } {}
 
 	virtual CholeskyDecompositor<T>& compute() override {
 		isspd = (m == n);

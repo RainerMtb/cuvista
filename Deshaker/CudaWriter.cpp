@@ -1,5 +1,24 @@
 #include "CudaWriter.hpp"
 #include "Util.hpp"
+#include "NvEncoder.hpp"
+
+class FunctorLess {
+public:
+    bool operator () (const GUID& g1, const GUID& g2) const {
+        return std::tie(g1.Data1, g1.Data2, g1.Data3, *g1.Data4) < std::tie(g2.Data1, g2.Data2, g2.Data3, *g2.Data4);
+    }
+};
+
+std::map<GUID, AVCodecID, FunctorLess> guidToCodecMap = {
+    { NV_ENC_CODEC_H264_GUID, AV_CODEC_ID_H264 },
+    { NV_ENC_CODEC_HEVC_GUID, AV_CODEC_ID_HEVC },
+};
+
+std::list<NvPacket> nvPackets; //encoded packets
+
+CudaFFmpegWriter::CudaFFmpegWriter(MainData& data, MovieReader& reader) :
+    FFmpegFormatWriter(data, reader),
+    nvenc { std::make_unique<NvEncoder>(data.w, data.h) } {}
 
 //cuda encoding contructor
 void CudaFFmpegWriter::open(EncodingOption videoCodec) {
@@ -17,7 +36,7 @@ void CudaFFmpegWriter::open(EncodingOption videoCodec) {
     FFmpegFormatWriter::open(videoCodec);
 
     //setup nvenc class
-    nvenc.createEncoder(mReader.fpsNum, mReader.fpsDen, GOP_SIZE, mData.crf, guid, dic->cudaIndex);
+    nvenc->createEncoder(mReader.fpsNum, mReader.fpsDen, GOP_SIZE, mData.crf, guid, dic->cudaIndex);
 
     //setup codec parameters for ffmpeg format output
     AVCodecParameters* params = videoStream->codecpar;
@@ -25,9 +44,9 @@ void CudaFFmpegWriter::open(EncodingOption videoCodec) {
     params->codec_id = guidToCodecMap[guid];
     params->width = mData.w;
     params->height = mData.h;
-    params->extradata_size = nvenc.mExtradataSize;
-    params->extradata = (uint8_t*) av_mallocz(0ull + nvenc.mExtradataSize + AV_INPUT_BUFFER_PADDING_SIZE);
-    memcpy(params->extradata, nvenc.mExtradata.data(), nvenc.mExtradataSize);
+    params->extradata_size = nvenc->mExtradataSize;
+    params->extradata = (uint8_t*) av_mallocz(0ull + nvenc->mExtradataSize + AV_INPUT_BUFFER_PADDING_SIZE);
+    memcpy(params->extradata, nvenc->mExtradata.data(), nvenc->mExtradataSize);
 
     result = avio_open(&fmt_ctx->pb, fmt_ctx->url, AVIO_FLAG_WRITE);
     if (result < 0)
@@ -50,7 +69,7 @@ void CudaFFmpegWriter::open(EncodingOption videoCodec) {
 
 
 OutputContext CudaFFmpegWriter::getOutputContext() {
-    return { false, true, &outputFrame, reinterpret_cast<unsigned char*>(nvenc.getNextInputFramePtr()), nvenc.cudaPitch };
+    return { false, true, &outputFrame, reinterpret_cast<unsigned char*>(nvenc->getNextInputFramePtr()), nvenc->cudaPitch };
 }
 
 
@@ -76,7 +95,7 @@ void CudaFFmpegWriter::writePacketToFile(const NvPacket& nvpkt, bool terminate) 
 
 void CudaFFmpegWriter::encodePackets() {
     try {
-        nvenc.encodeFrame(nvPackets);
+        nvenc->encodeFrame(nvPackets);
 
     } catch (const AVException& e) {
         errorLogger.logError("error writing: ", e.what());
@@ -84,7 +103,7 @@ void CudaFFmpegWriter::encodePackets() {
 }
 
 
-void CudaFFmpegWriter::write() {
+void CudaFFmpegWriter::write(const MovieFrame& frame) {
     encodePackets();
 
     for (NvPacket& nvpkt : nvPackets) {
@@ -94,7 +113,7 @@ void CudaFFmpegWriter::write() {
 }
 
 
-std::future<void> CudaFFmpegWriter::writeAsync() {
+std::future<void> CudaFFmpegWriter::writeAsync(const MovieFrame& frame) {
     //util::ConsoleTimer ct("write");
     encodePackets();
 
@@ -110,23 +129,17 @@ std::future<void> CudaFFmpegWriter::writeAsync() {
 
 //flush encoder buffer
 bool CudaFFmpegWriter::startFlushing() {
-    nvenc.endEncode();
-    return nvenc.hasBufferedFrame();
+    nvenc->endEncode();
+    return nvenc->hasBufferedFrame();
 }
 
 
 bool CudaFFmpegWriter::flush() {
-    writePacketToFile(nvenc.getBufferedFrame(), true);
-    return nvenc.hasBufferedFrame();
+    writePacketToFile(nvenc->getBufferedFrame(), true);
+    return nvenc->hasBufferedFrame();
 }
 
 
 CudaFFmpegWriter::~CudaFFmpegWriter() {
-    nvenc.destroyEncoder();
-}
-
-
-//so GUID can be used as key in a map
-bool CudaFFmpegWriter::FunctorLess::operator () (const GUID& g1, const GUID& g2) const {
-    return std::tie(g1.Data1, g1.Data2, g1.Data3, *g1.Data4) < std::tie(g2.Data1, g2.Data2, g2.Data3, *g2.Data4);
+    nvenc->destroyEncoder();
 }

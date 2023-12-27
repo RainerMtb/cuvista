@@ -30,7 +30,7 @@ public:
 		MovieFrame(data, reader, writer) 
 	{
 		device = data.deviceList[data.deviceSelected];
-		cl::init(data, bufferFrame, device);
+		cl::init(data, mBufferFrame, device);
 	}
 
 	~OpenClFrame() {
@@ -38,7 +38,7 @@ public:
 	}
 
 	void inputData() override {
-		cl::inputData(bufferFrame.index, mData, bufferFrame);
+		cl::inputData(mBufferFrame.index, mData, mBufferFrame);
 	}
 
 	void createPyramid(int64_t frameIndex) override {
@@ -50,7 +50,7 @@ public:
 	}
 
 	void computeTerminate(int64_t frameIndex) override {
-		cl::computeTerminate(frameIndex, mData, resultPoints);
+		cl::computeTerminate(frameIndex, mData, mResultPoints);
 	}
 
 	void outputData(const AffineTransform& trf, OutputContext outCtx) override {
@@ -79,7 +79,7 @@ public:
 		cl::getTransformedOutput(image);
 	}
 
-	std::string name() const override {
+	std::string className() const override {
 		return device->getName();
 	}
 };

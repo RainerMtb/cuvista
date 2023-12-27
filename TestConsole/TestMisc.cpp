@@ -22,27 +22,30 @@ void similarTransformPerformance() {
 	//load PointResults
 	Matd::precision(10);
 	std::chrono::microseconds time;
-	Matd mat = Matd::fromBinaryFile("D:/VideoTest/points.dat");
-	size_t rows = mat.rows();
-	std::vector<PointResult> points(rows);
-	for (size_t i = 0; i < rows; i++) {
-		points[i] = {
-			.x = (int) mat[i][0],
-			.y = (int) mat[i][1],
-			.u = mat[i][2],
-			.v = mat[i][3]
-		}; //since c++ 20 designated initializers
+
+	int w = 100;
+	int h = 75;
+	int n = w * h;
+	std::vector<PointResult> points(n);
+	for (int x = 0; x < w; x++) {
+		for (int y = 0; y < h; y++) {
+			PointResult& pr = points[1ll * y * w + x];
+			pr.x = x;
+			pr.y = y;
+			pr.u = 4 + std::sin(x);
+			pr.v = 3 + std::sin(y);
+		}
 	}
-	std::cout << rows << " points" << std::endl;
+	std::cout << n << " points" << std::endl;
 
 	//slow method
-	AffineTransform trans;
-	trans.computeSimilarLoop(points.begin(), rows);
-	Matd x1 = Matd::fromRow(trans.scale(), trans.rot(), trans.dX(), trans.dY()).trans();
+	AffineSolverSimple trans1;
+	trans1.computeSimilar(points.begin(), n);
+	Matd x1 = Matd::fromRow(trans1.scale(), trans1.rot(), trans1.dX(), trans1.dY()).trans();
 	x1.toConsole("V1");
 	for (int i = 0; i < 15; i++) {
 		auto t1 = std::chrono::high_resolution_clock::now();
-		trans.computeSimilarLoop(points.begin(), rows);
+		trans1.computeSimilar(points.begin(), n);
 		auto t2 = std::chrono::high_resolution_clock::now();
 		time = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1);
 		std::cout << "time : " << time.count() / 1000.0 << " ms" << std::endl;
@@ -50,12 +53,13 @@ void similarTransformPerformance() {
 
 	//direct method
 	ThreadPool thr(4);
-	trans.computeSimilarDirect(points.begin(), rows, thr);
-	Matd x2 = Matd::fromRow(trans.scale(), trans.rot(), trans.dX(), trans.dY()).trans();
+	AffineSolverFast trans2(thr);
+	trans2.computeSimilar(points.begin(), n);
+	Matd x2 = Matd::fromRow(trans2.scale(), trans2.rot(), trans2.dX(), trans2.dY()).trans();
 	x2.toConsole("V2");
 	for (int i = 0; i < 15; i++) {
 		auto t1 = std::chrono::high_resolution_clock::now();
-		trans.computeSimilarDirect(points.begin(), rows, thr);
+		trans2.computeSimilar(points.begin(), n);
 		auto t2 = std::chrono::high_resolution_clock::now();
 		time = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1);
 		std::cout << "time : " << time.count() / 1000.0 << " ms" << std::endl;
@@ -76,14 +80,14 @@ void readAndWriteOneFrame() {
 		NullWriter writer(data, reader);
 		CudaFrame frame(data, reader, writer);
 
-		frame.bufferFrame.readFromPGM("d:/VideoTest/v00.pgm");
-		frame.bufferFrame.index = 0;
+		frame.mBufferFrame.readFromPGM("d:/VideoTest/v00.pgm");
+		frame.mBufferFrame.index = 0;
 		frame.mReader.frameIndex = 0;
 		frame.inputData();
 		frame.createPyramid(frame.mReader.frameIndex);
 
-		frame.bufferFrame.readFromPGM("D:/VideoTest/v01.pgm");
-		frame.bufferFrame.index = 1;
+		frame.mBufferFrame.readFromPGM("D:/VideoTest/v01.pgm");
+		frame.mBufferFrame.index = 1;
 		frame.mReader.frameIndex = 1;
 		frame.inputData();
 		frame.createPyramid(frame.mReader.frameIndex);
@@ -118,11 +122,11 @@ void transform() {
 		{ 1, 0, 0, 0, 0, 5, 5, 0.5, 0.4 },
 	};
 
-	AffineTransform trf1;
-	trf1.computeSimilarLoop(points.begin(), points.size());
+	AffineSolverSimple trf1;
+	trf1.computeSimilar(points.begin(), points.size());
 	ThreadPool pool(2);
-	AffineTransform trf2;
-	trf2.computeSimilarDirect(points.begin(), points.size(), pool);
+	AffineSolverFast trf2(pool);
+	trf2.computeSimilar(points.begin(), points.size());
 
 	trf1.toConsole("result classic loop ");
 	trf2.toConsole("result direct method");

@@ -67,10 +67,9 @@ namespace CudaTest {
 		std::vector<ImageYuv> outputFrames;
 
 		TestWriter(MainData& data, MovieReader& reader) : 
-			MovieWriter(data, reader) 
-		{}
+			MovieWriter(data, reader) {}
 
-		void write() override {
+		void write(const MovieFrame& frame) override {
 			this->frameIndex++;
 			outputFrames.push_back(outputFrame);
 		}
@@ -83,12 +82,12 @@ private:
 
 	std::vector<PointResult> run(MovieFrame& frame, MainData& data) {
 		//read first frame
-		frame.mReader.read(frame.bufferFrame);
+		frame.mReader.read(frame.mBufferFrame);
 		frame.inputData();
 		frame.createPyramid(frame.mReader.frameIndex);
 
 		//read second frame
-		frame.mReader.read(frame.bufferFrame);
+		frame.mReader.read(frame.mBufferFrame);
 		frame.inputData();
 		frame.createPyramid(frame.mReader.frameIndex);
 
@@ -96,7 +95,7 @@ private:
 		frame.computeStart(frame.mReader.frameIndex);
 		frame.computeTerminate(frame.mReader.frameIndex);
 		Assert::IsTrue(errorLogger.hasNoError());
-		return frame.resultPoints;
+		return frame.mResultPoints;
 	}
 
 public:
@@ -227,14 +226,14 @@ private:
 		NullWriter writer(data, reader);
 		std::unique_ptr<MovieFrame> frame = std::make_unique<T>(data, reader, writer);
 
-		frame->bufferFrame.readFromPGM("d:/VideoTest/v00.pgm");
-		frame->bufferFrame.index = 0;
+		frame->mBufferFrame.readFromPGM("d:/VideoTest/v00.pgm");
+		frame->mBufferFrame.index = 0;
 		reader.frameIndex = 0;
 		frame->inputData();
 		frame->createPyramid(frame->mReader.frameIndex);
 
-		frame->bufferFrame.readFromPGM("D:/VideoTest/v01.pgm");
-		frame->bufferFrame.index = 1;
+		frame->mBufferFrame.readFromPGM("D:/VideoTest/v01.pgm");
+		frame->mBufferFrame.index = 1;
 		reader.frameIndex = 1;
 		frame->inputData();
 		frame->createPyramid(frame->mReader.frameIndex);
@@ -245,7 +244,7 @@ private:
 		res.out = frame->getTransformedOutput();
 		res.im = writer.outputFrame;
 
-		res.res = frame->resultPoints;
+		res.res = frame->mResultPoints;
 		Assert::IsTrue(errorLogger.hasNoError());
 
 		return res;

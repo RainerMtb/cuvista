@@ -25,18 +25,26 @@
 
 class FrameResult {
 
+private:
+	const MainData& mData;
+	std::unique_ptr<AffineSolver> mAffineSolver;
+
 public:
-	std::vector<PointResult> mFiniteResults;
 	ptrdiff_t mCountFinite = 0;
 	ptrdiff_t mCountConsens = 0;
 
+	std::vector<PointResult> mFiniteResults;
 	std::vector<AffineTransform> mTransformsList;
-	AffineTransform mTransform;
 
-	FrameResult(const MainData& data) : 
-		mFiniteResults(data.resultCount) 
-	{}
+	FrameResult(MainData& data, ThreadPool& threadPool) :
+		mData { data },
+		mFiniteResults(data.resultCount),
+		mAffineSolver { std::make_unique<AffineSolverFast>(threadPool) } {}
 
 	//compute resulting transformation for this frame
-	const AffineTransform& computeTransform(const std::vector<PointResult>& results, const MainData& data, ThreadPool& threadPool, int64_t frameIndex);
+	void computeTransform(const std::vector<PointResult>& results, ThreadPool& threadPool, int64_t frameIndex);
+
+	const AffineTransform& transform() const;
+
+	void transformReset();
 };

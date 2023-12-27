@@ -66,6 +66,9 @@ char* d_interrupt;
 //parameter structure
 __constant__ CudaData d_core;
 
+//keep track of frames in the buffer
+std::vector<int64_t> frameIndizes;
+
 
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------- HOST CODE ------------------------------------------------------
@@ -307,6 +310,7 @@ void cudaInit(CudaData& core, int devIdx, const cudaDeviceProp& prop, ImageYuv& 
 	allocSafe(&d_yuvData, frameSize8 * core.bufferCount);
 	allocDeviceIndices(&d_yuvRows, d_yuvData, core.strideChar, yuvRowCount);
 	allocDeviceIndices(&d_yuvPlanes, d_yuvRows, h, core.bufferCount * 3ull);
+	frameIndizes.assign(core.bufferCount, -1);
 
 	//allocate float buffers
 	allocSafe(&out.data, core.strideFloat4 * h * core.outBufferCount);
@@ -368,6 +372,7 @@ void cudaInit(CudaData& core, int devIdx, const cudaDeviceProp& prop, ImageYuv& 
 //copy yuv input to device
 void cudaReadFrame(int64_t frameIdx, const CudaData& core, const ImageYuv& inputFrame) {
 	int64_t fr = frameIdx % core.bufferCount;
+	frameIndizes[fr] = frameIdx;
 	size_t frameSizeBytes = 3ull * core.strideChar * core.h;
 	unsigned char* d_frame = d_yuvData + fr * frameSizeBytes;
 	handleStatus(cudaMemcpy2D(d_frame, core.strideChar, inputFrame.data(), inputFrame.stride, core.w, 3ull * core.h, cudaMemcpyDefault), "error @read #10");
@@ -489,6 +494,7 @@ void cudaOutput(int64_t frameIdx, const CudaData& core, OutputContext outCtx, st
 	int h = core.h;
 	int w = core.w;
 	int64_t fr = frameIdx % core.bufferCount;
+	assert(frameIndizes[fr] == frameIdx && "invalid frame in buffer");
 
 	//size of all pixel data in bytes in yuv including padding
 	size_t frameSize8 = 3ull * core.strideChar * h;

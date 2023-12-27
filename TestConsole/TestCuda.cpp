@@ -30,20 +30,20 @@ void imageOutput() {
 	NullWriter writer(data, reader);
 	CudaFrame frame(data, reader, writer);
 	OutputContext oc = { true, false, &writer.outputFrame, nullptr, 0 };
-	ResultImageWriter resim(data, frame);
+	ResultImageWriter resim(data);
 
-	reader.read(frame.bufferFrame);
+	reader.read(frame.mBufferFrame);
 	frame.inputData();
 	frame.createPyramid(frame.mReader.frameIndex);
 
 	for (int i = 0; i < frameOut; i++) {
 		std::cout << "reading " << frame.mReader.frameIndex << std::endl;
-		reader.read(frame.bufferFrame);
+		reader.read(frame.mBufferFrame);
 		frame.inputData();
 		frame.createPyramid(frame.mReader.frameIndex);
 		frame.computeStart(frame.mReader.frameIndex);
 		frame.computeTerminate(frame.mReader.frameIndex);
-		const AffineTransform& trf = frame.computeTransform(frame.mReader.frameIndex);
+		frame.computeTransform(frame.mReader.frameIndex);
 		std::string fname = std::format("f:/im{:03d}.bmp", i);
 		resim.write(frame.mFrameResult, i, frame.getInput(i), fname);
 	}
@@ -173,11 +173,11 @@ void compare() {
 		NullWriter writer(data, reader);
 		CudaFrame frame(data, reader, writer);
 
-		frame.bufferFrame.readFromPGM("d:/VideoTest/v00.pgm");
+		frame.mBufferFrame.readFromPGM("d:/VideoTest/v00.pgm");
 		frame.inputData();
 		frame.createPyramid(frame.mReader.frameIndex);
 
-		frame.bufferFrame.readFromPGM("D:/VideoTest/v01.pgm");
+		frame.mBufferFrame.readFromPGM("D:/VideoTest/v01.pgm");
 		frame.inputData();
 		frame.createPyramid(frame.mReader.frameIndex);
 		frame.computeStart(frame.mReader.frameIndex);
@@ -195,11 +195,11 @@ void compare() {
 		NullWriter writer(data, reader);
 		CpuFrame frame(data, reader, writer);
 
-		frame.bufferFrame.readFromPGM("d:/VideoTest/v00.pgm");
+		frame.mBufferFrame.readFromPGM("d:/VideoTest/v00.pgm");
 		frame.inputData();
 		frame.createPyramid(frame.mReader.frameIndex);
 
-		frame.bufferFrame.readFromPGM("D:/VideoTest/v01.pgm");
+		frame.mBufferFrame.readFromPGM("D:/VideoTest/v01.pgm");
 		frame.inputData();
 		frame.createPyramid(frame.mReader.frameIndex);
 		frame.computeStart(frame.mReader.frameIndex);

@@ -28,7 +28,10 @@ public:
 
 	ImageMat(T* data, int h, int w, int stride, int planeIdx);
 
-	ImageMat() : ImageMat(nullptr, 0, 0, 0, 0) {}
+	ImageMat(const T* data, int h, int w, int stride, int planeIdx);
+
+	ImageMat() : 
+		ImageMat(nullptr, 0, 0, 0, 0) {}
 
 	using CoreMat<T>::addr;
 };
@@ -66,7 +69,9 @@ public:
 
 	ImageBase(int h, int w, int stride, int numPlanes);
 
-	ImageBase() : ImageBase(0, 0, 0, 0) {}
+	ImageBase() : 
+		ImageBase(0, 0, 0, 0) 
+	{}
 
 	//start of data array
 	virtual T* data();
@@ -120,7 +125,8 @@ public:
 
 	ImagePlanar(int h, int w, T* y, T* u, T* v);
 
-	ImagePlanar() : ImagePlanar(0, 0, 0, 0) {}
+	ImagePlanar() : 
+		ImagePlanar(0, 0, 0, 0) {}
 
 	//pointer to start of color plane
 	T* plane(size_t idx);
@@ -151,7 +157,8 @@ class ImageYuvMat : public ImagePlanar<float> {
 
 public:
 
-	ImageYuvMat(int h, int w, CoreMat<float>& y, CoreMat<float>& u, CoreMat<float>& v) : ImagePlanar(h, w, y.data(), u.data(), v.data()) {}
+	ImageYuvMat(int h, int w, CoreMat<float>& y, CoreMat<float>& u, CoreMat<float>& v) : 
+		ImagePlanar(h, w, y.data(), u.data(), v.data()) {}
 
 	ImagePPM& toPPM(ImagePPM& dest, ThreadPoolBase& pool = defaultPool) const;
 
@@ -164,10 +171,12 @@ class ImageRGB : public ImagePlanar<unsigned char> {
 public:
 
 	//allocate frame given height, width, and stride
-	ImageRGB(int h, int w) : ImagePlanar(h, w, w, 3) {}
+	ImageRGB(int h, int w) : 
+		ImagePlanar(h, w, w, 3) {}
 
 	//default constructor produces invalid image
-	ImageRGB() : ImageRGB(0, 0) {}
+	ImageRGB() : 
+		ImageRGB(0, 0) {}
 };
 
 
@@ -175,17 +184,22 @@ class ImageYuv : public ImagePlanar<unsigned char> {
 
 public:
 	//allocate frame given height, width, and stride
-	ImageYuv(int h, int w, int stride, int planes) : ImagePlanar(h, w, stride, planes) {}
+	ImageYuv(int h, int w, int stride, int planes) : 
+		ImagePlanar(h, w, stride, planes) {}
 
 	//allocate frame given height, width, and stride
-	ImageYuv(int h, int w, int stride) : ImageYuv(h, w, stride, 3) {}
+	ImageYuv(int h, int w, int stride) : 
+		ImageYuv(h, w, stride, 3) {}
 
 	//allocate frame given height, width, and stride
-	ImageYuv(int h, int w, size_t stride) : ImageYuv(h, w, int(stride)) {}
+	ImageYuv(int h, int w, size_t stride) : 
+		ImageYuv(h, w, int(stride)) {}
 
-	ImageYuv(int h, int w) : ImageYuv(h, w, w) {}
+	ImageYuv(int h, int w) : 
+		ImageYuv(h, w, w) {}
 
-	ImageYuv() : ImageYuv(0, 0, 0) {}
+	ImageYuv() : 
+		ImageYuv(0, 0, 0) {}
 
 	//downsample and copy pixeldata to given array in nv12 format
 	void toNV12(std::vector<unsigned char>& nv12, size_t strideNV12) const;
@@ -228,9 +242,11 @@ template <class T> class ImagePacked : public ImageBase<T> {
 
 public:
 
-	ImagePacked(int h, int w, int stride, int planes) : ImageBase<T>(h, w, stride, planes) {}
+	ImagePacked(int h, int w, int stride, int planes) : 
+		ImageBase<T>(h, w, stride, planes) {}
 
-	ImagePacked(int h, int w, int stride, int planes, int arraySize) : ImageBase<T>(h, w, stride, planes, arraySize) {}
+	ImagePacked(int h, int w, int stride, int planes, int arraySize) : 
+		ImageBase<T>(h, w, stride, planes, arraySize) {}
 
 	unsigned char* addr(size_t idx, size_t r, size_t c) override;
 
@@ -242,9 +258,11 @@ class ImageBGR : public ImagePacked<unsigned char> {
 
 public:
 
-	ImageBGR(int h, int w) : ImagePacked(h, w, w, 3) {}
+	ImageBGR(int h, int w) : 
+		ImagePacked(h, w, w, 3) {}
 
-	ImageBGR() : ImageBGR(0, 0) {}
+	ImageBGR() : 
+		ImageBGR(0, 0) {}
 
 	bool saveAsBMP(const std::string& filename) const;
 };
@@ -259,7 +277,8 @@ public:
 
 	ImagePPM(int h, int w);
 
-	ImagePPM() : ImagePPM(0, 0) {}
+	ImagePPM() : 
+		ImagePPM(0, 0) {}
 
 	const unsigned char* header() const;
 

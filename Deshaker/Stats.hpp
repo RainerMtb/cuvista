@@ -45,7 +45,6 @@ class WriterStats {
 public:
 	int64_t frameIndex = 0;
 	int frameEncoded = 0;
-	int64_t encodedBytes = 0;
 	int64_t encodedBytesTotal = 0;
 	int64_t outputBytesWritten = 0;
 

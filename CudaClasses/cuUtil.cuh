@@ -51,13 +51,12 @@ namespace cu {
 
 	__device__ __host__ size_t clampUnsigned(size_t valueToAdd, size_t valueToSubtract, size_t lo, size_t hi);
 
-	__device__ __host__ double clamp(double val, double lo, double hi);
-
-	__device__ __host__ float clamp(float val, float lo, float hi);
-
-	__device__ __host__ int64_t clamp(int64_t val, int64_t lo, int64_t hi);
-
-	__device__ __host__ int clamp(int val, int lo, int hi);
+	template <class T> T __device__ __host__ clamp(T val, T lo, T hi) {
+		T out = val;
+		if (val < lo) out = lo;
+		if (val > hi) out = hi;
+		return out;
+	}
 
 	//-----------------------------------
 	//matrix implementation in device code
@@ -67,7 +66,9 @@ namespace cu {
 		int h, w, stride;
 		T* data;
 
-		__host__ __device__ Mat(T* data, int h, int w, int stride) : data { data }, h { h }, w { w }, stride { stride } {}
+		__host__ __device__ Mat(T* data, int h, int w, int stride) : 
+			data { data }, h { h }, w { w }, stride { stride } 
+		{}
 
 		__device__ T& at(int row, int col) {
 			assert(row >= 0 && col >= 0 && row < h && col < w);
@@ -122,15 +123,17 @@ namespace cu {
 	private:
 		char* mStr = nullptr;
 
-		__device__ string(size_t length, bool dummy) : mStr { new char[length] } {}
+		__device__ string(size_t length, bool dummy) : 
+			mStr { new char[length] } 
+		{}
 
 	public:
 
 		//copy constructor
-		__device__ string(const cu::string& other);
+		__device__ string(const string& other);
 
 		//move constructor
-		__device__ string(cu::string&& other) noexcept;
+		__device__ string(string&& other) noexcept;
 
 		//destructor
 		__device__ ~string();
@@ -142,7 +145,7 @@ namespace cu {
 		__device__ string(int value);
 
 		//concatenate strings
-		__device__ cu::string operator + (const cu::string& other);
+		__device__ string operator + (const string& other);
 
 		//get the underlying char array
 		__device__ const char* str() const;
