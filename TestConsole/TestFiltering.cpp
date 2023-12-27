@@ -50,7 +50,7 @@ void runInit(MainData& data, std::unique_ptr<MovieFrame>& frame, AffineTransform
 
 void filterCompare() {
 	std::cout << "compare filtering on cpu and gpu" << std::endl;
-	std::string file = "d:/VideoTest/04.ts";
+	std::string file = "d:/VideoTest/02.mp4";
 	MainData dataGpu, dataCpu;
 	std::unique_ptr<MovieFrame> gpu, cpu;
 	AffineTransform trf;
@@ -98,6 +98,6 @@ void filterCompare() {
 	bool matEqual = c.equalsExact(g);
 	std::cout << "equal: " << std::boolalpha << (isEqual && matEqual) << std::endl;
 
-	c.saveAsBinary("D:/VideoTest/out/cpu.dat");
-	g.saveAsBinary("D:/VideoTest/out/gpu.dat");
+	//c.saveAsBinary("D:/VideoTest/out/cpu.dat");
+	//g.saveAsBinary("D:/VideoTest/out/gpu.dat");
 }

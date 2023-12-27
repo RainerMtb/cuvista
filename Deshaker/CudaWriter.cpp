@@ -114,10 +114,10 @@ void CudaFFmpegWriter::write(const MovieFrame& frame) {
 
 
 std::future<void> CudaFFmpegWriter::writeAsync(const MovieFrame& frame) {
-    //util::ConsoleTimer ct("write");
     encodePackets();
 
     auto fcn = [&] () {
+        //util::ConsoleTimer ct("write cuda");
         for (NvPacket& nvpkt : nvPackets) {
             writePacketToFile(nvpkt, false);
         }

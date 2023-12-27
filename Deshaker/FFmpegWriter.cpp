@@ -20,10 +20,12 @@
 #include "Util.hpp"
 #include <filesystem>
 
+
 //set up ffmpeg encoder
 void FFmpegWriter::open(EncodingOption videoCodec) {
     open(videoCodec, mData.w, mData.h);
 }
+
 
 //set up ffmpeg encoder
 void FFmpegWriter::open(EncodingOption videoCodec, int w, int h) {
@@ -104,7 +106,7 @@ void FFmpegWriter::open(EncodingOption videoCodec, int w, int h) {
 
 
 int FFmpegWriter::sendFFmpegFrame(AVFrame* frame) {
-    //util::ConsoleTimer timer("write");
+    //util::ConsoleTimer timer("write ffmpeg");
     int result = avcodec_send_frame(codec_ctx, frame);
     if (result < 0)
         ffmpeg_log_error(result, "error encoding #1");
@@ -134,6 +136,7 @@ int FFmpegWriter::writeFFmpegPacket() {
 void FFmpegWriter::write(const MovieFrame& frame) {
     write(outputFrame);
 }
+
 
 void FFmpegWriter::write(ImageYuv& fr) {
     //fr.writeText(std::to_string(status.frameWriteIndex), 10, 10, 2, 3, ColorYuv::BLACK, ColorYuv::WHITE);

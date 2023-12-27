@@ -150,7 +150,7 @@ public:
 	TEST_METHOD(compareFrameResults) {
 		std::vector<PointResult> resCpu, resGpu;
 		std::vector<Mat<float>> pyramids;
-		std::string file = "d:/VideoTest/04.ts";
+		std::string file = "d:/VideoTest/02.mp4";;
 
 		{
 			MainData data;
@@ -170,7 +170,6 @@ public:
 		{
 			MainData data;
 			data.probeCuda();
-			data.fileIn = file;
 			FFmpegReader reader;
 			reader.open(file);
 			data.collectDeviceInfo();

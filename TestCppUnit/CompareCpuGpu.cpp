@@ -42,11 +42,8 @@ private:
 		AffineTransform trf;
 		trf.addRotation(0.2).addTranslation(-40, 30);
 		trf.frameIndex = 0;
-		std::string file = "d:/VideoTest/04.ts";
-
-		data.fileIn = file;
 		FFmpegReader reader;
-		reader.open(file);
+		reader.open("d:/VideoTest/02.mp4");
 		data.validate(reader);
 		NullWriter writer(data, reader);
 		std::unique_ptr<MovieFrame> frame = std::make_unique<T>(data, reader, writer);

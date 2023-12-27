@@ -129,6 +129,7 @@ template <class T> Result runPyramid(MainData& data) {
 void pyramid() {
 	std::cout << "comparing platforms..." << std::endl;
 	Result cpu, ocl, cuda;
+	std::string fileName = "d:/VideoTest/02.mp4";
 
 	{
 		//CPU
@@ -136,7 +137,7 @@ void pyramid() {
 		MainData data;
 		data.deviceRequested = true;
 		data.deviceSelected = 0;
-		data.fileIn = "d:/VideoTest/04.ts";
+		data.fileIn = fileName;
 		cpu = runPyramid<CpuFrame>(data);
 		//ret.second.saveAsColorBMP("f:/testCpu.bmp");
 	}
@@ -148,7 +149,7 @@ void pyramid() {
 		data.deviceRequested = true;
 		data.deviceSelected = 1;
 		data.probeCuda();
-		data.fileIn = "d:/VideoTest/04.ts";
+		data.fileIn = fileName;
 		cuda = runPyramid<CudaFrame>(data);
 		//ret.second.saveAsColorBMP("f:/testCuda.bmp");
 	}
@@ -160,7 +161,7 @@ void pyramid() {
 		data.deviceRequested = true;
 		data.deviceSelected = 1;
 		data.probeOpenCl();
-		data.fileIn = "d:/VideoTest/04.ts";
+		data.fileIn = fileName;
 		ocl = runPyramid<OpenClFrame>(data);
 		//ret.second.saveAsColorBMP("f:/testOcl.bmp");
 	}
