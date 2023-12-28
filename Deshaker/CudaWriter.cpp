@@ -1,6 +1,7 @@
 #include "CudaWriter.hpp"
 #include "Util.hpp"
 #include "NvEncoder.hpp"
+#include "ThreadPool.hpp"
 
 class FunctorLess {
 public:

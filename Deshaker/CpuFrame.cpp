@@ -37,7 +37,7 @@ CpuFrame::CpuFrame(MainData& data, MovieReader& reader, MovieWriter& writer) :
 	MovieFrame(data, reader, writer) 
 {
 	//buffer to hold input frames in yuv format
-	mYUV.assign(data.bufferCount, ImageYuv(data.h, data.w, data.w));
+	mYUV.assign(data.bufferCount, ImageYuv());
 
 	//init cpuFrameItem structures, allocate pyramid
 	for (int i = 0; i < data.pyramidCount; i++) mPyr.emplace_back(data);
@@ -51,7 +51,7 @@ CpuFrame::CpuFrame(MainData& data, MovieReader& reader, MovieWriter& writer) :
 	mBuffer.assign(4, Matf::allocate(data.h, data.w));
 	mFilterBuffer = Matf::allocate(data.h, data.w);
 	mFilterResult = Matf::allocate(data.h, data.w);
-	mYuv = Matf::allocate(data.h, data.w);
+	mYuvPlane = Matf::allocate(data.h, data.w);
 }
 
 //construct data for one pyramid
@@ -255,12 +255,12 @@ void CpuFrame::outputData(const AffineTransform& trf, OutputContext outCtx) {
 	assert(input.index == trf.frameIndex && "invalid frame index");
 	for (size_t z = 0; z < 3; z++) {
 		float f = 1.0f / 255.0f;
-		mYuv.setValues([&] (size_t r, size_t c) { return input.at(z, r, c) * f; }, mPool);
+		mYuvPlane.setValues([&] (size_t r, size_t c) { return input.at(z, r, c) * f; }, mPool);
 		//transform and evaluate pixels, write to out buffer
 		auto func1 = [&] (size_t r, size_t c) {
 			float bg = (mData.bgmode == BackgroundMode::COLOR ? mData.bgcol_yuv.colors[z] : mPrevOut[z].at(r, c));
 			auto [x, y] = trf.transform(c, r); //pay attention to order of x and y
-			return mYuv.interp2(float(x), float(y)).value_or(bg);
+			return mYuvPlane.interp2(float(x), float(y)).value_or(bg);
 		};
 		Matf& buf = mBuffer[z];
 		buf.setValues(func1, mPool);
@@ -286,18 +286,10 @@ void CpuFrame::outputData(const AffineTransform& trf, OutputContext outCtx) {
 			}
 		};
 		//forward to thread pool for iteration there
-		mPool.add(func2, 0, mData.h);
-
-		//blend input if requested
-		if (outCtx.requestInput) {
-			for (size_t r = 0; r < mData.h; r++) {
-				const unsigned char* src = input.plane(z);
-				unsigned char* dest = outCtx.inputFrame->plane(z);
-				std::copy(src, src + mData.w, dest);
-				src += input.stride;
-				dest += outCtx.inputFrame->stride;
-			}
-		}
+		mPool.addAndWait(func2, 0, mData.h);
+	}
+	if (outCtx.requestInput) {
+		*outCtx.inputFrame = input;
 	}
 	outCtx.outputFrame->index = trf.frameIndex;
 

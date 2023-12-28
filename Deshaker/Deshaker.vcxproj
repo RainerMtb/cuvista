@@ -184,6 +184,7 @@
     <ClCompile Include="MovieWriter.cpp" />
     <ClCompile Include="Stats.cpp" />
     <ClCompile Include="TCPWriter.cpp" />
+    <ClCompile Include="ThreadPool.cpp" />
     <ClCompile Include="Trajectory.cpp" />
     <ClCompile Include="Util.cpp" />
   </ItemGroup>
@@ -216,6 +217,7 @@
     <ClInclude Include="MovieFrame.hpp" />
     <ClInclude Include="MovieReader.hpp" />
     <ClInclude Include="NvEncoder.hpp" />
+    <ClInclude Include="ThreadPool.hpp" />
     <ClInclude Include="Trajectory.hpp" />
     <ClInclude Include="UserInput.hpp" />
     <ClInclude Include="UserInputConsole.hpp" />

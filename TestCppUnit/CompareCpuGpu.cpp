@@ -45,7 +45,7 @@ private:
 		FFmpegReader reader;
 		reader.open("d:/VideoTest/02.mp4");
 		data.validate(reader);
-		NullWriter writer(data, reader);
+		TestWriter writer(data, reader);
 		std::unique_ptr<MovieFrame> frame = std::make_unique<T>(data, reader, writer);
 
 		reader.read(frame->mBufferFrame);

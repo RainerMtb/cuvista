@@ -43,6 +43,7 @@ protected:
 public:
 	virtual void init() {}
 	virtual void update(bool force = false) = 0;
+	virtual void forceUpdate() { update(true); }
 	virtual void terminate() {}
 	virtual void writeMessage(const std::string& msg) {}
 };

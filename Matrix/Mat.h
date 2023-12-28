@@ -36,7 +36,7 @@
 #include "SVDecompositor.h"
 
 #include "CoreMat.h"
-#include "ThreadPool.h"
+#include "ThreadPoolBase.h"
 #include "MatIterator.h"
 #include "SubMat.h"
 #include "OutputLine.h"
@@ -532,7 +532,7 @@ public:
 				set(r + r0, c + c0, supplier(r, c));
 			}
 		};
-		pool.add(func, 0, rows);
+		pool.addAndWait(func, 0, rows);
 		return *this;
 	}
 

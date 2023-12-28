@@ -19,7 +19,7 @@
 #pragma once
 
 #include "CudaWriter.hpp"
-#include "ThreadPool.h"
+#include "ThreadPool.hpp"
 #include "UserInput.hpp"
 #include "MainData.hpp"
 #include "Trajectory.hpp"
@@ -126,7 +126,10 @@ protected:
 
 private:
 	void read();
+	std::future<void> readAsync();
 	void write();
+	std::future<void> writeAsync();
+	bool continueLoop(UserInput& input);
 
 	void runLoopCombined(ProgressDisplay& progress, UserInput& input, AuxWriters& auxWriters);
 	void runLoopFirst(ProgressDisplay& progress, UserInput& input, AuxWriters& auxWriters);

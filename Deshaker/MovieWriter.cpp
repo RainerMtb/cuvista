@@ -27,11 +27,15 @@ void AuxWriters::writeAll(const MovieFrame& frame) {
 }
 
 OutputContext MovieWriter::getOutputContext() {
-	return { true, false, &outputFrame, nullptr };
+	return { false, false, nullptr, nullptr };
 }
 
 std::future<void> MovieWriter::writeAsync(const MovieFrame& frame) {
-	return std::async(std::launch::async, [&] () { write(frame); });
+	return std::async(std::launch::async, [&] { write(frame); });
+}
+
+OutputContext StandardMovieWriter::getOutputContext() {
+	return { true, false, &outputFrame, nullptr };
 }
 
 std::string ImageWriter::makeFilename(const std::string& pattern, int64_t index) {
@@ -73,24 +77,24 @@ void JpegImageWriter::open(EncodingOption videoCodec) {
 	if (ret < 0)
 		throw AVException(av_make_error(ret, "cannot open mjpeg codec"));
 
-	avframe = av_frame_alloc();
-	avframe->format = ctx->pix_fmt;
-	avframe->width = mData.w;
-	avframe->height = mData.h;
+	av_frame = av_frame_alloc();
+	av_frame->format = ctx->pix_fmt;
+	av_frame->width = mData.w;
+	av_frame->height = mData.h;
 
-	avframe->linesize[0] = outputFrame.stride;
-	avframe->linesize[1] = outputFrame.stride;
-	avframe->linesize[2] = outputFrame.stride;
-	avframe->data[0] = outputFrame.plane(0);
-	avframe->data[1] = outputFrame.plane(1);
-	avframe->data[2] = outputFrame.plane(2);
+	av_frame->linesize[0] = outputFrame.stride;
+	av_frame->linesize[1] = outputFrame.stride;
+	av_frame->linesize[2] = outputFrame.stride;
+	av_frame->data[0] = outputFrame.plane(0);
+	av_frame->data[1] = outputFrame.plane(1);
+	av_frame->data[2] = outputFrame.plane(2);
 
 	packet = av_packet_alloc();
 }
 
 void JpegImageWriter::write(const MovieFrame& frame) {
-	avframe->pts = this->frameIndex;
-	int result = avcodec_send_frame(ctx, avframe);
+	av_frame->pts = this->frameIndex;
+	int result = avcodec_send_frame(ctx, av_frame);
 	if (result < 0)
 		errorLogger.logError(av_make_error(result, "error sending frame"));
 
@@ -135,7 +139,7 @@ void RawWriter::packYuv() {
 // Computed Transformation Values
 //-----------------------------------------------------------------------------------
 
-std::map<int64_t, TransformValues> TransformsWriterMain::readTransformMap(const std::string& trajectoryFile) {
+std::map<int64_t, TransformValues> TransformsFile::readTransformMap(const std::string& trajectoryFile) {
 	std::map<int64_t, TransformValues> transformsMap;
 	std::ifstream file(trajectoryFile, std::ios::binary);
 	if (file.is_open()) {
@@ -158,6 +162,9 @@ std::map<int64_t, TransformValues> TransformsWriterMain::readTransformMap(const 
 				transformsMap[frameIdx] = { s, dx, dy, da / 3600.0 * std::numbers::pi / 180.0 };
 			}
 		}
+
+	} else {
+		errorLogger.logError("cannot open transforms file '" + trajectoryFile + "'");
 	}
 	return transformsMap;
 }

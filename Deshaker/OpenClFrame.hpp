@@ -46,7 +46,7 @@ public:
 	}
 
 	void computeStart(int64_t frameIndex) override {
-		cl::compute(frameIndex, mData);
+		cl::computeStart(frameIndex, mData);
 	}
 
 	void computeTerminate(int64_t frameIndex) override {

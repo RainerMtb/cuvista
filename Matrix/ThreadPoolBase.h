@@ -18,34 +18,41 @@
 
 #pragma once
 
-#include <algorithm>
-#include "AffineTransform.hpp"
-#include "MainData.hpp"
+#include <thread>
+#include <functional>
+#include <future>
+#include <mutex>
+#include <vector>
+#include <queue>
+#include <cassert>
 
-class ThreadPool;
+//base class syncronously executes jobs
+class ThreadPoolBase {
 
-class FrameResult {
-
-private:
-	const MainData& mData;
-	std::unique_ptr<AffineSolver> mAffineSolver;
+protected:
+	std::vector<std::thread> mThreads;
 
 public:
-	ptrdiff_t mCountFinite = 0;
-	ptrdiff_t mCountConsens = 0;
+	virtual ~ThreadPoolBase() {}
+	virtual void wait() {}
+	virtual void cancel() {}
+	virtual void shutdown() {}
 
-	std::vector<PointResult> mFiniteResults;
-	std::vector<AffineTransform> mTransformsList;
+	//execute one job
+	virtual std::future<void> add(std::function<void()> job) {
+		job();
+		return {};
+	}
 
-	FrameResult(MainData& data, ThreadPool& threadPool) :
-		mData { data },
-		mFiniteResults(data.resultCount),
-		mAffineSolver { std::make_unique<AffineSolverFast>(threadPool) } {}
+	//iterate over job array
+	virtual void addAndWait(std::function<void(size_t)> job, size_t iterStart, size_t iterEnd) {
+		for (size_t i = iterStart; i < iterEnd; i++) {
+			std::bind(job, i)(); //exectute job directly
+		}
+	}
 
-	//compute resulting transformation for this frame
-	void computeTransform(const std::vector<PointResult>& results, ThreadPool& threadPool, int64_t frameIndex);
-
-	const AffineTransform& transform() const;
-
-	void transformReset();
+	//number of threads
+	size_t size() const {
+		return mThreads.size();
+	}
 };

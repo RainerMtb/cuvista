@@ -20,7 +20,7 @@
 
 #include "ImageUtil.hpp"
 #include "CoreMat.h"
-#include "ThreadPool.h"
+#include "ThreadPoolBase.h"
 
 template <class T> class ImageMat : public CoreMat<T> {
 

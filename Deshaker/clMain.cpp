@@ -20,6 +20,7 @@
 #include "clMain.hpp"
 #include "clKernels.hpp"
 #include "clKernelCompute.hpp"
+#include "Util.hpp"
 
 #include <format>
 #include <algorithm>
@@ -275,9 +276,8 @@ void cl::createPyramid(int64_t frameIdx, const CoreData& core) {
 //-------- COMPUTE -----------------
 //----------------------------------
 
-void cl::compute(int64_t frameIdx, const CoreData& core) {}
-
-void cl::computeTerminate(int64_t frameIdx, const CoreData& core, std::vector<PointResult>& results) {
+void cl::computeStart(int64_t frameIdx, const CoreData& core) {
+	//util::ConsoleTimer timer("ocl compute start");
 	assert(frameIdx > 0 && "invalid pyramid index");
 	int64_t pyrIdx = frameIdx % core.pyramidCount;
 	int64_t pyrIdxPrev = (frameIdx - 1) % core.pyramidCount;
@@ -292,14 +292,22 @@ void cl::computeTerminate(int64_t frameIdx, const CoreData& core, std::vector<Po
 		kernel.setArg(4, clData.core);
 
 		//local memory
-		int memsiz = (core.iw * core.iw * 7 + 108) * sizeof(cl_double) + 6 * sizeof(cl_double*);
+		int memsiz = (7LL * core.iw * core.iw + 108) * sizeof(cl_double) + 6 * sizeof(cl_double*);
 		kernel.setArg(5, memsiz, nullptr);
 
 		//threads
-		NDRange ndlocal = NDRange(core.iw, 32 / core.iw); //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+		NDRange ndlocal = NDRange(core.iw, 32 / core.iw); //based on cuda warp
 		NDRange ndglobal = NDRange(ndlocal[0] * core.ixCount, ndlocal[1] * core.iyCount);
 		clData.queue.enqueueNDRangeKernel(kernel, NullRange, ndglobal, ndlocal);
 
+	} catch (const Error& err) {
+		errorLogger.logError("OpenCL compute error: ", err.what());
+	}
+}
+
+void cl::computeTerminate(int64_t frameIdx, const CoreData& core, std::vector<PointResult>& results) {
+	//util::ConsoleTimer timer("ocl compute end");
+	try {
 		//copy from device to host buffer in cl_PointResult
 		clData.queue.enqueueReadBuffer(clData.results, CL_TRUE, 0, sizeof(cl_PointResult) * core.resultCount, clData.cl_results.data());
 
@@ -319,7 +327,7 @@ void cl::computeTerminate(int64_t frameIdx, const CoreData& core, std::vector<Po
 //----------------------------------
 
 void cl::outputData(int64_t frameIdx, const CoreData& core, OutputContext outCtx, std::array<double, 6> trf) {
-	//ConsoleTimer timer;
+	//util::ConsoleTimer timer("ocl output");
 	int64_t frIdx = frameIdx % core.bufferCount;
 	auto& [outStart, outWarped, outFilterH, outFilterV, outFinal] = clData.out;
 
@@ -348,10 +356,12 @@ void cl::outputData(int64_t frameIdx, const CoreData& core, OutputContext outCtx
 		//copy output to host
 		if (outCtx.encodeCpu) {
 			clData.queue.enqueueReadBuffer(clData.yuvOut, CL_TRUE, 0, 3ull * core.cpupitch * core.h, outCtx.outputFrame->data());
+			outCtx.outputFrame->index = frameIdx;
 		}
 		//copy input if requested
 		if (outCtx.requestInput) {
 			readImage(clData.yuv[frIdx], core.cpupitch, outCtx.inputFrame->data(), clData.queue);
+			outCtx.inputFrame->index = frameIdx;
 		}
 
 	} catch (const Error& err) {

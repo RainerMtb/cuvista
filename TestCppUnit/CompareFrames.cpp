@@ -30,52 +30,6 @@ using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
 namespace CudaTest {
 
-	//make up frame data in memory for testing
-	class TestReader : public MovieReader {
-
-	private:
-		int64_t testFrameCount = 20;
-
-	public:
-		void open(std::string_view source) override {
-			frameCount = testFrameCount;
-			h = 100;
-			w = 200;
-		}
-
-		void read(ImageYuv& frame) override {
-			frameIndex++;
-			for (int64_t z = 0; z < 3; z++) {
-				int64_t base = this->frameIndex * 2 + z * 5 + 30;
-				unsigned char* plane = frame.plane(z);
-				for (int64_t r = 0; r < frame.h; r++) {
-					for (int64_t c = 0; c < frame.w; c++) {
-						int64_t pix = std::clamp(base + r / 10, 0LL, 255LL);
-						plane[r * frame.stride + c] = (unsigned char) (pix);
-					}
-				}
-			}
-			frame.index = this->frameIndex;
-			endOfInput = this->frameIndex == testFrameCount;
-		}
-	};
-
-	//store resulting images in vector
-	class TestWriter : public MovieWriter {
-
-	public:
-		std::vector<ImageYuv> outputFrames;
-
-		TestWriter(MainData& data, MovieReader& reader) : 
-			MovieWriter(data, reader) {}
-
-		void write(const MovieFrame& frame) override {
-			this->frameIndex++;
-			outputFrames.push_back(outputFrame);
-		}
-	};
-
-
 	TEST_CLASS(FrameTest) {
 
 private:
@@ -221,7 +175,7 @@ private:
 		reader.w = 1920;
 		reader.h = 1080;
 		data.validate(reader);
-		NullWriter writer(data, reader);
+		TestWriter writer(data, reader);
 		std::unique_ptr<MovieFrame> frame = std::make_unique<T>(data, reader, writer);
 
 		frame->mBufferFrame.readFromPGM("d:/VideoTest/v00.pgm");
@@ -239,8 +193,10 @@ private:
 		frame->computeStart(frame->mReader.frameIndex);
 		frame->computeTerminate(frame->mReader.frameIndex);
 		frame->outputData(trf, writer.getOutputContext());
+		writer.write(*frame);
+
 		res.out = frame->getTransformedOutput();
-		res.im = writer.outputFrame;
+		res.im = writer.outputFrames[0];
 
 		res.res = frame->mResultPoints;
 		Assert::IsTrue(errorLogger.hasNoError());

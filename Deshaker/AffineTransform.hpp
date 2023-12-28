@@ -20,7 +20,7 @@
 
 #include "Affine2D.h"
 #include "CoreData.hpp"
-#include "ThreadPool.h"
+#include "ThreadPool.hpp"
 
 class AffineTransform : public Affine2D {
 

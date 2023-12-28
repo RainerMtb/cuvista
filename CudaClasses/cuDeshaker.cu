@@ -531,6 +531,7 @@ void cudaOutput(int64_t frameIdx, const CudaData& core, OutputContext outCtx, st
 	if (outCtx.requestInput) {
 		ImageYuv* im = outCtx.inputFrame;
 		cudaMemcpy2D(im->data(), im->stride, yuvSrc, core.strideChar, w, h * 3ll, cudaMemcpyDefault);
+		outCtx.inputFrame->index = frameIdx;
 	}
 
 	//writeText(std::to_string(frameIdx), 10, 10, 2, 3, bufferFrames[18], core);

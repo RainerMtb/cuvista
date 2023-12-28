@@ -43,7 +43,7 @@
     <ClInclude Include="SubMat.h">
       <Filter>Main</Filter>
     </ClInclude>
-    <ClInclude Include="ThreadPool.h">
+    <ClInclude Include="ThreadPoolBase.h">
       <Filter>Main</Filter>
     </ClInclude>
     <ClInclude Include="CharMap.hpp">

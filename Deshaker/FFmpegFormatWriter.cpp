@@ -295,7 +295,7 @@ void FFmpegFormatWriter::transcodeAudio(AVPacket* pkt, StreamContext& sc, bool t
         while (av_audio_fifo_size(sc.fifo) >= sc.audioOutCtx->frame_size || eof) {
             void** ptrs = (void**) sc.frameOut->extended_data;
             int sampleCount = av_audio_fifo_read(sc.fifo, ptrs, sc.audioOutCtx->frame_size);
-            AVFrame* frame = nullptr;
+            AVFrame* av_frame = nullptr;
 
             if (sampleCount < 0) {
                 ffmpeg_log_error(retval, "cannot read from fifo");
@@ -305,10 +305,10 @@ void FFmpegFormatWriter::transcodeAudio(AVPacket* pkt, StreamContext& sc, bool t
                 sc.frameOut->pkt_dts = sc.pts;
                 sc.frameOut->duration = 0;
                 sc.pts += sampleCount;
-                frame = sc.frameOut;
+                av_frame = sc.frameOut;
             }
 
-            retval = avcodec_send_frame(sc.audioOutCtx, frame); //send flush signal when no more samples to encode
+            retval = avcodec_send_frame(sc.audioOutCtx, av_frame); //send flush signal when no more samples to encode
             if (retval == AVERROR_EOF) {
                 //flush signal was sent at least for the second time, ignore here
 

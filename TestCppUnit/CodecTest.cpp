@@ -81,8 +81,8 @@ private:
 		Assert::IsTrue(retval == 0);
 		AVPacket* pkt = av_packet_alloc();
 		Assert::IsNotNull(pkt);
-		AVFrame* frame = av_frame_alloc();
-		Assert::IsNotNull(frame);
+		AVFrame* av_frame = av_frame_alloc();
+		Assert::IsNotNull(av_frame);
 
 		//decode packet into ffmpeg frame in format YUV420
 		pkt->data = packets.front().packet.data();
@@ -91,7 +91,7 @@ private:
 		Assert::IsTrue(retval == 0);
 		retval = avcodec_send_packet(ctx, NULL);
 		Assert::IsTrue(retval == 0);
-		retval = avcodec_receive_frame(ctx, frame);
+		retval = avcodec_receive_frame(ctx, av_frame);
 		Assert::IsTrue(retval == 0);
 
 		//scale to YUV444
@@ -100,7 +100,7 @@ private:
 		uint8_t* frame_buffer[] = {(uint8_t*) outputFrame.plane(0), (uint8_t*) outputFrame.plane(1), (uint8_t*) outputFrame.plane(2), nullptr};
 		int stride = (int) nvenc.cudaPitch;
 		int linesizes[] = { stride, stride, stride, 0 };
-		sws_scale(scaler, frame->data, frame->linesize, 0, frame->height, frame_buffer, linesizes);
+		sws_scale(scaler, av_frame->data, av_frame->linesize, 0, av_frame->height, frame_buffer, linesizes);
 
 		//inputFrame.writeToBMPcolor("f:/test_in.bmp");
 		//outputFrame.writeToBMPcolor("f:/test_out.bmp");
@@ -114,7 +114,7 @@ private:
 		nvenc.destroyEncoder();
 		sws_freeContext(scaler);
 		avcodec_free_context(&ctx);
-		av_frame_free(&frame);
+		av_frame_free(&av_frame);
 		av_packet_free(&pkt);
 	}
 

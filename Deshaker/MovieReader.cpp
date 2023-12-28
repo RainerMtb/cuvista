@@ -28,7 +28,7 @@
  //----------------------------------
 
 std::future<void> MovieReader::readAsync(ImageYuv& inputFrame) {
-    return std::async(std::launch::async, [&] () { read(inputFrame); });
+    return std::async(std::launch::async, [&] { read(inputFrame); });
 }
 
 

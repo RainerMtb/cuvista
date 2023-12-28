@@ -129,7 +129,7 @@ template <class T> void ImageBase<T>::convert8(ImageBase<unsigned char>& dest, i
 			yuv_to_rgb(at(0, r, c), at(1, r, c), at(2, r, c), dest.addr(z0, r, c), dest.addr(z1, r, c), dest.addr(z2, r, c));
 		}
 	};
-	pool.add(func, 0, h);
+	pool.addAndWait(func, 0, h);
 }
 
 

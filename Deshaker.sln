@@ -47,8 +47,12 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TestConsole", "TestConsole\
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{BA81BB6C-97F9-4729-BAC1-ADC0AEA3649B}"
 	ProjectSection(SolutionItems) = preProject
+		sampleData\01.mp4 = sampleData\01.mp4
+		sampleData\02.mp4 = sampleData\02.mp4
 		Notes.md = Notes.md
 		README.md = README.md
+		sampleData\v00.pgm = sampleData\v00.pgm
+		sampleData\v01.pgm = sampleData\v01.pgm
 	EndProjectSection
 EndProject
 Global

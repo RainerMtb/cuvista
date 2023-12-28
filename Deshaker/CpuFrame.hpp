@@ -63,5 +63,5 @@ protected:
 
 	//buffer for generating output from input yuv and transformation
 	std::vector<Mat<float>> mBuffer;
-	Mat<float> mYuv, mFilterBuffer, mFilterResult;
+	Mat<float> mYuvPlane, mFilterBuffer, mFilterResult;
 };

@@ -113,6 +113,9 @@
     <ClCompile Include="PipeWriter.cpp">
       <Filter>Windows</Filter>
     </ClCompile>
+    <ClCompile Include="ThreadPool.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MovieReader.hpp">
@@ -210,6 +213,9 @@
     </ClInclude>
     <ClInclude Include="AffineTransform.hpp">
       <Filter>Transformation</Filter>
+    </ClInclude>
+    <ClInclude Include="ThreadPool.hpp">
+      <Filter>Util</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

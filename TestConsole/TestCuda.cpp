@@ -19,17 +19,17 @@
 #include "TestMain.hpp"
 
 void imageOutput() {
-	int frameOut = 20;
+	int frameOut = 10;
 
 	MainData data;
 	FFmpegReader reader;
 	data.probeCuda();
 	data.collectDeviceInfo();
-	reader.open("//READYNAS/Data/Documents/x.orig/bikini.1.1.avi");
+	reader.open("d:/VideoTest/02.mp4");
 	data.validate(reader);
 	NullWriter writer(data, reader);
 	CudaFrame frame(data, reader, writer);
-	OutputContext oc = { true, false, &writer.outputFrame, nullptr, 0 };
+	OutputContext oc = { false, false, nullptr, nullptr };
 	ResultImageWriter resim(data);
 
 	reader.read(frame.mBufferFrame);

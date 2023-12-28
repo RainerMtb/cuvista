@@ -52,6 +52,8 @@ void StackedWriter::write(const MovieFrame& frame) {
 		dest += combinedFrame.stride;
 	}
 
+	assert(inputFrame.index == outputFrame.index && "frame index mismatch");
+	combinedFrame.index = inputFrame.index;
+
 	FFmpegWriter::write(combinedFrame);
-	this->frameIndex++;
 }

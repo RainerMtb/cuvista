@@ -20,6 +20,52 @@
 
 #include "AffineTransform.hpp"
 #include "CudaData.cuh"
+#include "MovieWriter.hpp"
+
+//make up frame data in memory for testing
+class TestReader : public MovieReader {
+
+private:
+	int64_t testFrameCount = 20;
+
+public:
+	void open(std::string_view source) override {
+		frameCount = testFrameCount;
+		h = 100;
+		w = 200;
+	}
+
+	void read(ImageYuv& frame) override {
+		frameIndex++;
+		for (int64_t z = 0; z < 3; z++) {
+			int64_t base = this->frameIndex * 2 + z * 5 + 30;
+			unsigned char* plane = frame.plane(z);
+			for (int64_t r = 0; r < frame.h; r++) {
+				for (int64_t c = 0; c < frame.w; c++) {
+					int64_t pix = std::clamp(base + r / 10, 0LL, 255LL);
+					plane[r * frame.stride + c] = (unsigned char) (pix);
+				}
+			}
+		}
+		frame.index = this->frameIndex;
+		endOfInput = this->frameIndex == testFrameCount;
+	}
+};
+
+ //store resulting images in vector
+class TestWriter : public StandardMovieWriter {
+
+public:
+	std::vector<ImageYuv> outputFrames;
+
+	TestWriter(MainData& data, MovieReader& reader) :
+		StandardMovieWriter(data, reader) {}
+
+	void write(const MovieFrame& frame) override {
+		outputFrames.push_back(outputFrame);
+		this->frameIndex++;
+	}
+};
 
 namespace Microsoft::VisualStudio::CppUnitTestFramework {
 
