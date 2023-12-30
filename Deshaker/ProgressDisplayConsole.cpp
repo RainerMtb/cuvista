@@ -37,8 +37,7 @@ void ProgressDisplayConsole::writeMessage(const std::string& str) {
 }
 
 std::stringstream& ProgressDisplayConsole::buildMessage() {
-	outBuffer.seekg(0);
-	outBuffer.seekp(0);
+	outBuffer.str("");
 	double donePercent = progressPercent();
 	if (isfinite(donePercent))
 		outBuffer << "done " << donePercent << "% ";
@@ -69,7 +68,7 @@ void ProgressDisplayNewLine::update(bool force) {
 void ProgressDisplayRewriteLine::update(bool force) {
 	if (isDue(force)) {
 		//overwrite existing line
-		output.assign(output.size(), ' ');
+		output.assign(output.length() + 1, ' ');
 		output[0] = '\r';
 		*outstream << output;
 

@@ -193,7 +193,7 @@ private:
 		frame->computeStart(frame->mReader.frameIndex);
 		frame->computeTerminate(frame->mReader.frameIndex);
 		frame->outputData(trf, writer.getOutputContext());
-		writer.write(*frame);
+		writer.write();
 
 		res.out = frame->getTransformedOutput();
 		res.im = writer.outputFrames[0];

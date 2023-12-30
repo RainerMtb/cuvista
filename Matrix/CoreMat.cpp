@@ -120,12 +120,16 @@ template <class T> template <class R> R CoreMat<T>::interpFunc(size_t ix, size_t
 	return (R) ((1 - dx) * (1 - dy) * f00 + (1 - dx) * dy * f10 + dx * (1 - dy) * f01 + dx * dy * f11);
 }
 
-template <class T> template <class R> std::optional<R> CoreMat<T>::interpFunc(R x, R y, size_t x0, size_t y0, size_t w, size_t h) const {
-	if (x < x0 || x > x0 + w - 1 || y < y0 || y > y0 + h - 1) return std::nullopt;
+template <class T> template <class R> R CoreMat<T>::interpFunc(R x, R y) const {
 	R flx = std::floor(x), fly = std::floor(y);
 	R dx = x - flx, dy = y - fly;
 	size_t ix = size_t(flx), iy = size_t(fly);
-	return interp2(ix, iy, dx, dy);
+	return interpFunc(ix, iy, dx, dy);
+}
+
+template <class T> template <class R> std::optional<R> CoreMat<T>::interpFunc(R x, R y, size_t x0, size_t y0, size_t w, size_t h) const {
+	if (x < x0 || x > x0 + w - 1 || y < y0 || y > y0 + h - 1) return std::nullopt;
+	return interpFunc(x, y);
 }
 
 template <class T> float CoreMat<T>::interp2(size_t ix, size_t iy, float dx, float dy) const {
@@ -136,20 +140,20 @@ template <class T> double CoreMat<T>::interp2(size_t ix, size_t iy, double dx, d
 	return interpFunc(ix, iy, dx, dy);
 }
 
-template <class T> std::optional<float> CoreMat<T>::interp2(float x, float y, size_t x0, size_t y0, size_t w, size_t h) const {
-	return interpFunc(x, y, x0, y0, w, h);
-}
-
-template <class T> std::optional<double> CoreMat<T>::interp2(double x, double y, size_t x0, size_t y0, size_t w, size_t h) const {
-	return interpFunc(x, y, x0, y0, w, h);
-}
-
 template <class T> std::optional<float> CoreMat<T>::interp2(float x, float y) const {
-	return interp2(x, y, 0, 0, cols(), rows());
+	return interpFunc(x, y, 0, 0, cols(), rows());
 }
 
 template <class T> std::optional<double> CoreMat<T>::interp2(double x, double y) const {
-	return interp2(x, y, 0, 0, cols(), rows());
+	return interpFunc(x, y, 0, 0, cols(), rows());
+}
+
+template <class T> double CoreMat<T>::interp2clamped(double x, double y) const {
+	return interpFunc(std::clamp(x, 0.0, cols() - 1.0), std::clamp(y, 0.0, rows() - 1.0));
+}
+
+template <class T> float CoreMat<T>::interp2clamped(float x, float y) const {
+	return interpFunc(std::clamp(x, 0.0f, cols() - 1.0f), std::clamp(y, 0.0f, rows() - 1.0f));
 }
 
 //------------------------------------------------

@@ -104,10 +104,11 @@ private:
 	bool equal(double a, double b, double tol) const;
 
 public:
-	int idx, ix0, iy0;
-	int px, py;
-	int x, y;
-	double u, v;
+	int idx;        //absolute linear index of this point
+	int ix0, iy0;   //absolute index per dimension
+	int px, py;     //pixel coordinate of center point with respect to image top left
+	int x, y;       //pixel coordinate with respect to image center
+	double u, v;    //calculated translation of center point
 	PointResultType result;
 	double distance;
 	double length;

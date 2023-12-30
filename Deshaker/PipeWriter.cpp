@@ -27,7 +27,7 @@ void PipeWriter::open(EncodingOption videoCodec) {
 		throw AVException("Pipe: error setting stdout to binary");
 }
 
-void PipeWriter::write(const MovieFrame& frame) {
+void PipeWriter::write() {
 	packYuv();
 	size_t siz = fwrite(yuvPacked.data(), 1, yuvPacked.size(), stdout);
 	if (siz != yuvPacked.size()) {

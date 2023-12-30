@@ -34,7 +34,7 @@ void CudaFFmpegWriter::open(EncodingOption videoCodec) {
     GUID guid = guidMap[videoCodec.codec];
 
     //open ffmpeg output format
-    FFmpegFormatWriter::open(videoCodec);
+    FFmpegFormatWriter::open(videoCodec, mData.fileOut);
 
     //setup nvenc class
     nvenc->createEncoder(mReader.fpsNum, mReader.fpsDen, GOP_SIZE, mData.crf, guid, dic->cudaIndex);
@@ -104,7 +104,7 @@ void CudaFFmpegWriter::encodePackets() {
 }
 
 
-void CudaFFmpegWriter::write(const MovieFrame& frame) {
+void CudaFFmpegWriter::write() {
     encodePackets();
 
     for (NvPacket& nvpkt : nvPackets) {
@@ -114,7 +114,7 @@ void CudaFFmpegWriter::write(const MovieFrame& frame) {
 }
 
 
-std::future<void> CudaFFmpegWriter::writeAsync(const MovieFrame& frame) {
+std::future<void> CudaFFmpegWriter::writeAsync() {
     encodePackets();
 
     auto fcn = [&] () {

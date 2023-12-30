@@ -61,6 +61,9 @@
     <ClInclude Include="CoreMat.h">
       <Filter>Main</Filter>
     </ClInclude>
+    <ClInclude Include="Color.hpp">
+      <Filter>Image</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Image.cpp">
@@ -74,6 +77,9 @@
     </ClCompile>
     <ClCompile Include="CoreMat.cpp">
       <Filter>Main</Filter>
+    </ClCompile>
+    <ClCompile Include="Color.cpp">
+      <Filter>Image</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

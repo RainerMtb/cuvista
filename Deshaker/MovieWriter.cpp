@@ -30,8 +30,8 @@ OutputContext MovieWriter::getOutputContext() {
 	return { false, false, nullptr, nullptr };
 }
 
-std::future<void> MovieWriter::writeAsync(const MovieFrame& frame) {
-	return std::async(std::launch::async, [&] { write(frame); });
+std::future<void> MovieWriter::writeAsync() {
+	return std::async(std::launch::async, [&] { write(); });
 }
 
 OutputContext StandardMovieWriter::getOutputContext() {
@@ -53,7 +53,7 @@ std::string ImageWriter::makeFilename() const {
 // BMP Images
 //-----------------------------------------------------------------------------------
 
-void BmpImageWriter::write(const MovieFrame& frame) {
+void BmpImageWriter::write() {
 	outputFrame.toBGR(image).saveAsBMP(makeFilename());
 	outputBytesWritten += image.dataSizeInBytes();
 	this->frameIndex++;
@@ -92,7 +92,7 @@ void JpegImageWriter::open(EncodingOption videoCodec) {
 	packet = av_packet_alloc();
 }
 
-void JpegImageWriter::write(const MovieFrame& frame) {
+void JpegImageWriter::write() {
 	av_frame->pts = this->frameIndex;
 	int result = avcodec_send_frame(ctx, av_frame);
 	if (result < 0)
@@ -169,24 +169,14 @@ std::map<int64_t, TransformValues> TransformsFile::readTransformMap(const std::s
 	return transformsMap;
 }
 
-void TransformsWriterMain::open(EncodingOption videoCodec) {
-	TransformsFile::open();
-}
-
-void TransformsWriterMain::write(const MovieFrame& frame) {
-	writeTransform(frame.mFrameResult.transform(), frameIndex);
-	this->frameIndex++;
-	this->outputBytesWritten = file.tellp();
-}
-
-void TransformsFile::open() {
-	file = std::ofstream(mData.trajectoryFile, std::ios::binary);
+void TransformsFile::open(const std::string& trajectoryFile) {
+	file = std::ofstream(trajectoryFile, std::ios::binary);
 	if (file.is_open()) {
 		//write signature
 		file << id;
 
 	} else {
-		throw AVException("error opening file '" + mData.trajectoryFile + "'");
+		throw AVException("error opening file '" + trajectoryFile + "'");
 	}
 }
 
@@ -198,8 +188,18 @@ void TransformsFile::writeTransform(const Affine2D& transform, int64_t frameInde
 	writeValue(transform.rotMilliDegrees());
 }
 
+void TransformsWriterMain::open(EncodingOption videoCodec) {
+	TransformsFile::open(mData.trajectoryFile);
+}
+
+void TransformsWriterMain::write() {
+	writeTransform(movieFrame->mFrameResult.transform(), frameIndex);
+	this->frameIndex++;
+	this->outputBytesWritten = file.tellp();
+}
+
 void AuxTransformsWriter::open() {
-	TransformsFile::open();
+	TransformsFile::open(mAuxData.trajectoryFile);
 }
 
 void AuxTransformsWriter::write(const MovieFrame& frame) {
@@ -209,96 +209,113 @@ void AuxTransformsWriter::write(const MovieFrame& frame) {
 
 
 //-----------------------------------------------------------------------------------
-// Computed Results per Point
+// Optical Flow Video
 //-----------------------------------------------------------------------------------
 
-void  ResultDetailsWriter::open() {
-	file = std::ofstream(mData.resultsFile);
-	if (file.is_open()) {
-		file << "frameIdx" << delimiter << "ix0" << delimiter << "iy0"
-			<< delimiter << "px" << delimiter << "py" << delimiter << "u" << delimiter << "v"
-			<< delimiter << "isValid" << delimiter << "isConsens" << std::endl;
-
-	} else {
-		throw AVException("cannot open file '" + mData.resultsFile + "'");
-	}
+void OpticalFlowWriter::open() {
+	open(mData.flowFile);
 }
 
-void ResultDetailsWriter::write(const std::vector<PointResult>& results, int64_t frameIndex) {
-	//for better performace first write into buffer string
-	std::stringstream ss;
-	for (auto& item : results) {
-		ss << frameIndex << delimiter << item.ix0 << delimiter << item.iy0 << delimiter << item.px << delimiter << item.py << delimiter
-			<< item.u << delimiter << item.v << delimiter << item.resultValue() << std::endl;
-	}
-	//write buffer to file
-	file << ss.str();
+void OpticalFlowWriter::open(const std::string& sourceName) {
+	//simplified ffmpeg video setup
+	av_log_set_callback(ffmpeg_log);
+
+	const AVCodec* codec = avcodec_find_encoder(AV_CODEC_ID_H264);
+	if (!codec)
+		throw AVException("Could not find encoder");
+
+	codec_ctx = avcodec_alloc_context3(codec);
+	if (!codec_ctx)
+		throw AVException("Could not allocate encoder context");
+
+	//setup output file
+	int result = avformat_alloc_output_context2(&fmt_ctx, NULL, NULL, sourceName.c_str());
+	if (result < 0)
+		throw AVException(av_make_error(result));
+
+	videoStream = avformat_new_stream(fmt_ctx, NULL);
+	if (!videoStream)
+		throw AVException("could not create stream");
+
+	codec_ctx->width = mData.w;
+	codec_ctx->height = mData.h;
+	codec_ctx->pix_fmt = pixfmt;
+	codec_ctx->time_base = timeBase;
+	codec_ctx->gop_size = GOP_SIZE;
+
+	FFmpegWriter::openEncoder(codec, sourceName);
+
+	//setup scaler to accept RGB
+	sws_scaler_ctx = sws_getContext(mData.w, mData.h, AV_PIX_FMT_BGR24, mData.w, mData.h, pixfmt, SWS_BICUBIC, NULL, NULL, NULL);
+	if (!sws_scaler_ctx)
+		throw AVException("Could not get scaler context");
 }
 
-void ResultDetailsWriter::write(const MovieFrame& frame) {
-	write(frame.mFrameResult.mFiniteResults, frameIndex);
-	this->frameIndex++;
-}
+void OpticalFlowWriter::write(const MovieFrame& frame) {
+	//convert vectors to hsv color values and then to rgb planar image
+	std::vector<PointResult> results = frame.mResultPoints;
+	for (const PointResult& pr : results) {
+		if (pr.isValid()) {
+			double hue = std::atan2(-pr.v, pr.u) / std::numbers::pi * 180.0 + 180.0;
+			double val = std::clamp(std::sqrt(pr.u * pr.u + pr.v * pr.v) / 10.0, 0.0, 1.0);
+			hsv_to_rgb(hue, 1.0, val, imageResults.addr(2, pr.iy0, pr.ix0), imageResults.addr(1, pr.iy0, pr.ix0), imageResults.addr(0, pr.iy0, pr.ix0));
 
-
-//-----------------------------------------------------------------------------------
-// Result Images
-//-----------------------------------------------------------------------------------
-
-void ResultImageWriter::write(const FrameResult& fr, int64_t idx, const ImageYuv& yuv, const std::string& fname) {
-	const AffineTransform& trf = fr.transform();
-	
-	//copy and scale Y plane to first color plane of bgr
-	yuv.scaleTo(0, bgr, 0);
-	//copy planes in bgr image making it grayscale bgr
-	for (int z = 1; z < 3; z++) {
-		for (int r = 0; r < bgr.h; r++) {
-			for (int c = 0; c < bgr.w; c++) {
-				bgr.at(z, r, c) = bgr.at(0, r, c);
-			}
+		} else {
+			//invalid result is black pixel
+			imageResults.setPixel(pr.iy0, pr.ix0, 0, 0, 0);
 		}
 	}
 
-	//draw lines
-	//green line -> consensus point
-	//red line -> out of consens
-	//blue line -> computed transform
-	int numValid = (int) fr.mCountFinite;
-	int numConsens = (int) fr.mCountConsens;
-	for (int i = 0; i < numValid; i++) {
-		const PointResult& pr = fr.mFiniteResults[i];
-		double x2 = pr.px + pr.u;
-		double y2 = pr.py + pr.v;
+	//interpolate image
+	ImageBGR& fr = imageInterpolated;
+	auto fcn = [&] (size_t iy) {
+		int div = 1 << mData.zMax;
+		double y = 1.0 * iy / div - 1.0 - mData.ir;
+		for (size_t ix = 0; ix < mData.w; ix++) {
+			double x = 1.0 * ix / div - 1.0 - mData.ir;
+			imageInterpolated.at(0, iy, ix) = imageResults.sample(0, x, y);
+			imageInterpolated.at(1, iy, ix) = imageResults.sample(1, x, y);
+			imageInterpolated.at(2, iy, ix) = imageResults.sample(2, x, y);
+		}
+	};
+	frame.mPool.addAndWait(fcn, 0, mData.h);
 
-		//red or green if point is consens
-		ImageColor col = i < numConsens ? ColorBgr::GREEN : ColorBgr::RED;
-		bgr.drawLine(pr.px, pr.py, x2, y2, col);
-		bgr.drawDot(x2, y2, 1.25, 1.25, col);
+	//encode bgr image
+	AVFrame* av_frame = av_frames[0];
+	uint8_t* src[] = { fr.data(), nullptr, nullptr, nullptr};
+	int strides[] = { fr.stride * 3, 0, 0, 0 };
+	int sliceHeight = sws_scale(sws_scaler_ctx, src, strides, 0, fr.h, av_frame->data, av_frame->linesize);
 
-		//blue line to computed transformation
-		auto [tx, ty] = trf.transform(pr.x, pr.y);
-		bgr.drawLine(pr.px, pr.py, tx + bgr.w / 2.0, ty + bgr.h / 2.0, ColorBgr::BLUE);
-	}
+	av_frame->pts = AuxiliaryWriter::frameIndex;
+	writeData(av_frame);
+	AuxiliaryWriter::frameIndex++;
+	MovieWriter::frameIndex++;
+}
 
-	//write text info
-	int textScale = bgr.h / 540;
-	double frac = numValid == 0 ? 0.0 : 100.0 * numConsens / numValid;
-	std::string s1 = std::format("index {}, consensus {}/{} ({:.0f}%)", idx, numConsens, numValid, frac);
-	bgr.writeText(s1, 0, bgr.h - textScale * 20, textScale, textScale, ColorBgr::WHITE, ColorBgr::BLACK);
-	std::string s2 = std::format("transform dx={:.1f}, dy={:.1f}, scale={:.5f}, rot={:.1f}", trf.dX(), trf.dY(), trf.scale(), trf.rotMilliDegrees());
-	bgr.writeText(s2, 0, bgr.h - textScale * 10, textScale, textScale, ColorBgr::WHITE, ColorBgr::BLACK);
+void OpticalFlowWriter::writeData(AVFrame* av_frame) {
+	int result = avcodec_send_frame(codec_ctx, av_frame);
+	if (result < 0)
+		ffmpeg_log_error(result, "error encoding flow #1");
 
-	//save image to file
-	bool result = bgr.saveAsBMP(fname);
-	if (result == false) {
-		errorLogger.logError("cannot write file '" + fname + "'");
+	while (result >= 0) {
+		result = avcodec_receive_packet(codec_ctx, videoPacket);
+		if (result == AVERROR(EAGAIN) || result == AVERROR_EOF) {
+			//do not report error here, need more frame data or end of file
+
+		} else if (result < 0) {
+			//report error, something wrong
+			ffmpeg_log_error(result, "error encoding flow #2");
+
+		} else {
+			av_packet_rescale_ts(videoPacket, timeBase, videoStream->time_base);
+			result = av_interleaved_write_frame(fmt_ctx, videoPacket);
+			if (result < 0) {
+				errorLogger.logError(av_make_error(result, "error writing flow packet"));
+			}
+		}
 	}
 }
 
-void ResultImageWriter::write(const MovieFrame& frame) {
-	//get input image from buffers
-	ImageYuv yuv = frame.getInput(frameIndex);
-	std::string fname = ImageWriter::makeFilename(mData.resultImageFile, frameIndex);
-	write(frame.mFrameResult, frameIndex, yuv, fname);
-	this->frameIndex++;
+OpticalFlowWriter::~OpticalFlowWriter() {
+	writeData(nullptr);
 }

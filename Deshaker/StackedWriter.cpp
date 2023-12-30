@@ -19,7 +19,7 @@
 #include "MovieWriter.hpp"
 
 void StackedWriter::open(EncodingOption videoCodec) {
-	FFmpegWriter::open(videoCodec, widthTotal, mData.h);
+	FFmpegWriter::open(videoCodec, widthTotal, mData.h, mData.fileOut);
 
 	ColorYuv bgcol = mData.bgcol_rgb.toYuv();
 	for (int z = 0; z < 3; z++) {
@@ -31,7 +31,7 @@ OutputContext StackedWriter::getOutputContext() {
 	return { true, false, &outputFrame, nullptr, 0, true, &inputFrame };
 }
 
-void StackedWriter::write(const MovieFrame& frame) {
+void StackedWriter::write() {
 	int offset = int(mData.w * (1 + mData.blendInput.position) / 8);
 	unsigned char* in = inputFrame.data() + offset;
 	unsigned char* out = outputFrame.data() + offset;

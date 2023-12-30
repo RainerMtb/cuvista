@@ -61,6 +61,12 @@ template <class T> const T& ImageBase<T>::at(size_t idx, size_t r, size_t c) con
 	return *addr(idx, r, c);
 }
 
+template <class T> void ImageBase<T>::setPixel(size_t row, size_t col, T color1, T color2, T color3) {
+	at(0, row, col) = color1;
+	at(1, row, col) = color2;
+	at(2, row, col) = color3;
+}
+
 template <class T> int ImageBase<T>::colorValue(T pixelValue) const {
 	return pixelValue;
 }

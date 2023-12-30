@@ -116,6 +116,9 @@
     <ClCompile Include="ThreadPool.cpp">
       <Filter>Util</Filter>
     </ClCompile>
+    <ClCompile Include="AuxiliaryWriter.cpp">
+      <Filter>Writer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MovieReader.hpp">
@@ -216,6 +219,9 @@
     </ClInclude>
     <ClInclude Include="ThreadPool.hpp">
       <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="AuxiliaryWriter.hpp">
+      <Filter>Writer</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

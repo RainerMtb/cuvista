@@ -46,11 +46,11 @@ std::future<void> MovieFrame::readAsync() {
 
 //output frame to main writer class
 void MovieFrame::write() {
-	mWriter.write(*this);
+	mWriter.write();
 }
 
 std::future<void> MovieFrame::writeAsync() {
-	return mWriter.writeAsync(*this);
+	return mWriter.writeAsync();
 }
 
 //check if we should continue with the next frame

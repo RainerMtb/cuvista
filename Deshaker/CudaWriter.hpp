@@ -37,8 +37,8 @@ public:
 
 	void open(EncodingOption videoCodec) override;
 	OutputContext getOutputContext() override;
-	void write(const MovieFrame& frame) override;
-	std::future<void> writeAsync(const MovieFrame& frame) override;
+	void write() override;
+	std::future<void> writeAsync() override;
 	bool startFlushing() override;
 	bool flush() override;
 };

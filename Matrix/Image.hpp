@@ -91,6 +91,9 @@ public:
 	//set color values per color plane
 	void setValues(const ColorBase<T>& color);
 
+	//set color values for one pixel
+	void setPixel(size_t row, size_t col, T color1, T color2, T color3);
+
 	//equals operator
 	virtual bool operator == (const ImageBase& other) const;
 

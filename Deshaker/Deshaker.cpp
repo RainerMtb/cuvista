@@ -100,6 +100,9 @@ int deshake(int argsCount, char** args) {
 		if (!data.resultImageFile.empty()) {
 			auxWriters.push_back(std::make_unique<ResultImageWriter>(data));
 		}
+		if (!data.flowFile.empty()) {
+			auxWriters.push_back(std::make_unique<OpticalFlowWriter>(data, *reader));
+		}
 		for (auto& aw : auxWriters) {
 			aw->open();
 		}

@@ -30,6 +30,8 @@ private:
 
 	template <class R = T> R interpFunc(size_t ix, size_t iy, R dx, R dy) const;
 
+	template <class R = T> R interpFunc(R x, R y) const;
+
 	template <class R = T> std::optional<R> interpFunc(R x, R y, size_t x0, size_t y0, size_t w, size_t h) const;
 
 protected:
@@ -123,11 +125,11 @@ public:
 	std::optional<float> interp2(float x, float y) const;
 
 	std::optional<double> interp2(double x, double y) const;
-	
-	//interpolate this mat at given points in the given area
-	std::optional<float> interp2(float x, float y, size_t x0, size_t y0, size_t w, size_t h) const;
 
-	std::optional<double> interp2(double x, double y, size_t x0, size_t y0, size_t w, size_t h) const;
+	//interpolate this mat at given point x and y, return optional, return nullopt when outside this mat
+	float interp2clamped(float x, float y) const;
+
+	double interp2clamped(double x, double y) const;
 
 	//interpolate this mat at given points through index ix and iy and fractions dx and dy and dx*dy
 	float interp2(size_t ix, size_t iy, float dx, float dy) const;

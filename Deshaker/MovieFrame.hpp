@@ -100,7 +100,7 @@ public:
 	virtual std::map<int64_t, TransformValues> readTransforms() final;
 
 	/*
-	* name MovieFrame used
+	* printable name of MovieFrame in use
 	*/
 	virtual std::string className() const { return "None"; }
 
@@ -122,7 +122,10 @@ protected:
 		mPool(data.cpuThreads),
 		mFrameResult(data, mPool),
 		mBufferFrame(data.h, data.w, data.cpupitch),
-		mResultPoints(data.resultCount) {}
+		mResultPoints(data.resultCount) 
+	{
+		writer.movieFrame = this;
+	}
 
 private:
 	void read();

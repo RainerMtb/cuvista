@@ -58,7 +58,7 @@ bool ThreadPool::isBusy() const {
 	return !mJobs.empty() || std::any_of(mBusyArray.cbegin(), mBusyArray.cend(), [] (int a) { return a; });
 }
 
-void ThreadPool::wait() {
+void ThreadPool::wait() const {
 	std::unique_lock<std::mutex> lock(mMutex);
 	if (isBusy()) mBusy.wait(lock);
 }
@@ -67,7 +67,7 @@ ThreadPool::~ThreadPool() {
 	shutdown();
 }
 
-std::future<void> ThreadPool::add(std::function<void()> job) {
+std::future<void> ThreadPool::add(std::function<void()> job) const {
 	std::unique_lock<std::mutex> lock(mMutex);
 	mJobs.emplace(std::packaged_task<void()>(job));
 	auto fut = mJobs.back().get_future();
@@ -75,17 +75,17 @@ std::future<void> ThreadPool::add(std::function<void()> job) {
 	return fut;
 }
 
-void ThreadPool::addAndWait(std::function<void(size_t)> job, size_t iterStart, size_t iterEnd) {
-	assert(futures.empty() && "list of futures must be empty here");
+void ThreadPool::addAndWait(std::function<void(size_t)> job, size_t iterStart, size_t iterEnd) const {
+	std::vector<std::future<void>> futures;
 	//create jobs and queue up
 	for (size_t i = iterStart; i < iterEnd; i++) {
 		futures.emplace_back(add(std::bind(job, i)));
 	}
 	//wait for jobs to complete
-	for (auto& fut : futures) {
-		fut.get();
+	//destructor of future only blocks when created through std::async ?!
+	for (auto& f : futures) {
+		f.wait();
 	}
-	futures.clear();
 }
 
 void ThreadPool::cancel() {

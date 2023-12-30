@@ -160,9 +160,21 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 			//produce and write transformation images
 			resultImageFile = next;
 
+		} else if (args.nextArg("flow", next)) {
+			//optical flow video
+			flowFile = next;
+
 		} else if (args.nextArg("pass", next)) {
 			int p = std::stoi(next);
-			if (p == 0) { pass = DeshakerPass::COMBINED; } else if (p == 1) { pass = DeshakerPass::FIRST_PASS; } else if (p == 2) { pass = DeshakerPass::SECOND_PASS; } else if (p == 12) { pass = DeshakerPass::CONSECUTIVE; } else throw AVException("invalid value for pass: " + next);
+			if (p == 0) { 
+				pass = DeshakerPass::COMBINED; 
+			} else if (p == 1) { 
+				pass = DeshakerPass::FIRST_PASS; 
+			} else if (p == 2) { 
+				pass = DeshakerPass::SECOND_PASS; 
+			} else if (p == 12) { 
+				pass = DeshakerPass::CONSECUTIVE; 
+			} else throw AVException("invalid value for pass: " + next);
 
 		} else if (args.nextArg("radius", next)) {
 			//temporal radius in seconds before and after current frame
@@ -494,9 +506,10 @@ void MainData::showIntro(const std::string& deviceName, const MovieReader& reade
 	if (trajectoryFile.empty() == false) *console << "TRAJECTORY FILE: " << trajectoryFile << std::endl;
 	if (resultsFile.empty() == false) *console << "CALCULATION DETAILS OUT: " << resultsFile << std::endl;
 	if (resultImageFile.empty() == false) *console << "CALCULATION DETAILS IMAGES: " << resultImageFile << std::endl;
+	if (flowFile.empty() == false) *console << "OPTICAL FLOW VIDEO: " << flowFile << std::endl;
 
 	//device info
-	*console << "USING DEVICE: " << deviceName << std::endl;
+	*console << "  USING DEVICE: " << deviceName << std::endl;
 }
 
 //default output when no arguments are given

@@ -181,6 +181,7 @@ public:
 	std::string trajectoryFile;			//file to read or write trajectory data
 	std::string resultsFile;			//output file path
 	std::string resultImageFile;        //file to write result images, gray, transform lines
+	std::string flowFile;               //file to write video showing optical flow
 
 	std::string tcp_address;
 	unsigned short tcp_port = 0;

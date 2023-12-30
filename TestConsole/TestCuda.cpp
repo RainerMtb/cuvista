@@ -31,6 +31,7 @@ void imageOutput() {
 	CudaFrame frame(data, reader, writer);
 	OutputContext oc = { false, false, nullptr, nullptr };
 	ResultImageWriter resim(data);
+	data.resultImageFile = "f:/im%03d.bmp";
 
 	reader.read(frame.mBufferFrame);
 	frame.inputData();
@@ -44,8 +45,7 @@ void imageOutput() {
 		frame.computeStart(frame.mReader.frameIndex);
 		frame.computeTerminate(frame.mReader.frameIndex);
 		frame.computeTransform(frame.mReader.frameIndex);
-		std::string fname = std::format("f:/im{:03d}.bmp", i);
-		resim.write(frame.mFrameResult, i, frame.getInput(i), fname);
+		resim.write(frame);
 	}
 
 }

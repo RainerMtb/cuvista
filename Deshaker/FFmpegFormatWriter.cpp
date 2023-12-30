@@ -29,13 +29,13 @@ AVStream* FFmpegFormatWriter::newStream(AVFormatContext* fmt_ctx, AVStream* inSt
 }
 
 //setup output format
-void FFmpegFormatWriter::open(EncodingOption videoCodec) {
+void FFmpegFormatWriter::open(EncodingOption videoCodec, const std::string& sourceName) {
     //av_log_set_level(AV_LOG_ERROR);
     //custom callback to log ffmpeg errors
     av_log_set_callback(ffmpeg_log);
 
     //setup output file
-    int result = avformat_alloc_output_context2(&fmt_ctx, NULL, NULL, mData.fileOut.c_str());
+    int result = avformat_alloc_output_context2(&fmt_ctx, NULL, NULL, sourceName.c_str());
     if (result < 0)
         throw AVException(av_make_error(result));
 

@@ -25,11 +25,9 @@ class ThreadPool : public ThreadPoolBase {
 
 private:
 	std::vector<int> mBusyArray; //do not use vector<bool> here
-	std::queue<std::packaged_task<void()>> mJobs;
-	std::vector<std::future<void>> futures;
-
-	std::mutex mMutex;
-	std::condition_variable mCV, mBusy;
+	mutable std::queue<std::packaged_task<void()>> mJobs;
+	mutable std::mutex mMutex;
+	mutable std::condition_variable mCV, mBusy;
 	bool mCancelRequest = false;
 
 	bool isIdle() const;
@@ -40,13 +38,13 @@ public:
 	~ThreadPool() override;
 
 	//wait for all pending jobs to execute
-	void wait() override;
+	void wait() const override;
 
 	//add job to queue
-	std::future<void> add(std::function<void()> job) override;
+	std::future<void> add(std::function<void()> job) const override;
 
 	//create jobs and add to queue by iterating from a to b and calling func
-	void addAndWait(std::function<void(size_t)> job, size_t iterStart, size_t iterEnd) override;
+	void addAndWait(std::function<void(size_t)> job, size_t iterStart, size_t iterEnd) const override;
 
 	//cancel all jobs
 	void cancel() override;

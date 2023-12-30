@@ -14,6 +14,7 @@
     <ClInclude Include="Affine2D.h" />
     <ClInclude Include="CharMap.hpp" />
     <ClInclude Include="CholeskyDecompositor.h" />
+    <ClInclude Include="Color.hpp" />
     <ClInclude Include="CoreMat.h" />
     <ClInclude Include="Decompositor.h" />
     <ClInclude Include="Image.hpp" />
@@ -29,6 +30,7 @@
     <ClInclude Include="ThreadPoolBase.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Color.cpp" />
     <ClCompile Include="CoreMat.cpp" />
     <ClCompile Include="Image.cpp" />
     <ClCompile Include="ImageSub.cpp" />

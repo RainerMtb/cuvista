@@ -22,6 +22,7 @@
 #include "MainData.hpp"
 #include "Trajectory.hpp"
 #include "Stats.hpp"
+#include "AuxiliaryWriter.hpp"
 
 class MovieFrame;
 
@@ -29,7 +30,7 @@ class MovieFrame;
 class MovieWriter : public WriterStats {
 
 protected:
-	const MainData& mData; //central metadata structure
+	const MainData& mData; //main metadata structure
 	MovieReader& mReader;
 
 	MovieWriter(MainData& data, MovieReader& reader) :
@@ -37,11 +38,13 @@ protected:
 		mReader { reader } {}
 
 public:
+	const MovieFrame* movieFrame = nullptr; //will be set in constructor of MovieFrame
+
 	virtual ~MovieWriter() = default;
 	virtual void open(EncodingOption videoCodec) {}
 	virtual OutputContext getOutputContext();
-	virtual void write(const MovieFrame& frame) { frameIndex++; }
-	virtual std::future<void> writeAsync(const MovieFrame& frame);
+	virtual void write() { frameIndex++; }
+	virtual std::future<void> writeAsync();
 	virtual bool startFlushing() { return false; }
 	virtual bool flush() { return false; }
 };
@@ -95,7 +98,7 @@ public:
 		ImageWriter(data, reader), 
 		image(data.h, data.w) {}
 
-	void write(const MovieFrame& frame) override;
+	void write() override;
 };
 
 
@@ -113,7 +116,7 @@ public:
 
 	~JpegImageWriter() override;
 	void open(EncodingOption videoCodec) override;
-	void write(const MovieFrame& frame) override;
+	void write() override;
 };
 
 
@@ -142,7 +145,7 @@ public:
 
 	~PipeWriter() override;
 	void open(EncodingOption videoCodec) override;
-	void write(const MovieFrame& frame) override;
+	void write() override;
 };
 
 
@@ -165,7 +168,7 @@ public:
 	TCPWriter(MainData& data, MovieReader& reader);
 	~TCPWriter() override;
 	void open(EncodingOption videoCodec) override;
-	void write(const MovieFrame& frame) override;
+	void write() override;
 };
 
 
@@ -195,7 +198,7 @@ protected:
 		outputFrame(data.h, data.w, data.cpupitch) {}
 
 	~FFmpegFormatWriter() override;
-	void open(EncodingOption videoCodec) override;
+	void open(EncodingOption videoCodec, const std::string& sourceName);
 	int writePacket(AVPacket* packet);
 	void writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsIdx, bool terminate);
 	void transcodeAudio(AVPacket* pkt, StreamContext& sc, bool terminate);
@@ -208,7 +211,7 @@ private:
 //-----------------------------------------------------------------------------------
 class FFmpegWriter : public FFmpegFormatWriter {
 
-private:
+protected:
 	int writeBufferSize = 4;
 	std::vector<AVFrame*> av_frames;
 
@@ -216,12 +219,12 @@ private:
 	AVCodecContext* codec_ctx = nullptr;
 	SwsContext* sws_scaler_ctx = nullptr;
 
-	AVFrame* writeAVFrame(ImageYuv& fr);
+	AVFrame* putAVFrame(ImageYuv& fr);
 	int sendFFmpegFrame(AVFrame* frame);
 	int writeFFmpegPacket(AVFrame* av_frame);
 
-protected:
-	void open(EncodingOption videoCodec, int w, int h);
+	void openEncoder(const AVCodec* codec, const std::string& sourceName);
+	void open(EncodingOption videoCodec, int w, int h, const std::string& sourceName);
 	void write(ImageYuv& frame);
 
 public:
@@ -231,8 +234,8 @@ public:
 	~FFmpegWriter() override;
 	void open(EncodingOption videoCodec) override;
 	OutputContext getOutputContext() override;
-	void write(const MovieFrame& frame) override;
-	std::future<void> writeAsync(const MovieFrame& mf) override;
+	void write() override;
+	std::future<void> writeAsync() override;
 	bool startFlushing() override;
 	bool flush() override;
 };
@@ -256,7 +259,7 @@ public:
 
 	void open(EncodingOption videoCodec) override;
 	OutputContext getOutputContext() override;
-	void write(const MovieFrame& frame) override;
+	void write() override;
 };
 
 
@@ -264,7 +267,6 @@ public:
 class TransformsFile {
 
 protected:
-	const MainData& mData;
 	inline static std::string id = "CUVI";
 	std::ofstream file;
 
@@ -273,12 +275,11 @@ protected:
 	}
 
 public:
-	TransformsFile(const MainData& data) :
-		mData { data } {}
+	TransformsFile(const MainData& data) {}
 
 	static std::map<int64_t, TransformValues> readTransformMap(const std::string& trajectoryFile);
 
-	void open();
+	void open(const std::string& trajectoryFile);
 	void writeTransform(const Affine2D& transform, int64_t frameIndex);
 };
 
@@ -291,22 +292,8 @@ public:
 		MovieWriter(data, reader),
 		TransformsFile(data) {}
 
-	virtual void open(EncodingOption videoCodec) override; //for use as a main writer
-	virtual void write(const MovieFrame& frame) override;
-};
-
-
-//-------------- superclass for secondary writers -----------------------------------
-class AuxiliaryWriter : public MovieWriter {
-
-private:
-	NullReader nullReader;
-
-public:
-	AuxiliaryWriter(MainData& data) :
-		MovieWriter(data, nullReader) {}
-
-	virtual void open() {}
+	void open(EncodingOption videoCodec) override; //for use as a main writer
+	void write() override;
 };
 
 
@@ -318,47 +305,30 @@ public:
 		AuxiliaryWriter(data),
 		TransformsFile(data) {}
 
-	virtual void open() override;
-	virtual void write(const MovieFrame& frame) override;
+	void open() override;
+	void write(const MovieFrame& frame) override;
 };
 
-//--------------- write point results as large text file ----------------------------
-class ResultDetailsWriter : public AuxiliaryWriter {
+
+//optical flow video
+class OpticalFlowWriter : public AuxiliaryWriter, FFmpegWriter {
 
 private:
-	std::string delimiter = ";";
-	std::ofstream file;
+	ImageRGB imageResults;
+	ImageBGR imageInterpolated;
+	AVRational timeBase = { 1, 10 };
+
+	void open(const std::string& sourceName);
+	void writeData(AVFrame* av_frame);
 
 public:
-	ResultDetailsWriter(MainData& data) :
-		AuxiliaryWriter(data) {}
+	OpticalFlowWriter(MainData& data, MovieReader& reader) :
+		AuxiliaryWriter(data),
+		FFmpegWriter(data, reader),
+		imageResults(data.iyCount, data.ixCount), 
+		imageInterpolated(data.h, data.w) {}
 
-	virtual void open() override;
-	virtual void write(const MovieFrame& frame) override;
-	void write(const std::vector<PointResult>& results, int64_t frameIndex);
-};
-
-
-//--------------- write individual images to show point results ---------------------
-class ResultImageWriter : public AuxiliaryWriter {
-
-private:
-	ImageBGR bgr;
-
-public:
-	ResultImageWriter(MainData& data) :
-		AuxiliaryWriter(data), 
-		bgr(data.h, data.w) {}
-
-	virtual void open() override {}
-	virtual void write(const MovieFrame& frame) override;
-	void write(const FrameResult& fr, int64_t idx, const ImageYuv& yuv, const std::string& fname);
-};
-
-
-//--------------- collection of auxiliary writer instances
-class AuxWriters : public std::vector<std::unique_ptr<AuxiliaryWriter>> {
-
-public:
-	void writeAll(const MovieFrame& frame);
+	void open() override;
+	void write(const MovieFrame& frame) override;
+	~OpticalFlowWriter();
 };

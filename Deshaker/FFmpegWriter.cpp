@@ -23,7 +23,7 @@
 
 //set up ffmpeg encoder
 void FFmpegWriter::open(EncodingOption videoCodec) {
-    open(videoCodec, mData.w, mData.h);
+    open(videoCodec, mData.w, mData.h, mData.fileOut);
 }
 
 
@@ -32,50 +32,21 @@ OutputContext FFmpegWriter::getOutputContext() {
     return { true, false, &outputFrame, nullptr };
 }
 
-
-//set up ffmpeg encoder
-void FFmpegWriter::open(EncodingOption videoCodec, int w, int h) {
+void FFmpegWriter::openEncoder(const AVCodec* codec, const std::string& sourceName) {
     int result = 0;
-
-    const AVCodec* codec = avcodec_find_encoder(codecMap[videoCodec.codec]);
-    //const AVCodec* codec = avcodec_find_encoder_by_name("libsvtav1");
-    if (!codec) 
-        throw AVException("Could not find encoder");
-
-    codec_ctx = avcodec_alloc_context3(codec);
-    if (!codec_ctx) 
-        throw AVException("Could not allocate encoder context");
-
-    //open container format
-    FFmpegFormatWriter::open(videoCodec);
-
-    codec_ctx->width = w;
-    codec_ctx->height = h;
-    codec_ctx->pix_fmt = pixfmt;
-    //codec_ctx->framerate = { data.inputCtx.fpsNum, data.inputCtx.fpsDen };
-    codec_ctx->time_base = { (int) mReader.timeBaseNum, (int) mReader.timeBaseDen };
-    codec_ctx->gop_size = GOP_SIZE;
-    codec_ctx->max_b_frames = 4;
-    //av_opt_set(codec_ctx->priv_data, "preset", "slow", 0);
-    av_opt_set(codec_ctx->priv_data, "profile", "main", 0);
-    av_opt_set(codec_ctx->priv_data, "x265-params", "log-level=error", 0);
-    av_opt_set(codec_ctx->priv_data, "crf", std::to_string(mData.crf).c_str(), 0); //?????
-
-    if (fmt_ctx->oformat->flags & AVFMT_GLOBALHEADER)
-        codec_ctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
 
     //open encoder
     result = avcodec_open2(codec_ctx, codec, NULL);
-    if (result < 0) 
+    if (result < 0)
         throw AVException(av_make_error(result, "error opening codec"));
 
     result = avcodec_parameters_from_context(videoStream->codecpar, codec_ctx);
-    if (result < 0) 
+    if (result < 0)
         throw AVException(av_make_error(result, "error setting codec parameters"));
 
     result = avio_open(&fmt_ctx->pb, fmt_ctx->url, AVIO_FLAG_WRITE);
-    if (result < 0) 
-        throw AVException(std::string("error opening file '") + mData.fileOut + "'");
+    if (result < 0)
+        throw AVException(std::string("error opening file '") + sourceName + "'");
 
     result = avformat_write_header(fmt_ctx, NULL);
     if (result < 0)
@@ -86,7 +57,7 @@ void FFmpegWriter::open(EncodingOption videoCodec, int w, int h) {
     //av_dump_format(fmt_ctx, 0, fmt_ctx->url, 1);
 
     videoPacket = av_packet_alloc();
-    if (!videoPacket) 
+    if (!videoPacket)
         throw AVException("Could not allocate encoder packet");
 
     //allocate av_frames to be cycled through on encoding
@@ -109,10 +80,61 @@ void FFmpegWriter::open(EncodingOption videoCodec, int w, int h) {
 
         av_frames.push_back(av_frame);
     }
+}
+
+
+//set up ffmpeg encoder
+void FFmpegWriter::open(EncodingOption videoCodec, int w, int h, const std::string& sourceName) {
+    const AVCodec* codec = avcodec_find_encoder(codecMap[videoCodec.codec]);
+    //const AVCodec* codec = avcodec_find_encoder_by_name("libsvtav1");
+    if (!codec) 
+        throw AVException("Could not find encoder");
+
+    codec_ctx = avcodec_alloc_context3(codec);
+    if (!codec_ctx) 
+        throw AVException("Could not allocate encoder context");
+
+    //open container format
+    FFmpegFormatWriter::open(videoCodec, sourceName);
+
+    codec_ctx->width = w;
+    codec_ctx->height = h;
+    codec_ctx->pix_fmt = pixfmt;
+    //codec_ctx->framerate = { data.inputCtx.fpsNum, data.inputCtx.fpsDen };
+    codec_ctx->time_base = { (int) mReader.timeBaseNum, (int) mReader.timeBaseDen };
+    codec_ctx->gop_size = GOP_SIZE;
+    codec_ctx->max_b_frames = 4;
+    //av_opt_set(codec_ctx->priv_data, "preset", "slow", 0);
+    av_opt_set(codec_ctx->priv_data, "profile", "main", 0);
+    av_opt_set(codec_ctx->priv_data, "x265-params", "log-level=error", 0);
+    av_opt_set(codec_ctx->priv_data, "crf", std::to_string(mData.crf).c_str(), 0); //?????
+
+    if (fmt_ctx->oformat->flags & AVFMT_GLOBALHEADER)
+        codec_ctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+
+    openEncoder(codec, sourceName);
 
     sws_scaler_ctx = sws_getContext(w, h, AV_PIX_FMT_YUV444P, w, h, pixfmt, SWS_BICUBIC, NULL, NULL, NULL);
     if (!sws_scaler_ctx) 
         throw AVException("Could not get scaler context");
+}
+
+
+AVFrame* FFmpegWriter::putAVFrame(ImageYuv& fr) {
+    //get storage
+    size_t idx = fr.index % writeBufferSize;
+    AVFrame* av_frame = av_frames[idx];
+
+    //fr.writeText(std::to_string(status.frameWriteIndex), 10, 10, 2, 3, ColorYuv::BLACK, ColorYuv::WHITE);
+    //scale and put into av_frame
+    uint8_t* src[] = { fr.plane(0), fr.plane(1), fr.plane(2), nullptr };
+    int strides[] = { fr.stride, fr.stride, fr.stride, 0 }; //if only three values are provided, we get a warning "data not aligned"
+    int sliceHeight = sws_scale(sws_scaler_ctx, src, strides, 0, fr.h, av_frame->data, av_frame->linesize);
+
+    //set pts into frame to later name packet
+    av_frame->pts = this->frameIndex;
+
+    return av_frame;
 }
 
 
@@ -144,32 +166,14 @@ int FFmpegWriter::writeFFmpegPacket(AVFrame* av_frame) {
 }
 
 
-AVFrame* FFmpegWriter::writeAVFrame(ImageYuv& fr) {
-    //get storage
-    size_t idx = fr.index % writeBufferSize;
-    AVFrame* av_frame = av_frames[idx];
-
-    //fr.writeText(std::to_string(status.frameWriteIndex), 10, 10, 2, 3, ColorYuv::BLACK, ColorYuv::WHITE);
-    //scale and put into av_frame
-    uint8_t* src[] = { fr.plane(0), fr.plane(1), fr.plane(2), nullptr };
-    int strides[] = { fr.stride, fr.stride, fr.stride, 0 }; //if only three values are provided, we get a warning "data not aligned"
-    int sliceHeight = sws_scale(sws_scaler_ctx, src, strides, 0, fr.h, av_frame->data, av_frame->linesize);
-
-    //set pts into frame to later name packet
-    av_frame->pts = this->frameIndex;
-
-    return av_frame;
-}
-
-
-void FFmpegWriter::write(const MovieFrame& frame) {
+void FFmpegWriter::write() {
     write(outputFrame);
 }
 
 
 void FFmpegWriter::write(ImageYuv& frame) {
     //put yuv frame into ffmpeg frame storage
-    AVFrame* av_frame = writeAVFrame(frame);
+    AVFrame* av_frame = putAVFrame(frame);
 
     //generate and write packet
     int result = sendFFmpegFrame(av_frame);
@@ -180,9 +184,9 @@ void FFmpegWriter::write(ImageYuv& frame) {
 }
 
 
-std::future<void> FFmpegWriter::writeAsync(const MovieFrame& mf) {
+std::future<void> FFmpegWriter::writeAsync() {
     //put yuv frame into ffmpeg frame storage
-    AVFrame* av_frame = writeAVFrame(outputFrame);
+    AVFrame* av_frame = putAVFrame(outputFrame);
 
     //enqueue ffmpeg process
     auto fcn = [this, av_frame] {

@@ -34,20 +34,20 @@ protected:
 
 public:
 	virtual ~ThreadPoolBase() {}
-	virtual void wait() {}
+	virtual void wait() const {}
 	virtual void cancel() {}
 	virtual void shutdown() {}
 
 	//execute one job
-	virtual std::future<void> add(std::function<void()> job) {
+	virtual std::future<void> add(std::function<void()> job) const {
 		job();
-		return {};
+		return { std::async([] {}) };
 	}
 
 	//iterate over job array
-	virtual void addAndWait(std::function<void(size_t)> job, size_t iterStart, size_t iterEnd) {
+	virtual void addAndWait(std::function<void(size_t)> job, size_t iterStart, size_t iterEnd) const {
 		for (size_t i = iterStart; i < iterEnd; i++) {
-			std::bind(job, i)(); //exectute job directly
+			std::bind(job, i)();
 		}
 	}
 

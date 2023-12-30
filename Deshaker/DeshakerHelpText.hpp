@@ -52,7 +52,7 @@ other output options:
 -trf file       text file containing transformation data per frame
                 use in conjunction with single pass mode, see -pass
 -res file       write detailed results of the compute step to file
--resim fmt      write images containing lines to show calculations 
+-resim x.bmp    write images containing trasform lines in bmp file format 
                 images are grayscaled, lines are colored
                 blue: calculated transform
                 green: point is consens / red: point is not consens
@@ -71,6 +71,7 @@ other output options:
                 final output video is 3/2 the input width
                 3/4 of input and 3/4 of output are displayed
                 -1 takes leftmost part, 0 shows the middle, +1 takes the right
+-flow file      produce video of calculated optical flow
 
 quality and performance settings:
 -radius sec     the temporal radius where frames will be considered for 

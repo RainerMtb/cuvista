@@ -84,10 +84,7 @@ template <class T> void ImagePlanar<T>::scaleTo(size_t srcPlane, ImageBase<T>& d
 }
 
 template <class T> T ImagePlanar<T>::sample(size_t plane, double x, double y) const {
-	x = std::clamp(x, 0.0, this->w - 1.0);
-	y = std::clamp(y, 0.0, this->h - 1.0);
-	double val = mats[plane].interp2(x, y, 0, 0, this->w, this->h).value();
-	return (T) val;
+	return (T) mats[plane].interp2clamped(x, y);
 }
 
 ImagePPM& ImageYuvMat::toPPM(ImagePPM& dest, ThreadPoolBase& pool) const {
