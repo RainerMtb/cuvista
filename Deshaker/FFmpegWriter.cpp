@@ -80,6 +80,9 @@ void FFmpegWriter::openEncoder(const AVCodec* codec, const std::string& sourceNa
 
         av_frames.push_back(av_frame);
     }
+    for (int i = 0; i < writeBufferSize - 1; i++) {
+        futures.push_back(std::async([] {}));
+    }
 }
 
 
@@ -196,12 +199,18 @@ std::future<void> FFmpegWriter::writeAsync() {
         }
     };
     this->frameIndex++;
-    return std::async(std::launch::async, fcn);
+    futures.push_back(encoderPool.add(fcn));
+    std::future<void> f = std::move(futures.front());
+    futures.pop_front();
+    return f;
 }
 
 
 //flush encoder buffer
 bool FFmpegWriter::startFlushing() {
+    for (auto& f : futures) {
+        f.wait();
+    }
     int result = sendFFmpegFrame(nullptr);
     return result >= 0;
 }

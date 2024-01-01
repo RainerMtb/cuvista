@@ -37,6 +37,7 @@ namespace cl {
 		cl_int idx, ix0, iy0;
 		cl_int xm, ym;
 		cl_char result;
+		cl_char computed;
 	};
 
 	//structure holding data for compute kernel
@@ -53,6 +54,7 @@ namespace cl {
 	struct Data {
 		Context context;
 		CommandQueue queue;
+		CommandQueue secondQueue;
 
 		//input yuv frames
 		std::vector<Image2D> yuv;
@@ -73,24 +75,20 @@ namespace cl {
 		//core data in opencl structure format
 		Buffer core;
 
-		std::map<std::string, Kernel> kernelMap = {
-			{"scale_8u32f_1", {}},
-			{"scale_8u32f_3", {}},
-			{"scale_32f8u_3", {}},
-			{"filter_32f_1", {}},
-			{"filter_32f_3", {}},
-			{"remap_downsize_32f", {}},
-			{"warp_back", {}},
-			{"unsharp", {}},
-			{"yuv8u_to_rgb", {}},
-			{"yuv32f_to_rgb", {}},
-			{"scrap", {}},
-			{"compute", {}},
-		};
-
-		Kernel& kernel(const std::string& key) {
-			return kernelMap.at(key);
-		}
+		struct Kernels {
+			Kernel scale_8u32f_1;
+			Kernel scale_8u32f_3;
+			Kernel scale_32f8u_3;
+			Kernel filter_32f_1;
+			Kernel filter_32f_3;
+			Kernel remap_downsize_32f;
+			Kernel warp_back;
+			Kernel unsharp;
+			Kernel yuv8u_to_rgb;
+			Kernel yuv32f_to_rgb;
+			Kernel scrap;
+			Kernel compute;
+		} kernels;
 	};
 
 	void scale_8u32f_1(Image src, Image dest, Data& clData);
@@ -106,7 +104,5 @@ namespace cl {
 	void warp_back(Image src, Image dest, Data& clData, std::array<double, 6> trf);
 	void unsharp(Image src, Image dest, Image gauss, Data& clData, cl_float4 factor);
 
-	void yuv_to_rgb(const std::string& kernelName, Image src, unsigned char* imageData, Data& clData, int w, int h);
-
-	void readImage(Image src, size_t destPitch, void* dest, CommandQueue queue);
+	void yuv_to_rgb(Kernel& kernel, Image src, unsigned char* imageData, Data& clData, int w, int h);
 }

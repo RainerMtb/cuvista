@@ -143,4 +143,5 @@ bool CudaFFmpegWriter::flush() {
 
 CudaFFmpegWriter::~CudaFFmpegWriter() {
     nvenc->destroyEncoder();
+    nvPackets.clear();
 }

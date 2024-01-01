@@ -232,9 +232,13 @@ void FFmpegReader::seek(double fraction) {
 void FFmpegReader::rewind() {
     seek(0.0);
     frameIndex = -1;
+    endOfInput = true;
     packetList.clear();
 
     for (auto& s : inputStreams) {
+        for (AVPacket* packet : s.packets) {
+            av_packet_free(&packet);
+        }
         s.packets.clear();
     }
 }

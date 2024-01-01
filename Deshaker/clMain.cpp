@@ -131,6 +131,7 @@ void cl::init(CoreData& core, ImageYuv& inputFrame, const DeviceInfo* device) {
 	try {
 		clData.context = Context(devInfo->device);
 		clData.queue = CommandQueue(clData.context, devInfo->device);
+		clData.secondQueue = CommandQueue(clData.context, devInfo->device);
 
 		//supported image formats
 		std::vector<ImageFormat> fmts;
@@ -196,10 +197,19 @@ void cl::init(CoreData& core, ImageYuv& inputFrame, const DeviceInfo* device) {
 		Program program(clData.context, sources);
 		program.build(compilerFlag.c_str());
 
-		//assign kernels to map
-		for (auto& entry : clData.kernelMap) {
-			entry.second = Kernel(program, entry.first.c_str());
-		}
+		//assign kernels
+		clData.kernels.scale_8u32f_1 = Kernel(program, "scale_8u32f_1");
+		clData.kernels.scale_8u32f_3 = Kernel(program, "scale_8u32f_3");
+		clData.kernels.scale_32f8u_3 = Kernel(program, "scale_32f8u_3");
+		clData.kernels.filter_32f_1 = Kernel(program, "filter_32f_1");
+		clData.kernels.filter_32f_3 = Kernel(program, "filter_32f_3");
+		clData.kernels.remap_downsize_32f = Kernel(program, "remap_downsize_32f");
+		clData.kernels.warp_back = Kernel(program, "warp_back");
+		clData.kernels.unsharp = Kernel(program, "unsharp");
+		clData.kernels.yuv8u_to_rgb = Kernel(program, "yuv8u_to_rgb");
+		clData.kernels.yuv32f_to_rgb = Kernel(program, "yuv32f_to_rgb");
+		clData.kernels.scrap = Kernel(program, "scrap");
+		clData.kernels.compute = Kernel(program, "compute");
 
 	} catch (const BuildError& err) {
 		for (auto& data : err.getBuildLog()) {
@@ -276,28 +286,28 @@ void cl::createPyramid(int64_t frameIdx, const CoreData& core) {
 //-------- COMPUTE -----------------
 //----------------------------------
 
-void cl::computeStart(int64_t frameIdx, const CoreData& core) {
+void cl::compute(int64_t frameIdx, const CoreData& core, int rowStart, int rowEnd) {
 	//util::ConsoleTimer timer("ocl compute start");
 	assert(frameIdx > 0 && "invalid pyramid index");
 	int64_t pyrIdx = frameIdx % core.pyramidCount;
 	int64_t pyrIdxPrev = (frameIdx - 1) % core.pyramidCount;
 
 	try {
+		//local memory size in bytes
+		int memsiz = (7LL * core.iw * core.iw + 108) * sizeof(cl_double) + 6 * sizeof(cl_double*);
 		//set up compute kernel
-		Kernel& kernel = clData.kernel("compute");
+		Kernel& kernel = clData.kernels.compute;
 		kernel.setArg(0, (cl_long) frameIdx);
 		kernel.setArg(1, clData.pyramid[pyrIdxPrev]);
 		kernel.setArg(2, clData.pyramid[pyrIdx]);
 		kernel.setArg(3, clData.results);
 		kernel.setArg(4, clData.core);
-
-		//local memory
-		int memsiz = (7LL * core.iw * core.iw + 108) * sizeof(cl_double) + 6 * sizeof(cl_double*);
 		kernel.setArg(5, memsiz, nullptr);
+		kernel.setArg(6, rowStart);
 
 		//threads
 		NDRange ndlocal = NDRange(core.iw, 32 / core.iw); //based on cuda warp
-		NDRange ndglobal = NDRange(ndlocal[0] * core.ixCount, ndlocal[1] * core.iyCount);
+		NDRange ndglobal = NDRange(ndlocal[0] * core.ixCount, ndlocal[1] * (rowEnd - rowStart));
 		clData.queue.enqueueNDRangeKernel(kernel, NullRange, ndglobal, ndlocal);
 
 	} catch (const Error& err) {
@@ -305,10 +315,26 @@ void cl::computeStart(int64_t frameIdx, const CoreData& core) {
 	}
 }
 
+void cl::computeStart(int64_t frameIdx, const CoreData& core) {
+	try {
+		//reset computed flag
+		clData.queue.enqueueFillBuffer<cl_char>(clData.results, 0, 0, sizeof(cl_PointResult) * core.resultCount);
+
+	} catch (const Error& err) {
+		errorLogger.logError("OpenCL compute error: ", err.what());
+	}
+	//compute first part of points
+	compute(frameIdx, core, 0, core.iyCount / 4);
+}
+
 void cl::computeTerminate(int64_t frameIdx, const CoreData& core, std::vector<PointResult>& results) {
 	//util::ConsoleTimer timer("ocl compute end");
+
+	//compute rest of points
+	compute(frameIdx, core, core.iyCount / 4, core.iyCount);
+	
 	try {
-		//copy from device to host buffer in cl_PointResult
+		//copy results from device to host buffer
 		clData.queue.enqueueReadBuffer(clData.results, CL_TRUE, 0, sizeof(cl_PointResult) * core.resultCount, clData.cl_results.data());
 
 		//convert from cl_PointResult to PointResult
@@ -413,9 +439,9 @@ Matf cl::getTransformedOutput(const CoreData& core) {
 
 void cl::getCurrentInputFrame(ImagePPM& image, int64_t idx) {
 	size_t fridx = idx % clData.yuv.size();
-	yuv_to_rgb("yuv8u_to_rgb", clData.yuv[fridx], image.data(), clData, image.w, image.h);
+	yuv_to_rgb(clData.kernels.yuv8u_to_rgb, clData.yuv[fridx], image.data(), clData, image.w, image.h);
 }
 
 void cl::getTransformedOutput(ImagePPM& image) {
-	yuv_to_rgb("yuv32f_to_rgb", clData.out[1], image.data(), clData, image.w, image.h);
+	yuv_to_rgb(clData.kernels.yuv32f_to_rgb, clData.out[1], image.data(), clData, image.w, image.h);
 }

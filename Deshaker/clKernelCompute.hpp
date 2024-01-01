@@ -51,6 +51,7 @@ struct PointResult {
 	int idx, ix0, iy0;
 	int xm, ym;
 	char result;
+    char computed;
 };
 
 //core data in opencl structure
@@ -66,9 +67,9 @@ __constant double wp0[] = { 1, 0, 0, 0, 1, 0, 0, 0, 1 };
 __constant double eta0[] = { 0, 0, 1, 0, 0, 1 };
 
 __kernel void compute(long frameIndex, __read_only image2d_depth_t Yprev, __read_only image2d_depth_t Ycur, __global struct PointResult* results, 
-						__constant struct KernelData* d_core, __local double* shd) {
+						__constant struct KernelData* d_core, __local double* shd, int rowStart) {
 	const int ix0 = get_group_id(0);
-	const int iy0 = get_group_id(1);
+	const int iy0 = get_group_id(1) + rowStart;
 	const int blockIndex = iy0 * get_num_groups(0) + ix0;
 	const int ci = get_local_id(1);
 	const int cols = get_local_size(1);
@@ -264,6 +265,7 @@ __kernel void compute(long frameIndex, __read_only image2d_depth_t Yprev, __read
 		results[blockIndex].u = u;
 		results[blockIndex].v = v;
 		results[blockIndex].result = result;
+		results[blockIndex].computed = 1;
 	}
 }
 )";

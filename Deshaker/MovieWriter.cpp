@@ -34,7 +34,7 @@ std::future<void> MovieWriter::writeAsync() {
 	return std::async(std::launch::async, [&] { write(); });
 }
 
-OutputContext StandardMovieWriter::getOutputContext() {
+OutputContext NullWriter::getOutputContext() {
 	return { true, false, &outputFrame, nullptr };
 }
 
@@ -279,6 +279,7 @@ void OpticalFlowWriter::write(const MovieFrame& frame) {
 		}
 	};
 	frame.mPool.addAndWait(fcn, 0, mData.h);
+	//fr.saveAsBMP("f:/im.bmp");
 
 	//encode bgr image
 	AVFrame* av_frame = av_frames[0];

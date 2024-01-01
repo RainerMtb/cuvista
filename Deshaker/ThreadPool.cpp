@@ -76,10 +76,15 @@ std::future<void> ThreadPool::add(std::function<void()> job) const {
 }
 
 void ThreadPool::addAndWait(std::function<void(size_t)> job, size_t iterStart, size_t iterEnd) const {
-	std::vector<std::future<void>> futures;
-	//create jobs and queue up
-	for (size_t i = iterStart; i < iterEnd; i++) {
-		futures.emplace_back(add(std::bind(job, i)));
+	std::vector<std::future<void>> futures(iterEnd - iterStart);
+	{
+		//create jobs and queue up
+		std::unique_lock<std::mutex> lock(mMutex);
+		for (size_t i = iterStart; i < iterEnd; i++) {
+			mJobs.emplace(std::packaged_task<void()>(std::bind(job, i)));
+			futures[i] = mJobs.back().get_future();
+		}
+		mCV.notify_all();
 	}
 	//wait for jobs to complete
 	//destructor of future only blocks when created through std::async ?!

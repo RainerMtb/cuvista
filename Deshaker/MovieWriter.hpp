@@ -23,6 +23,7 @@
 #include "Trajectory.hpp"
 #include "Stats.hpp"
 #include "AuxiliaryWriter.hpp"
+#include "ThreadPool.hpp"
 
 class MovieFrame;
 
@@ -51,35 +52,35 @@ public:
 
 
 //-----------------------------------------------------------------------------------
-class NullWriter : public MovieWriter {
+class EmptyWriter : public MovieWriter {
 
 public:
-	NullWriter(MainData& data, MovieReader& reader) : 
+	EmptyWriter(MainData& data, MovieReader& reader) : 
 		MovieWriter(data, reader) {}
 };
 
 
 //-----------------------------------------------------------------------------------
-class StandardMovieWriter : public MovieWriter {
+class NullWriter : public MovieWriter {
 
 protected:
 	ImageYuv outputFrame; //frame to write in YUV444 format
 
-	StandardMovieWriter(MainData& data, MovieReader& reader) :
+public:
+	NullWriter(MainData& data, MovieReader& reader) :
 		MovieWriter(data, reader),
 		outputFrame(data.h, data.w, data.cpupitch) {}
 
-public:
 	OutputContext getOutputContext() override;
 };
 
 
 //-----------------------------------------------------------------------------------
-class ImageWriter : public StandardMovieWriter {
+class ImageWriter : public NullWriter {
 
 protected:
 	ImageWriter(MainData& data, MovieReader& reader) : 
-		StandardMovieWriter(data, reader) {}
+		NullWriter(data, reader) {}
 
 	std::string makeFilename() const;
 
@@ -121,14 +122,14 @@ public:
 
 
 //-----------------------------------------------------------------------------------
-class RawWriter : public StandardMovieWriter {
+class RawWriter : public NullWriter {
 
 protected:
 	std::vector<char> yuvPacked;
 
 	//constructor
 	RawWriter(MainData& data, MovieReader& reader) :
-		StandardMovieWriter(data, reader),
+		NullWriter(data, reader),
 		yuvPacked(3ull * data.h * data.w) {}
 
 	//copy strided yuv data into a packed array [w * h * 3]
@@ -212,8 +213,10 @@ private:
 class FFmpegWriter : public FFmpegFormatWriter {
 
 protected:
-	int writeBufferSize = 4;
+	int writeBufferSize;
 	std::vector<AVFrame*> av_frames;
+	std::list<std::future<void>> futures;
+	ThreadPool encoderPool = ThreadPool(1);
 
 	AVPixelFormat pixfmt = AV_PIX_FMT_YUV420P;
 	AVCodecContext* codec_ctx = nullptr;
@@ -227,9 +230,13 @@ protected:
 	void open(EncodingOption videoCodec, int w, int h, const std::string& sourceName);
 	void write(ImageYuv& frame);
 
+	FFmpegWriter(MainData& data, MovieReader& reader, int writeBufferSize) :
+		FFmpegFormatWriter(data, reader),
+		writeBufferSize { writeBufferSize }  {}
+
 public:
 	FFmpegWriter(MainData& data, MovieReader& reader) :
-		FFmpegFormatWriter(data, reader) {}
+		FFmpegWriter(data, reader, 4) {}
 
 	~FFmpegWriter() override;
 	void open(EncodingOption videoCodec) override;
@@ -324,7 +331,7 @@ private:
 public:
 	OpticalFlowWriter(MainData& data, MovieReader& reader) :
 		AuxiliaryWriter(data),
-		FFmpegWriter(data, reader),
+		FFmpegWriter(data, reader, 1),
 		imageResults(data.iyCount, data.ixCount), 
 		imageInterpolated(data.h, data.w) {}
 

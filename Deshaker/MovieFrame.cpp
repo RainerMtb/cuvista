@@ -197,8 +197,8 @@ void MovieFrame::runLoopCombined(ProgressDisplay& progress, UserInput& input, Au
 		mTrajectory.addTrajectoryTransform(mFrameResult.transform());
 		const AffineTransform& finalTransform = mTrajectory.computeSmoothTransform(mData, mWriter.frameIndex);
 		outputData(finalTransform, mWriter.getOutputContext());
-		write();
 		auxWriters.writeAll(*this);
+		writeAsync().wait();
 		progress.update();
 	}
 
@@ -206,7 +206,7 @@ void MovieFrame::runLoopCombined(ProgressDisplay& progress, UserInput& input, Au
 	while (errorLogger.hasNoError() && mWriter.frameIndex < mReader.frameIndex && input.current <= UserInputEnum::END) {
 		const AffineTransform& tf = mTrajectory.computeSmoothTransform(mData, mWriter.frameIndex);
 		outputData(tf, mWriter.getOutputContext());
-		write();
+		writeAsync().wait();
 
 		//check if there is input on the console
 		input.checkState();

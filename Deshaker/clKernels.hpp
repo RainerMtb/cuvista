@@ -197,7 +197,8 @@ __kernel void yuv32f_to_rgb(__read_only image2d_t src, __global uchar* dest) {
 	yuv_to_rgb_func(yuv.s0, yuv.s1, yuv.s2, ptr, ptr + 1, ptr + 2);
 }
 
-__kernel void scrap() {}
+__kernel void scrap() {
+}
 
 )";
 

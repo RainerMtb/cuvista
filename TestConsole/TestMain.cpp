@@ -23,7 +23,7 @@
 
 int main() {
 	std::cout << "----------------------------" << std::endl << "TestMain:" << std::endl;
-	imageOutput();
+	//imageOutput();
 	//qrdec();
 	//text();
 	//filterCompare();
@@ -42,7 +42,7 @@ int main() {
 	//transform();
 	//cudaInvTest(1, 32);
 
-	//pyramid();
+	pyramid();
 	//openClInvTest(1, 32);
 	//openClInvGroupTest(1, 9);
 	//openClnorm1Test();

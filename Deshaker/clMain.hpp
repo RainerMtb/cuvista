@@ -59,4 +59,7 @@ namespace cl {
 	void getPyramid(float* pyramid, size_t idx, const CoreData& core);
 	void getCurrentInputFrame(ImagePPM& image, int64_t idx);
 	void getTransformedOutput(ImagePPM& image);
+
+	void readImage(Image src, size_t destPitch, void* dest, CommandQueue queue);
+	void compute(int64_t frameIdx, const CoreData& core, int rowStart, int rowEnd);
 }
