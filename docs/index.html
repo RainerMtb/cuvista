@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>CUVISTA - Cuda Video Stabilizer</title>
+    <title>CUVISTA - Video Stabilizer</title>
     <link rel="shortcut icon" type="image/x-icon" href="images/favicon.ico">
     <link rel="stylesheet" href="style.css">
 
@@ -9,20 +9,20 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="keywords" content="video, stabilization, stabilize, cuda">
-    <meta property="og:title" content="CUVISTA - Cuda Video Stabilizer">
+    <meta property="og:title" content="CUVISTA - Video Stabilizer">
     <meta property="og:locale" content="en_US">
     <meta name="google-site-verification" content="hLB3LpUyRKBPBzCZ1fEMaujIDOfW05AigtVBAwT24hg">
-    <meta name="description" content="cuvista, video stabilization, stabilize shaky video footage, cuda acceleration">
+    <meta name="description" content="cuvista, video stabilization, stabilize shaky video footage, cuda acceleration, opencl">
 </head>
 
 <body>
     <div id="wrapper">
         <header>
             <div class="main_margin">
-                <h1>CUVISTA - Cuda Video Stabilizer</h1>
+                <h1>CUVISTA - Video Stabilizer</h1>
                 <p>Stabilize shaky video on your PC quick and easy</p>
                 <div id="banner">
-                    <a id="download" href="https://github.com/RainerMtb/cuvista/releases/download/v0.9.7/cuvista-0.9.7.zip">
+                    <a id="download" href="https://github.com/RainerMtb/cuvista/releases/download/v0.9.10/cuvista-0.9.10.zip">
                         <span><strong>Download Latest Version</strong></span>
                         <span><img id="dlsymb" src="images/download-solid.svg"></span>
                     </a>
@@ -39,10 +39,11 @@
                 generate the output.
             </p>
             <p>
-                The software will make use of the cuda platform present on Nvidia grahics cards if such a suitable device
-                is detected, greatly accelerating the process in that way. No special driver or software is needed
-                to make use of cuda capabilites.
-                Without a cuda device stabilization will still run on CPU power alone, which will provide the same result,
+                The software will make use of GPU acceleration if supported hardware is present, greatly accelerating the process in that way.
+                The cuda platform present on Nvidia grahics cards is used if such a suitable device is detected.
+                Also OpenCL capable devices are supported.
+                No special driver or software is needed to make use of gpu acceleration.
+                Without any dedicated hardware stabilization will still run on CPU power alone, which will provide the same result,
                 although at a significantly lower speed.
             </p>
 
@@ -90,7 +91,7 @@
                 <li><strong>Zoom:</strong> Stabilization moves frames around, which reaveals the void at least on one side of the frame.
                     Zooming into the video by some amount will hide this moving effect</li>
                 <li><strong>Background:</strong> Fill the void in the background either with a fixed color or preceding frames</li>
-                <li><strong>Blend:</strong> Overlay part of the original video to display the stabilization result</li>
+                <li><strong>Stack:</strong> Put original and stabilized video side by side to display the stabilization result</li>
             </ul>
             If you want to watch how exactly each frame is moved around to compensate for the shakyness in the recording,
             try to set zoom to 0.9 and background to some fixed color
