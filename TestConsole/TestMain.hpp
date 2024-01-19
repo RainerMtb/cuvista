@@ -56,3 +56,4 @@ void compare();
 void pyramid();
 
 void imageOutput();
+void flow();

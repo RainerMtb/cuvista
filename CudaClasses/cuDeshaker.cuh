@@ -35,6 +35,8 @@ public:
 	int idx, ix0, iy0;
 	int xm, ym;
 	PointResultType result;
+	int z;
+	double err;
 	bool computed;
 };
 

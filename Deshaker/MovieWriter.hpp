@@ -55,7 +55,7 @@ public:
 class EmptyWriter : public MovieWriter {
 
 public:
-	EmptyWriter(MainData& data, MovieReader& reader) : 
+	EmptyWriter(MainData& data, MovieReader& reader) :
 		MovieWriter(data, reader) {}
 };
 
@@ -79,7 +79,7 @@ public:
 class ImageWriter : public NullWriter {
 
 protected:
-	ImageWriter(MainData& data, MovieReader& reader) : 
+	ImageWriter(MainData& data, MovieReader& reader) :
 		NullWriter(data, reader) {}
 
 	std::string makeFilename() const;
@@ -95,8 +95,8 @@ private:
 	ImageBGR image;
 
 public:
-	BmpImageWriter(MainData& data, MovieReader& reader) : 
-		ImageWriter(data, reader), 
+	BmpImageWriter(MainData& data, MovieReader& reader) :
+		ImageWriter(data, reader),
 		image(data.h, data.w) {}
 
 	void write() override;
@@ -112,7 +112,7 @@ private:
 	AVPacket* packet = nullptr;
 
 public:
-	JpegImageWriter(MainData& data, MovieReader& reader) : 
+	JpegImageWriter(MainData& data, MovieReader& reader) :
 		ImageWriter(data, reader) {}
 
 	~JpegImageWriter() override;
@@ -141,7 +141,7 @@ protected:
 class PipeWriter : public RawWriter {
 
 public:
-	PipeWriter(MainData& data, MovieReader& reader) : 
+	PipeWriter(MainData& data, MovieReader& reader) :
 		RawWriter(data, reader) {}
 
 	~PipeWriter() override;
@@ -194,7 +194,7 @@ protected:
 	AVPacket* videoPacket = nullptr;
 	bool headerWritten = false;
 
-	FFmpegFormatWriter(MainData& data, MovieReader& reader) : 
+	FFmpegFormatWriter(MainData& data, MovieReader& reader) :
 		MovieWriter(data, reader),
 		outputFrame(data.h, data.w, data.cpupitch) {}
 
@@ -232,7 +232,7 @@ protected:
 
 	FFmpegWriter(MainData& data, MovieReader& reader, int writeBufferSize) :
 		FFmpegFormatWriter(data, reader),
-		writeBufferSize { writeBufferSize }  {}
+		writeBufferSize { writeBufferSize } {}
 
 public:
 	FFmpegWriter(MainData& data, MovieReader& reader) :
@@ -259,8 +259,8 @@ private:
 
 public:
 	StackedWriter(MainData& data, MovieReader& reader) :
-		FFmpegWriter(data, reader), 
-		widthTotal { data.w * 3 / 2 }, 
+		FFmpegWriter(data, reader),
+		widthTotal { data.w * 3 / 2 },
 		combinedFrame(data.h, widthTotal, widthTotal),
 		inputFrame(data.h, data.w, data.cpupitch) {}
 
@@ -292,7 +292,7 @@ public:
 
 
 //------------- write binary transformation file ------------------------------------
-class TransformsWriterMain : public MovieWriter, TransformsFile {
+class TransformsWriterMain : public MovieWriter, public TransformsFile {
 
 public:
 	TransformsWriterMain(MainData& data, MovieReader& reader) :
@@ -305,7 +305,7 @@ public:
 
 
 //--------------- write transforms --------------------------------------------------
-class AuxTransformsWriter : public AuxiliaryWriter, TransformsFile {
+class AuxTransformsWriter : public AuxiliaryWriter, public TransformsFile {
 
 public:
 	AuxTransformsWriter(MainData& data) :
@@ -318,21 +318,27 @@ public:
 
 
 //optical flow video
-class OpticalFlowWriter : public AuxiliaryWriter, FFmpegWriter {
+class OpticalFlowWriter : public AuxiliaryWriter, public FFmpegWriter {
 
-private:
+protected:
 	ImageRGB imageResults;
 	ImageBGR imageInterpolated;
 	AVRational timeBase = { 1, 10 };
 
+	int legendSize = 64;
+	ImageBGR legend = ImageBGR(legendSize, legendSize);
+	ImageGray legendMask = ImageGray(legendSize, legendSize);
+
 	void open(const std::string& sourceName);
-	void writeData(AVFrame* av_frame);
+	void writeFlow(const MovieFrame& frame);
+	void writeAVFrame(AVFrame* av_frame);
+	void vectorToColor(double dx, double dy, unsigned char* r, unsigned char* g, unsigned char* b);
 
 public:
 	OpticalFlowWriter(MainData& data, MovieReader& reader) :
 		AuxiliaryWriter(data),
 		FFmpegWriter(data, reader, 1),
-		imageResults(data.iyCount, data.ixCount), 
+		imageResults(data.iyCount, data.ixCount),
 		imageInterpolated(data.h, data.w) {}
 
 	void open() override;

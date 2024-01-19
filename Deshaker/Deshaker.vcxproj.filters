@@ -145,9 +145,6 @@
     <ClInclude Include="RandomSource.hpp">
       <Filter>Transformation</Filter>
     </ClInclude>
-    <ClInclude Include="MovieWriter.hpp">
-      <Filter>Writer</Filter>
-    </ClInclude>
     <ClInclude Include="UserInput.hpp">
       <Filter>Main</Filter>
     </ClInclude>
@@ -221,6 +218,9 @@
       <Filter>Util</Filter>
     </ClInclude>
     <ClInclude Include="AuxiliaryWriter.hpp">
+      <Filter>Writer</Filter>
+    </ClInclude>
+    <ClInclude Include="MovieWriter.hpp">
       <Filter>Writer</Filter>
     </ClInclude>
   </ItemGroup>

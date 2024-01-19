@@ -480,13 +480,13 @@ public:
 		return *this;
 	}
 
-	std::string toString(const std::string& title = "", int digits = -1) const {
+	virtual std::string toString(const std::string& title = "", int digits = -1) const {
 		std::stringstream buf;
 		print(buf, title, digits);
 		return buf.str();
 	}
 
-	std::wstring toWString(const std::string& title = "", int digits = -1) const {
+	virtual std::wstring toWString(const std::string& title = "", int digits = -1) const {
 		std::wstringstream buf;
 		print(buf, title, digits);
 		return buf.str();

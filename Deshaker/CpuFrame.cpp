@@ -135,6 +135,8 @@ void CpuFrame::computeTerminate(int64_t frameIndex) {
 				int xm = ix0 + ir + 1;
 				PointResultType result = PointResultType::RUNNING;
 				int z = mData.zMax;
+				double err = 0.0;
+
 				for (; z >= mData.zMin && result >= PointResultType::RUNNING; z--) {
 					Matf& Y = previous.mY[z];
 					SubMat<float> im = Y.subMatShared(ym - ir, xm - ir, iw, iw);
@@ -164,7 +166,7 @@ void CpuFrame::computeTerminate(int64_t frameIndex) {
 					double gs = g.norm1();
 					double rcond = 1 / (ns * gs); //reciprocal condition number
 
-					//if (frameIndex == 1 && ix0 == 29 && iy0 == 2) std::printf("cpu %d %.14f\n", z, rcond);
+					//if (frameIndex == 1 && ix0 == 97 && iy0 == 4) std::printf("cpu %d %.14f\n", z, rcond);
 					//if (frameIndex == 1 && ix0 == 63 && iy0 == 1) g.toConsole(); //----------------
 
 					result = (std::isnan(rcond) || rcond < mData.deps) ? PointResultType::FAIL_SINGULAR : PointResultType::RUNNING;
@@ -181,7 +183,6 @@ void CpuFrame::computeTerminate(int64_t frameIndex) {
 						}
 						);
 
-						//TODO jm adjust for brightness and contrast
 						delta.setValues([&] (size_t r, size_t c) {
 							return im.at(r, c) - jm.at(r, c); }
 						);
@@ -205,28 +206,30 @@ void CpuFrame::computeTerminate(int64_t frameIndex) {
 						wp = wp.times(dwp);
 						//if (frameIndex == 1 && ix0 == 27 && iy0 == 1) wp.toConsole("cpu"); //------------------------
 
-						double err = eta[0] * eta[0] + eta[1] * eta[1];
+						err = eta[0] * eta[0] + eta[1] * eta[1];
 						if (std::isnan(err)) result = PointResultType::FAIL_ETA_NAN;
-						if (err < mData.compMaxTol) result = PointResultType::SUCCESS_ABSOLUTE_ERR;
-						if (std::abs(err - bestErr) / bestErr < mData.compMaxTol * mData.compMaxTol) result = PointResultType::SUCCESS_STABLE_ITER;
+						if (err < mData.COMP_MAX_TOL) result = PointResultType::SUCCESS_ABSOLUTE_ERR;
+						if (std::abs(err - bestErr) / bestErr < mData.COMP_MAX_TOL * mData.COMP_MAX_TOL) result = PointResultType::SUCCESS_STABLE_ITER;
 						if (err < bestErr) bestErr = err;
 						iter++;
-						if (iter == mData.compMaxIter && result == PointResultType::RUNNING) result = PointResultType::FAIL_ITERATIONS;
+						if (iter == mData.COMP_MAX_ITER && result == PointResultType::RUNNING) result = PointResultType::FAIL_ITERATIONS;
 					}
-					//if (frameIndex == 1 && ix0 == 63 && iy0 == 1) etaMat.toConsole("cpu"); //------------------------
 
 					//center of integration window on next level
 					ym *= 2;
 					xm *= 2;
+
 					//transformation * 2
 					wp[0][2] *= 2.0;
 					wp[1][2] *= 2.0;
 
-					//if (frameIndex == 1 && ix0 == 10 && iy0 == 1) wp.toConsole("cpu");
+					//if (frameIndex == 1 && ix0 == 63 && iy0 == 1) etaMat.toConsole("cpu"); //------------------------
+					//if (frameIndex == 1 && ix0 == 97 && iy0 == 4) std::printf("cpu %d %.14f\n", z, wp[1][2]);
 				}
 				//bring values to level 0
 				double u = wp.at(0, 2);
 				double v = wp.at(1, 2);
+				int zp = z;
 
 				while (z < 0) {
 					xm /= 2; ym /= 2; u /= 2.0; v /= 2.0; z++;
@@ -237,7 +240,7 @@ void CpuFrame::computeTerminate(int64_t frameIndex) {
 
 				//transformation for points with respect to center of image and level 0 of pyramid
 				int idx = iy0 * mData.ixCount + ix0;
-				mResultPoints[idx] = { idx, ix0, iy0, xm, ym, xm - mData.w / 2, ym - mData.h / 2, u, v, result };
+				mResultPoints[idx] = { idx, ix0, iy0, xm, ym, xm - mData.w / 2, ym - mData.h / 2, u, v, result, zp, err };
 			}
 		}
 	});

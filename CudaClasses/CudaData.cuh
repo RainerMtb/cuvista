@@ -28,6 +28,7 @@ struct DebugData {
 	ImageBGR kernelTimings;
 };
 
+//all values must be initialized to be used as __constant__ variable in device code, no constructor calls
 struct CudaData : public CoreData {
 	size_t cudaMemTotal = 0;
 	size_t cudaUsedMem = 0;

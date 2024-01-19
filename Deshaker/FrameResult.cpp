@@ -115,7 +115,7 @@ void FrameResult::computeTransform(const std::vector<PointResult>& results, Thre
 }
 
 
-const AffineTransform& FrameResult::transform() const {
+const AffineTransform& FrameResult::getTransform() const {
 	return *mAffineSolver;
 }
 

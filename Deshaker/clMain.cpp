@@ -138,8 +138,8 @@ void cl::init(CoreData& core, ImageYuv& inputFrame, const DeviceInfo* device) {
 		clData.context.getSupportedImageFormats(CL_MEM_READ_WRITE, CL_MEM_OBJECT_IMAGE2D, &fmts);
 
 		//constant core data structure
-		KernelData data = { core.compMaxTol, core.deps, core.dmin, core.dmax, core.dnan, 
-			core.w, core.h, core.ir, core.iw, core.zMin, core.zMax, core.compMaxIter, core.pyramidRowCount };
+		KernelData data = { core.COMP_MAX_TOL, core.deps, core.dmin, core.dmax, core.dnan, 
+			core.w, core.h, core.ir, core.iw, core.zMin, core.zMax, core.COMP_MAX_ITER, core.pyramidRowCount };
 		clData.core = Buffer(clData.context, CL_MEM_READ_ONLY, sizeof(KernelData));
 		clData.queue.enqueueWriteBuffer(clData.core, CL_FALSE, 0, sizeof(KernelData), &data);
 
@@ -340,7 +340,7 @@ void cl::computeTerminate(int64_t frameIdx, const CoreData& core, std::vector<Po
 		//convert from cl_PointResult to PointResult
 		for (size_t i = 0; i < results.size(); i++) {
 			cl_PointResult& pr = clData.cl_results[i];
-			results[i] = { pr.idx, pr.ix0, pr.iy0, pr.xm, pr.ym, pr.xm - core.w / 2, pr.ym - core.h / 2, pr.u, pr.v, PointResultType(pr.result) };
+			results[i] = { pr.idx, pr.ix0, pr.iy0, pr.xm, pr.ym, pr.xm - core.w / 2, pr.ym - core.h / 2, pr.u, pr.v, PointResultType(pr.result), pr.z, pr.err };
 		}
 
 	} catch (const Error& err) {

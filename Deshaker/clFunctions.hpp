@@ -37,6 +37,8 @@ namespace cl {
 		cl_int idx, ix0, iy0;
 		cl_int xm, ym;
 		cl_char result;
+		cl_int z;
+		cl_double err;
 		cl_char computed;
 	};
 

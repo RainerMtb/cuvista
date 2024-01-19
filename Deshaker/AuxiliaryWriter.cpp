@@ -40,7 +40,7 @@ void ResultDetailsWriter::write(const MovieFrame& frame) {
 //-----------------------------------------------------------------------------------
 
 void ResultImageWriter::write(const FrameResult& fr, int64_t idx, const ImageYuv& yuv, const std::string& fname) {
-	const AffineTransform& trf = fr.transform();
+	const AffineTransform& trf = fr.getTransform();
 
 	//copy and scale Y plane to first color plane of bgr
 	yuv.scaleTo(0, bgr, 0);

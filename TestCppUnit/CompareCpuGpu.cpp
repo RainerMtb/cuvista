@@ -136,9 +136,8 @@ public:
 		//compute transformation matrix multiple times
 		for (int i = 0; i < siz; i++) {
 			FrameResult frameResult(dataCpu, pool);
-			std::unique_ptr<RNGbase> rng = std::make_unique<RNG<RandomSource>>();
 			frameResult.computeTransform(frameCpu->mResultPoints, pool, -1);
-			trfs[i] = frameResult.transform();
+			trfs[i] = frameResult.getTransform();
 		}
 
 		//check
@@ -158,7 +157,7 @@ public:
 		for (int i = 0; i < siz; i++) {
 			FrameResult frameResult(dataCpu, pool);
 			frameResult.computeTransform(frameCpu->mResultPoints, pool, -1);
-			trfs[i] = frameResult.transform();
+			trfs[i] = frameResult.getTransform();
 		}
 
 		Matd avg = Matd::zeros(1, 4);

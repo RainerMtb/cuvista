@@ -17,7 +17,9 @@ For Cuda acceleration a device with Compute Version 5 or later is required
 With OpenCL the device must support at least version 2
 
 ## Getting started
-Get the latest version from the [Releases](https://github.com/RainerMtb/cuvista/releases) page, download, unzip and run either ```cuvista.exe``` on the command line or ```cuvistaGui.exe``` for a windowed user interface
+Get the latest version from the [Releases](https://github.com/RainerMtb/cuvista/releases) page, download, unzip and run either ```cuvista.exe``` on the command line or ```cuvistaGui.exe``` for a windowed user interface. 
+
+In a fresh Windows environment the the Microsoft Visual C/C++ Runtime Libraries might be missing, so when prompted with a message like ```MSVCP140.dll not found```, download and install the latest redistributable https://aka.ms/vs/17/release/vc_redist.x64.exe
 ## Building
 To work on the code yourself and build the application, get the source code and start by opening ```Deshaker.sln``` in Visual Studio
 

@@ -51,6 +51,8 @@ struct PointResult {
 	int idx, ix0, iy0;
 	int xm, ym;
 	char result;
+	int z;
+	double err;
     char computed;
 };
 
@@ -104,6 +106,7 @@ __kernel void compute(long frameIndex, __read_only image2d_depth_t Yprev, __read
 	int z = d_core->zMax;
 	int rowOffset = d_core->pyramidRowCount - (d_core->h >> z);
 
+	double err = 0.0;
 	for (; z >= d_core->zMin && result >= RUNNING; z--) {
 		int wz = d_core->w >> z;
 		int hz = d_core->h >> z;
@@ -220,18 +223,13 @@ __kernel void compute(long frameIndex, __read_only image2d_depth_t Yprev, __read
 			work_group_barrier(CLK_LOCAL_MEM_FENCE);
 
 			//analyse result, decide on continuing loop
-			double err = eta[0] * eta[0] + eta[1] * eta[1];
-			result = 0;
-			result += (int) isnan(err) * -1; //leave loop with fail message FAIL_ETA_NAN
-			result += (int) (err < d_core->compMaxTol) * 1; //leave loop with success SUCCESS_ABSOLUTE_ERR
-			result += (int) (fabs(err - bestErr) / bestErr < d_core->compMaxTol * d_core->compMaxTol) * 2; //SUCCESS_STABLE_ITER
-
+			err = eta[0] * eta[0] + eta[1] * eta[1];
+			if (isnan(err)) result = FAIL_ETA_NAN; //leave loop with fail message FAIL_ETA_NAN
+			if (err < d_core->compMaxTol) result = SUCCESS_ABSOLUTE_ERR; //leave loop with success SUCCESS_ABSOLUTE_ERR
+			if (fabs(err - bestErr) / bestErr < d_core->compMaxTol * d_core->compMaxTol) result = SUCCESS_STABLE_ITER; //SUCCESS_STABLE_ITER
 			bestErr = min(err, bestErr);
 			iter++;
-
-			if (iter == d_core->compMaxIter && result == RUNNING) {
-				result = FAIL_ITERATIONS; //leave with fail
-			}
+			if (iter == d_core->compMaxIter && result == RUNNING) result = FAIL_ITERATIONS; //leave with fail
 		}
 
 		//displacement * 2 for next level
@@ -253,6 +251,7 @@ __kernel void compute(long frameIndex, __read_only image2d_depth_t Yprev, __read
 	if (get_local_linear_id() == 0) {
 		double u = wp[2];
 		double v = wp[5];
+		int zp = z;
 
 		while (z < 0) { xm /= 2; ym /= 2; u /= 2; v /= 2; z++; }
 		while (z > 0) { xm *= 2; ym *= 2; u *= 2; v *= 2; z--; }
@@ -265,6 +264,8 @@ __kernel void compute(long frameIndex, __read_only image2d_depth_t Yprev, __read
 		results[blockIndex].u = u;
 		results[blockIndex].v = v;
 		results[blockIndex].result = result;
+		results[blockIndex].z = zp;
+		results[blockIndex].err = err;
 		results[blockIndex].computed = 1;
 	}
 }

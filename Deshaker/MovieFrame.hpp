@@ -65,6 +65,11 @@ public:
 	virtual void computeTransform(int64_t frameIndex) final;
 
 	/*
+	* get the current frame transform
+	*/
+	virtual const AffineTransform& getTransform() final;
+
+	/*
 	* get transformed image as Mat<float> where YUV color planes are stacked vertically
 	* image is warped output before unsharping, useful for debugging
 	*/
@@ -102,7 +107,7 @@ public:
 	/*
 	* printable name of MovieFrame in use
 	*/
-	virtual std::string className() const { return "None"; }
+	virtual std::string getClassName() const { return "None"; }
 
 	ThreadPool mPool;
 	FrameResult mFrameResult;
@@ -124,7 +129,19 @@ protected:
 		mBufferFrame(data.h, data.w, data.cpupitch),
 		mResultPoints(data.resultCount) 
 	{
+		//set a reference to this frame class into writer object
 		writer.movieFrame = this;
+
+		//set PointResult indizes
+		int idx = 0;
+		for (int y = 0; y < data.iyCount; y++) {
+			for (int x = 0; x < data.ixCount; x++) {
+				mResultPoints[idx].idx = idx;
+				mResultPoints[idx].ix0 = x;
+				mResultPoints[idx].iy0 = y;
+				idx++;
+			}
+		}
 	}
 
 private:

@@ -61,10 +61,11 @@ template <class T> const T& ImageBase<T>::at(size_t idx, size_t r, size_t c) con
 	return *addr(idx, r, c);
 }
 
-template <class T> void ImageBase<T>::setPixel(size_t row, size_t col, T color1, T color2, T color3) {
-	at(0, row, col) = color1;
-	at(1, row, col) = color2;
-	at(2, row, col) = color3;
+template <class T> void ImageBase<T>::setPixel(size_t row, size_t col, std::vector<T> colors) {
+	assert(numPlanes == colors.size() && "image plane count does not match number of color values");
+	for (int i = 0; i < numPlanes; i++) {
+		at(i, row, col) = colors[i];
+	}
 }
 
 template <class T> int ImageBase<T>::colorValue(T pixelValue) const {
@@ -119,8 +120,21 @@ template <class T> void ImageBase<T>::setValues(int plane, T colorValue) {
 }
 
 template <class T> void ImageBase<T>::setValues(const ColorBase<T>& color) {
-	for (int z = 0; z < 3; z++) {
+	for (int z = 0; z < color.colors.size(); z++) {
 		setValues(z, color.colors[z]);
+	}
+}
+
+template <class T> void ImageBase<T>::setArea(size_t r0, size_t c0, const ImageBase<T>& src, const ImageGray& mask) {
+	assert(w >= r0 + src.w && h >= c0 + src.h && "pixel coordinates exceeding image bounds");
+	for (size_t r = 0; r < src.h; r++) {
+		for (size_t c = 0; c < src.w; c++) {
+			if (mask.at(0, r, c) > 0) {
+				for (size_t z = 0; z < numPlanes; z++) {
+					at(z, r0 + r, c0 + c) = src.at(z, r, c);
+				}
+			}
+		}
 	}
 }
 

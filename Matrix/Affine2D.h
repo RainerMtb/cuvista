@@ -82,7 +82,7 @@ public:
 		return *this;
 	}
 
-	Affine2D invert() {
+	Affine2D invert() const {
 		auto out = inv();
 		return out.has_value() ? Affine2D(out.value()) : Affine2D();
 	}
@@ -116,14 +116,23 @@ public:
 		return rot() * 180.0 / std::numbers::pi * 3600.0;
 	}
 
-	double dX() const { return at(0, 2); }
+	double dX() const { 
+		return at(0, 2); 
+	}
 
-	double dY() const { return at(1, 2); }
+	double dY() const { 
+		return at(1, 2); 
+	}
 
-	virtual Affine2D& toConsole(const std::string& title = "Affine", int digits = -1) override {
-		std::cout << std::setprecision(10) << title << " [["
-			<< array[0] << ", " << array[1] << ", " << array[2] << " // " 
-			<< array[3] << ", " << array[4] << ", " << array[5] << "]] " << std::endl;
+	std::string toString(const std::string& title = "", int digits = -1) const override {
+		int d = digits == -1 ? 3 : digits;
+		std::stringstream ss;
+		ss << title << std::fixed << std::setprecision(d) << "scale=" << scale() << ", rot=" << rotMilliDegrees() << ", dx=" << dX() << ", dy=" << dY();
+		return ss.str();
+	}
+
+	Affine2D& toConsole(const std::string& title = "", int digits = -1) override {
+		std::cout << toString(title, digits);
 		return *this;
 	}
 };

@@ -181,8 +181,18 @@ void pyramid() {
 	std::cout << std::endl;
 	std::cout << (cpu.output.equalsExact(cuda.output) ? "warped output equal" : "warped output DIFFER");
 	std::cout << std::endl;
-	std::cout << (cpu.results == cuda.results ? "results equal" : "results DIFFER");
-	std::cout << std::endl;
+
+	//compare results
+	bool isEqual = true;
+	for (size_t i = 0; i < cpu.results.size(); i++) {
+		if (cpu.results[i] != cuda.results[i]) {
+			isEqual = false;
+			std::cout << "result DIFFER: ix0=" << cpu.results[i].ix0 << ", iy0=" << cpu.results[i].iy0 << std::endl;
+		}
+	}
+	if (isEqual) {
+		std::cout << "results equal" << std::endl;
+	}
 	std::cout << std::endl;
 
 	std::cout << "comparing CPU and OPEN CL: ";
@@ -191,7 +201,18 @@ void pyramid() {
 	std::cout << std::endl;
 	std::cout << (cpu.output.equalsExact(ocl.output) ? "warped output equal" : "warped output DIFFER");
 	std::cout << std::endl;
-	std::cout << (cpu.results == ocl.results ? "results equal" : "results DIFFER");
+	
+	//compare results
+	isEqual = true;
+	for (size_t i = 0; i < cpu.results.size(); i++) {
+		if (cpu.results[i] != ocl.results[i]) {
+			isEqual = false;
+			std::cout << "result DIFFER: ix0=" << cpu.results[i].ix0 << ", iy0=" << cpu.results[i].iy0 << std::endl;
+		}
+	}
+	if (isEqual) {
+		std::cout << "results equal" << std::endl;
+	}
 	std::cout << std::endl;
 
 	if (errorLogger.hasError()) {

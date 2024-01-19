@@ -35,6 +35,10 @@ std::map<int64_t, TransformValues> MovieFrame::readTransforms() {
 	return TransformsFile::readTransformMap(mData.trajectoryFile);
 }
 
+const AffineTransform& MovieFrame::getTransform() {
+	return mFrameResult.getTransform();
+}
+
 //try to read next frame from reader class into input buffer
 void MovieFrame::read() {
 	mReader.read(mBufferFrame);
@@ -106,7 +110,7 @@ void MovieFrame::loopInit(ProgressDisplay& progress, const std::string& message)
 	//read first frame from input into buffer
 	if (errorLogger.hasNoError()) read();
 	//show program header on console
-	if (errorLogger.hasNoError() && mData.showHeader) mData.showIntro(className(), mReader);
+	if (errorLogger.hasNoError() && mData.showHeader) mData.showIntro(getClassName(), mReader);
 	//init progress display
 	progress.init();
 	progress.writeMessage(message);
@@ -142,7 +146,7 @@ void MovieFrame::runLoopCombined(ProgressDisplay& progress, UserInput& input, Au
 		createPyramid(mReader.frameIndex);
 		//transform for previous frame
 		computeTransform(mReader.frameIndex - 1);
-		mTrajectory.addTrajectoryTransform(mFrameResult.transform());
+		mTrajectory.addTrajectoryTransform(mFrameResult.getTransform());
 		auxWriters.writeAll(*this);
 		//compute flow for current frame
 		computeStart(mReader.frameIndex);
@@ -171,7 +175,7 @@ void MovieFrame::runLoopCombined(ProgressDisplay& progress, UserInput& input, Au
 		
 		//now compute transform for previous frame while results for current frame are potentially computed on device
 		computeTransform(readIndex - 1);
-		mTrajectory.addTrajectoryTransform(mFrameResult.transform());
+		mTrajectory.addTrajectoryTransform(mFrameResult.getTransform());
 		const AffineTransform& finalTransform = mTrajectory.computeSmoothTransform(mData, mWriter.frameIndex);
 		outputData(finalTransform, mWriter.getOutputContext());
 		
@@ -194,7 +198,7 @@ void MovieFrame::runLoopCombined(ProgressDisplay& progress, UserInput& input, Au
 	//process last frame in buffer
 	if (errorLogger.hasNoError() && input.current <= UserInputEnum::END) {
 		computeTransform(mReader.frameIndex);
-		mTrajectory.addTrajectoryTransform(mFrameResult.transform());
+		mTrajectory.addTrajectoryTransform(mFrameResult.getTransform());
 		const AffineTransform& finalTransform = mTrajectory.computeSmoothTransform(mData, mWriter.frameIndex);
 		outputData(finalTransform, mWriter.getOutputContext());
 		auxWriters.writeAll(*this);
@@ -220,7 +224,7 @@ void MovieFrame::runLoopFirst(ProgressDisplay& progress, UserInput& input, AuxWr
 	mReader.storePackets = false; //do not keep any secondary packets when we do not write output anyway
 	loopInit(progress);
 	mFrameResult.transformReset();
-	mTrajectory.addTrajectoryTransform(mFrameResult.transform()); //first frame has no transform applied
+	mTrajectory.addTrajectoryTransform(mFrameResult.getTransform()); //first frame has no transform applied
 	write();
 	auxWriters.writeAll(*this);
 
@@ -249,7 +253,7 @@ void MovieFrame::runLoopSecond(ProgressDisplay& progress, UserInput& input, AuxW
 
 	//init
 	if (errorLogger.hasNoError()) read();
-	if (errorLogger.hasNoError() && mData.showHeader) mData.showIntro(className(), mReader);
+	if (errorLogger.hasNoError() && mData.showHeader) mData.showIntro(getClassName(), mReader);
 	progress.init();
 	progress.update();
 
@@ -274,7 +278,7 @@ void MovieFrame::runLoopConsecutive(ProgressDisplay& progress, UserInput& input,
 	mReader.storePackets = false; //we do not want packets to pile up on first iteration
 	loopInit(progress, "first pass - analyzing input\n");
 	mFrameResult.transformReset();
-	mTrajectory.addTrajectoryTransform(mFrameResult.transform()); //first frame has no transform applied
+	mTrajectory.addTrajectoryTransform(mFrameResult.getTransform()); //first frame has no transform applied
 	auxWriters.writeAll(*this);
 
 	//first run - analyse
@@ -285,7 +289,7 @@ void MovieFrame::runLoopConsecutive(ProgressDisplay& progress, UserInput& input,
 		computeStart(mReader.frameIndex);
 		computeTerminate(mReader.frameIndex);
 		computeTransform(mReader.frameIndex);
-		mTrajectory.addTrajectoryTransform(mFrameResult.transform());
+		mTrajectory.addTrajectoryTransform(mFrameResult.getTransform());
 		auxWriters.writeAll(*this);
 		read();
 

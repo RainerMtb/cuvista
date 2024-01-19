@@ -49,12 +49,10 @@ enum class BackgroundMode {
 };
 
 struct CoreData {
-	//inside CoreData struct all values must be initialized to be used as __constant__ variable in device code
+	int MAX_POINTS_COUNT = 150;	//max number of points in x or y direction
+	int COMP_MAX_ITER = 20;		//max loop iterations
+	double COMP_MAX_TOL = 0.5;	//tolerance to stop window pattern matching
 
-protected:
-	int MAX_POINTS_COUNT = 150;		//max number of points in x or y direction
-
-public:
 	int w = 0;                  //frame width
 	int h = 0;					//frame height
 	int ir = 3;					//integration window, radius around point to integrate
@@ -70,8 +68,6 @@ public:
 	int resultCount = 0;		//number of points to compute in a frame
 
 	int cpupitch = 0;
-	int compMaxIter = 20;		//max loop iterations
-	double compMaxTol = 0.05;	//tolerance to stop window pattern matching
 
 	//numeric constants used in compute kernel, will be initialized once
 	double dmin = 0.0, dmax = 0.0, deps = 0.0, dnan = 0.0;
@@ -110,6 +106,9 @@ public:
 	int x, y;       //pixel coordinate with respect to image center
 	double u, v;    //calculated translation of center point
 	PointResultType result;
+
+	int z;
+	double err;
 	double distance;
 	double length;
 	double distanceRelative;

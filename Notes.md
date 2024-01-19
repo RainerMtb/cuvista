@@ -1,14 +1,14 @@
 # General program flow
 
 1. Create MainData structure
-2. Optional: probe devices and input
-3. Collect device info
-4. Create subclass of MovieReader and open input
-5. Validate MainData
-6. Create subclass of MovieWriter and open output
-7. Create subclass of MovieFrame handler class
-8. Set up progress information handler class
-9. Decide on the type of loop to run
+1. Optional: probe cuda and/or opencl devices
+1. Collect device info
+1. Create subclass of MovieReader and open input
+1. Validate MainData variables
+1. Create subclass of MovieWriter and open output
+1. Create subclass of MovieFrame handler class
+1. Set up progress information handler class
+1. Decide on the type of loop to run
 1. Run the loop in the frame class
 1. Close Writer
 1. Close Reader
@@ -43,7 +43,7 @@ always used to decode video
 used to encode when not via nvenc
 get shared build from https://www.gyan.dev/ffmpeg/builds/
 or build with Media Auto Build https://github.com/m-ab-s/media-autobuild_suite
-M-AB-S unfortunately rarely succeeds, always some problem with some package
+but M-AB-S rarely ever succeeds, always some problem with some package
 
 # Misc Notes
 Cuda 11.8 is the highest version to support Compute 3.5

@@ -36,6 +36,7 @@ public:
 	using CoreMat<T>::addr;
 };
 
+class ImageGray;
 
 template <class T> class ImageBase {
 
@@ -85,14 +86,17 @@ public:
 	//read access one pixel on plane idx (0..2) and row / col
 	const T& at(size_t idx, size_t r, size_t c) const;
 
-	//set color value in one plane
+	//set color value for all pixels in one plane
 	void setValues(int plane, T colorValue);
 
 	//set color values per color plane
 	void setValues(const ColorBase<T>& color);
 
+	//copy area from source image into this image
+	void setArea(size_t r0, size_t c0, const ImageBase<T>& src, const ImageGray& mask);
+
 	//set color values for one pixel
-	void setPixel(size_t row, size_t col, T color1, T color2, T color3);
+	void setPixel(size_t row, size_t col, std::vector<T> colors);
 
 	//equals operator
 	virtual bool operator == (const ImageBase& other) const;
@@ -180,6 +184,16 @@ public:
 	//default constructor produces invalid image
 	ImageRGB() : 
 		ImageRGB(0, 0) {}
+};
+
+class ImageGray : public ImagePlanar<unsigned char> {
+
+public:
+	ImageGray(int h, int w) :
+		ImagePlanar(h, w, w, 1) {}
+
+	ImageGray() :
+		ImageGray(0, 0) {}
 };
 
 

@@ -193,7 +193,7 @@ void TransformsWriterMain::open(EncodingOption videoCodec) {
 }
 
 void TransformsWriterMain::write() {
-	writeTransform(movieFrame->mFrameResult.transform(), frameIndex);
+	writeTransform(movieFrame->mFrameResult.getTransform(), frameIndex);
 	this->frameIndex++;
 	this->outputBytesWritten = file.tellp();
 }
@@ -203,7 +203,7 @@ void AuxTransformsWriter::open() {
 }
 
 void AuxTransformsWriter::write(const MovieFrame& frame) {
-	writeTransform(frame.mFrameResult.transform(), frameIndex);
+	writeTransform(frame.mFrameResult.getTransform(), frameIndex);
 	this->frameIndex++;
 }
 
@@ -214,6 +214,12 @@ void AuxTransformsWriter::write(const MovieFrame& frame) {
 
 void OpticalFlowWriter::open() {
 	open(mData.flowFile);
+}
+
+void OpticalFlowWriter::vectorToColor(double dx, double dy, unsigned char* r, unsigned char* g, unsigned char* b) {
+	double hue = std::atan2(dy, dx) / std::numbers::pi * 180.0 + 180.0;
+	double val = std::clamp(std::sqrt(sqr(dx) + sqr(dy)) / 15.0, 0.0, 1.0);
+	hsv_to_rgb(hue, 1.0, val, r, g, b);
 }
 
 void OpticalFlowWriter::open(const std::string& sourceName) {
@@ -249,25 +255,36 @@ void OpticalFlowWriter::open(const std::string& sourceName) {
 	sws_scaler_ctx = sws_getContext(mData.w, mData.h, AV_PIX_FMT_BGR24, mData.w, mData.h, pixfmt, SWS_BICUBIC, NULL, NULL, NULL);
 	if (!sws_scaler_ctx)
 		throw AVException("Could not get scaler context");
+
+	//setup legend image showing flow colors
+	double r = legendSize / 2.0;
+	for (int y = 0; y < legendSize; y++) {
+		double dy = r - y;
+		for (int x = 0; x < legendSize; x++) {
+			double dx = r - x;
+			double dist = std::sqrt(sqr(dx) + sqr(dy));
+			if (dist < r) {
+				legendMask.setPixel(y, x, { 1 });
+				vectorToColor(dx, -dy, legend.addr(2, y, x), legend.addr(1, y, x), legend.addr(0, y, x));
+			}
+		}
+	}
 }
 
-void OpticalFlowWriter::write(const MovieFrame& frame) {
+void OpticalFlowWriter::writeFlow(const MovieFrame& frame) {
 	//convert vectors to hsv color values and then to rgb planar image
 	std::vector<PointResult> results = frame.mResultPoints;
 	for (const PointResult& pr : results) {
 		if (pr.isValid()) {
-			double hue = std::atan2(-pr.v, pr.u) / std::numbers::pi * 180.0 + 180.0;
-			double val = std::clamp(std::sqrt(pr.u * pr.u + pr.v * pr.v) / 10.0, 0.0, 1.0);
-			hsv_to_rgb(hue, 1.0, val, imageResults.addr(2, pr.iy0, pr.ix0), imageResults.addr(1, pr.iy0, pr.ix0), imageResults.addr(0, pr.iy0, pr.ix0));
+			vectorToColor(-pr.u, pr.v, imageResults.addr(2, pr.iy0, pr.ix0), imageResults.addr(1, pr.iy0, pr.ix0), imageResults.addr(0, pr.iy0, pr.ix0));
 
 		} else {
-			//invalid result is black pixel
-			imageResults.setPixel(pr.iy0, pr.ix0, 0, 0, 0);
+			//invalid result is gray pixel
+			imageResults.setPixel(pr.iy0, pr.ix0, { 128, 128, 128 });
 		}
 	}
 
 	//interpolate image
-	ImageBGR& fr = imageInterpolated;
 	auto fcn = [&] (size_t iy) {
 		int div = 1 << mData.zMax;
 		double y = 1.0 * iy / div - 1.0 - mData.ir;
@@ -279,21 +296,29 @@ void OpticalFlowWriter::write(const MovieFrame& frame) {
 		}
 	};
 	frame.mPool.addAndWait(fcn, 0, mData.h);
-	//fr.saveAsBMP("f:/im.bmp");
+}
+
+void OpticalFlowWriter::write(const MovieFrame& frame) {
+	writeFlow(frame);
+	//imageInterpolated.saveAsBMP("f:/im.bmp");
+
+	//stamp color legend onto image
+	imageInterpolated.setArea(0ull + mData.h - 10 - legendSize, 10, legend, legendMask);
 
 	//encode bgr image
+	ImageBGR& fr = imageInterpolated;
 	AVFrame* av_frame = av_frames[0];
 	uint8_t* src[] = { fr.data(), nullptr, nullptr, nullptr};
 	int strides[] = { fr.stride * 3, 0, 0, 0 };
 	int sliceHeight = sws_scale(sws_scaler_ctx, src, strides, 0, fr.h, av_frame->data, av_frame->linesize);
 
 	av_frame->pts = AuxiliaryWriter::frameIndex;
-	writeData(av_frame);
+	writeAVFrame(av_frame);
 	AuxiliaryWriter::frameIndex++;
 	MovieWriter::frameIndex++;
 }
 
-void OpticalFlowWriter::writeData(AVFrame* av_frame) {
+void OpticalFlowWriter::writeAVFrame(AVFrame* av_frame) {
 	int result = avcodec_send_frame(codec_ctx, av_frame);
 	if (result < 0)
 		ffmpeg_log_error(result, "error encoding flow #1");
@@ -318,5 +343,5 @@ void OpticalFlowWriter::writeData(AVFrame* av_frame) {
 }
 
 OpticalFlowWriter::~OpticalFlowWriter() {
-	writeData(nullptr);
+	writeAVFrame(nullptr);
 }

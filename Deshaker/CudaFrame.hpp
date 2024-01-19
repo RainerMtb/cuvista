@@ -86,7 +86,7 @@ public:
 		cudaGetTransformedOutput(image, mData);
 	}
 
-	std::string className() const override {
+	std::string getClassName() const override {
 		return device->getName();
 	}
 };

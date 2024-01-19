@@ -45,7 +45,7 @@ public:
 	//compute resulting transformation for this frame
 	void computeTransform(const std::vector<PointResult>& results, ThreadPool& threadPool, int64_t frameIndex);
 
-	const AffineTransform& transform() const;
+	const AffineTransform& getTransform() const;
 
 	void transformReset();
 };

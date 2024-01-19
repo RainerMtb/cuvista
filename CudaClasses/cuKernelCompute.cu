@@ -90,6 +90,7 @@ __global__ void kernelCompute(ComputeTextures tex, CudaPointResult* results, Com
 	//offset in rows to current pyramid level as texture spans one full pyramid
 	int rowOffset = d_core.pyramidRowCount - (d_core.h >> z);
 
+	double err = 0.0;
 	for (; z >= d_core.zMin && result >= PointResultType::RUNNING; z--) {
 		//dimensions for current pyramid level
 		int wz = d_core.w >> z;
@@ -140,7 +141,7 @@ __global__ void kernelCompute(ComputeTextures tex, CudaPointResult* results, Com
 		double ng = norm1(g, 6, 6, temp);
 		double rcond = 1 / (ns * ng);
 		result = (isnan(rcond) || rcond < d_core.deps) ? PointResultType::FAIL_SINGULAR : PointResultType::RUNNING;
-		//if (param.frameIdx == 1 && ix0 == 63 && iy0 == 1 && cu::firstThread()) cu::storeDebugData(param.debugData, param.debugDataSize, 6, 6, g);
+		//if (param.frameIdx == 1 && ix0 == 97 && iy0 == 4 && cu::firstThread()) printf("cuda %d %.14f\n", z, rcond);
 
 		//init loop limit counter
 		int iter = 0;
@@ -209,21 +210,14 @@ __global__ void kernelCompute(ComputeTextures tex, CudaPointResult* results, Com
 			//if (param.frameIdx == 1 && ix0 == 63 && iy0 == 1 && cu::firstThread()) cu::storeDebugData(param.debugData, param.debugDataSize, 3, 3, wp);
 
 			//analyse result, decide on continuing loop
-			double err = eta[0] * eta[0] + eta[1] * eta[1];
-			int typeIndex = 0;
-			typeIndex += (int) isnan(err) * -1; //leave loop with fail message FAIL_ETA_NAN
-			typeIndex += (int) (err < d_core.compMaxTol) * 1; //leave loop with success SUCCESS_ABSOLUTE_ERR
-			typeIndex += (int) (fabs(err - bestErr) / bestErr < d_core.compMaxTol * d_core.compMaxTol) * 2; //SUCCESS_STABLE_ITER
-			result = (PointResultType) typeIndex;
-
+			err = eta[0] * eta[0] + eta[1] * eta[1];
+			if (isnan(err)) result = PointResultType::FAIL_ETA_NAN; //leave loop with fail message FAIL_ETA_NAN
+			if (err < d_core.COMP_MAX_TOL) result = PointResultType::SUCCESS_ABSOLUTE_ERR; //leave loop with success SUCCESS_ABSOLUTE_ERR
+			if (fabs(err - bestErr) / bestErr < d_core.COMP_MAX_TOL * d_core.COMP_MAX_TOL) result = PointResultType::SUCCESS_STABLE_ITER;
 			bestErr = min(err, bestErr);
 			iter++;
-
-			if (iter == d_core.compMaxIter && result == PointResultType::RUNNING) {
-				result = PointResultType::FAIL_ITERATIONS; //leave with fail
-			}
+			if (iter == d_core.COMP_MAX_ITER && result == PointResultType::RUNNING) result = PointResultType::FAIL_ITERATIONS; //leave with fail
 		}
-		//if (param.frameIdx == 1 && ix0 == 63 && iy0 == 1 && cu::firstThread()) cu::storeDebugData(param.debugData, param.debugDataSize, 6, 1, eta);
 
 		//displacement * 2 for next level
 		if (r == 0 && ci == 0) wp[2] *= 2.0;
@@ -236,18 +230,23 @@ __global__ void kernelCompute(ComputeTextures tex, CudaPointResult* results, Com
 		//new texture row offset
 		int delta = d_core.h >> (z - 1);
 		rowOffset -= delta;
+
+		//if (param.frameIdx == 1 && ix0 == 63 && iy0 == 1 && cu::firstThread()) cu::storeDebugData(param.debugData, param.debugDataSize, 6, 1, eta);
+		//if (param.frameIdx == 1 && ix0 == 97 && iy0 == 4 && cu::firstThread()) printf("cuda %d %.14f\n", z, wp[5]);
 	}
 
 	if (cu::firstThread()) {
 		//final displacement vector
 		double u = wp[2];
 		double v = wp[5];
+		int zp = z;
+
 		//bring values to level 0
 		while (z < 0) { xm /= 2; ym /= 2; u /= 2; v /= 2; z++; }
 		while (z > 0) { xm *= 2; ym *= 2; u *= 2; v *= 2; z--; }
 		//store results object
 		int64_t timeStop = cu::globaltimer();
-		results[blockIndex] = { timeStart, timeStop, u, v, blockIndex, ix0, iy0, xm, ym, result, true };
+		results[blockIndex] = { timeStart, timeStop, u, v, blockIndex, ix0, iy0, xm, ym, result, zp, err, true };
 	}
 }
 
