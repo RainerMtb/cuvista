@@ -68,8 +68,10 @@ bool AffineTransform::computeAffine(std::vector<PointResult>::iterator begin, si
 void AffineSolverSimple::computeSimilar(std::vector<PointResult>::iterator it, size_t count) {
 	assert(count >= 2 && "affine transform needs at least two points");
 	size_t m = count * 2;
-	Mat<double> A = Mat<double>::zeros(m, 4);
-	Mat<double> b = Mat<double>::zeros(m, 1);
+	Matd A = Adata.share(m, 4);
+	A.setValues(0.0);
+	Matd b = bdata.share(m, 1);
+	b.setValues(0.0);
 	for (size_t i = 0; i < count; i++) {
 		double xx = it->x;
 		double yy = it->y;
@@ -97,7 +99,7 @@ void AffineSolverSimple::computeSimilar(std::vector<PointResult>::iterator it, s
 void AffineSolverFast::computeSimilar(std::vector<PointResult>::iterator it, size_t count) {
 	assert(count >= 2 && "affine transform needs at least two points");
 	size_t m = count * 2;
-	Mat<double> A = Mat<double>::allocate(6, m); //A is transposed when compared to loop version
+	Matd A = Adata.share(6, m); //A is transposed when compared to loop version
 
 	int dy = it->y;       //represents a2, needs to be smallest value
 	int dx = (it + 1)->x; //represents a3

@@ -39,7 +39,7 @@ void similarTransformPerformance() {
 	std::cout << n << " points" << std::endl;
 
 	//slow method
-	AffineSolverSimple trans1;
+	AffineSolverSimple trans1(points.size());
 	trans1.computeSimilar(points.begin(), n);
 	Matd x1 = Matd::fromRow(trans1.scale(), trans1.rot(), trans1.dX(), trans1.dY()).trans();
 	x1.toConsole("V1");
@@ -53,7 +53,7 @@ void similarTransformPerformance() {
 
 	//direct method
 	ThreadPool thr(4);
-	AffineSolverFast trans2(thr);
+	AffineSolverFast trans2(thr, points.size());
 	trans2.computeSimilar(points.begin(), n);
 	Matd x2 = Matd::fromRow(trans2.scale(), trans2.rot(), trans2.dX(), trans2.dY()).trans();
 	x2.toConsole("V2");
@@ -122,10 +122,10 @@ void transform() {
 		{ 1, 0, 0, 0, 0, 5, 5, 0.5, 0.4 },
 	};
 
-	AffineSolverSimple trf1;
+	AffineSolverSimple trf1(points.size());
 	trf1.computeSimilar(points.begin(), points.size());
 	ThreadPool pool(2);
-	AffineSolverFast trf2(pool);
+	AffineSolverFast trf2(pool, points.size());
 	trf2.computeSimilar(points.begin(), points.size());
 
 	trf1.toConsole("result classic loop ");
@@ -151,4 +151,60 @@ void text() {
 	file = "D:/VideoTest/out/text2.bmp";
 	std::cout << "save to " << file << std::endl;
 	bgr.saveAsBMP(file);
+}
+
+class OpticalFlowImageWriter : public OpticalFlowWriter {
+public:
+	OpticalFlowImageWriter(MainData& data, MovieReader& reader) :
+		OpticalFlowWriter(data, reader) {
+		codec_ctx = avcodec_alloc_context3(NULL);
+	}
+
+	void writeFlow(const MovieFrame& frame, const std::string& fileName) {
+		OpticalFlowWriter::writeFlow(frame);
+		imageInterpolated.saveAsBMP("f:/flow.bmp");
+	}
+};
+
+void flow() {
+	std::chrono::time_point t1 = std::chrono::system_clock::now();
+	std::cout << "-------- Test Flow" << std::endl;
+	std::string file = "d:/VideoTest/02.mp4";
+	MainData data;
+	data.collectDeviceInfo();
+	data.fileIn = file;
+	FFmpegReader reader;
+	reader.open(file);
+	data.validate(reader);
+	NullWriter writer(data, reader);
+	CpuFrame frame(data, reader, writer);
+	reader.read(frame.mBufferFrame);
+	frame.inputData();
+	frame.createPyramid(reader.frameIndex);
+
+	reader.read(frame.mBufferFrame);
+	frame.inputData();
+	frame.createPyramid(reader.frameIndex);
+
+	frame.computeStart(reader.frameIndex);
+	frame.computeTerminate(reader.frameIndex);
+
+	OpticalFlowImageWriter fw(data, reader);
+	fw.writeFlow(frame, "f:/flow.bmp");
+
+	std::vector<PointResult>& pr = frame.mResultPoints;
+	for (PointResultType type : {
+		PointResultType::FAIL_SINGULAR, PointResultType::FAIL_ITERATIONS, PointResultType::FAIL_ETA_NAN,
+			PointResultType::RUNNING, PointResultType::SUCCESS_ABSOLUTE_ERR, PointResultType::SUCCESS_STABLE_ITER
+	}) {
+		auto num = std::count_if(pr.cbegin(), pr.cend(), [&] (const PointResult& pr) { return pr.result == type; });
+		std::cout << "type " << int(type) << ", count " << num << " = " << 100.0 * num / pr.size() << "%" << std::endl;
+	}
+
+	frame.computeTransform(reader.frameIndex);
+	AffineTransform trf = frame.getTransform();
+	trf.toConsole("transform: ", 2);
+
+	std::chrono::time_point t2 = std::chrono::system_clock::now();
+	std::cout << "time [ms]: " << std::chrono::duration<double, std::milli>(t2 - t1).count() << std::endl;
 }

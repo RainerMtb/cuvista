@@ -92,12 +92,12 @@ public:
 		for (int i = 0; i < pointSets.size() && i < resultSet.size(); i++) {
 			std::wstring str = L"check " + std::to_wstring(i);
 			auto points = pointSets[i];
-			AffineSolverSimple trf1;
+			AffineSolverSimple trf1(points.size());
 			trf1.computeSimilar(points.begin(), points.size());
 			Assert::IsTrue(resultSet[i].equals(trf1, 1e-14), str.c_str());
 
 			ThreadPool pool(2);
-			AffineSolverFast trf2(pool);
+			AffineSolverFast trf2(pool, points.size());
 			trf2.computeSimilar(points.begin(), points.size());
 			Assert::IsTrue(resultSet[i].equals(trf2, 1e-14), str.c_str());
 		}
@@ -122,11 +122,11 @@ public:
 				}
 
 				//compute transforms
-				AffineSolverSimple trf1;
+				AffineSolverSimple trf1(points.size());
 				trf1.computeSimilar(points.begin(), points.size());
 
 				ThreadPool pool(2);
-				AffineSolverFast trf2(pool);
+				AffineSolverFast trf2(pool, points.size());
 				trf2.computeSimilar(points.begin(), points.size());
 
 				Assert::IsTrue(trf1.equals(trf2, 1e-12));

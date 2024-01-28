@@ -17,6 +17,7 @@
  */
 
 #include "CpuFrame.hpp"
+#include "SubMat.h"
 
 struct FilterKernel {
 	static const int maxSize = 8;
@@ -88,8 +89,8 @@ void CpuFrame::createPyramid(int64_t frameIndex) {
 	for (size_t z = 0; z < mData.zMax; z++) {
 		Matf& y = frame.mY[z];
 		//gauss filtering
-		Matf filterTemp = mFilterBuffer.reuse(y.rows(), y.cols());
-		Matf mat = mFilterResult.reuse(y.rows(), y.cols());
+		Matf filterTemp = mFilterBuffer.share(y.rows(), y.cols());
+		Matf mat = mFilterResult.share(y.rows(), y.cols());
 		y.filter1D(filterKernels[0].k, filterKernels[0].siz, Matf::Direction::HORIZONTAL, filterTemp, mPool);
 		filterTemp.filter1D(filterKernels[0].k, filterKernels[0].siz, Matf::Direction::VERTICAL, mat, mPool);
 
@@ -116,12 +117,12 @@ void CpuFrame::computeTerminate(int64_t frameIndex) {
 	for (int threadIdx = 0; threadIdx < mData.cpuThreads; threadIdx++) mPool.add([&, threadIdx] {
 		int ir = mData.ir;
 		int iw = mData.iw;
-		Mat jm = Mat<double>::allocate(iw, iw);
-		Mat delta = Mat<double>::allocate(iw, iw);
-		Mat sd = Mat<double>::allocate(6, 1ull * iw * iw);
-		Mat etaMat = Mat<double>::allocate(6, 1);
-		Mat wp = Mat<double>::allocate(3, 3);
-		Mat dwp = Mat<double>::allocate(3, 3);
+		Mat jm = Matd::allocate(iw, iw);
+		Mat delta = Matd::allocate(iw, iw);
+		Mat sd = Matd::allocate(6, 1ull * iw * iw);
+		Mat etaMat = Matd::allocate(6, 1);
+		Mat wp = Matd::allocate(3, 3);
+		Mat dwp = Matd::allocate(3, 3);
 		for (int iy0 = threadIdx; iy0 < mData.iyCount; iy0 += mData.cpuThreads) {
 			for (int ix0 = 0; ix0 < mData.ixCount; ix0++) {
 				//start with null transform
@@ -139,7 +140,7 @@ void CpuFrame::computeTerminate(int64_t frameIndex) {
 
 				for (; z >= mData.zMin && result >= PointResultType::RUNNING; z--) {
 					Matf& Y = previous.mY[z];
-					SubMat<float> im = Y.subMatShared(ym - ir, xm - ir, iw, iw);
+					SubMat<float> im = SubMat<float>::from(Y, ym - ir, xm - ir, iw, iw);
 
 					//affine transform
 					for (int r = 0; r < iw; r++) {
@@ -158,6 +159,7 @@ void CpuFrame::computeTerminate(int64_t frameIndex) {
 						}
 					}
 					//if (frameIndex == 1 && ix0 == 63 && iy0 == 1) sd.toConsole(); //----------------
+
 					Mat s = sd.timesTransposed();
 					//if (frameIndex == 1 && ix0 == 63 && iy0 == 1) s.toConsole(); //----------------
 
@@ -165,18 +167,18 @@ void CpuFrame::computeTerminate(int64_t frameIndex) {
 					double ns = s.norm1();
 					double gs = g.norm1();
 					double rcond = 1 / (ns * gs); //reciprocal condition number
+					result = (std::isnan(rcond) || rcond < mData.deps) ? PointResultType::FAIL_SINGULAR : PointResultType::RUNNING;
 
 					//if (frameIndex == 1 && ix0 == 97 && iy0 == 4) std::printf("cpu %d %.14f\n", z, rcond);
-					//if (frameIndex == 1 && ix0 == 63 && iy0 == 1) g.toConsole(); //----------------
+					//if (frameIndex == 1 && ix0 == 75 && iy0 == 10) g.toConsole(); //----------------
 
-					result = (std::isnan(rcond) || rcond < mData.deps) ? PointResultType::FAIL_SINGULAR : PointResultType::RUNNING;
 					int iter = 0;
 					double bestErr = std::numeric_limits<double>::max();
 					while (result == PointResultType::RUNNING) {
 						//search for selected patch in current frame
 						jm.setValues([&] (size_t r, size_t c) {
-							double x = (double) (c) -mData.ir;
-							double y = (double) (r) -mData.ir;
+							double x = (double) (c) - mData.ir;
+							double y = (double) (r) - mData.ir;
 							double ix = xm + x * wp.at(0, 0) + y * wp.at(1, 0) + wp.at(0, 2);
 							double iy = ym + x * wp.at(0, 1) + y * wp.at(1, 1) + wp.at(1, 2);
 							return frame.mY[z].interp2(ix, iy).value_or(mData.dnan);

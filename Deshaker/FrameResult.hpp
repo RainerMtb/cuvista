@@ -40,7 +40,7 @@ public:
 	FrameResult(MainData& data, ThreadPool& threadPool) :
 		mData { data },
 		mFiniteResults(data.resultCount),
-		mAffineSolver { std::make_unique<AffineSolverFast>(threadPool) } {}
+		mAffineSolver { std::make_unique<AffineSolverFast>(threadPool, data.resultCount) } {}
 
 	//compute resulting transformation for this frame
 	void computeTransform(const std::vector<PointResult>& results, ThreadPool& threadPool, int64_t frameIndex);

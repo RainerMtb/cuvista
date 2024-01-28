@@ -25,7 +25,8 @@ template <class T> CoreMat<T>::CoreMat() :
 	CoreMat<T>(nullptr, 0, 0, true) {}
 
 //copy constructor
-template <class T> CoreMat<T>::CoreMat(const CoreMat<T>& other) : CoreMat<T>(nullptr, other.h, other.w, true) {
+template <class T> CoreMat<T>::CoreMat(const CoreMat<T>& other) : 
+	CoreMat<T>(nullptr, other.h, other.w, true) {
 	//std::cout << "!! 1 copy constructor" << std::endl;
 	//when template type is const, need to allocate a non const array to be able to write to it
 	using TT = std::remove_const_t<T>;
@@ -37,7 +38,8 @@ template <class T> CoreMat<T>::CoreMat(const CoreMat<T>& other) : CoreMat<T>(nul
 }
 
 //move constructor
-template <class T> CoreMat<T>::CoreMat(CoreMat<T>&& other) noexcept : CoreMat<T>(other.array, other.h, other.w, other.ownData) {
+template <class T> CoreMat<T>::CoreMat(CoreMat<T>&& other) noexcept : 
+	CoreMat<T>(other.array, other.h, other.w, other.ownData) {
 	//std::cout << "!! 2 move constructor" << std::endl;
 	other.array = nullptr;
 	other.h = 0;

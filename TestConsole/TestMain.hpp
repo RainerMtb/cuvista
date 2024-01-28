@@ -57,3 +57,5 @@ void pyramid();
 
 void imageOutput();
 void flow();
+void pinvTest();
+void eigen();

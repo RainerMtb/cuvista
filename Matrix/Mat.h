@@ -38,7 +38,6 @@
 #include "CoreMat.h"
 #include "ThreadPoolBase.h"
 #include "MatIterator.h"
-#include "SubMat.h"
 #include "OutputLine.h"
 
 //---------------------------------------------------------
@@ -106,10 +105,12 @@ protected:
 	inline static ThreadPoolBase defaultPool;
 
 	//create mat using existing data array, sharing memory
-	Mat<T>(T* array, size_t rows, size_t cols, bool ownData) : CoreMat<T>(array, rows, cols, ownData) {}
+	Mat<T>(T* array, size_t rows, size_t cols, bool ownData) : 
+		CoreMat<T>(array, rows, cols, ownData) {}
 
 	//create new mat, allocate data array
-	Mat<T>(size_t rows, size_t cols) : Mat<T>(new T[rows * cols], rows, cols, true) {}
+	Mat<T>(size_t rows, size_t cols) : 
+		Mat<T>(new T[rows * cols], rows, cols, true) {}
 
 	//apply unary op
 	Mat<T> unaryOpSafe(const Mat<T>& other, std::function <T(size_t, size_t)> op) const {
@@ -200,12 +201,13 @@ private:
 	}
 
 public:
-
 	//default constructor produces invalid mat
-	Mat<T>() : Mat<T>(nullptr, 0, 0, true) {}
+	Mat<T>() : 
+		Mat<T>(nullptr, 0, 0, true) {}
 
 	//implicit constructor for scalar Matrix
-	Mat<T>(T val) : Mat<T>(new T[1] {val}, 1, 1, true) {}
+	Mat<T>(T val) : 
+		Mat<T>(new T[1] {val}, 1, 1, true) {}
 
 	//return epsilon of T
 	static constexpr T eps() {
@@ -450,15 +452,20 @@ public:
 
 	//compute 1-norm of Mat
 	T norm1() const {
-		T maxVal = std::abs(at(0, 0));
+		T maxSum = std::abs(at(0, 0));
 		for (size_t c = 0; c < cols(); c++) {
-			T colVal = std::abs(at(0, c));
+			T colSum = std::abs(at(0, c));
 			for (size_t r = 1; r < rows(); r++) {
-				colVal += std::abs(at(r, c));
+				colSum += std::abs(at(r, c));
 			}
-			if (std::isnan(colVal) || colVal > maxVal) maxVal = colVal;
+			if (std::isnan(colSum) || colSum > maxSum) maxSum = colSum;
 		}
-		return maxVal;
+		return maxSum;
+	}
+
+	//compute Frobenius-norm of Mat
+	T normF() const {
+		return std::sqrt(std::accumulate(cbegin(), cend(), T(0), [] (const T& a, const T& b) { return a + b * b; }));
 	}
 
 	//compute inf-norm of Mat
@@ -591,7 +598,7 @@ public:
 	}
 
 	//reuse memory for a new Mat
-	Mat<T> reuse(size_t rows, size_t cols) {
+	Mat<T> share(size_t rows, size_t cols) {
 		assert(rows * cols <= this->numel() && "new mat does not fit inside memory");
 		return Mat<T>(array, rows, cols, false);
 	}
@@ -785,12 +792,6 @@ public:
 	//create sub mat by copy
 	Mat<T> subMat(size_t r0, size_t c0, size_t h, size_t w) const {
 		return generate(h, w, [&] (size_t r, size_t c) {return at(r0 + r, c0 + c); });
-	}
-
-	//create sub mat by sharing data array
-	virtual SubMat<T> subMatShared(size_t r0, size_t c0, size_t hs, size_t ws) {
-		assert(r0 + hs <= rows() && c0 + ws <= cols() && "invalid index arguments");
-		return SubMat<T>(array, r0, c0, hs, ws, rows(), cols());
 	}
 
 	//pseudo inverse

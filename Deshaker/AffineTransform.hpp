@@ -61,22 +61,33 @@ class AffineSolver : public AffineTransform {
 public:
 	//compute similar transform, no shear
 	virtual void computeSimilar(std::vector<PointResult>::iterator it, size_t count) = 0;
+
+	virtual ~AffineSolver() {}
 };
 
 class AffineSolverSimple : public AffineSolver {
 
+private:
+	Matd Adata, bdata;
+
 public:
 	void computeSimilar(std::vector<PointResult>::iterator it, size_t count) override;
+
+	AffineSolverSimple(size_t maxPoints) :
+		Adata { Matd::allocate(maxPoints * 2, 4) },
+		bdata { Matd::allocate(maxPoints * 2, 1) } {}
 };
 
 class AffineSolverFast : public AffineSolver {
 
 private:
 	ThreadPool& threadPool;
+	Matd Adata;
 
 public:
-	AffineSolverFast(ThreadPool& threadPool) :
-		threadPool { threadPool } {}
+	AffineSolverFast(ThreadPool& threadPool, size_t maxPoints) :
+		threadPool { threadPool },
+		Adata { Matd::allocate(6, maxPoints * 2) } {}
 
 	void computeSimilar(std::vector<PointResult>::iterator it, size_t count) override;
 };

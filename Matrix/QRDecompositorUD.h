@@ -27,7 +27,9 @@ private:
 	QRDecompositor<T> qr;
 
 public:
-	QRDecompositorUD(Mat<T>& mat) : A { mat.trans() }, qr(A) {}
+	QRDecompositorUD(Mat<T>& mat) : 
+		A { mat.trans() }, 
+		qr(A) {}
 
 	QRDecompositorUD<T>& compute() override {
 		qr.compute();

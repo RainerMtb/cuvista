@@ -32,7 +32,11 @@ protected:
 	std::vector<size_t> piv;
 
 public:
-	LUDecompositor(Mat<T>& mat) : A { mat }, m { mat.rows() }, n { mat.cols() }, piv(mat.rows()) {}
+	LUDecompositor(Mat<T>& mat) : 
+		A { mat }, 
+		m { mat.rows() }, 
+		n { mat.cols() }, 
+		piv(mat.rows()) {}
 
 	virtual LUDecompositor<T>& compute() override {
 		for (size_t i = 0; i < m; i++) piv[i] = i;

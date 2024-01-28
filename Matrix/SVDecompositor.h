@@ -34,14 +34,16 @@ private:
 	std::vector<T> s, sinv, e, work;
 
 public:
-	SVDecompositor(Mat<T>& mat) : A { mat }, m { mat.rows() }, n { mat.cols() },
+	SVDecompositor(Mat<T>& mat) : 
+		A { mat }, 
+		m { mat.rows() }, 
+		n { mat.cols() },
 		U { Mat<T>::zeros(mat.rows(), mat.cols()) }, 
 		V { Mat<T>::allocate(mat.cols(), mat.cols()) },
 		s(std::min(mat.rows() + 1, mat.cols())), 
 		sinv(std::min(mat.rows(), mat.cols())), 
 		e(mat.cols()), 
-		work(mat.rows()) 
-	{}
+		work(mat.rows()) {}
 
 	virtual SVDecompositor<T>& compute() override {
 		int n = (int) this->n;

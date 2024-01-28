@@ -18,8 +18,7 @@
 
 #pragma once
 
-template <class T> class Mat;
-template <class T> class MatRow;
+#include "Mat.h"
 
 template <class T> class SubMat : public Mat<T> {
 
@@ -70,6 +69,17 @@ public:
 	SubMat<T>() : 
 		Mat<T>() {}
 
+	//create sub mat by sharing data array
+	static SubMat<T> from(Mat<T>& mat, size_t r0, size_t c0, size_t hs, size_t ws) {
+		assert(r0 + hs <= mat.rows() && c0 + ws <= mat.cols() && "invalid index arguments");
+		return SubMat<T>(mat.array, r0, c0, hs, ws, mat.rows(), mat.cols());
+	}
+
+	//create sub mat from submat
+	static SubMat<T> from(SubMat<T>& mat, size_t r0, size_t c0, size_t hs, size_t ws) {
+		return mat.subMat(r0, c0, hs, ws);
+	}
+
 	virtual MatRow<T> operator [] (size_t row) override {
 		assert(row < hs && "row index out of bounds");
 		return MatRow<T>(subArray + row * this->w, ws);
@@ -91,7 +101,7 @@ public:
 	}
 
 	//create shared sub mat of shared sub mat
-	virtual SubMat<T> subMatShared(size_t r0, size_t c0, size_t hs, size_t ws) override {
+	SubMat<T> subMat(size_t r0, size_t c0, size_t hs, size_t ws) {
 		assert(this->r0 + r0 + hs <= this->h && this->c0 + c0 + ws <= this->w && "invalid index arguments");
 		return SubMat<T>(this->array, this->r0 + r0, this->c0 + c0, hs, ws, this->h, this->w);
 	}

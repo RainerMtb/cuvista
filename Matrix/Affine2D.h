@@ -132,7 +132,7 @@ public:
 	}
 
 	Affine2D& toConsole(const std::string& title = "", int digits = -1) override {
-		std::cout << toString(title, digits);
+		std::cout << toString(title, digits) << std::endl;
 		return *this;
 	}
 };

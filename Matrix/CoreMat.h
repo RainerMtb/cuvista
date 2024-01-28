@@ -47,7 +47,8 @@ protected:
 		ownData { ownData } {}
 
 	//create new mat, allocate data array
-	CoreMat<T>(size_t rows, size_t cols) : CoreMat<T>(new T[rows * cols], rows, cols, true) {}
+	CoreMat<T>(size_t rows, size_t cols) : 
+		CoreMat<T>(new T[rows * cols], rows, cols, true) {}
 
 	//return height for index 0 or width for index 1
 	size_t dim(size_t dimIdx) const;

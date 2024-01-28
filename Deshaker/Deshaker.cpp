@@ -36,7 +36,7 @@ int deshake(int argsCount, char** args) {
 	MainData data;
 	std::unique_ptr<MovieReader> reader = std::make_unique<NullReader>();
 	std::unique_ptr<MovieWriter> writer = std::make_unique<NullWriter>(data, *reader);
-	std::unique_ptr<MovieFrame> frame = std::make_unique<DefaultFrame>(data, *reader, *writer);
+	std::unique_ptr<MovieFrame> frame;
 	AuxWriters auxWriters;
 	
 	try {
@@ -88,6 +88,9 @@ int deshake(int argsCount, char** args) {
 		} else if (data.deviceList[data.deviceSelected]->type == DeviceType::OPEN_CL) {
 			//use OpenCL
 			frame = std::make_unique<OpenClFrame>(data, *reader, *writer);
+
+		} else {
+			frame = std::make_unique<DefaultFrame>(data, *reader, *writer);
 		}
 
 		//----------- create secondary Writers

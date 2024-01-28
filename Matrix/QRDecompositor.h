@@ -33,7 +33,11 @@ protected:
 	int pivsign = 0;
 
 public:
-	QRDecompositor(Mat<T>& mat) : A { mat }, m { mat.rows() }, n { mat.cols() }, rd(mat.cols()) {}
+	QRDecompositor(Mat<T>& mat) : 
+		A { mat }, 
+		m { mat.rows() }, 
+		n { mat.cols() }, 
+		rd(mat.cols()) {}
 
 	QRDecompositor<T>& compute() override {
 		//std::cout << "qr " << m << " by " << n << std::endl;
@@ -94,9 +98,9 @@ public:
 		return x.subMat(0, 0, n, nx);
 	}
 
-	Mat<T> getQ() { //dim [m x n]
+	Mat<T>& getQ(Mat<T>& q) { //dim [m x n]
 		if (dirty) compute();
-		Mat<T> q = Mat<T>::zeros(m, n);
+		q.setValues((T) 0);
 		size_t u = std::min(m, n);
 		for (size_t kk = u; kk > 0; kk--) {
 			size_t k = kk - 1;
@@ -113,9 +117,21 @@ public:
 		return q;
 	}
 
+	Mat<T> getQ() { //dim [m x n]
+		if (dirty) compute();
+		Mat<T> q = Mat<T>::allocate(m, n);
+		return getQ(q);
+	}
+
+	Mat<T>& getR(Mat<T>& r) { //dim [n x n]
+		if (dirty) compute();
+		return r.setArea([&] (size_t r, size_t c) { return r < c ? A[r][c] : (r == c ? rd[r] : (T) 0); });
+	}
+
 	Mat<T> getR() { //dim [n x n]
 		if (dirty) compute();
-		return Mat<T>::generate(n, n, [this] (size_t r, size_t c) {return r < c ? A[r][c] : (r == c ? rd[r] : (T) 0); });
+		Mat<T> r = Mat<T>::allocate(n, n);
+		return getR(r);
 	}
 
 	bool isFullRank() {

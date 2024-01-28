@@ -20,6 +20,7 @@
 #include "CppUnitTest.h"
 #include "Utils.hpp"
 #include "AffineTransform.hpp"
+#include "SubMat.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
@@ -40,7 +41,7 @@ public:
 		Assert::AreEqual(result, a.timesTransposed());
 
 		Matd b = Matd::fromRows(5, 5, {2, 2, 2, 2, 2, -2, 1, 2, 3, -2, -2, 4, 5, 6, -2, -2, 7, 8, 9, -2, 2, 2, 2, 2, 2});
-		SubMat<double> sb = b.subMatShared(1, 1, 3, 3);
+		SubMat<double> sb = SubMat<double>::from(b, 1, 1, 3, 3);
 		Assert::AreEqual(result, sb.times(sb.trans()));
 		Assert::AreEqual(result, sb.timesTransposed());
 	}
@@ -160,7 +161,7 @@ public:
 	TEST_METHOD(subMat) {
 		Matd a = Matd::eye(7);
 		Matd sm = a.subMat(1, 2, 4, 3);
-		SubMat<double> sms = a.subMatShared(1, 2, 4, 3);
+		SubMat<double> sms = SubMat<double>::from(a, 1, 2, 4, 3);
 		Assert::IsTrue(sms == sm, L"subMat not equal");
 		Assert::AreEqual(4ull, sm.rows());
 		Assert::AreEqual(3ull, sm.cols());
@@ -177,7 +178,7 @@ public:
 
 		sms.setValues([] (size_t r, size_t c) {return r * 2.0 + c * 4.0 + 2.0; });
 
-		SubMat<double> sub2 = sms.subMatShared(1, 0, 2, 1);
+		SubMat<double> sub2 = SubMat<double>::from(sms, 1, 0, 2, 1);
 		sub2.set(1, 0, 100);
 		Assert::AreEqual(4.0, a.at(2, 2));
 		Assert::AreEqual(100.0, a.at(3, 2));

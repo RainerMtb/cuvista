@@ -17,7 +17,198 @@
  */
 
 #include "TestMain.hpp"
+#include "SubMat.h"
 #include <iterator>
+
+//specialized algorithms for symmetric Matrix
+class MatSym : public Mat<double> {
+
+private:
+	MatSym(size_t rows, size_t cols) :
+		Mat<double>(rows, cols) {}
+
+public:
+	MatSym(const Mat<double>& mat) : 
+		Mat<double>(mat) {}
+
+	MatSym(Mat<double>&& mat) noexcept :
+		Mat<double>(std::move(mat)) {}
+
+	static MatSym allocate(size_t rows, size_t cols) {
+		assert(rows > 0 && cols > 0 && rows < MAX_DIM && cols < MAX_DIM && "invalid dimensions for allocation");
+		return MatSym(rows, cols);
+	}
+
+	Mat<double> diag() const {
+		return Mat<double>::generate(rows(), 1, [&] (size_t r, size_t c) { return at(r, r); });
+	}
+
+	//compute eigenvalues via repeated qr decomposition
+	Mat<double> eigen() const {
+		size_t s = rows();
+		Mat<double> A = *this;
+		//A.toConsole("A");
+		Mat<double> I = Mat<double>::eye(s);
+		Mat<double> q = Mat<double>::allocate(s, s);
+		Mat<double> r = Mat<double>::allocate(s, s);
+
+		QRDecompositor qrd(A);
+		double norm = 2.0;
+		int i = 0;
+		while (norm > 1e-3 && i < 500) {
+			qrd.compute();
+			qrd.getQ(q);
+			qrd.getR(r);
+			//q.toConsole("Q");
+			//r.toConsole("R");
+			norm = q.abs().minus(I).normF();
+			A = r.times(q);
+			i++;
+		}
+		return MatSym(A).diag();
+	}
+
+	//compute 2-norm as the maximum eigenvalue
+	double norm2() const {
+		return eigen().at(0, 0);
+	}
+
+	//matrix multiplication between two symmetric matrices
+	MatSym& times(const MatSym& b, MatSym& dest) const {
+		for (size_t r = 0; r < dest.rows(); r++) {
+			for (size_t c = r; c < dest.cols(); c++) {
+				double sum = 0.0;
+				for (size_t i = 0; i < dest.cols(); i++) {
+					sum += at(r, i) * at(c, i) + at(c, i) * at(r, i);
+				}
+				sum /= 2.0;
+				dest.at(r, c) = sum;
+				dest.at(c, r) = sum;
+			}
+		}
+	}
+
+	MatSym times(const MatSym& b) const {
+		MatSym out = MatSym::allocate(rows(), b.cols());
+		return times(b, out);
+	}
+};
+
+void eigen() {
+	Matd M = Matd::fromBinaryFile("d:/VideoTest/s.dat");
+	for (size_t i = 0; i < M.rows(); i += 6) {
+		MatSym A = M.subMat(i, 0, 6, 6);
+		Matd e = A.eigen();
+	}
+}
+
+int s = 6;
+Matd X1 = Matd::allocate(s, s);
+Matd X2 = Matd::allocate(s, s);
+
+struct Index {
+	int r, c;
+	double ival;
+};
+
+Index sidx[] = {
+	{0,0,1.0}, {0,1}, {0,2}, {0,3}, {0,4}, {0,5},
+		   {1,1,1.0}, {1,2}, {1,3}, {1,4}, {1,5},
+				  {2,2,1.0}, {2,3}, {2,4}, {2,5},
+						 {3,3,1.0}, {3,4}, {3,5},
+								{4,4,1.0}, {4,5},
+									   {5,5,1.0},
+};
+
+Matd pinvIter(const Matd& s) {
+	double n = std::numeric_limits<double>::max();
+	double beta = 0.1;
+	double eps = 1e-4;
+	Mat g = beta * s;
+	Mat I = Matd::eye(6);
+	for (int i = 0; i < 500 && n > eps * eps; i++) {
+		//g = g.timesEach(1 + beta) - g.timesEach(beta).times(s).times(g);
+		Matd G = g.timesEach(1 + beta) - g.timesEach(beta).times(s).times(g);
+		//G.toConsole("check");
+
+
+		for (int i = 0; i < 21; i++) {
+			Index idx = sidx[i];
+			double sum = 0.0;
+			for (int k = 0; k < 6; k++) {
+				sum += beta * g.at(idx.r, k) * s.at(idx.c, k);
+			}
+			X1.at(idx.r, idx.c) = sum;
+			X1.at(idx.c, idx.r) = sum;
+		}
+		for (int i = 0; i < 21; i++) {
+			Index idx = sidx[i];
+			double sum = 0.0;
+			for (int k = 0; k < 6; k++) {
+				sum += X1.at(idx.r, k) * g.at(idx.c, k);
+			}
+			X2.at(idx.r, idx.c) = sum;
+			X2.at(idx.c, idx.r) = sum;
+		}
+		for (int i = 0; i < 21; i++) {
+			Index idx = sidx[i];
+			double x = g.at(idx.r, idx.c) * (1 + beta) - X2.at(idx.r, idx.c);
+			g.at(idx.r, idx.c) = x;
+			g.at(idx.c, idx.r) = x;
+		}
+
+
+		//double nn = g.times(s).minus(I).norm2();
+		n = 0.0;
+		for (int i = 0; i < 21; i++) {
+			Index idx = sidx[i];
+			double sum = 0.0;
+			for (int k = 0; k < 6; k++) {
+				sum += g.at(idx.r, k) * s.at(idx.c, k);
+			}
+			double s = idx.ival == 1.0 ? sqr(sum - 1.0) : 2 * sqr(sum);
+			n += s;
+		}
+		//n = std::sqrt(n);
+		//std::cout << i << " " << n << " " << std::endl;
+		std::cout << i << " " << n << " " << g.minus(G).normF() << std::endl;
+	}
+	//g.toConsole();
+	//g.times(s).toConsole();
+	return g;
+}
+
+void pinvTest() {
+	Matd s = Matd::fromRows(6, 6, {
+		0.1, 0.25, -0.6, 0.4, -0.25, 0.3,
+		0.4, 0.75, -0.34, -0.15, -0.8, 0.45,
+		0.0, 0.2, 0.5, -0.3, -0.45, 0.6,
+		0.24, -0.67, 0.84, -0.23, -0.6, 0.75,
+		0.5, 0.15, 0.84, -0.56, -0.72, -0.8,
+		-0.7, -0.43, 0.75, 0.23, 0.4, -0.2
+		});
+	s = s.timesTransposed();
+	Matd I = Matd::eye(6);
+
+	//s = Matd::fromBinaryFile("f:/s.dat");
+
+	for (int i = 0; i < 1; i++) {
+		std::chrono::time_point t1 = std::chrono::system_clock::now();
+		Matd A = pinvIter(s);
+		//A.times(s).toConsole("I");
+		std::chrono::time_point t2 = std::chrono::system_clock::now();
+		double nrm = A.times(s).minus(I).normF();
+		std::cout << "iter " << i << ", time [us] " << std::chrono::duration<double, std::micro>(t2 - t1).count() << ", nrm " << nrm << std::endl;
+	}
+
+	for (int i = 0; i < 10; i++) {
+		std::chrono::time_point t1 = std::chrono::system_clock::now();
+		Matd A = s.inv().value();
+		std::chrono::time_point t2 = std::chrono::system_clock::now();
+		double nrm = A.times(s).minus(I).normF();
+		std::cout << "iter " << i << ", time [us] " << std::chrono::duration<double, std::micro>(t2 - t1).count() << ", nrm " << nrm << std::endl;
+	}
+}
 
 void matTest() {
 	std::cout << "----------------------------" << std::endl << "Mat Test:" << std::endl;
@@ -60,7 +251,7 @@ void matTest() {
 	Matd hs = h.subMat(2, 3, 2, 5).toConsole("hilb subMat");
 	std::cout << "is shared (no): " << h.isShared(hs) << " and " << hs.isShared(h) << std::endl;
 
-	SubMat<double> hss = h.subMatShared(2, 3, 2, 5);
+	SubMat<double> hss = SubMat<double>::from(h, 2, 3, 2, 5);
 	hss.toConsole("subMatShared");
 	std::cout << "sub == subshared (yes): " << (hs == hss) << std::endl;
 	std::cout << "is shared (yes): " << h.isShared(hss) << " and " << hss.isShared(h) << std::endl;
@@ -99,7 +290,7 @@ void qrdec() {
 void subMat() {
 	Matd A = Matd::fromRows(3, 3, { 1, 2, 3, 4, 5, 6, 7, 8, 9 });
 	A.toConsole();
-	SubMat<double> ss = A.subMatShared(1, 1, 2, 2);
+	SubMat<double> ss = SubMat<double>::from(A, 1, 1, 2, 2);
 	ss.toConsole("ss");
 	Matd s = A.subMat(1, 1, 2, 2);
 	s.toConsole("s");
@@ -110,7 +301,7 @@ void subMat() {
 
 void iteratorTest() {
 	Matd A = Matd::fromRows(3, 3, { 1, 2, 3, 4, 5, 6, 7, 8, 9 });
-	SubMat<double> ss = A.subMatShared(1, 1, 2, 2);
+	SubMat<double> ss = SubMat<double>::from(A, 1, 1, 2, 2);
 	ss.toConsole("ss");
 	Matd s = A.subMat(1, 1, 2, 2);
 
