@@ -19,9 +19,9 @@
 #pragma once
 
 #include "Decompositor.h"
-#include <vector>
+#include "MatInverter.h"
 
-template <class T> class LUDecompositor : public Decompositor<T> {
+template <class T> class LUDecompositor : public Decompositor<T>, public MatInverter<T> {
 
 	using Decompositor<T>::dirty;
 
@@ -38,7 +38,7 @@ public:
 		n { mat.cols() }, 
 		piv(mat.rows()) {}
 
-	virtual LUDecompositor<T>& compute() override {
+	LUDecompositor<T>& compute() override {
 		for (size_t i = 0; i < m; i++) piv[i] = i;
 		pivsign = 1;
 
@@ -120,12 +120,10 @@ public:
 		return result;
 	}
 
-	virtual std::optional<Mat<T>> solve(const Mat<T>& b) override {
+	bool solve(const Mat<T>& b, Mat<T>& x) {
 		if (dirty) compute();
-		if (b.rows() != m) return std::nullopt;
-
+		if (b.rows() != m) return false;
 		size_t nx = b.cols();
-		Mat<T> x = Mat<T>::allocate(m, nx);
 
 		// B(piv,:)
 		for (size_t k = 0; k < nx; k++) {
@@ -153,10 +151,23 @@ public:
 				}
 			}
 		}
-		return x;
+		return true;
 	}
 
-	std::optional<Mat<T>> inv() {
+	std::optional<Mat<T>> solve(const Mat<T>& b) override {
+		Mat<T> x = Mat<T>::allocate(b.rows(), b.cols());
+		bool result = solve(b, x);
+		if (result) return x;
+		else return std::nullopt;
+	}
+
+	std::optional<Mat<T>> inv(Mat<T>& A) override {
+		this->A = A;
+		this->dirty = true;
+		return solve(Mat<T>::eye(m));
+	}
+
+	std::optional<Mat<T>> inv() override {
 		return solve(Mat<T>::eye(m));
 	}
 

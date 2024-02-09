@@ -117,6 +117,11 @@ public:
 	void drawCircle(double cx, double cy, double r, ColorBase<T> color, bool fill = false);
 
 	void drawDot(double cx, double cy, double rx, double ry, ColorBase<T> color);
+
+private:
+	double fpart(double d);
+
+	double rfpart(double d);
 };
 
 

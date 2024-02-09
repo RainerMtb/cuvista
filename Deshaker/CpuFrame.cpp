@@ -18,6 +18,8 @@
 
 #include "CpuFrame.hpp"
 #include "SubMat.h"
+#include "MatrixInverter.hpp"
+
 
 struct FilterKernel {
 	static const int maxSize = 8;
@@ -123,11 +125,14 @@ void CpuFrame::computeTerminate(int64_t frameIndex) {
 		Mat etaMat = Matd::allocate(6, 1);
 		Mat wp = Matd::allocate(3, 3);
 		Mat dwp = Matd::allocate(3, 3);
+		Mat g = Matd::allocate(6, 6);
+		Mat I = Matd::eye(6);
+
 		for (int iy0 = threadIdx; iy0 < mData.iyCount; iy0 += mData.cpuThreads) {
 			for (int ix0 = 0; ix0 < mData.ixCount; ix0++) {
 				//start with null transform
-				wp.setValuesByRow({ 1, 0, 0, 0, 1, 0, 0, 0, 1 });
-				dwp.setValuesByRow({ 1, 0, 0, 0, 1, 0, 0, 0, 1 });
+				wp.setDiag(1.0);
+				dwp.setDiag(1.0);
 
 				// center of previous integration window
 				// one pixel padding around outside for delta
@@ -163,8 +168,14 @@ void CpuFrame::computeTerminate(int64_t frameIndex) {
 					Mat s = sd.timesTransposed();
 					//if (frameIndex == 1 && ix0 == 63 && iy0 == 1) s.toConsole(); //----------------
 
-					Mat g = s.inv().value();
+					//auto res = IterativePseudoInverse1(6).inv(s);
+					//if (res.has_value()) {
+					//	g = res.value();
+					//} else {
+					//	result = PointResultType::FAIL_SINGULAR;
+					//}
 					double ns = s.norm1();
+					LUDecompositor<double>(s).solve(I, g); //decomposing will overwrite content of s
 					double gs = g.norm1();
 					double rcond = 1 / (ns * gs); //reciprocal condition number
 					result = (std::isnan(rcond) || rcond < mData.deps) ? PointResultType::FAIL_SINGULAR : PointResultType::RUNNING;

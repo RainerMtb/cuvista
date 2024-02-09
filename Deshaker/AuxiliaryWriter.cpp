@@ -64,14 +64,15 @@ void ResultImageWriter::write(const FrameResult& fr, int64_t idx, const ImageYuv
 		double x2 = pr.px + pr.u;
 		double y2 = pr.py + pr.v;
 
-		//red or green if point is consens
-		ImageColor col = i < numConsens ? ColorBgr::GREEN : ColorBgr::RED;
-		bgr.drawLine(pr.px, pr.py, x2, y2, col);
-		bgr.drawDot(x2, y2, 1.25, 1.25, col);
-
 		//blue line to computed transformation
 		auto [tx, ty] = trf.transform(pr.x, pr.y);
 		bgr.drawLine(pr.px, pr.py, tx + bgr.w / 2.0, ty + bgr.h / 2.0, ColorBgr::BLUE);
+
+		//green line if point is consens
+		//red line if point is not consens
+		ImageColor col = i < numConsens ? ColorBgr::GREEN : ColorBgr::RED;
+		bgr.drawLine(pr.px, pr.py, x2, y2, col);
+		bgr.drawDot(x2, y2, 1.25, 1.25, col);
 	}
 
 	//write text info

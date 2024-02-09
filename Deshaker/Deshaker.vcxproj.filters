@@ -119,6 +119,9 @@
     <ClCompile Include="AuxiliaryWriter.cpp">
       <Filter>Writer</Filter>
     </ClCompile>
+    <ClCompile Include="MatrixInverter.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MovieReader.hpp">
@@ -222,6 +225,9 @@
     </ClInclude>
     <ClInclude Include="MovieWriter.hpp">
       <Filter>Writer</Filter>
+    </ClInclude>
+    <ClInclude Include="MatrixInverter.hpp">
+      <Filter>Util</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

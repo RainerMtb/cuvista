@@ -19,8 +19,9 @@
 #pragma once
 
 #include "Decompositor.h"
+#include "MatInverter.h"
 
-template <class T> class SVDecompositor : public Decompositor<T> {
+template <class T> class SVDecompositor : public Decompositor<T>, public MatInverter<T> {
 
 	using Decompositor<T>::dirty;
 
@@ -45,7 +46,7 @@ public:
 		e(mat.cols()), 
 		work(mat.rows()) {}
 
-	virtual SVDecompositor<T>& compute() override {
+	SVDecompositor<T>& compute() override {
 		int n = (int) this->n;
 		int m = (int) this->m;
 		if (n > m) throw std::runtime_error("cannot decompose underdetermined systems n > m");
@@ -157,7 +158,7 @@ public:
 		if (wantv) {
 			for (int kk = n; kk > 0; kk--) {
 				int k = kk - 1;
-				if ((k < nrt) & (e[k] != (T) 0)) {
+				if ((k < nrt) && (e[k] != (T) 0)) {
 					for (int j = k + 1; j < nu; j++) {
 						T t = 0;
 						for (int i = k + 1; i < n; i++) t += V[i][k] * V[i][j];
@@ -368,10 +369,10 @@ public:
 		return *this;
 	}
 
-	virtual std::optional<Mat<T>> solve(const Mat<T>& b) override {
+	std::optional<Mat<T>> solve(const Mat<T>& b) override {
 		if (dirty) compute();
 		if (b.rows() != this->m) return std::nullopt;
-		return pinv().times(b);
+		return inv().value().times(b);
 	}
 
 	// return U Matrix
@@ -392,7 +393,7 @@ public:
 		return V.subMat(0, 0, this->n, this->n);
 	}
 
-	Mat<T> pinv() {
+	std::optional<Mat<T>> inv() override {
 		if (dirty) compute();
 		int m = (int) this->m;
 		int n = (int) this->n;
@@ -411,6 +412,12 @@ public:
 			}
 		}
 		return p;
+	}
+
+	std::optional<Mat<T>> inv(Mat<T>& A) override {
+		this->A = A;
+		this->dirty = true;
+		return inv();
 	}
 
 	T cond() {

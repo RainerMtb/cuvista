@@ -139,10 +139,10 @@ public:
 
 	TEST_METHOD(svd) {
 		Matd s = Matd::fromRows(3, 3, { 2, 3, 4, -4, 2.5, -20, 0, 3, 6 });
-		Matd sp = s.pinv().value().pinv().value();
+		Matd sp = s.pinv().pinv();
 		Assert::AreEqual(s, sp);
 
-		s = Matd::fromRows(7, 7, {
+		Matd ss = Matd::fromRows(7, 7, {
 			0.56115, 0.06098, 0.09795, 0.69631, 0.46300, 0.94497, 0.41785,
 			0.73846, 0.55851, 0.81792, 0.40089, 0.46976, 0.17597, 0.46457,
 			0.85967, 0.49835, 0.29663, 0.84098, 0.23546, 0.39177, 0.94879,
@@ -151,10 +151,10 @@ public:
 			0.10501, 0.06406, 0.04323, 0.76693, 0.32525, 0.45771, 0.28060,
 			0.94509, 0.77685, 0.08106, 0.10140, 0.03811, 0.97761, 0.90337
 			});
-		Matd in = s;
+		Matd in = ss;
 		SVDecompositor<double> svd(in);
-		Matd si = svd.pinv().pinv().value();
-		Assert::IsTrue(s.equals(si, 1e-10));
+		Matd si = svd.inv().value().pinv();
+		Assert::IsTrue(ss.equals(si, 1e-10));
 		Assert::IsTrue(svd.cond() < 15000);
 	}
 

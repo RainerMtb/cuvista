@@ -217,8 +217,9 @@ void OpticalFlowWriter::open() {
 }
 
 void OpticalFlowWriter::vectorToColor(double dx, double dy, unsigned char* r, unsigned char* g, unsigned char* b) {
+	const double f = 20.0;
 	double hue = std::atan2(dy, dx) / std::numbers::pi * 180.0 + 180.0;
-	double val = std::clamp(std::sqrt(sqr(dx) + sqr(dy)) / 20.0, 0.0, 1.0);
+	double val = std::clamp(std::sqrt(sqr(dx) + sqr(dy)) / f, 0.0, 1.0);
 	hsv_to_rgb(hue, 1.0, val, r, g, b);
 }
 

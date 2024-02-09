@@ -16,33 +16,21 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
-#include "TestMain.hpp"
+#pragma once
 
-int main() {
-	std::cout << "----------------------------" << std::endl << "TestMain:" << std::endl;
-	//imageOutput();
-	//qrdec();
-	//draw();
-	//filterCompare();
-	//matPerf();
-	//matTest();
-	//subMat();
-	//iteratorTest();
-	//similarTransformPerformance();
-	//cudaInvSimple();
-	//cudaInvPerformanceTest();
-	//cudaInvEqualityTest();
-	//cudaFMAD();
-	//cudaInvParallel();
-	//readAndWriteOneFrame();
-	//checkVersions();
-	//transform();
-	//cudaInvTest(1, 32);
+#include <optional>
 
-	//pyramid();
-	//openClInvTest(1, 32);
-	//openClInvGroupTest(1, 9);
-	//openClnorm1Test();
-	flow();
-	//pinvTest();
-}
+template <class T> class Mat;
+
+template <class T> class MatInverter {
+
+protected:
+	T sqr(T value) {
+		return value * value;
+	}
+
+public:
+	virtual ~MatInverter() = default;
+	virtual std::optional<Mat<T>> inv(Mat<T>& A) = 0;
+	virtual std::optional<Mat<T>> inv() = 0;
+};

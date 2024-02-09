@@ -134,23 +134,54 @@ void transform() {
 	std::cout << "results equal: " << std::boolalpha << isEqual << std::endl;
 }
 
-void text() {
+void draw() {
+	//text in yuv image
 	ImageYuv im(200, 500);
+	std::string file1 = "f:/draw1.bmp";
 	im.writeText("abcdefghijklmnopqrstuvwxyz", 10, 10, 2, 3, ColorYuv::WHITE, ColorYuv::BLACK);
 	im.writeText("ABCDEFGHIJKLMNOPQRSTUVWXYZ", 10, 50, 2, 3, ColorYuv::WHITE, ColorYuv::GRAY);
 	im.writeText("äöüß %,.()/-=", 10, 90, 2, 3, ColorYuv::WHITE);
-	std::string file = "D:/VideoTest/out/text1.bmp";
-	std::cout << "save to " << file << std::endl;
-	im.saveAsColorBMP(file);
+	std::cout << "save to " << file1 << std::endl;
+	im.saveAsColorBMP(file1);
 
-	ImageBGR bgr(200, 500);
+	//text in bgr image
+	ImageBGR bgr(500, 500);
+	std::string file2 = "f:/draw2.bmp";
 	bgr.writeText("A quick brown fox", 10, 10, 2, 3, { 255, 255, 0 });
 	bgr.writeText("jumps over a lazy dog", 10, 50, 2, 3, { 255, 255, 0, 0.5 });
 	bgr.writeText("A quick brown fox", 10, 90, 2, 3, { 255, 255, 0 }, { 0, 255, 255, 0.25 });
 	bgr.writeText("jumps over a lazy dog", 10, 130, 2, 3, { 255, 255, 0, 0.5 }, { 0, 255, 255, 0.5 });
-	file = "D:/VideoTest/out/text2.bmp";
-	std::cout << "save to " << file << std::endl;
-	bgr.saveAsBMP(file);
+
+	//lines and dots
+	double len = 100.0;
+	double cx = 250.0;
+	double cy = 350.0;
+	double r = 1.75;
+	for (double angle = 0.0; angle < 360.0; angle += 15.0) {
+		double x1 = cx + len * std::cos(angle * std::numbers::pi / 180.0);
+		double y1 = cy + len * std::sin(angle * std::numbers::pi / 180.0);
+		bgr.drawLine(cx, cy, x1, y1, ColorBgr::BLUE);
+		bgr.drawDot(x1, y1, r, r, ColorBgr::RED);
+	}
+
+	//dots at fractional pixel values
+	for (int i = 0; i < 5; i++) {
+		for (int k = 0; k < 5; k++) {
+			double x = 20 + 10.2 * i + 0.2 * k;
+			double y = 250 + 10.2 * k + 0.2 * i;
+			bgr.drawDot(x, y, 1.5, 1.5, ColorBgr::GREEN);
+		}
+	}
+
+	//polygon
+	bgr.drawLine(400, 300, 425, 320, ColorBgr::GREEN);
+	bgr.drawLine(425, 320, 410, 375, ColorBgr::GREEN);
+	bgr.drawLine(410, 375, 380, 355, ColorBgr::GREEN);
+	bgr.drawLine(380, 355, 400, 300, ColorBgr::GREEN);
+
+	//save to file
+	std::cout << "save to " << file2 << std::endl;
+	bgr.saveAsBMP(file2);
 }
 
 class OpticalFlowImageWriter : public OpticalFlowWriter {

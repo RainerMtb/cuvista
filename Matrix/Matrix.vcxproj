@@ -22,6 +22,7 @@
     <ClInclude Include="LUDecompositor.h" />
     <ClInclude Include="Mat.h" />
     <ClInclude Include="MatIterator.h" />
+    <ClInclude Include="MatInverter.h" />
     <ClInclude Include="OutputLine.h" />
     <ClInclude Include="QRDecompositor.h" />
     <ClInclude Include="QRDecompositorUD.h" />

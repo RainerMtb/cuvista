@@ -464,13 +464,23 @@ public:
 	}
 
 	//compute Frobenius-norm of Mat
+	T normF2() const {
+		return std::accumulate(cbegin(), cend(), T(0), [] (const T& a, const T& b) { return a + b * b; });
+	}
+
+	//compute square of Frobenius-norm of Mat
 	T normF() const {
-		return std::sqrt(std::accumulate(cbegin(), cend(), T(0), [] (const T& a, const T& b) { return a + b * b; }));
+		return std::sqrt(normF2());
 	}
 
 	//compute inf-norm of Mat
 	T normInf() const {
 		return trans().norm1();
+	}
+
+	Mat<T> diag() const {
+		size_t s = std::min(rows(), cols());
+		return Mat<double>::generate(s, 1, [&] (size_t r, size_t c) { return at(r, r); });
 	}
 
 	//---------------------------------------------------------
@@ -561,6 +571,11 @@ public:
 	//set each value according to function
 	Mat<T>& setValues(std::function<T(size_t, size_t)> supplier, ThreadPoolBase& pool = defaultPool) {
 		return setArea(0, 0, rows(), cols(), supplier, pool);
+	}
+
+	//set diagonal values to given value, otherwise 0
+	Mat<T>& setDiag(T value) {
+		return setValues([value] (size_t r, size_t c) { return r == c ? value : T(0); });
 	}
 
 	//copy data directly from input array
@@ -789,30 +804,11 @@ public:
 		return generate(rows() * copiesVert, cols() * copiesHorz, [this] (size_t r, size_t c) { return at(r % rows(), c % cols()); });
 	}
 
-	//create sub mat by copy
+	//take part of this mat as a copy for a new mat
 	Mat<T> subMat(size_t r0, size_t c0, size_t h, size_t w) const {
 		return generate(h, w, [&] (size_t r, size_t c) {return at(r0 + r, c0 + c); });
 	}
-
-	//pseudo inverse
-	std::optional<Mat<T>> pinv() const {
-		Mat A = *this;
-		return SVDecompositor<T>(A).pinv();
-	}
-
-	//inverse in place
-	std::optional<Mat<T>> invInPlace() {
-		if (rows() != cols()) return std::nullopt;
-		Mat b = Mat<T>::eye(rows());
-		return LUDecompositor<T>(*this).solve(b);
-	}
 	
-	//inverse
-	std::optional<Mat<T>> inv() const {
-		Mat A = *this;
-		return A.invInPlace();
-	}
-
 	//solve A * x = b using this mat for decomposition
 	//using different decompositions based on format of mat
 	std::optional<Mat<T>> solveInPlace(const Mat<T>& b) {
@@ -829,16 +825,23 @@ public:
 		return A.solveInPlace(b);
 	}
 
-	// condition of matrix
+	//condition of matrix
 	T cond() const {
 		Mat A = *this;
 		return SVDecompositor<T>(A).cond();
 	}
 
-	// determinant of matrix
-	T det() const {
-		Mat A = *this;
-		return LUDecompositor<T>(A).det();
+	//calculate inverse
+	std::optional<Mat<T>> inv() const {
+		Mat<T> copy = *this;
+		if (rows() == cols()) return LUDecompositor<T>(copy).inv();
+		else return std::nullopt;
+	}
+
+	//calculate pseudo inverse
+	Mat<T> pinv() const {
+		Mat<T> copy = *this;
+		return SVDecompositor<T>(copy).inv().value();
 	}
 };
 

@@ -98,23 +98,22 @@ public:
 		return x.subMat(0, 0, n, nx);
 	}
 
-	Mat<T>& getQ(Mat<T>& q) { //dim [m x n]
+	Mat<T>& getQ(Mat<T>& Q) { //dim [m x n]
 		if (dirty) compute();
-		q.setValues((T) 0);
 		size_t u = std::min(m, n);
 		for (size_t kk = u; kk > 0; kk--) {
 			size_t k = kk - 1;
-			q[k][k] = (T) 1;
+			Q.setDiag(1.0);
 			for (size_t j = k; j < u; j++) {
 				if (std::abs(A[k][k]) > std::numeric_limits<T>::epsilon()) {
 					T s = T(0);
-					for (size_t i = k; i < m; i++) s += A[i][k] * q[i][j];
+					for (size_t i = k; i < m; i++) s += A[i][k] * Q[i][j];
 					s /= -A[k][k];
-					for (size_t i = k; i < m; i++) q[i][j] += s * A[i][k];
+					for (size_t i = k; i < m; i++) Q[i][j] += s * A[i][k];
 				}
 			}
 		}
-		return q;
+		return Q;
 	}
 
 	Mat<T> getQ() { //dim [m x n]
@@ -125,7 +124,15 @@ public:
 
 	Mat<T>& getR(Mat<T>& r) { //dim [n x n]
 		if (dirty) compute();
-		return r.setArea([&] (size_t r, size_t c) { return r < c ? A[r][c] : (r == c ? rd[r] : (T) 0); });
+		auto fcn = [&] (size_t r, size_t c) {
+			if (r < c)
+				return A[r][c];
+			else if (r == c)
+				return rd[r];
+			else
+				return T(0);
+		};
+		return r.setArea(fcn);
 	}
 
 	Mat<T> getR() { //dim [n x n]
@@ -142,4 +149,48 @@ public:
 		return true;
 	}
 
+	//compute eigenvalues via repeated qr decomposition
+	Mat<T> eig() {
+		if (m != n) return Mat<T>();
+
+		Mat<T> Anew = Mat<T>::allocate(m, m);
+		Mat<T> Q = Mat<T>::allocate(m, m);
+		Mat<T> d = Mat<T>::zeros(m, 1);
+
+		T norm = (T) 1;
+		int i = 0;
+		while (norm > Mat<T>::eps() && i < 500) {
+			//decompose qr
+			compute();
+
+			//calcluate r * q
+			getQ(Q);
+			for (size_t r = 0; r < m; r++) {
+				for (size_t c = r; c < m; c++) {
+					T sum = rd[r] * Q.at(r, c);
+					for (size_t i = r + 1; i < m; i++) {
+						sum += A.at(r, i) * Q.at(i, c);
+					}
+					Anew.at(r, c) = Anew.at(c, r) = sum;
+				}
+			}
+			std::swap(Anew.array, A.array);
+
+			//see if iteration has reached stable state
+			norm = (T) 0;
+			for (size_t i = 0; i < m; i++) {
+				double dnew = A.at(i, i);
+				double delta = d.at(i, 0) - dnew;
+				norm += delta * delta;
+				d.at(i, 0) = dnew;
+			}
+
+			i++;
+		}
+		return d;
+	}
+
+	T norm2() {
+		return eig().at(0, 0);
+	}
 };

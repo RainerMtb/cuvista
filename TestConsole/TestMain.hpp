@@ -39,7 +39,7 @@ void readAndWriteOneFrame();
 void checkVersions();
 
 void transform();
-void text();
+void draw();
 void filterCompare();
 
 void cudaInvSimple();
@@ -58,4 +58,3 @@ void pyramid();
 void imageOutput();
 void flow();
 void pinvTest();
-void eigen();

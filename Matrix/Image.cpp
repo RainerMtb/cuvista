@@ -220,15 +220,19 @@ template <class T> void ImageBase<T>::plot4(double cx, double cy, double dx, dou
 	plot(cx - dx, cy - dy, a, color);
 }
 
-double fpart(double d) {
+template <class T> double ImageBase<T>::fpart(double d) {
 	return d - floor(d);
 }
 
-double rfpart(double d) {
+template <class T> double ImageBase<T>::rfpart(double d) {
 	return 1.0 - fpart(d);
 }
 
 template <class T> void ImageBase<T>::drawLine(double x0, double y0, double x1, double y1, ColorBase<T> color) {
+	/*
+	Xiaolin Wu's line algorithm
+	https://en.wikipedia.org/wiki/Xiaolin_Wu%27s_line_algorithm
+	*/
 	bool steep = std::abs(y1 - y0) > std::abs(x1 - x0);
 	if (steep) {
 		std::swap(x0, y0);
@@ -278,14 +282,14 @@ template <class T> void ImageBase<T>::drawLine(double x0, double y0, double x1, 
 
 	//main loop
 	if (steep) {
-		for (double x = xpxl1; x < xpxl2; x++) {
+		for (double x = xpxl1 + 1.0; x < xpxl2; x++) {
 			plot(floor(inter), x, rfpart(inter), color);
 			plot(floor(inter) + 1, x, fpart(inter), color);
 			inter += g;
 		}
 
 	} else {
-		for (double x = xpxl1; x < xpxl2; x++) {
+		for (double x = xpxl1 + 1.0; x < xpxl2; x++) {
 			plot(x, floor(inter), rfpart(inter), color);
 			plot(x, floor(inter) + 1, fpart(inter), color);
 			inter += g;
@@ -303,7 +307,7 @@ template <class T> void ImageBase<T>::drawEllipse(double cx, double cy, double r
 
 	} else {
 		//upper and lower halves
-		int quarterX = int(round(rx2 / h));
+		int quarterX = int(rx2 / h + 0.5);
 		for (double x = 0; x <= quarterX; x++) {
 			double y = ry * sqrt(1.0 - x * x / rx2);
 			double alpha = fpart(y);
@@ -321,7 +325,7 @@ template <class T> void ImageBase<T>::drawEllipse(double cx, double cy, double r
 		}
 
 		//right and left halves
-		int quarterY = int(round(ry2 / h));
+		int quarterY = int(ry2 / h + 0.5);
 		for (double y = 0; y <= quarterY; y++) {
 			double x = rx * sqrt(1.0 - y * y / ry2);
 			double alpha = fpart(x);
@@ -345,43 +349,38 @@ template <class T> void ImageBase<T>::drawCircle(double cx, double cy, double r,
 }
 
 template <class T> void ImageBase<T>::drawDot(double cx, double cy, double rx, double ry, ColorBase<T> color) {
-	//collect subpixels that need to be drawn
-	int x0 = int(cx - rx);
-	int y0 = int(cy - ry);
-	int x1 = int(cx + rx + 2);
-	int y1 = int(cy + ry + 2);
-	int nx = x1 - x0;
-	int ny = y1 - y0;
-	std::vector<int8_t> alphaMap(1ull * nx * ny);
-
 	const int steps = 8;
-	double ds = 1.0 / steps;
+	constexpr double ds = 1.0 / steps;
+	//align center to nearest fraction
+	cx = std::round((cx + 0.5) * steps) / steps;
+	cy = std::round((cy + 0.5) * steps) / steps;
+
+	//collect subpixels that need to be drawn
+	std::map<int, int> alpha;
 
 	double rx2 = sqr(rx);
 	double ry2 = sqr(ry);
-	for (double x = ds / 2; x < rx + ds / 2; x += ds) {
+	for (double x = ds / 2; x <= rx; x += ds) {
 		//y on the ellipse circumference
-		double dy = sqrt(ry2 - sqr(x) * ry2 / rx2);
-		for (double y = ds / 2; y < dy + ds / 2; y += ds) {
+		double ey = sqrt(ry2 - sqr(x) * ry2 / rx2);
+		for (double y = ds / 2; y <= ey; y += ds) {
 			//set subpixels 4 times around center
-			for (double px : { cx + 0.5 - x, cx + 0.5 + x}) {
-				for (double py : { cy + 0.5 - y, cy + 0.5 + y }) {
-					int ix = int(px * steps + 0.5) / steps - x0;
-					int iy = int(py * steps + 0.5) / steps - y0;
-					alphaMap[1ull * iy * nx + ix]++;
+			for (double px : { cx - x, cx + x}) {
+				for (double py : { cy - y, cy + y }) {
+					int ix = int(px);
+					int iy = int(py);
+					int idx = iy * stride + ix;
+					alpha[idx]++;
 				}
 			}
 		}
 	}
 
-	for (int x = 0; x < nx; x++) {
-		for (int y = 0; y < ny; y++) {
-			int a = alphaMap[1ull * y * nx + x];
-			int ix = x + x0;
-			int iy = y + y0;
-			if (ix >= 0 && ix < w && iy >= 0 && iy < h) {
-				plot(ix, iy, a * ds * ds, color);
-			}
+	for (auto& [idx, a] : alpha) {
+		int iy = idx / stride;
+		int ix = idx % stride;
+		if (ix >= 0 && ix < w && iy >= 0 && iy < h) {
+			plot(ix, iy, a * ds * ds, color);
 		}
 	}
 }

@@ -142,7 +142,7 @@ public:
 			Mat S = svd.getS();
 			Mat V = svd.getV();
 			Assert::AreEqual(m, U.times(S).times(V.trans())); // A == U * S * V'
-			Assert::IsTrue(svd.pinv().times(m).equalsIdentity(1e-10));	// I == A * pinv(A)
+			Assert::IsTrue(svd.inv().value().times(m).equalsIdentity(1e-10));	// I == A * pinv(A)
 		}
 	}
 

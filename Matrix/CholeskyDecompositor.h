@@ -38,7 +38,7 @@ public:
 		n { mat.cols() }, 
 		L { Mat<T>::allocate(m, n) } {}
 
-	virtual CholeskyDecompositor<T>& compute() override {
+	CholeskyDecompositor<T>& compute() override {
 		isspd = (m == n);
 
 		// Main loop.
@@ -72,7 +72,7 @@ public:
 		return L.subMat(0, 0, m, n);
 	}
 
-	virtual std::optional<Mat<T>> solve(const Mat<T>& b) override {
+	std::optional<Mat<T>> solve(const Mat<T>& b) override {
 		if (dirty) compute();
 		if (!isspd) return std::nullopt;
 		if (b.rows() != m) return std::nullopt;

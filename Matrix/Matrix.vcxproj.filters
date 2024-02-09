@@ -64,6 +64,9 @@
     <ClInclude Include="Color.hpp">
       <Filter>Image</Filter>
     </ClInclude>
+    <ClInclude Include="MatInverter.h">
+      <Filter>Main</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Image.cpp">
