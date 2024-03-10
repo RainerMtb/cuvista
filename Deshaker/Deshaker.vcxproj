@@ -129,6 +129,9 @@
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
       <WarningLevel>Level3</WarningLevel>
+      <EnableEnhancedInstructionSet>AdvancedVectorExtensions512</EnableEnhancedInstructionSet>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <ShowIncludes>false</ShowIncludes>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -141,13 +144,14 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <FunctionLevelLinking>true</FunctionLevelLinking>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
+      <EnableEnhancedInstructionSet>AdvancedVectorExtensions512</EnableEnhancedInstructionSet>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -160,6 +164,7 @@
   <ItemGroup>
     <ClCompile Include="AffineTransform.cpp" />
     <ClCompile Include="AuxiliaryWriter.cpp" />
+    <ClCompile Include="AvxFrame.cpp" />
     <ClCompile Include="clFunctions.cpp" />
     <ClCompile Include="clMain.cpp" />
     <ClCompile Include="clTest.cpp" />
@@ -194,6 +199,7 @@
     <ClInclude Include="AffineTransform.hpp" />
     <ClInclude Include="AuxiliaryWriter.hpp" />
     <ClInclude Include="AVException.hpp" />
+    <ClInclude Include="AvxFrame.hpp" />
     <ClInclude Include="clFunctions.hpp" />
     <ClInclude Include="clHeaders.hpp" />
     <ClInclude Include="clKernelCompute.hpp" />

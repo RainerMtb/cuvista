@@ -340,7 +340,7 @@ void cl::computeTerminate(int64_t frameIdx, const CoreData& core, std::vector<Po
 		//convert from cl_PointResult to PointResult
 		for (size_t i = 0; i < results.size(); i++) {
 			cl_PointResult& pr = clData.cl_results[i];
-			results[i] = { pr.idx, pr.ix0, pr.iy0, pr.xm, pr.ym, pr.xm - core.w / 2, pr.ym - core.h / 2, pr.u, pr.v, PointResultType(pr.result), pr.z, pr.err };
+			results[i] = { pr.idx, pr.ix0, pr.iy0, pr.xm, pr.ym, pr.xm - core.w / 2, pr.ym - core.h / 2, pr.u, pr.v, PointResultType(pr.result), pr.z };
 		}
 
 	} catch (const Error& err) {

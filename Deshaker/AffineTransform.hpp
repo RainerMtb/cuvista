@@ -22,13 +22,36 @@
 #include "CoreData.hpp"
 #include "ThreadPool.hpp"
 
+struct PointContext {
+	PointResult* ptr;
+	double delta = 0.0;
+	double deltaAngleCos = 0.0;
+	double deltaAngle = 0.0;
+	double distanceEllipse = 0.0;
+	double tx = 0.0;
+	double ty = 0.0;
+
+	double distance = 0.0;
+	double distanceRelative = 0.0;
+
+	PointContext(PointResult& pr) : ptr { &pr } {}
+	PointContext() : ptr { nullptr } {}
+};
+
+struct PointBase {
+	int x, y;
+	double u, v;
+
+	PointBase(const PointResult& pr) : x { pr.x }, y { pr.y }, u { pr.u }, v { pr.v } {}
+	PointBase(const PointContext& pc) : x { pc.ptr->x }, y { pc.ptr->y }, u { pc.ptr->u }, v { pc.ptr->v } {}
+};
+
 class AffineTransform : public Affine2D {
 
-private:
+protected:
 	Mat A = Mat<double>::zeros(6, 6);
 	Mat b = Mat<double>::zeros(6, 1);
 
-protected:
 	AffineTransform(int64_t frameIndex, double m00, double m01, double m02, double m10, double m11, double m12) :
 		Affine2D(m00, m01, m02, m10, m11, m12),
 		frameIndex { frameIndex } {}
@@ -46,21 +69,31 @@ public:
 		AffineTransform(-1, 1, 0, 0, 0) {}
 
 	//compute parameters from gives points
-	void computeAffine(std::vector<PointResult>& points);
+	const AffineTransform& computeAffineDirect(const PointResult& p1, const PointResult& p2, const PointResult& p3);
+
+	//compute similar transform directly from two points
+	const AffineTransform& computeSimilarDirect(const PointResult& p1, const PointResult& p2);
 
 	//compute affine transform from given points
-	bool computeAffine(std::vector<PointResult>::iterator begin, size_t count);
+	bool computeAffine(std::vector<PointResult>& points);
 
 	//convert to cuda struct
 	std::array<double, 6> toArray() const;
+
+	friend std::ostream& operator << (std::ostream& os, const AffineTransform& trf);
 };
 
 
 class AffineSolver : public AffineTransform {
 
-public:
+protected:
 	//compute similar transform, no shear
-	virtual void computeSimilar(std::vector<PointResult>::iterator it, size_t count) = 0;
+	virtual const AffineTransform& computeSimilar(const std::vector<PointBase>& pb) = 0;
+	
+public:
+	const AffineTransform& computeSimilar(const std::vector<PointResult>& results);
+	const AffineTransform& computeSimilar(std::vector<PointResult>::iterator begin, ptrdiff_t count);
+	const AffineTransform& computeSimilar(std::vector<PointContext>::iterator begin, std::vector<PointContext>::iterator end);
 
 	virtual ~AffineSolver() {}
 };
@@ -70,9 +103,9 @@ class AffineSolverSimple : public AffineSolver {
 private:
 	Matd Adata, bdata;
 
-public:
-	void computeSimilar(std::vector<PointResult>::iterator it, size_t count) override;
+	const AffineTransform& computeSimilar(const std::vector<PointBase>& pb) override;
 
+public:
 	AffineSolverSimple(size_t maxPoints) :
 		Adata { Matd::allocate(maxPoints * 2, 4) },
 		bdata { Matd::allocate(maxPoints * 2, 1) } {}
@@ -84,10 +117,10 @@ private:
 	ThreadPool& threadPool;
 	Matd Adata;
 
+	const AffineTransform& computeSimilar(const std::vector<PointBase>& pb) override;
+
 public:
 	AffineSolverFast(ThreadPool& threadPool, size_t maxPoints) :
 		threadPool { threadPool },
 		Adata { Matd::allocate(6, maxPoints * 2) } {}
-
-	void computeSimilar(std::vector<PointResult>::iterator it, size_t count) override;
 };

@@ -52,11 +52,12 @@ other output options:
 -trf file       text file containing transformation data per frame
                 use in conjunction with single pass mode, see -pass
 -res file       write detailed results of the compute step to file
--resim x.bmp    write images containing trasform lines in bmp file format 
+-resim files    write images containing transform lines in bmp file format 
                 images are grayscaled, lines are colored
                 blue: calculated transform
                 green: point is consens / red: point is not consens
                 see -o options for filename pattern
+-resim folder   write images to specified folder using default filename pattern
 -pass n         mode of operation
 -pass 1         only reads video file and computes transformations
 -pass 2         only applies transformation to generate output video

@@ -20,20 +20,14 @@
 
 #include "MovieFrame.hpp"
 
-//---------------------------------------------------------------------
-//---------- CPU FRAME ------------------------------------------------
-//---------------------------------------------------------------------
+ //---------------------------------------------------------------------
+ //---------- AVX FRAME ------------------------------------------------
+ //---------------------------------------------------------------------
 
-struct FilterKernel {
-	static const int maxSize = 8;
-	int siz;
-	float k[maxSize];
-};
-
-class CpuFrame : public MovieFrame {
+class AvxFrame : public MovieFrame {
 
 public:
-	CpuFrame(MainData& data, MovieReader& reader, MovieWriter& writer);
+	AvxFrame(MainData& data, MovieReader& reader, MovieWriter& writer);
 
 	void inputData() override;
 	void createPyramid(int64_t frameIndex) override;
@@ -45,36 +39,6 @@ public:
 	ImageYuv getInput(int64_t index) const override;
 	void getInputFrame(int64_t frameIndex, ImagePPM& image) override;
 	void getTransformedOutput(int64_t frameIndex, ImagePPM& image) override;
-	std::string getClassName() const override { return "Cpu Only"; }
+	std::string getClassName() const override { return "AVX vector extensions"; }
 
-protected:
-
-	FilterKernel filterKernels[4] = {
-		{5, {0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f}},
-		{3, {0.25f, 0.5f, 0.25f}},
-		{3, {0.25f, 0.5f, 0.25f}},
-		{3, {-0.5f, 0.0f, 0.5f}},
-	};
-
-	class CpuFrameItem {
-
-	public:
-		int64_t frameIndex = -1;
-		std::vector<Mat<float>> mY;
-
-		CpuFrameItem(MainData& data);
-	};
-
-	//frame input buffer, number of frames = frameBufferCount
-	std::vector<ImageYuv> mYUV;
-
-	//holds image pyramids
-	std::vector<CpuFrameItem> mPyr;
-
-	//buffers the last output frame, 3 mats, to be used to blend background of next frame
-	std::vector<Mat<float>> mPrevOut;
-
-	//buffer for generating output from input yuv and transformation
-	std::vector<Mat<float>> mBuffer;
-	Mat<float> mYuvPlane, mFilterBuffer, mFilterResult;
 };

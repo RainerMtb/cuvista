@@ -51,7 +51,7 @@ enum class BackgroundMode {
 struct CoreData {
 	int MAX_POINTS_COUNT = 150;	//max number of points in x or y direction
 	int COMP_MAX_ITER = 20;		//max loop iterations
-	double COMP_MAX_TOL = 0.5;	//tolerance to stop window pattern matching
+	double COMP_MAX_TOL = 0.15;	//tolerance to stop window pattern matching
 
 	int w = 0;                  //frame width
 	int h = 0;					//frame height
@@ -70,7 +70,10 @@ struct CoreData {
 	int cpupitch = 0;
 
 	//numeric constants used in compute kernel, will be initialized once
-	double dmin = 0.0, dmax = 0.0, deps = 0.0, dnan = 0.0;
+	double dmin = std::numeric_limits<double>::min();
+	double dmax = std::numeric_limits<double>::max();
+	double deps = std::numeric_limits<double>::epsilon();
+	double dnan = std::numeric_limits<double>::quiet_NaN();
 
 	Triplet unsharp = { 0.6f, 0.3f, 0.3f };	//ffmpeg unsharp=5:5:0.6:3:3:0.3
 	ColorNorm bgcol_yuv = {};				//background fill colors in yuv
@@ -106,12 +109,13 @@ public:
 	int x, y;       //pixel coordinate with respect to image center
 	double u, v;    //calculated translation of center point
 	PointResultType result;
-
 	int z;
-	double err;
-	double distance;
-	double length;
-	double distanceRelative;
+
+	double length;   //displacement vector length
+	double heading;  //heading of displacement vector
+	double stretch;  //stretch factor for ellipse along major axis
+
+	bool isConsens;
 
 	//is valid when numeric stable result was found
 	bool isValid() const;

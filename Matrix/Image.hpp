@@ -110,7 +110,7 @@ public:
 	//imprint text
 	void writeText(std::string_view text, int x0, int y0, int scaleX, int scaleY, ColorBase<T> fg, ColorBase<T> bg = { 0, 0, 0, 0.0 });
 
-	void drawLine(double x0, double y0, double x1, double y1, ColorBase<T> color);
+	void drawLine(double x0, double y0, double x1, double y1, ColorBase<T> color, double alpha = 1.0);
 
 	void drawEllipse(double cx, double cy, double rx, double ry, ColorBase<T> color, bool fill = false);
 

@@ -132,11 +132,12 @@ public:
 		ThreadPool pool(4);
 		size_t siz = 20;
 		std::vector<AffineTransform> trfs(siz);
+		std::unique_ptr<RNGbase> rng = std::make_unique<RNG<PseudoRandomSource>>();
 
 		//compute transformation matrix multiple times
 		for (int i = 0; i < siz; i++) {
 			FrameResult frameResult(dataCpu, pool);
-			frameResult.computeTransform(frameCpu->mResultPoints, pool, -1);
+			frameResult.computeTransform(frameCpu->mResultPoints, pool, -1, rng.get());
 			trfs[i] = frameResult.getTransform();
 		}
 
@@ -156,7 +157,7 @@ public:
 		std::unique_ptr<RNGbase> rng = std::make_unique<RNG<std::default_random_engine>>();
 		for (int i = 0; i < siz; i++) {
 			FrameResult frameResult(dataCpu, pool);
-			frameResult.computeTransform(frameCpu->mResultPoints, pool, -1);
+			frameResult.computeTransform(frameCpu->mResultPoints, pool, -1, rng.get());
 			trfs[i] = frameResult.getTransform();
 		}
 

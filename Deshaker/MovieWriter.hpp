@@ -86,6 +86,7 @@ protected:
 
 public:
 	static std::string makeFilename(const std::string& pattern, int64_t index);
+	static std::string makeFilenameSamples(const std::string& pattern);
 };
 
 //-----------------------------------------------------------------------------------

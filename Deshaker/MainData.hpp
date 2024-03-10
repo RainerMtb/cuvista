@@ -180,7 +180,7 @@ public:
 	std::string fileOut;				//output file path
 	std::string trajectoryFile;			//file to read or write trajectory data
 	std::string resultsFile;			//output file path
-	std::string resultImageFile;        //file to write result images, gray, transform lines
+	std::string resultImageFile;        //file to write result images, grayscale background and transform vectors
 	std::string flowFile;               //file to write video showing optical flow
 
 	std::string tcp_address;
@@ -196,7 +196,7 @@ public:
 	int cpuThreads = std::max(1u, std::thread::hardware_concurrency() * 3 / 4);
 
 	int64_t maxFrames = std::numeric_limits<int32_t>::max();
-	std::unique_ptr<RNGbase> rng = std::make_unique<RNG<RandomSource>>();
+	std::unique_ptr<RNGbase> rng = std::make_unique<RNG<PseudoRandomSource>>();
 	ColorRgb bgcol_rgb { 0, 50, 0 };
 
 	std::chrono::steady_clock::time_point timePoint;

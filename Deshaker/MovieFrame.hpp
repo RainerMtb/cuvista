@@ -67,7 +67,7 @@ public:
 	/*
 	* get the current frame transform
 	*/
-	virtual const AffineTransform& getTransform() final;
+	virtual const AffineTransform& getTransform() const final;
 
 	/*
 	* get transformed image as Mat<float> where YUV color planes are stacked vertically
@@ -113,6 +113,7 @@ public:
 	FrameResult mFrameResult;
 	ImageYuv mBufferFrame;
 	std::vector<PointResult> mResultPoints;
+	std::unique_ptr<RNGbase> rng = std::make_unique<RNG<PseudoRandomSource>>();
 
 	MovieFrame(const MovieFrame& other) = delete;
 	MovieFrame(MovieFrame&& other) = delete;

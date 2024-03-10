@@ -112,8 +112,8 @@ public:
 		return at(0, 1); 
 	}
 
-	double rotMilliDegrees() const {
-		return rot() * 180.0 / std::numbers::pi * 3600.0;
+	double rotMinutes() const {
+		return rot() * 180.0 / std::numbers::pi * 60.0;
 	}
 
 	double dX() const { 
@@ -127,12 +127,16 @@ public:
 	std::string toString(const std::string& title = "", int digits = -1) const override {
 		int d = digits == -1 ? 3 : digits;
 		std::stringstream ss;
-		ss << title << std::fixed << std::setprecision(d) << "scale=" << scale() << ", rot=" << rotMilliDegrees() << ", dx=" << dX() << ", dy=" << dY();
+		ss << title << std::fixed << std::setprecision(d) <<
+			"trf: s1=" << at(0, 0) << ", s2=" << at(1, 1) <<
+			", r01=" << at(0, 1) << ", r20=" << at(1, 0) <<
+			", dx=" << at(0, 2) << ", dy=" << at(1, 2);
+
 		return ss.str();
 	}
 
 	Affine2D& toConsole(const std::string& title = "", int digits = -1) override {
-		std::cout << toString(title, digits) << std::endl;
+		std::cout << toString(title, digits);
 		return *this;
 	}
 };

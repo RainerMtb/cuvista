@@ -171,11 +171,9 @@ public:
 		return solve(Mat<T>::eye(m));
 	}
 
-	void solveAffine(const Mat<T>& b, Mat<T>& dest) {
+	void solveAffine(const T* bp, T* xp) {
 		compute();
 
-		T* xp = dest.data();
-		const T* bp = b.data();
 		// B(piv,:)
 		for (size_t i = 0; i < m; i++) {
 			xp[i] = bp[piv[i]];

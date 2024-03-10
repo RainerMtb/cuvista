@@ -18,61 +18,96 @@
 
 #include "AffineTransform.hpp"
 
-void AffineTransform::computeAffine(std::vector<PointResult>& points) {
+const AffineTransform& AffineTransform::computeAffineDirect(const PointResult& p1, const PointResult& p2, const PointResult& p3) {
 	//set up A and b, members of AffineTransform
 	double* ap = A.data();
 	double* bp = b.data();
-	for (auto it = points.begin(); it < points.end(); it++) {
-		ap[0] = it->x;		ap[1] = it->y;		ap[2] = 1.0;		
-		ap[3] = 0.0;		ap[4] = 0.0;		ap[5] = 0.0;
-		ap[6] = 0.0;        ap[7] = 0.0;        ap[8] = 0.0;        
-		ap[9] = it->x;      ap[10] = it->y;     ap[11] = 1.0;
-		ap += 12; //next row of A
+	for (const PointResult& pr : { p1, p2, p3}) {
+		ap[0] = pr.x;	ap[1] = pr.y;	ap[2] = 1.0;	ap[3] = 0.0;    ap[4] = 0.0;   ap[5] = 0.0;
+		ap[6] = 0.0;    ap[7] = 0.0;    ap[8] = 0.0;    ap[9] = pr.x;  ap[10] = pr.y; ap[11] = 1.0;
+		ap += 12; //move two rows of A
 
-		bp[0] = it->x + it->u;
-		bp[1] = it->y + it->v;
-		bp += 2;
+		bp[0] = pr.x + pr.u;
+		bp[1] = pr.y + pr.v;
+		bp += 2; //move two rows of b
 	}
 
 	//solve and write the 6 result values directly to this AffineTransform
 	LUDecompositor<double> ludec(A);
-	ludec.solveAffine(b, *this);
+	ludec.solveAffine(b.data(), array);
+	setParam(array[0], array[1], array[2], array[3], array[4], array[5]);
+	return *this;
 }
 
-bool AffineTransform::computeAffine(std::vector<PointResult>::iterator begin, size_t count) {
-	Mat A = Mat<double>::zeros(count * 2, 6);
-	Mat b = Mat<double>::zeros(count * 2, 1);
-	auto& it = begin;
-	for (size_t i = 0; i < count; i++) {
-		double xx = it->x;
-		double yy = it->y;
-		size_t k = i * 2;
+const AffineTransform& AffineTransform::computeSimilarDirect(const PointResult& p1, const PointResult& p2) {
+	Matd As = A.share(4, 4);
+	As[0][0] = p1.x;   As[0][1] =  p1.y;   As[0][2] = 1.0;   As[0][3] = 0.0;
+	As[1][0] = p1.y;   As[1][1] = -p1.x;   As[1][2] = 0.0;   As[1][3] = 1.0;
+	As[2][0] = p2.x;   As[2][1] =  p2.y;   As[2][2] = 1.0;   As[2][3] = 0.0;
+	As[3][0] = p2.y;   As[3][1] = -p2.x;   As[3][2] = 0.0;   As[3][3] = 1.0;
+
+	double* bp = b.data();
+	bp[0] = p1.x + p1.u;
+	bp[1] = p1.y + p1.v;
+	bp[2] = p2.x + p2.u;
+	bp[3] = p2.y + p2.v;
+
+	LUDecompositor<double> ludec(As);
+	ludec.solveAffine(bp, array);
+	setParam(array[0], array[1], array[2], array[3]);
+	return *this;
+}
+
+bool AffineTransform::computeAffine(std::vector<PointResult>& points) {
+	size_t count = points.size();
+	assert(count >= 3 && "transform needs at least three points");
+	Matd A = Matd::zeros(count * 2, 6);
+	Matd b = Matd::zeros(count * 2, 1);
+	const PointResult* p = points.data();
+	for (size_t i = 0, k = 0; i < count; i++) {
+		double xx = p->x;
+		double yy = p->y;
 
 		A[k][0] = xx;
 		A[k][1] = yy;
 		A[k][2] = 1.0;
-		A[k + 1][3] = xx;
-		A[k + 1][4] = yy;
-		A[k + 1][5] = 1.0;
+		b[k][0] = xx + p->u;
+		k++;
 
-		b[k][0] = xx + it->u;
-		b[k + 1][0] = yy + it->v;
+		A[k][3] = xx;
+		A[k][4] = yy;
+		A[k][5] = 1.0;
+		b[k][0] = yy + p->v;
+		k++;
 
-		it++;
+		p++;
 	}
 	auto res = A.solveInPlace(b);
 	setParam(res->at(0, 0), res->at(1, 0), res->at(2, 0), res->at(3, 0), res->at(4, 0), res->at(5, 0));
 	return res.has_value();
 }
 
-void AffineSolverSimple::computeSimilar(std::vector<PointResult>::iterator it, size_t count) {
-	assert(count >= 2 && "affine transform needs at least two points");
-	size_t m = count * 2;
+const AffineTransform& AffineSolver::computeSimilar(const std::vector<PointResult>& results) {
+	return computeSimilar(std::vector<PointBase>(results.begin(), results.end()));
+}
+
+const AffineTransform& AffineSolver::computeSimilar(std::vector<PointResult>::iterator begin, ptrdiff_t count) {
+	return computeSimilar(std::vector<PointBase>(begin, begin + count));
+}
+
+const AffineTransform& AffineSolver::computeSimilar(std::vector<PointContext>::iterator begin, std::vector<PointContext>::iterator end) {
+	return computeSimilar(std::vector<PointBase>(begin, end));
+}
+
+const AffineTransform& AffineSolverSimple::computeSimilar(const std::vector<PointBase>& pb) {
+	assert(pb.size() >= 2 && "similar transform needs at least two points");
+	size_t m = pb.size() * 2;
 	Matd A = Adata.share(m, 4);
 	A.setValues(0.0);
 	Matd b = bdata.share(m, 1);
 	b.setValues(0.0);
-	for (size_t i = 0; i < count; i++) {
+	auto it = pb.begin();
+	for (size_t i = 0; i < pb.size(); i++) {
 		double xx = it->x;
 		double yy = it->y;
 		size_t k = i * 2;
@@ -93,24 +128,25 @@ void AffineSolverSimple::computeSimilar(std::vector<PointResult>::iterator it, s
 	QRDecompositor<double> qrdec(A);
 	auto res = qrdec.solve(b);
 	setParam(res->at(0, 0), res->at(1, 0), res->at(2, 0), res->at(3, 0));
+	return *this;
 }
 
-//void AffineSolverFast::computeSimilar(std::vector<PointResult>::iterator it, size_t count, ThreadPool& threadPool) {
-void AffineSolverFast::computeSimilar(std::vector<PointResult>::iterator it, size_t count) {
-	assert(count >= 2 && "affine transform needs at least two points");
-	size_t m = count * 2;
-	Matd A = Adata.share(6, m); //A is transposed when compared to loop version
+const AffineTransform& AffineSolverFast::computeSimilar(const std::vector<PointBase>& pb) {
+	assert(pb.size() >= 2 && "similar transform needs at least two points");
+	size_t m = pb.size() * 2;
+	Matd A = Adata.share(6, m);  //A is transposed when compared to loop version
 
-	int dy = it->y;       //represents a2, needs to be smallest value
-	int dx = (it + 1)->x; //represents a3
-	long long int nn = 0; //int could overflow
-	long long int s0 = 0; //in docs s1
-	long long int s1 = 0; //in docs s2
+	int dy = pb[0].y;         //represents a2, needs to be smallest value
+	int dx = pb[1].x;         //represents a3
+	long long int nn = 0;      //int could overflow
+	long long int s0 = 0;      //in docs s1
+	long long int s1 = 0;      //in docs s2
 
 	double* p = A.data() + m * 4; //5th row holds adjusted x and y values
 	double* q = A.data() + m * 5; //6th row holds adjusted b values
 
 	//accumulate s0, s1, nn and adjust coords
+	auto it = pb.begin();
 	for (size_t idx = 0; idx < m; ) {
 		int x = it->x - dx;
 		p[idx] = x;
@@ -134,7 +170,7 @@ void AffineSolverFast::computeSimilar(std::vector<PointResult>::iterator it, siz
 	double n = std::sqrt(nn) * sign0;
 	double b = p[0] + n;
 	double sign2 = sign0 * n * b < p[3] * s1 ? -1.0 : 1.0;
-	double t = sign2 * std::sqrt(count * nn - s0 * s0 - s1 * s1);
+	double t = sign2 * std::sqrt(pb.size() * nn - s0 * s0 - s1 * s1);
 	double z = b * (n + t) - p[3] * s1;
 	double e = n / t;
 	double f = s1 / (b * t);
@@ -226,8 +262,14 @@ void AffineSolverFast::computeSimilar(std::vector<PointResult>::iterator it, siz
 
 	//readjust transform parameter values back to given points
 	setParam(q[0], q[1], -dx * q[0] - dy * q[1] + q[2] + dx, dx * q[1] - dy * q[0] + q[3] + dy);
+	return *this;
 }
 
 std::array<double, 6> AffineTransform::toArray() const {
 	return { array[0], array[1], array[2], array[3], array[4], array[5] };
+}
+
+std::ostream& operator << (std::ostream& os, const AffineTransform& trf) {
+	os << "trf: s=" << trf.scale() << ", r=" << trf.rot() << ", dx=" << trf.dX() << ", dy=" << trf.dY();
+	return os;
 }

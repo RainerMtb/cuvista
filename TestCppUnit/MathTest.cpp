@@ -28,14 +28,26 @@ namespace MathTest {
 	TEST_CLASS(MathTest) {
 
 private:
-	bool checkTransform(Affine2D& tf, PointResult& pr) {
+	bool testTransform(Affine2D& tf, PointResult& pr) {
 		auto p = tf.transform(pr.x, pr.y);
 		return std::abs(p.first - pr.x - pr.u) < 1e-10 && std::abs(p.second - pr.y - pr.v) < 1e-10;
 	}
 
 public:
 
-	TEST_METHOD(affine) {
+	TEST_METHOD(transformSimilar) {
+		std::vector<PointResult> pr {
+			{ 0, 0, 0, 0, 0, 832, -232, -25.7400,  2.5287, PointResultType::SUCCESS_ABSOLUTE_ERR },
+			{ 1, 0, 0, 0, 0, 64,   -40, -24.2886,  0.0104, PointResultType::SUCCESS_ABSOLUTE_ERR }
+		};
+
+		AffineSolverSimple ass(2);
+		ass.computeSimilarDirect(pr[0], pr[1]);
+		testTransform(ass, pr[0]);
+		testTransform(ass, pr[1]);
+	}
+
+	TEST_METHOD(transformAffine) {
 		std::vector<PointResult> pr {
 			{ 0, 0, 0, 0, 0, 832, -232, -25.7400,  2.5287, PointResultType::SUCCESS_ABSOLUTE_ERR },
 			{ 1, 0, 0, 0, 0, 64,   -40, -24.2886,  0.0104, PointResultType::SUCCESS_ABSOLUTE_ERR },
@@ -43,11 +55,11 @@ public:
 		};
 
 		AffineTransform tf;
-		bool hasValue = tf.computeAffine(pr.begin(), 3);
+		bool hasValue = tf.computeAffine(pr);
 		Assert::IsTrue(hasValue);
-		Assert::IsTrue(checkTransform(tf, pr[0]));
-		Assert::IsTrue(checkTransform(tf, pr[1]));
-		Assert::IsTrue(checkTransform(tf, pr[2]));
+		Assert::IsTrue(testTransform(tf, pr[0]));
+		Assert::IsTrue(testTransform(tf, pr[1]));
+		Assert::IsTrue(testTransform(tf, pr[2]));
 	}
 
 	TEST_METHOD(transformDirect) {
@@ -57,7 +69,7 @@ public:
 			{ 0, 0, 0, 0, 0, -4,  2, 0.5, 0.4 },
 			{ 1, 0, 0, 0, 0,  1, -4, 0.5, 0.4 },
 			{ 2, 0, 0, 0, 0,  3,  4, 0.5, 0.4 },
-			{ 1, 0, 0, 0, 0,  2,  2, 0.5, 0.4 },
+			{ 3, 0, 0, 0, 0,  2,  2, 0.5, 0.4 },
 			},
 			{
 			{ 0, 0, 0, 0, 0, 3, 3, 0.75, 0.3 },
@@ -71,7 +83,7 @@ public:
 			{ 0, 0, 0, 0, 0, -2,  1, 1.5, -2.3 },
 			{ 1, 0, 0, 0, 0, -2,  3, 1.5, -2.3 },
 			{ 2, 0, 0, 0, 0, -2,  7, 1.5, -2.3 },
-			{ 1, 0, 0, 0, 0, -2, -4, 1.5, -2.3 },
+			{ 3, 0, 0, 0, 0, -2, -4, 1.5, -2.3 },
 			},
 			{
 			{ 0, 0, 0, 0, 0, -2,  1, 15, -23 },
@@ -93,12 +105,14 @@ public:
 			std::wstring str = L"check " + std::to_wstring(i);
 			auto points = pointSets[i];
 			AffineSolverSimple trf1(points.size());
-			trf1.computeSimilar(points.begin(), points.size());
+			AffineSolver& as1 = trf1;
+			as1.computeSimilar(points);
 			Assert::IsTrue(resultSet[i].equals(trf1, 1e-14), str.c_str());
 
 			ThreadPool pool(2);
 			AffineSolverFast trf2(pool, points.size());
-			trf2.computeSimilar(points.begin(), points.size());
+			AffineSolver& as2 = trf2;
+			as2.computeSimilar(points);
 			Assert::IsTrue(resultSet[i].equals(trf2, 1e-14), str.c_str());
 		}
 	}
@@ -123,15 +137,53 @@ public:
 
 				//compute transforms
 				AffineSolverSimple trf1(points.size());
-				trf1.computeSimilar(points.begin(), points.size());
+				AffineSolver& as1 = trf1;
+				as1.computeSimilar(points);
 
 				ThreadPool pool(2);
 				AffineSolverFast trf2(pool, points.size());
-				trf2.computeSimilar(points.begin(), points.size());
+				AffineSolver& as2 = trf2;
+				as2.computeSimilar(points);
 
 				Assert::IsTrue(trf1.equals(trf2, 1e-12));
 			}
 		}
+	}
+
+	TEST_METHOD(transformExpected) {
+		PointResult p1 = { 0, 0, 0, 0, 0, 4, 5, 1.0, 0.5 };
+		PointResult p2 = { 1, 0, 0, 0, 0, 6, 10, 1.0, 0.5 };
+		PointResult p3 = { 2, 0, 0, 0, 0, 8, 14, 1.0, 0.5 };
+
+		AffineSolverSimple ass(8);
+		AffineSolver& as = ass;
+		AffineTransform trf;
+
+		trf = as.computeSimilarDirect(p1, p2);
+		Assert::AreEqual(1.0, trf.scale(), 1e-14);
+		Assert::AreEqual(0.0, trf.rot(), 1e-14);
+		Assert::AreEqual(1.0, trf.dX(), 1e-14);
+		Assert::AreEqual(0.5, trf.dY(), 1e-14);
+
+		std::vector p = { p1, p2 };
+		trf = as.computeSimilar(p);
+		Assert::AreEqual(1.0, trf.scale(), 1e-14);
+		Assert::AreEqual(0.0, trf.rot(), 1e-14);
+		Assert::AreEqual(1.0, trf.dX(), 1e-14);
+		Assert::AreEqual(0.5, trf.dY(), 1e-14);
+
+		trf = as.computeAffineDirect(p1, p2, p3);
+		Assert::AreEqual(1.0, trf.scale(), 1e-14);
+		Assert::AreEqual(0.0, trf.rot(), 1e-14);
+		Assert::AreEqual(1.0, trf.dX(), 1e-14);
+		Assert::AreEqual(0.5, trf.dY(), 1e-14);
+
+		std::vector pp = { p1, p2, p3 };
+		as.computeAffine(pp);
+		Assert::AreEqual(1.0, trf.scale(), 1e-14);
+		Assert::AreEqual(0.0, trf.rot(), 1e-14);
+		Assert::AreEqual(1.0, trf.dX(), 1e-14);
+		Assert::AreEqual(0.5, trf.dY(), 1e-14);
 	}
 
 	};

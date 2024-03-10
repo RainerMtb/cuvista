@@ -19,10 +19,8 @@
 #pragma once
 
 #include <cassert>
-#include <type_traits>
 #include <algorithm>
 #include <optional>
-
 
 template <class T> class CoreMat {
 
@@ -41,9 +39,9 @@ protected:
 
 	//create mat using existing data array, sharing memory
 	CoreMat<T>(T* array, size_t rows, size_t cols, bool ownData) : 
-		array { array }, 
-		h { rows }, 
-		w { cols }, 
+		array { array },
+		h { rows },
+		w { cols },
 		ownData { ownData } {}
 
 	//create new mat, allocate data array

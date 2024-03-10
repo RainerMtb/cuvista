@@ -18,7 +18,7 @@
 
 #include "RandomSource.hpp"
 
-RandomSource::result_type RandomSource::operator () () {
+PseudoRandomSource::result_type PseudoRandomSource::operator () () {
 	//compute output value
 	uint16_t out = (~rngData[idx1] << 8) | (rngData[idx2]);
 

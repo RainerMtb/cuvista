@@ -20,21 +20,6 @@
 #include "SubMat.h"
 #include "MatrixInverter.hpp"
 
-
-struct FilterKernel {
-	static const int maxSize = 8;
-	int siz;
-	float k[maxSize];
-};
-
-FilterKernel filterKernels[4] = {
-	{5, {0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f}},
-	{3, {0.25f, 0.5f, 0.25f}},
-	{3, {0.25f, 0.5f, 0.25f}},
-	{3, {-0.5f, 0.0f, 0.5f}},
-};
-
-
 //constructor
 CpuFrame::CpuFrame(MainData& data, MovieReader& reader, MovieWriter& writer) : 
 	MovieFrame(data, reader, writer) 
@@ -168,12 +153,6 @@ void CpuFrame::computeTerminate(int64_t frameIndex) {
 					Mat s = sd.timesTransposed();
 					//if (frameIndex == 1 && ix0 == 63 && iy0 == 1) s.toConsole(); //----------------
 
-					//auto res = IterativePseudoInverse1(6).inv(s);
-					//if (res.has_value()) {
-					//	g = res.value();
-					//} else {
-					//	result = PointResultType::FAIL_SINGULAR;
-					//}
 					double ns = s.norm1();
 					LUDecompositor<double>(s).solve(I, g); //decomposing will overwrite content of s
 					double gs = g.norm1();
@@ -253,7 +232,7 @@ void CpuFrame::computeTerminate(int64_t frameIndex) {
 
 				//transformation for points with respect to center of image and level 0 of pyramid
 				int idx = iy0 * mData.ixCount + ix0;
-				mResultPoints[idx] = { idx, ix0, iy0, xm, ym, xm - mData.w / 2, ym - mData.h / 2, u, v, result, zp, err };
+				mResultPoints[idx] = { idx, ix0, iy0, xm, ym, xm - mData.w / 2, ym - mData.h / 2, u, v, result, zp };
 			}
 		}
 	});

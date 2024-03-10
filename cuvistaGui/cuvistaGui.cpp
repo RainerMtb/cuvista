@@ -315,7 +315,7 @@ void cuvistaGui::showInfo() {
     QMessageBox msgBox(this);
     msgBox.setWindowTitle(QString("Cuvista Info"));
     msgBox.setIcon(QMessageBox::Information);
-    QString author = "Copyright (c) 2023 Rainer Bitschi <a href='mailto:cuvista@a1.net'>Email: cuvista@a1.net</a>";
+    QString author = "Copyright (c) 2024 Rainer Bitschi <a href='mailto:cuvista@a1.net'>Email: cuvista@a1.net</a>";
     QString license = "License GNU GPLv3+: GNU GPL version 3 or later";
     QString version = QString::fromStdString(CUVISTA_VERSION);
     msgBox.setText(QString("CUVISTA - Cuda Video Stabilizer, Version %1<br>%2<br>%3").arg(version).arg(author).arg(license));

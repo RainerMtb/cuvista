@@ -93,16 +93,7 @@ std::optional<Matd> IterativePseudoInverse1::inv(Matd& A) {
 	return n > err ? std::nullopt : std::optional(Xk);
 }
 
-std::optional<Matd> IterativePseudoInverse1::inv() {
-	return std::nullopt;
-}
-
-
 //------------------------------------------------------------------------
-
-std::optional<Matd> IterativePseudoInverse2::inv() {
-	return std::nullopt;
-}
 
 std::optional<Matd> IterativePseudoInverse2::inv(Matd& A) {
 	double n = std::numeric_limits<double>::max();

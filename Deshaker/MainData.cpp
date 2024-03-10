@@ -22,6 +22,7 @@
 #include "NvidiaDriver.hpp"
 #include "NvEncoder.hpp"
 #include "MovieReader.hpp"
+#include "MovieWriter.hpp"
 
 #include <algorithm>
 #include <regex>
@@ -286,7 +287,7 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 			dummyFrame = true;
 
 		} else if (args.nextArg("rand", next)) {
-			if (std::stoi(next) == 1) rng = std::make_unique<RNG<RandomSource>>();
+			if (std::stoi(next) == 1) rng = std::make_unique<RNG<PseudoRandomSource>>();
 			else if (std::stoi(next) == 2) rng = std::make_unique<RNG<std::random_device>>();
 			else if (std::stoi(next) == 3) rng = std::make_unique<RNG<std::default_random_engine>>();
 			else throw AVException("invalid random generator selection: " + next);
@@ -309,7 +310,7 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 	//show title
 	if (showHeader) {
 		*console << "CUVISTA - Cuda Video Stabilizer, Version " << CUVISTA_VERSION << std::endl;
-		*console << "Copyright (c) 2023 Rainer Bitschi, Email: cuvista@a1.net" << std::endl;
+		*console << "Copyright (c) 2024 Rainer Bitschi, Email: cuvista@a1.net" << std::endl;
 	}
 
 	if (args.empty()) {
@@ -390,12 +391,6 @@ void MainData::collectDeviceInfo() {
 }
 
 void MainData::validate(const MovieReader& reader) {
-	//get numeric limits
-	this->deps = std::numeric_limits<double>::epsilon();
-	this->dmax = std::numeric_limits<double>::max();
-	this->dmin = std::numeric_limits<double>::min();
-	this->dnan = std::numeric_limits<double>::quiet_NaN();
-
 	//main metrics
 	this->w = reader.w;
 	this->h = reader.h;
@@ -504,8 +499,8 @@ void MainData::showIntro(const std::string& deviceName, const MovieReader& reade
 	//output to be written
 	if (videoOutputType == OutputType::VIDEO_FILE && pass != DeshakerPass::FIRST_PASS) *console << "FILE OUT: " << fileOut << std::endl;
 	if (trajectoryFile.empty() == false) *console << "TRAJECTORY FILE: " << trajectoryFile << std::endl;
-	if (resultsFile.empty() == false) *console << "CALCULATION DETAILS OUT: " << resultsFile << std::endl;
-	if (resultImageFile.empty() == false) *console << "CALCULATION DETAILS IMAGES: " << resultImageFile << std::endl;
+	if (resultsFile.empty() == false) *console << "CALCULATION DETAIL OUTPUT: " << resultsFile << std::endl;
+	if (resultImageFile.empty() == false) *console << "CALCULATION DETAIL IMAGES: " << ImageWriter::makeFilenameSamples(resultImageFile) << std::endl;
 	if (flowFile.empty() == false) *console << "OPTICAL FLOW VIDEO: " << flowFile << std::endl;
 
 	//device info

@@ -45,7 +45,7 @@ class ResultImageWriter : public AuxiliaryWriter {
 
 private:
 	ImageBGR bgr;
-	void write(const FrameResult& fr, int64_t idx, const ImageYuv& yuv, const std::string& fname);
+	void write(const AffineTransform& trf, const std::vector<PointResult>& res, int64_t idx, const ImageYuv& yuv, const std::string& fname);
 
 public:
 	ResultImageWriter(MainData& data) :

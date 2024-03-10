@@ -101,9 +101,11 @@ public:
 	Mat<T>& getQ(Mat<T>& Q) { //dim [m x n]
 		if (dirty) compute();
 		size_t u = std::min(m, n);
+		Q.setValues(T(0));
+
 		for (size_t kk = u; kk > 0; kk--) {
 			size_t k = kk - 1;
-			Q.setDiag(1.0);
+			Q[k][k] = T(1);
 			for (size_t j = k; j < u; j++) {
 				if (std::abs(A[k][k]) > std::numeric_limits<T>::epsilon()) {
 					T s = T(0);

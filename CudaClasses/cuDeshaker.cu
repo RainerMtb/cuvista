@@ -473,7 +473,7 @@ void cudaComputeTerminate(int64_t frameIdx, const CudaData& core, std::vector<Po
 	//translate to host structure
 	for (int i = 0; i < core.resultCount; i++) {
 		const CudaPointResult& hr = h_results[i];
-		results[i] = { hr.idx, hr.ix0, hr.iy0, hr.xm, hr.ym, hr.xm - core.w / 2, hr.ym - core.h / 2, hr.u, hr.v, hr.result, hr.z, hr.err };
+		results[i] = { hr.idx, hr.ix0, hr.iy0, hr.xm, hr.ym, hr.xm - core.w / 2, hr.ym - core.h / 2, hr.u, hr.v, hr.result, hr.z };
 	}
 
 	//shutdown

@@ -122,6 +122,9 @@
     <ClCompile Include="MatrixInverter.cpp">
       <Filter>Util</Filter>
     </ClCompile>
+    <ClCompile Include="AvxFrame.cpp">
+      <Filter>Frame</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MovieReader.hpp">
@@ -228,6 +231,9 @@
     </ClInclude>
     <ClInclude Include="MatrixInverter.hpp">
       <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="AvxFrame.hpp">
+      <Filter>Frame</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

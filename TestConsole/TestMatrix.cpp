@@ -129,9 +129,15 @@ void matTest() {
 
 void qrdec() {
 	Matd A = Matd::fromRows(4, 3, { 1, 2, 3, 5, 6, 7, 10, 12, 8, 5, 2, 3 });
-	Matd b = Matd::fromRow({ 5, 2, 4, 1 }).trans();
-	Matd x = QRDecompositor(A).solve(b).value();
-	x.toConsole();
+	A.toConsole("A");
+	Matd b = Matd::fromRow({ 5, 2, 4, 1 }).trans().toConsole("b");
+	Matd input = A;
+	QRDecompositor qr = QRDecompositor(input);
+	Matd x = qr.solve(b).value();
+	x.toConsole("x");
+	Matd Q = qr.getQ().toConsole("Q");
+	Matd R = qr.getR().toConsole("R");
+	Q.times(R).toConsole("Q*R=A");
 }
 
 void subMat() {

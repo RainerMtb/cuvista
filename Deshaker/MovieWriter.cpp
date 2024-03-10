@@ -16,6 +16,7 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
+#include <filesystem>
 #include "MovieWriter.hpp"
 #include "MovieFrame.hpp"
 
@@ -39,10 +40,21 @@ OutputContext NullWriter::getOutputContext() {
 }
 
 std::string ImageWriter::makeFilename(const std::string& pattern, int64_t index) {
-	const int siz = 256;
+	const int siz = 512;
 	char fname[siz];
-	std::snprintf(fname, siz, pattern.c_str(), index);
-	return fname;
+	if (pattern.empty() == false && std::filesystem::is_directory(pattern)) {
+		std::string file = pattern + "/im%04d.bmp";
+		std::snprintf(fname, siz, file.c_str(), index);
+
+	} else {
+		std::snprintf(fname, siz, pattern.c_str(), index);
+	}
+	return std::filesystem::path(fname).make_preferred().string();
+}
+
+std::string ImageWriter::makeFilenameSamples(const std::string& pattern) {
+	std::string str = makeFilename(pattern, 0) + ", " + makeFilename(pattern, 1) + ", " + makeFilename(pattern, 2);
+	return str.substr(0, 100) + ", ...";
 }
 
 std::string ImageWriter::makeFilename() const {
@@ -159,7 +171,7 @@ std::map<int64_t, TransformValues> TransformsFile::readTransformMap(const std::s
 				file.read(reinterpret_cast<char*>(&dy), sizeof(dy));
 				file.read(reinterpret_cast<char*>(&da), sizeof(da));
 
-				transformsMap[frameIdx] = { s, dx, dy, da / 3600.0 * std::numbers::pi / 180.0 };
+				transformsMap[frameIdx] = { s, dx, dy, da / 60.0 * std::numbers::pi / 180.0 };
 			}
 		}
 
@@ -185,7 +197,7 @@ void TransformsFile::writeTransform(const Affine2D& transform, int64_t frameInde
 	writeValue(transform.scale());
 	writeValue(transform.dX());
 	writeValue(transform.dY());
-	writeValue(transform.rotMilliDegrees());
+	writeValue(transform.rotMinutes());
 }
 
 void TransformsWriterMain::open(EncodingOption videoCodec) {

@@ -45,7 +45,6 @@ public:
 		I { Matd::eye(s) } {}
 
 	std::optional<Matd> inv(Matd& A) override;
-	std::optional<Matd> inv() override;
 };
 
 
@@ -64,5 +63,4 @@ public:
 		I { Matd::eye(s) } {}
 
 	std::optional<Matd> inv(Matd& A) override;
-	std::optional<Matd> inv() override;
 };

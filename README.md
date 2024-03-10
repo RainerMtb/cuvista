@@ -33,4 +33,4 @@ To work on the code yourself and build the application, get the source code and 
 - FFmpeg 6.0
 
 For the GUI
-- Qt 6.6.1
+- Qt 6.6.2

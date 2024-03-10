@@ -51,7 +51,7 @@ public:
 
 
 //simple random number generator
-class RandomSource {
+class PseudoRandomSource {
 
 public:
 	typedef uint32_t result_type;
@@ -66,7 +66,7 @@ public:
 
 	result_type operator () ();
 
-	RandomSource& operator = (const RandomSource& other) = delete;
+	PseudoRandomSource& operator = (const PseudoRandomSource& other) = delete;
 
 private:
 	int idx1 = 0;

@@ -228,7 +228,7 @@ template <class T> double ImageBase<T>::rfpart(double d) {
 	return 1.0 - fpart(d);
 }
 
-template <class T> void ImageBase<T>::drawLine(double x0, double y0, double x1, double y1, ColorBase<T> color) {
+template <class T> void ImageBase<T>::drawLine(double x0, double y0, double x1, double y1, ColorBase<T> color, double alpha) {
 	/*
 	Xiaolin Wu's line algorithm
 	https://en.wikipedia.org/wiki/Xiaolin_Wu%27s_line_algorithm
@@ -255,12 +255,12 @@ template <class T> void ImageBase<T>::drawLine(double x0, double y0, double x1, 
 	double ypxl1 = floor(yend);
 
 	if (steep) {
-		plot(ypxl1, xpxl1, rfpart(yend) * xgap, color);
-		plot(ypxl1 + 1, xpxl1, fpart(yend) * xgap, color);
+		plot(ypxl1, xpxl1, rfpart(yend) * xgap * alpha, color);
+		plot(ypxl1 + 1, xpxl1, fpart(yend) * xgap * alpha, color);
 
 	} else {
-		plot(xpxl1, ypxl1, rfpart(yend) * xgap, color);
-		plot(xpxl1, ypxl1 + 1, fpart(yend) * xgap, color);
+		plot(xpxl1, ypxl1, rfpart(yend) * xgap * alpha, color);
+		plot(xpxl1, ypxl1 + 1, fpart(yend) * xgap * alpha, color);
 	}
 	double inter = yend + g;
 
@@ -272,26 +272,26 @@ template <class T> void ImageBase<T>::drawLine(double x0, double y0, double x1, 
 	double ypxl2 = floor(yend);
 
 	if (steep) {
-		plot(ypxl2, xpxl2, rfpart(yend) * xgap, color);
-		plot(ypxl2 + 1, xpxl2, fpart(yend) * xgap, color);
+		plot(ypxl2, xpxl2, rfpart(yend) * xgap * alpha, color);
+		plot(ypxl2 + 1, xpxl2, fpart(yend) * xgap * alpha, color);
 
 	} else {
-		plot(xpxl2, ypxl2, rfpart(yend) * xgap, color);
-		plot(xpxl2, ypxl2 + 1, fpart(yend) * xgap, color);
+		plot(xpxl2, ypxl2, rfpart(yend) * xgap * alpha, color);
+		plot(xpxl2, ypxl2 + 1, fpart(yend) * xgap * alpha, color);
 	}
 
 	//main loop
 	if (steep) {
 		for (double x = xpxl1 + 1.0; x < xpxl2; x++) {
-			plot(floor(inter), x, rfpart(inter), color);
-			plot(floor(inter) + 1, x, fpart(inter), color);
+			plot(floor(inter), x, rfpart(inter) * alpha, color);
+			plot(floor(inter) + 1, x, fpart(inter) * alpha, color);
 			inter += g;
 		}
 
 	} else {
 		for (double x = xpxl1 + 1.0; x < xpxl2; x++) {
-			plot(x, floor(inter), rfpart(inter), color);
-			plot(x, floor(inter) + 1, fpart(inter), color);
+			plot(x, floor(inter), rfpart(inter) * alpha, color);
+			plot(x, floor(inter) + 1, fpart(inter) * alpha, color);
 			inter += g;
 		}
 	}

@@ -18,7 +18,6 @@
 
 #pragma once
 
-#include <algorithm>
 #include "AffineTransform.hpp"
 #include "MainData.hpp"
 
@@ -26,26 +25,34 @@ class ThreadPool;
 
 class FrameResult {
 
-private:
-	const MainData& mData;
-	std::unique_ptr<AffineSolver> mAffineSolver;
-
 public:
-	ptrdiff_t mCountFinite = 0;
-	ptrdiff_t mCountConsens = 0;
-
-	std::vector<PointResult> mFiniteResults;
-	std::vector<AffineTransform> mTransformsList;
-
 	FrameResult(MainData& data, ThreadPool& threadPool) :
 		mData { data },
 		mFiniteResults(data.resultCount),
 		mAffineSolver { std::make_unique<AffineSolverFast>(threadPool, data.resultCount) } {}
 
 	//compute resulting transformation for this frame
-	void computeTransform(const std::vector<PointResult>& results, ThreadPool& threadPool, int64_t frameIndex);
+	void computeTransform(std::vector<PointResult>& results, ThreadPool& threadPool, int64_t frameIndex, RNGbase* rng);
 
+	//get the last computed treansform
 	const AffineTransform& getTransform() const;
 
-	void transformReset();
+	//reset internal state of this class
+	void reset();
+
+private:
+	const MainData& mData;
+	std::unique_ptr<AffineSolver> mAffineSolver;
+	AffineTransform mBestTransform;
+
+	ptrdiff_t mFiniteCount = 0;
+	std::vector<PointResult> mFiniteResults;
+	std::vector<PointResult>::iterator mFiniteEnd;
+	std::vector<PointContext> mConsList;
+
+	using IT = std::vector<PointContext>::iterator;
+	void computePointContext(IT begin, IT end, const AffineTransform& trf, double radius);
+
+	void computeExperimental(std::vector<PointResult>& results, ThreadPool& threadPool, int64_t frameIndex, RNGbase* rng);
+	void compute(std::vector<PointResult>& results, ThreadPool& threadPool, int64_t frameIndex, RNGbase* rng);
 };

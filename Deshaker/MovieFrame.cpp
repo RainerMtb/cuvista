@@ -27,7 +27,7 @@ MovieFrame::~MovieFrame() {
 
 //compute affine transform parameters given the indiviual point results
 void MovieFrame::computeTransform(int64_t frameIndex) {
-	mFrameResult.computeTransform(mResultPoints, mPool, frameIndex);
+	mFrameResult.computeTransform(mResultPoints, mPool, frameIndex, rng.get());
 }
 
 //read transform parameters from file, usually for second run
@@ -35,7 +35,7 @@ std::map<int64_t, TransformValues> MovieFrame::readTransforms() {
 	return TransformsFile::readTransformMap(mData.trajectoryFile);
 }
 
-const AffineTransform& MovieFrame::getTransform() {
+const AffineTransform& MovieFrame::getTransform() const {
 	return mFrameResult.getTransform();
 }
 
@@ -223,7 +223,7 @@ void MovieFrame::runLoopCombined(ProgressDisplay& progress, UserInput& input, Au
 void MovieFrame::runLoopFirst(ProgressDisplay& progress, UserInput& input, AuxWriters& auxWriters) {
 	mReader.storePackets = false; //do not keep any secondary packets when we do not write output anyway
 	loopInit(progress);
-	mFrameResult.transformReset();
+	mFrameResult.reset();
 	mTrajectory.addTrajectoryTransform(mFrameResult.getTransform()); //first frame has no transform applied
 	write();
 	auxWriters.writeAll(*this);
@@ -277,7 +277,7 @@ void MovieFrame::runLoopSecond(ProgressDisplay& progress, UserInput& input, AuxW
 void MovieFrame::runLoopConsecutive(ProgressDisplay& progress, UserInput& input, AuxWriters& auxWriters) {
 	mReader.storePackets = false; //we do not want packets to pile up on first iteration
 	loopInit(progress, "first pass - analyzing input\n");
-	mFrameResult.transformReset();
+	mFrameResult.reset();
 	mTrajectory.addTrajectoryTransform(mFrameResult.getTransform()); //first frame has no transform applied
 	auxWriters.writeAll(*this);
 
