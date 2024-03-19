@@ -25,6 +25,7 @@
 #include "CpuFrame.hpp"
 #include "CudaFrame.hpp"
 #include "OpenClFrame.hpp"
+#include "AvxFrame.hpp"
 #include "FrameResult.hpp"
 #include "cuTest.cuh"
 

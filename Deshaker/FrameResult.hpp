@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include <span>
 #include "AffineTransform.hpp"
 #include "MainData.hpp"
 
@@ -28,7 +29,6 @@ class FrameResult {
 public:
 	FrameResult(MainData& data, ThreadPool& threadPool) :
 		mData { data },
-		mFiniteResults(data.resultCount),
 		mAffineSolver { std::make_unique<AffineSolverFast>(threadPool, data.resultCount) } {}
 
 	//compute resulting transformation for this frame
@@ -44,14 +44,9 @@ private:
 	const MainData& mData;
 	std::unique_ptr<AffineSolver> mAffineSolver;
 	AffineTransform mBestTransform;
-
-	ptrdiff_t mFiniteCount = 0;
-	std::vector<PointResult> mFiniteResults;
-	std::vector<PointResult>::iterator mFiniteEnd;
 	std::vector<PointContext> mConsList;
 
-	using IT = std::vector<PointContext>::iterator;
-	void computePointContext(IT begin, IT end, const AffineTransform& trf, double radius);
+	void computePointContext(std::span<PointContext> points, const AffineTransform& trf, double radius);
 
 	void computeExperimental(std::vector<PointResult>& results, ThreadPool& threadPool, int64_t frameIndex, RNGbase* rng);
 	void compute(std::vector<PointResult>& results, ThreadPool& threadPool, int64_t frameIndex, RNGbase* rng);

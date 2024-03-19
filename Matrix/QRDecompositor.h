@@ -146,7 +146,7 @@ public:
 	bool isFullRank() {
 		if (dirty) compute();
 		for (size_t i = 0; i < std::min(m, n); i++) {
-			if (std::abs(rd[i]) < Mat<T>::EQUAL_TOL) return false;
+			if (std::abs(rd[i]) < std::numeric_limits<T>::epsilon() * 1000) return false;
 		}
 		return true;
 	}
@@ -161,7 +161,7 @@ public:
 
 		T norm = (T) 1;
 		int i = 0;
-		while (norm > Mat<T>::eps() && i < 500) {
+		while (norm > std::numeric_limits<T>::epsilon() && i < 500) {
 			//decompose qr
 			compute();
 

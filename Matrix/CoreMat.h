@@ -48,6 +48,13 @@ protected:
 	CoreMat<T>(size_t rows, size_t cols) : 
 		CoreMat<T>(new T[rows * cols], rows, cols, true) {}
 
+	//create new mat filled with given value
+	CoreMat<T>(size_t rows, size_t cols, T value) :
+		CoreMat<T>(rows, cols)
+	{
+		std::fill(array, array + rows * cols, value);
+	}
+
 	//return height for index 0 or width for index 1
 	size_t dim(size_t dimIdx) const;
 
@@ -58,14 +65,10 @@ protected:
 	virtual size_t index(size_t row, size_t col) const;
 
 	//return pointer to element without boundary check
-	virtual T* addr(size_t row, size_t col) {
-		return array + row * w + col;
-	}
+	virtual T* addr(size_t row, size_t col);
 
 	//return pointer to element without boundary check
-	virtual const T* addr(size_t row, size_t col) const {
-		return array + row * w + col;
-	}
+	virtual const T* addr(size_t row, size_t col) const;
 
 public:
 	//default constructor produces invalid mat
@@ -94,16 +97,10 @@ public:
 	}
 
 	//reference to value at given position
-	T& at(size_t row, size_t col) {
-		assert(row < h && col < w && "mat access out of bounds");
-		return *addr(row, col);
-	}
+	T& at(size_t row, size_t col);
 
 	//reference to value at given position
-	const T& at(size_t row, size_t col) const {
-		assert(row < h && col < w && "mat access out of bounds");
-		return *addr(row, col);
-	}
+	const T& at(size_t row, size_t col) const;
 
 	//pointer to data array
 	T* data();
@@ -134,5 +131,4 @@ public:
 	float interp2(size_t ix, size_t iy, float dx, float dy) const;
 
 	double interp2(size_t ix, size_t iy, double dx, double dy) const;
-
 };

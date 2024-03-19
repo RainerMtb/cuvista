@@ -221,7 +221,7 @@ public:
 		ImageYuv(h, w, w) {}
 
 	ImageYuv() : 
-		ImageYuv(0, 0, 0) {}
+		ImageYuv(0, 0, 0, 1) {}
 
 	//downsample and copy pixeldata to given array in nv12 format
 	void toNV12(std::vector<unsigned char>& nv12, size_t strideNV12) const;

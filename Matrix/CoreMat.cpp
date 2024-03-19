@@ -74,6 +74,28 @@ template <class T> CoreMat<T>& CoreMat<T>::operator = (CoreMat<T>&& other) noexc
 	return *this;
 }
 
+//return pointer to element without boundary check
+template <class T> T* CoreMat<T>::addr(size_t row, size_t col) {
+	return array + row * w + col;
+}
+
+//return pointer to element without boundary check
+template <class T> const T* CoreMat<T>::addr(size_t row, size_t col) const {
+	return array + row * w + col;
+}
+
+//reference to value at given position
+template <class T> T& CoreMat<T>::at(size_t row, size_t col) {
+	assert(row < h && col < w && "mat access out of bounds");
+	return *addr(row, col);
+}
+
+//reference to value at given position
+template <class T> const T& CoreMat<T>::at(size_t row, size_t col) const {
+	assert(row < h && col < w && "mat access out of bounds");
+	return *addr(row, col);
+}
+
 //number of rows
 template <class T> size_t CoreMat<T>::rows() const { 
 	return h; 
@@ -119,7 +141,8 @@ template <class T> template <class R> R CoreMat<T>::interpFunc(size_t ix, size_t
 	T f01 = dx == 0 ? f00 : at(iy, ix + 1);
 	T f10 = dy == 0 ? f00 : at(iy + 1, ix);
 	T f11 = dx == 0 || dy == 0 ? f00 : at(iy + 1, ix + 1);
-	return (R) ((1 - dx) * (1 - dy) * f00 + (1 - dx) * dy * f10 + dx * (1 - dy) * f01 + dx * dy * f11);
+	R result = (R) ((1 - dx) * (1 - dy) * f00 + (1 - dx) * dy * f10 + dx * (1 - dy) * f01 + dx * dy * f11);
+	return result;
 }
 
 template <class T> template <class R> R CoreMat<T>::interpFunc(R x, R y) const {

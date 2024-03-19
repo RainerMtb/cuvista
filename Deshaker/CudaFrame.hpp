@@ -89,4 +89,8 @@ public:
 	std::string getClassName() const override {
 		return device->getName();
 	}
+
+	std::string getClassId() const override {
+		return "Cuda";
+	}
 };

@@ -250,6 +250,7 @@ void cl::inputData(int64_t frameIdx, const CoreData& core, const ImageYuv& input
 //----------------------------------
 
 void cl::createPyramid(int64_t frameIdx, const CoreData& core) {
+	//util::ConsoleTimer ic("ocl pyramid");
 	int w = core.w;
 	int h = core.h;
 	int64_t frIdx = frameIdx % core.bufferCount;

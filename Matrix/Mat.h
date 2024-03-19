@@ -26,9 +26,9 @@
 #include <random>
 #include <sstream>
 #include <format>
-#include <numeric>
 #include <numbers>
 #include <optional>
+#include <span>
 
 #include "LUDecompositor.h"
 #include "QRDecompositor.h"
@@ -127,6 +127,8 @@ protected:
 	}
 
 private:
+	inline static T EPS = std::numeric_limits<T>::epsilon() * 1000;
+
 	//compute array index from interator index
 	virtual std::function<size_t(size_t)> indexFunc(Direction dir) const {
 		if (dir == Direction::HORIZONTAL) return [&] (size_t i) { return i; }; //iterator for row major order
@@ -209,10 +211,13 @@ public:
 	Mat<T>(T val) : 
 		Mat<T>(new T[1] {val}, 1, 1, true) {}
 
-	//return epsilon of T
-	static constexpr T eps() {
-		return std::numeric_limits<T>::epsilon();
-	}
+	//copy constructor from CoreMat
+	Mat<T>(const CoreMat<T>& other) :
+		CoreMat<T>(other) {}
+
+	//move constructor from CoreMat
+	Mat<T>(CoreMat<T>&& other) noexcept :
+		CoreMat<T>(other) {}
 
 	//print precision
 	static int precision(int digits) {
@@ -226,9 +231,6 @@ public:
 	static int precision() {
 		return printDigits;
 	}
-
-	//default tolerance for equality comaprison
-	static constexpr T EQUAL_TOL = eps() * 1000;
 
 	//iterators
 	auto begin(Direction dir = Direction::HORIZONTAL)           { return MatIterator<T>(this->data(), 0, indexFunc(dir)); }
@@ -251,36 +253,50 @@ public:
 		return out;
 	}
 
-	static Mat<T> fromRows(size_t rows, size_t cols, const std::initializer_list<T>& data) {
+	static Mat<T> fromArray(size_t rows, size_t cols, T* data, bool ownData = true) {
+		return Mat<T>(data, rows, cols, ownData);
+	}
+
+	static Mat<T> fromRowData(size_t rows, size_t cols, size_t stride, const T* data) {
+		assert(stride >= cols && "invalid value for stride");
+		return generate(rows, cols, [&] (size_t r, size_t c) { return data[r * stride + c]; });
+	}
+
+	static Mat<T> fromRowData(const std::vector<std::vector<T>>& data) {
+		assert(data.size() > 0 && data[0].size() > 0 && "invalid data size");
+		for (size_t r = 1; r < data.size(); r++) assert(data[r].size() == data[0].size() && "invalid data size");
+		return generate(data.size(), data[0].size(), [&] (size_t r, size_t c) { return data[r][c]; });
+	}
+
+	static Mat<T> fromRowData(size_t rows, size_t cols, const std::initializer_list<T>& data) {
 		assert(rows * cols == data.size() && "invalid number of initializer values");
 		Mat<T> out = allocate(rows, cols);
 		std::copy(data.begin(), data.end(), out.begin());
 		return out;
 	}
 
+	static Mat<T> fromRowData(size_t rows, size_t cols, const std::vector<T>& data) {
+		assert(rows * cols == data.size() && "invalid data size");
+		Mat<T> out = allocate(rows, cols);
+		std::copy(data.begin(), data.end(), out.begin());
+		return out;
+	}
+
+	static Mat<T> fromRowData(size_t rows, size_t cols, std::span<T> data) {
+		assert(rows * cols == data.size() && "invalid data size");
+		Mat<T> out = allocate(rows, cols);
+		std::copy(data.begin(), data.end(), out.begin());
+		return out;
+	}
+
 	static Mat<T> fromRow(const std::initializer_list<T>& dataList) {
-		return fromRows(1, dataList.size(), dataList);
+		return fromRowData(1, dataList.size(), dataList);
 	}
 
 	static Mat<T> fromRow(auto... args) {
 		size_t count = sizeof...(args);
 		T values[] { args... };
 		return generate(1, count, [&] (size_t r, size_t c) { return values[c]; });
-	}
-
-	static Mat<T> fromArray(size_t rows, size_t cols, T* data, bool ownData = true) {
-		return Mat<T>(data, rows, cols, ownData);
-	}
-
-	static Mat<T> fromVectors(const std::vector<std::vector<T>>& data) {
-		assert(data.size() > 0 && data[0].size() > 0 && "invalid data size");
-		for (size_t r = 1; r < data.size(); r++) assert(data[r].size() == data[0].size() && "invalid data size");
-		return generate(data.size(), data[0].size(), [&data] (size_t r, size_t c) { return data[r][c]; });
-	}
-
-	static Mat<T> fromVectorRow(const std::vector<T>& data) {
-		const std::vector<std::vector<T>> mat(1, data);
-		return fromVectors(mat);
 	}
 
 	static Mat<T> fromBinaryFile(const std::string& filename) {
@@ -414,7 +430,7 @@ public:
 
 	T min() const { return *std::min_element(cbegin(), cend()); }
 
-	template <class R> int compare(const Mat<R>& other, T tolerance = Mat::EQUAL_TOL) const {
+	template <class R> int compare(const Mat<R>& other, T tolerance = EPS) const {
 		if (rows() > other.rows()) return 1;
 		if (rows() < other.rows()) return -1;
 
@@ -434,7 +450,7 @@ public:
 		return 0;
 	}
 
-	template <class R> bool equals(const Mat<R>& other, T tolerance = Mat::EQUAL_TOL) const {
+	template <class R> bool equals(const Mat<R>& other, T tolerance = EPS) const {
 		return compare(other, tolerance) == 0;
 	}
 
@@ -442,11 +458,11 @@ public:
 		return compare(other, 0) == 0;
 	}
 
-	bool equalsIdentity(T tolerance = Mat::EQUAL_TOL) const {
+	bool equalsIdentity(T tolerance = EPS) const {
 		return rows() == cols() && compare(Mat<T>::eye(rows()), tolerance) == 0;
 	}
 
-	bool isSymmetric(T tolerance = Mat::EQUAL_TOL) const {
+	bool isSymmetric(T tolerance = EPS) const {
 		return compare(trans(), tolerance) == 0;
 	}
 

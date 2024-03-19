@@ -21,7 +21,7 @@
 #include <array>
 #include <vector>
 
-int roundUpToMultiple(int numToRound, int base);
+int alignValue(int numToRound, int base);
 
 double sqr(double d);
 

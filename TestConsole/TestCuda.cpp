@@ -75,7 +75,7 @@ void cudaInvTest(size_t s1, size_t s2) {
 void cudaInvSimple() {
 	std::cout << "----------------------------" << std::endl << "Simple Cuda Inv Test:" << std::endl;
 	int s = 3;
-	Matd a = Matd::fromRows(s, s, { 2, 8, 1, 4, 4, -1, -1, 2, 12 });
+	Matd a = Matd::fromRowData(s, s, { 2, 8, 1, 4, 4, -1, -1, 2, 12 });
 	//Matd a = Matd::hilb(s);
 	Matd ainv = Matd::allocate(s, s);
 	bool isOK = cutest::cudaInv(a.data(), ainv.data(), s);
@@ -109,7 +109,7 @@ void cudaInvPerformanceTest() {
 void cudaInvEqualityTest() {
 	std::cout << "----------------------------" << std::endl << "Cuda Inv Equal Test:" << std::endl;
 	size_t matdim = 3;
-	Matd a = Matd::fromRows(matdim, matdim, { 2, 8, 1, 4, 16, -1, -1, 2, 12 });
+	Matd a = Matd::fromRowData(matdim, matdim, { 2, 8, 1, 4, 16, -1, -1, 2, 12 });
 	//Matd a = Matd::fromRows(matdim, matdim, { 1, 0, 0, 4, 5, 6, -3, -2, -1 });
 	//Matd a = Matd::hilb(matdim);
 	a.toConsole("input");

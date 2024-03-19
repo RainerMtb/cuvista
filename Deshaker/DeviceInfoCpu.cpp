@@ -31,3 +31,6 @@ std::string DeviceInfoCpu::getName() const {
 	return std::format("CPU: {}, {} threads", cpu.brand_string, std::to_string(std::thread::hardware_concurrency()));
 }
 
+std::string getCpuName() {
+	return cpu.brand_string;
+}

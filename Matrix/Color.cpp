@@ -33,9 +33,9 @@ ColorBgr ColorBgr::WHITE = { 255, 255, 255 };
 ColorBgr ColorBgr::BLACK = { 0,   0,   0 };
 ColorBgr ColorBgr::BLUE = { 255,   0,   0 }; 
 
-int roundUpToMultiple(int numToRound, int base) {
-	assert(base && "factor must not be 0");
-	return numToRound >= 0 ? ((numToRound + base - 1) / base) * base : numToRound / base * base;
+int alignValue(int numToAlign, int alignment) {
+	assert(alignment && "factor must not be 0");
+	return numToAlign >= 0 ? ((numToAlign + alignment - 1) / alignment) * alignment : numToAlign / alignment * alignment;
 }
 
 double sqr(double d) {

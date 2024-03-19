@@ -87,27 +87,25 @@ bool AffineTransform::computeAffine(std::vector<PointResult>& points) {
 	return res.has_value();
 }
 
-const AffineTransform& AffineSolver::computeSimilar(const std::vector<PointResult>& results) {
-	return computeSimilar(std::vector<PointBase>(results.begin(), results.end()));
+const AffineTransform& AffineSolver::computeSimilar(std::span<PointResult> points) {
+	std::vector<PointBase> baseVector(points.begin(), points.end());
+	return computeSimilar(baseVector);
 }
 
-const AffineTransform& AffineSolver::computeSimilar(std::vector<PointResult>::iterator begin, ptrdiff_t count) {
-	return computeSimilar(std::vector<PointBase>(begin, begin + count));
+const AffineTransform& AffineSolver::computeSimilar(std::span<PointContext> points) {
+	std::vector<PointBase> baseVector(points.begin(), points.end());
+	return computeSimilar(baseVector);
 }
 
-const AffineTransform& AffineSolver::computeSimilar(std::vector<PointContext>::iterator begin, std::vector<PointContext>::iterator end) {
-	return computeSimilar(std::vector<PointBase>(begin, end));
-}
-
-const AffineTransform& AffineSolverSimple::computeSimilar(const std::vector<PointBase>& pb) {
-	assert(pb.size() >= 2 && "similar transform needs at least two points");
-	size_t m = pb.size() * 2;
+const AffineTransform& AffineSolverSimple::computeSimilar(std::span<PointBase> points) {
+	assert(points.size() >= 2 && "similar transform needs at least two points");
+	size_t m = points.size() * 2;
 	Matd A = Adata.share(m, 4);
 	A.setValues(0.0);
 	Matd b = bdata.share(m, 1);
 	b.setValues(0.0);
-	auto it = pb.begin();
-	for (size_t i = 0; i < pb.size(); i++) {
+	auto it = points.begin();
+	for (size_t i = 0; i < points.size(); i++) {
 		double xx = it->x;
 		double yy = it->y;
 		size_t k = i * 2;
@@ -131,13 +129,13 @@ const AffineTransform& AffineSolverSimple::computeSimilar(const std::vector<Poin
 	return *this;
 }
 
-const AffineTransform& AffineSolverFast::computeSimilar(const std::vector<PointBase>& pb) {
-	assert(pb.size() >= 2 && "similar transform needs at least two points");
-	size_t m = pb.size() * 2;
+const AffineTransform& AffineSolverFast::computeSimilar(std::span<PointBase> points) {
+	assert(points.size() >= 2 && "similar transform needs at least two points");
+	size_t m = points.size() * 2;
 	Matd A = Adata.share(6, m);  //A is transposed when compared to loop version
 
-	int dy = pb[0].y;         //represents a2, needs to be smallest value
-	int dx = pb[1].x;         //represents a3
+	int dy = points[0].y;         //represents a2, needs to be smallest value
+	int dx = points[1].x;         //represents a3
 	long long int nn = 0;      //int could overflow
 	long long int s0 = 0;      //in docs s1
 	long long int s1 = 0;      //in docs s2
@@ -146,7 +144,7 @@ const AffineTransform& AffineSolverFast::computeSimilar(const std::vector<PointB
 	double* q = A.data() + m * 5; //6th row holds adjusted b values
 
 	//accumulate s0, s1, nn and adjust coords
-	auto it = pb.begin();
+	auto it = points.begin();
 	for (size_t idx = 0; idx < m; ) {
 		int x = it->x - dx;
 		p[idx] = x;
@@ -170,7 +168,7 @@ const AffineTransform& AffineSolverFast::computeSimilar(const std::vector<PointB
 	double n = std::sqrt(nn) * sign0;
 	double b = p[0] + n;
 	double sign2 = sign0 * n * b < p[3] * s1 ? -1.0 : 1.0;
-	double t = sign2 * std::sqrt(pb.size() * nn - s0 * s0 - s1 * s1);
+	double t = sign2 * std::sqrt(points.size() * nn - s0 * s0 - s1 * s1);
 	double z = b * (n + t) - p[3] * s1;
 	double e = n / t;
 	double f = s1 / (b * t);

@@ -68,23 +68,18 @@ public:
 	}
 
 	Affine2D& addTranslation(double dx, double dy) {
-		setValues(times(Mat<double>::fromRows(3, 3, { 1, 0, dx, 0, 1, dy, 0, 0, 1 })));
+		setValues(times(Mat<double>::fromRowData(3, 3, { 1, 0, dx, 0, 1, dy, 0, 0, 1 })));
 		return *this;
 	}
 
 	Affine2D& addRotation(double angleRad) {
-		setValues(times(Mat<double>::fromRows(3, 3, { std::cos(angleRad), std::sin(angleRad), 0, -std::sin(angleRad), std::cos(angleRad), 0, 0, 0, 1 })));
+		setValues(times(Mat<double>::fromRowData(3, 3, { std::cos(angleRad), std::sin(angleRad), 0, -std::sin(angleRad), std::cos(angleRad), 0, 0, 0, 1 })));
 		return *this;
 	}
 
 	Affine2D& addZoom(double zoom) {
-		setValues(times(Mat<double>::fromRows(3, 3, { 1 / zoom, 0, 0, 0, 1 / zoom, 0, 0, 0, 1 })));
+		setValues(times(Mat<double>::fromRowData(3, 3, { 1 / zoom, 0, 0, 0, 1 / zoom, 0, 0, 0, 1 })));
 		return *this;
-	}
-
-	Affine2D invert() const {
-		auto out = inv();
-		return out.has_value() ? Affine2D(out.value()) : Affine2D();
 	}
 
 	//transform point x0, y0
@@ -103,12 +98,12 @@ public:
 	}
 
 	double scale() const {
-		assert(std::abs(at(0, 0) - at(1, 1)) < Mat::EQUAL_TOL && "scale is not affine");
+		assert(std::abs(at(0, 0) - at(1, 1)) < 1e-14 && "scale is not affine");
 		return at(0, 0); 
 	}
 
 	double rot() const { 
-		assert(std::abs(at(0, 1) + at(1, 0)) < Mat::EQUAL_TOL && "rotation is not affine");
+		assert(std::abs(at(0, 1) + at(1, 0)) < 1e-14 && "rotation is not affine");
 		return at(0, 1); 
 	}
 

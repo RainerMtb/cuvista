@@ -105,9 +105,14 @@ public:
 	virtual std::map<int64_t, TransformValues> readTransforms() final;
 
 	/*
-	* printable name of MovieFrame in use
+	* printable name of MovieFrame instance in use
 	*/
 	virtual std::string getClassName() const { return "None"; }
+
+	/*
+	* short id string for frame instance
+	*/
+	virtual std::string getClassId() const { return "None"; }
 
 	ThreadPool mPool;
 	FrameResult mFrameResult;

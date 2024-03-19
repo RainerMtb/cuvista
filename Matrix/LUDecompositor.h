@@ -107,7 +107,7 @@ public:
 	bool isSingular() {
 		if (dirty) compute();
 		for (size_t i = 0; i < std::min(m, n); i++) {
-			if (std::abs(A[i][i]) < A.eps()) return true;
+			if (std::abs(A[i][i]) < std::numeric_limits<T>::epsilon) return true;
 		}
 		return false;
 	}

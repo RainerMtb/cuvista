@@ -19,6 +19,7 @@
 #pragma once
 
 #include <vector>
+#include <numeric>
 
 template <class T> class Mat;
 

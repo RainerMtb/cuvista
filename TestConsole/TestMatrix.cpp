@@ -59,7 +59,7 @@ void pinvTest() {
 
 void matTest() {
 	std::cout << "----------------------------" << std::endl << "Mat Test:" << std::endl;
-	Matd md = Matd::fromRows(2, 3, { 1, 2, 3, 4, 5, 6 }).toConsole();
+	Matd md = Matd::fromRowData(2, 3, { 1, 2, 3, 4, 5, 6 }).toConsole();
 	std::cout << "output by row: ";
 	std::copy(md.begin(), md.end(), std::ostream_iterator<double>(std::cout, ", "));
 	std::cout << std::endl;
@@ -68,7 +68,7 @@ void matTest() {
 	std::copy(md.begin(Matd::Direction::VERTICAL), md.end(Matd::Direction::VERTICAL), std::ostream_iterator<double>(std::cout, ", "));
 	std::cout << std::endl;
 
-	Matd out = Mat<double>::fromRows(4, 3, {
+	Matd out = Mat<double>::fromRowData(4, 3, {
 		2.0,		1.045e-5,		2056.456,
 		20.56e9,	0,				1.56472e-200,
 		-13.456,	-0.1 + 0.101 - 0.001, -42.678,
@@ -86,7 +86,7 @@ void matTest() {
 	m.toConsole("vertcat");
 	m.subMat(1, 1, 2, 2).toConsole("subMat");
 
-	Matd h1 = Matd::fromRows(2, 1, { 3, 5 });
+	Matd h1 = Matd::fromRowData(2, 1, { 3, 5 });
 	Matd h2 = Matd::values(2, 2, -3.6);
 	Matd hm = Matd::concatHorz({ h1, h2 }).toConsole("horzcat");
 	std::cout << std::endl;
@@ -111,7 +111,7 @@ void matTest() {
 	(-1 / b).toConsole("-1 / b");
 	std::cout << std::endl;
 
-	Matd a = Matd::fromRows(3, 3, { 12, 6, -4, -51, 167, 24, 4, -68, -41 }).toConsole("A");
+	Matd a = Matd::fromRowData(3, 3, { 12, 6, -4, -51, 167, 24, 4, -68, -41 }).toConsole("A");
 	std::cout << "ptr[0][0] = " << a[0][0] << std::endl;
 	std::cout << "ptr[1][1] = " << a[1][1] << std::endl;
 	a[0][2] += 4;
@@ -128,7 +128,7 @@ void matTest() {
 }
 
 void qrdec() {
-	Matd A = Matd::fromRows(4, 3, { 1, 2, 3, 5, 6, 7, 10, 12, 8, 5, 2, 3 });
+	Matd A = Matd::fromRowData(4, 3, { 1, 2, 3, 5, 6, 7, 10, 12, 8, 5, 2, 3 });
 	A.toConsole("A");
 	Matd b = Matd::fromRow({ 5, 2, 4, 1 }).trans().toConsole("b");
 	Matd input = A;
@@ -141,7 +141,7 @@ void qrdec() {
 }
 
 void subMat() {
-	Matd A = Matd::fromRows(3, 3, { 1, 2, 3, 4, 5, 6, 7, 8, 9 });
+	Matd A = Matd::fromRowData(3, 3, { 1, 2, 3, 4, 5, 6, 7, 8, 9 });
 	A.toConsole();
 	SubMat<double> ss = SubMat<double>::from(A, 1, 1, 2, 2);
 	ss.toConsole("ss");
@@ -153,7 +153,7 @@ void subMat() {
 }
 
 void iteratorTest() {
-	Matd A = Matd::fromRows(3, 3, { 1, 2, 3, 4, 5, 6, 7, 8, 9 });
+	Matd A = Matd::fromRowData(3, 3, { 1, 2, 3, 4, 5, 6, 7, 8, 9 });
 	SubMat<double> ss = SubMat<double>::from(A, 1, 1, 2, 2);
 	ss.toConsole("ss");
 	Matd s = A.subMat(1, 1, 2, 2);

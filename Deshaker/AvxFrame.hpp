@@ -24,6 +24,18 @@
  //---------- AVX FRAME ------------------------------------------------
  //---------------------------------------------------------------------
 
+class AvxMatFloat : public CoreMat<float> {
+public:
+	AvxMatFloat() : CoreMat<float>() {}
+	AvxMatFloat(int h, int w) : CoreMat<float>(h, w) {}
+	AvxMatFloat(int h, int w, float value) : CoreMat<float>(h, w, value) {}
+
+	int w() const { return int(CoreMat::w); }
+	int h() const { return int(CoreMat::h); }
+	float* row(int r) { return addr(r, 0); }
+	void saveAsBinary(const std::string& filename) { Matf::fromArray(h(), w(), array, false).saveAsBinary(filename); }
+};
+
 class AvxFrame : public MovieFrame {
 
 public:
@@ -39,6 +51,25 @@ public:
 	ImageYuv getInput(int64_t index) const override;
 	void getInputFrame(int64_t frameIndex, ImagePPM& image) override;
 	void getTransformedOutput(int64_t frameIndex, ImagePPM& image) override;
-	std::string getClassName() const override { return "AVX vector extensions"; }
+	std::string getClassName() const override;
+	std::string getClassId() const override;
 
+private:
+	std::vector<ImageYuv> mYUV;
+	std::vector<AvxMatFloat> mPyr;
+	AvxMatFloat mFilterBuffer, mFilterResult;
+
+	__m512 filterKernels[3] = {
+		_mm512_setr_ps(0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f, 0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f, 0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f, 0),
+		_mm512_setr_ps(0, 0.25f, 0.5f, 0.25f, 0, 0, 0, 0, 0, 0.25f, 0.5f, 0.25f, 0, 0, 0, 0),
+		_mm512_setr_ps(0, 0.25f, 0.5f, 0.25f, 0, 0, 0, 0, 0, 0.25f, 0.5f, 0.25f, 0, 0, 0, 0)
+	};
+
+	void downsample(const float* srcptr, int h, int w, int stride, float* destptr, int destStride);
+	void filter(const float* srcptr, int h, int w, int stride, float* destptr, int destStride, __m512 k);
+	float* filterTriple(__m512i index, __m512 input, __m512 k, float* dest, int destStride);
+	float* filterVector(__m512i index, __m512 input, __m512 k, float* dest, int destStride);
+
+	float sum(__m512 a, int from, int to);
+	float sum(__m256 a, int from, int to);
 };

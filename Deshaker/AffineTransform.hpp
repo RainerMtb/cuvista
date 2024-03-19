@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include <span>
 #include "Affine2D.h"
 #include "CoreData.hpp"
 #include "ThreadPool.hpp"
@@ -30,6 +31,7 @@ struct PointContext {
 	double distanceEllipse = 0.0;
 	double tx = 0.0;
 	double ty = 0.0;
+	double confidence = 0.0;
 
 	double distance = 0.0;
 	double distanceRelative = 0.0;
@@ -88,13 +90,11 @@ class AffineSolver : public AffineTransform {
 
 protected:
 	//compute similar transform, no shear
-	virtual const AffineTransform& computeSimilar(const std::vector<PointBase>& pb) = 0;
-	
-public:
-	const AffineTransform& computeSimilar(const std::vector<PointResult>& results);
-	const AffineTransform& computeSimilar(std::vector<PointResult>::iterator begin, ptrdiff_t count);
-	const AffineTransform& computeSimilar(std::vector<PointContext>::iterator begin, std::vector<PointContext>::iterator end);
+	virtual const AffineTransform& computeSimilar(std::span<PointBase> points) = 0;
 
+public:
+	virtual const AffineTransform& computeSimilar(std::span<PointContext> points);
+	virtual const AffineTransform& computeSimilar(std::span<PointResult> points);
 	virtual ~AffineSolver() {}
 };
 
@@ -103,7 +103,7 @@ class AffineSolverSimple : public AffineSolver {
 private:
 	Matd Adata, bdata;
 
-	const AffineTransform& computeSimilar(const std::vector<PointBase>& pb) override;
+	const AffineTransform& computeSimilar(std::span<PointBase> points) override;
 
 public:
 	AffineSolverSimple(size_t maxPoints) :
@@ -117,7 +117,7 @@ private:
 	ThreadPool& threadPool;
 	Matd Adata;
 
-	const AffineTransform& computeSimilar(const std::vector<PointBase>& pb) override;
+	const AffineTransform& computeSimilar(std::span<PointBase> points) override;
 
 public:
 	AffineSolverFast(ThreadPool& threadPool, size_t maxPoints) :

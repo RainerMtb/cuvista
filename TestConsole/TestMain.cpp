@@ -18,6 +18,31 @@
 
 #include "TestMain.hpp"
 
+void x() {
+	MainData data;
+	data.deviceRequested = true;
+	data.deviceSelected = 0;
+	FFmpegReader reader;
+	reader.open("d:/VideoTest/02.mp4");
+	data.collectDeviceInfo();
+	data.validate(reader);
+	NullWriter writer(data, reader);
+	std::unique_ptr<MovieFrame> frame = std::make_unique<AvxFrame>(data, reader, writer);
+	std::cout << "running " << frame->getClassName() << std::endl;
+	reader.read(frame->mBufferFrame);
+	frame->inputData();
+	frame->createPyramid(frame->mReader.frameIndex);
+	frame->createPyramid(frame->mReader.frameIndex);
+	frame->createPyramid(frame->mReader.frameIndex);
+	frame->createPyramid(frame->mReader.frameIndex);
+	frame->createPyramid(frame->mReader.frameIndex);
+	frame->createPyramid(frame->mReader.frameIndex);
+	frame->createPyramid(frame->mReader.frameIndex);
+	frame->createPyramid(frame->mReader.frameIndex);
+	frame->createPyramid(frame->mReader.frameIndex);
+	frame->createPyramid(frame->mReader.frameIndex);
+}
+
 int main() {
 	std::cout << "----------------------------" << std::endl << "TestMain:" << std::endl;
 	//imageOutput();
@@ -39,10 +64,11 @@ int main() {
 	//transform();
 	//cudaInvTest(1, 32);
 
-	pyramid();
 	//openClInvTest(1, 32);
 	//openClInvGroupTest(1, 9);
 	//openClnorm1Test();
 	//flow();
 	//pinvTest();
+	pyramid();
+	//x();
 }

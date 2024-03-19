@@ -24,6 +24,8 @@ inline std::string kernelsInputOutput = R"(
 #pragma OPENCL FP_CONTRACT OFF
 
 const sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE | CLK_FILTER_NEAREST;
+const sampler_t downsampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE | CLK_FILTER_LINEAR;
+
 
 __kernel void scale_8u32f_1(__read_only image2d_t src, __write_only image2d_t dest) {
 	int c = get_global_id(0);
@@ -121,13 +123,14 @@ float interpolate(__read_only image2d_t src, int c, int r, float dx, float dy) {
 	return (1.0f - dx) * (1.0f - dy) * f00 + (1.0f - dx) * dy * f10 + dx * (1.0f - dy) * f01 + dx * dy * f11;
 }
 
+
 __kernel void remap_downsize_32f(__read_only image2d_t src, __write_only image2d_t dest) {
 	int c = get_global_id(0);
 	int r = get_global_id(1);
 
 	//sampling produces different result to cpu code
-	//int2 coords = (int2) (c * 2 + 0.5f, r * 2 + 0.5f);
-	//float val = read_imagef(src, sampler, coords).x;
+	//float2 coords = (float2) (c * 2 + 0.5f, r * 2 + 0.5f);
+	//float val = read_imagef(src, downsampler, coords).x;
 	
 	float val = interpolate(src, c * 2, r * 2, 0.5f, 0.5f);
 	write_imagef(dest, (int2)(c, r), val);

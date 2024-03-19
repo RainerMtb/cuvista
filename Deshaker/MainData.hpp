@@ -28,7 +28,7 @@
 #include "DeviceInfoCuda.cuh"
 #include "DeviceInfoCpu.hpp"
 
-inline std::string CUVISTA_VERSION = "0.9.10";
+inline std::string CUVISTA_VERSION = "0.9.11";
 
 enum class DeshakerPass {
 	NONE,

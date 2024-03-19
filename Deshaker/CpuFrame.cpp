@@ -19,6 +19,15 @@
 #include "CpuFrame.hpp"
 #include "SubMat.h"
 #include "MatrixInverter.hpp"
+#include "Util.hpp"
+
+std::string CpuFrame::getClassName() const {
+	return "Cpu only: " + getCpuName();
+}
+
+std::string CpuFrame::getClassId() const {
+	return "Cpu only";
+}
 
 //constructor
 CpuFrame::CpuFrame(MainData& data, MovieReader& reader, MovieWriter& writer) : 
@@ -27,7 +36,7 @@ CpuFrame::CpuFrame(MainData& data, MovieReader& reader, MovieWriter& writer) :
 	//buffer to hold input frames in yuv format
 	mYUV.assign(data.bufferCount, ImageYuv());
 
-	//init cpuFrameItem structures, allocate pyramid
+	//init pyramid structures
 	for (int i = 0; i < data.pyramidCount; i++) mPyr.emplace_back(data);
 
 	//init storage for previous output frame to background colors
@@ -43,7 +52,7 @@ CpuFrame::CpuFrame(MainData& data, MovieReader& reader, MovieWriter& writer) :
 }
 
 //construct data for one pyramid
-CpuFrame::CpuFrameItem::CpuFrameItem(MainData& data) {
+CpuFrame::CpuPyramid::CpuPyramid(MainData& data) {
 	//allocate matrices for pyramid
 	for (int z = 0; z <= data.zMax; z++) {
 		int hz = data.h >> z;
@@ -59,9 +68,9 @@ void CpuFrame::inputData() {
 }
 
 void CpuFrame::createPyramid(int64_t frameIndex) {
-	//ConsoleTimer ic("pyramid");
+	util::ConsoleTimer ic("cpu pyramid");
 	size_t pyrIdx = frameIndex % mPyr.size();
-	CpuFrameItem& frame = mPyr[pyrIdx];
+	CpuPyramid& frame = mPyr[pyrIdx];
 	frame.frameIndex = frameIndex;
 
 	//fill topmost level of pyramid
@@ -81,12 +90,12 @@ void CpuFrame::createPyramid(int64_t frameIndex) {
 		y.filter1D(filterKernels[0].k, filterKernels[0].siz, Matf::Direction::HORIZONTAL, filterTemp, mPool);
 		filterTemp.filter1D(filterKernels[0].k, filterKernels[0].siz, Matf::Direction::VERTICAL, mat, mPool);
 
-		//if (z == 0) std::printf("cpu %.14f %.14f %.14f %.14f %.14f\n", y.at(30, 28), y.at(30, 29), y.at(30, 30), y.at(30, 31), y.at(30, 32));
-		//if (z == 0) mat.saveAsBinary("f:/buf_c.dat");
 		//downsampling
 		auto func = [&] (size_t r, size_t c) { return mat.interp2(c * 2, r * 2, 0.5f, 0.5f); };
 		Matf& dest = frame.mY[z + 1];
 		dest.setArea(func, mPool);
+		//if (z == 0) std::printf("cpu %.14f\n", dest.at(100, 100));
+		//if (z == 1) mat.saveAsBinary("f:/filterCpu.dat");
 	}
 	//if (status.frameInputIndex == 1) frame.Y[1].saveAsBinary("f:/cpu.dat");
 }
@@ -96,8 +105,8 @@ void CpuFrame::computeStart(int64_t frameIndex) {}
 void CpuFrame::computeTerminate(int64_t frameIndex) {
 	size_t pyrIdx = frameIndex % mPyr.size();
 	size_t pyrIdxPrev = (frameIndex - 1) % mPyr.size();
-	CpuFrameItem& frame = mPyr[pyrIdx];
-	CpuFrameItem& previous = mPyr[pyrIdxPrev];
+	CpuPyramid& frame = mPyr[pyrIdx];
+	CpuPyramid& previous = mPyr[pyrIdxPrev];
 	assert(frame.frameIndex > 0 && frame.frameIndex == previous.frameIndex + 1 && "wrong frames to compute");
 	//Mat<double>::precision(16);
 
@@ -300,6 +309,10 @@ Matf CpuFrame::getTransformedOutput() const {
 	return Matf::concatVert(mBuffer[0], mBuffer[1], mBuffer[2]);
 }
 
+void CpuFrame::getTransformedOutput(int64_t frameIndex, ImagePPM& image) {
+	ImageYuvMat(mData.h, mData.w, mBuffer[0], mBuffer[1], mBuffer[2]).toPPM(image, mPool);
+}
+
 Matf CpuFrame::getPyramid(size_t idx) const {
 	assert(idx < mPyr.size() && "invalid pyramid index");
 	Matf out = Matf::zeros(mData.pyramidRowCount, mData.w);
@@ -312,14 +325,11 @@ Matf CpuFrame::getPyramid(size_t idx) const {
 }
 
 void CpuFrame::getInputFrame(int64_t frameIndex, ImagePPM& image) {
-	size_t idxIn = (frameIndex) % mYUV.size();
-	mYUV[idxIn].toPPM(image, mPool);
-}
-
-void CpuFrame::getTransformedOutput(int64_t frameIndex, ImagePPM& image) {
-	ImageYuvMat(mData.h, mData.w, mBuffer[0], mBuffer[1], mBuffer[2]).toPPM(image, mPool);
+	size_t idx = frameIndex % mYUV.size();
+	mYUV[idx].toPPM(image, mPool);
 }
 
 ImageYuv CpuFrame::getInput(int64_t index) const {
-	return mYUV[index % mYUV.size()];
+	size_t idx = index % mYUV.size();
+	return mYUV[idx];
 }

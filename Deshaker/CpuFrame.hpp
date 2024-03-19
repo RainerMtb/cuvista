@@ -40,15 +40,15 @@ public:
 	void computeStart(int64_t frameIndex) override;
 	void computeTerminate(int64_t frameIndex) override;
 	void outputData(const AffineTransform& trf, OutputContext outCtx) override;
-	Mat<float> getTransformedOutput() const override;
-	Mat<float> getPyramid(size_t idx) const override;
+	Matf getTransformedOutput() const override;
+	Matf getPyramid(size_t idx) const override;
 	ImageYuv getInput(int64_t index) const override;
 	void getInputFrame(int64_t frameIndex, ImagePPM& image) override;
 	void getTransformedOutput(int64_t frameIndex, ImagePPM& image) override;
-	std::string getClassName() const override { return "Cpu Only"; }
+	std::string getClassName() const override;
+	std::string getClassId() const override;
 
-protected:
-
+private:
 	FilterKernel filterKernels[4] = {
 		{5, {0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f}},
 		{3, {0.25f, 0.5f, 0.25f}},
@@ -56,25 +56,25 @@ protected:
 		{3, {-0.5f, 0.0f, 0.5f}},
 	};
 
-	class CpuFrameItem {
+	class CpuPyramid {
 
 	public:
 		int64_t frameIndex = -1;
-		std::vector<Mat<float>> mY;
+		std::vector<Matf> mY;
 
-		CpuFrameItem(MainData& data);
+		CpuPyramid(MainData& data);
 	};
 
 	//frame input buffer, number of frames = frameBufferCount
 	std::vector<ImageYuv> mYUV;
 
 	//holds image pyramids
-	std::vector<CpuFrameItem> mPyr;
+	std::vector<CpuPyramid> mPyr;
 
 	//buffers the last output frame, 3 mats, to be used to blend background of next frame
-	std::vector<Mat<float>> mPrevOut;
+	std::vector<Matf> mPrevOut;
 
 	//buffer for generating output from input yuv and transformation
-	std::vector<Mat<float>> mBuffer;
-	Mat<float> mYuvPlane, mFilterBuffer, mFilterResult;
+	std::vector<Matf> mBuffer;
+	Matf mYuvPlane, mFilterBuffer, mFilterResult;
 };
