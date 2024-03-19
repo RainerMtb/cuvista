@@ -32,10 +32,18 @@ std::ostream& operator << (std::ostream& os, __m256 v) {
 
 AvxFrame::AvxFrame(MainData& data, MovieReader& reader, MovieWriter& writer) :
 	MovieFrame(data, reader, writer),
+	walign{ alignValue(data.w, 16) },
 	mYUV(data.bufferCount),
 	mPyr(data.pyramidCount, AvxMatFloat(data.pyramidRowCount, data.w, 0.0f)), 
-	mFilterResult(data.h, alignValue(data.w, 16)),
-	mFilterBuffer(data.w, alignValue(data.h, 16)) {}
+	mYuvPlane(data.h, walign, 0.0f),
+	mPrevOut({ AvxMatFloat(data.h, walign, data.bgcol_yuv.colors[0]), 
+		AvxMatFloat(data.h, walign, data.bgcol_yuv.colors[1]), 
+		AvxMatFloat(data.h, walign, data.bgcol_yuv.colors[2]) }),
+	mOutBuffer({ AvxMatFloat(data.h, walign, data.bgcol_yuv.colors[0]),
+		AvxMatFloat(data.h, walign, data.bgcol_yuv.colors[1]),
+		AvxMatFloat(data.h, walign, data.bgcol_yuv.colors[2]) }),
+	mFilterResult(data.h, walign),
+	mFilterBuffer(data.w, walign) {}
 
 std::string AvxFrame::getClassName() const {
 	return "AVX 512: " + getCpuName();
@@ -194,31 +202,102 @@ void AvxFrame::downsample(const float* srcptr, int h, int w, int stride, float* 
 //	}
 //}
 
+void AvxFrame::interpolate(const AvxMatFloat& src, int h, int w, __m256 x, __m256 y, float* dest) {
+	__m256 ps_zero = _mm256_set1_ps(0.0f);
+	__m256 ps_one = _mm256_set1_ps(1.0f);
+	__m256i epi32_one = _mm256_set1_epi32(1);
+	__m256i idx;
+
+	__mmask8 mask = 0xFF;
+	__m256 check;
+	check = _mm256_set1_ps(0.0f);
+	mask &= _mm256_cmp_ps_mask(x, check, 13); //greater equal
+	mask &= _mm256_cmp_ps_mask(y, check, 13); //greater equal
+	check = _mm256_set1_ps(float(w - 1));
+	mask &= _mm256_cmp_ps_mask(x, check, 2); //less equal
+	check = _mm256_set1_ps(float(h - 1));
+	mask &= _mm256_cmp_ps_mask(y, check, 2); //less equal
+
+	__m256 flx = _mm256_floor_ps(x);
+	__m256 fly = _mm256_floor_ps(y);
+	__m256 dx = _mm256_sub_ps(x, flx);
+	__m256 dy = _mm256_sub_ps(y, fly);
+	__m256 dx1 = _mm256_sub_ps(ps_one, dx);
+	__m256 dy1 = _mm256_sub_ps(ps_one, dy);
+
+	__m256i ix = _mm256_cvtps_epi32(flx);
+	__m256i iy = _mm256_cvtps_epi32(fly);
+	__m256i stride = _mm256_set1_epi32(src.w());
+	idx = _mm256_mullo_epi32(stride, iy);
+	idx = _mm256_add_epi32(idx, ix);
+	__m256 f00 = _mm256_mmask_i32gather_ps(ps_zero, mask, idx, src.data(), 4);
+
+	__mmask8 maskdx = _mm256_cmp_ps_mask(dx, ps_zero, 4); //not equal
+	__m256i ix1 = _mm256_mask_add_epi32(ix, maskdx, ix, epi32_one);
+	idx = _mm256_mullo_epi32(stride, iy);
+	idx = _mm256_add_epi32(idx, ix1);
+	__m256 f01 = _mm256_mmask_i32gather_ps(ps_zero, mask, idx, src.data(), 4);
+
+	__mmask8 maskdy = _mm256_cmp_ps_mask(dy, ps_zero, 4); //not equal
+	__m256i iy1 = _mm256_mask_add_epi32(iy, maskdy, iy, epi32_one);
+	idx = _mm256_mullo_epi32(stride, iy1);
+	idx = _mm256_add_epi32(idx, ix);
+	__m256 f10 = _mm256_mmask_i32gather_ps(ps_zero, mask, idx, src.data(), 4);
+
+	__mmask8 maskdxdy = maskdx & maskdy;
+	__m256i ix11 = _mm256_mask_add_epi32(ix, maskdxdy, ix, epi32_one);
+	__m256i iy11 = _mm256_mask_add_epi32(iy, maskdxdy, iy, epi32_one);
+	idx = _mm256_mullo_epi32(stride, iy11);
+	idx = _mm256_add_epi32(idx, ix11);
+	__m256 f11 = _mm256_mmask_i32gather_ps(ps_zero, mask, idx, src.data(), 4);
+
+	__m256 r00, r01, r10, r11;
+	r00 = _mm256_mul_ps(dx1, dy1);
+	r00 = _mm256_mul_ps(r00, f00);
+	r10 = _mm256_mul_ps(dx1, dy);
+	r10 = _mm256_mul_ps(r10, f10);
+	r01 = _mm256_mul_ps(dx, dy1);
+	r01 = _mm256_mul_ps(r01, f01);
+	r11 = _mm256_mul_ps(dx, dy);
+	r11 = _mm256_mul_ps(r11, f11);
+
+	__m256 result = r00;
+	result = _mm256_add_ps(result, r10);
+	result = _mm256_add_ps(result, r01);
+	result = _mm256_add_ps(result, r11);
+
+	_mm256_mask_storeu_ps(dest, mask, result);
+}
+
+void AvxFrame::yuvToFloat(const ImageYuv& yuv, size_t plane, AvxMatFloat& dest) {
+	constexpr float f = 1.0f / 255.0f;
+	const __m512 f16 = _mm512_set1_ps(f);
+	for (int r = 0; r < mData.h; r++) {
+		int c = 0;
+		//handle blocks of 16 pixels
+		for (; c < mData.w / 16 * 16; c += 16) {
+			__m128i epi8 = _mm_loadu_epi8(yuv.addr(plane, r, c));
+			__m512i epi32 = _mm512_cvtepu8_epi32(epi8);
+			__m512 ps = _mm512_cvtepi32_ps(epi32);
+			__m512 result = _mm512_mul_ps(ps, f16);
+			_mm512_storeu_ps(dest.row(r) + c, result);
+		}
+		//image width may not align to 16, handle trailing pixels individually
+		for (; c < mData.w; c++) {
+			dest.at(r, c) = yuv.at(0, r, c) * f;
+		}
+	}
+}
+
 void AvxFrame::createPyramid(int64_t frameIndex) {
-	util::ConsoleTimer ic("avx pyramid");
+	//util::ConsoleTimer ic("avx pyramid");
 	size_t pyrIdx = frameIndex % mPyr.size();
 	AvxMatFloat& Y = mPyr[pyrIdx];
 
 	//fill topmost level of pyramid
 	size_t yuvIdx = frameIndex % mYUV.size();
 	ImageYuv& yuv = mYUV[yuvIdx];
-	constexpr float f = 1.0f / 255.0f;
-	const __m512 fps = _mm512_set1_ps(f);
-
-	for (int r = 0; r < mData.h; r++) {
-		int c = 0;
-		for (; c < mData.w / 16 * 16; c += 16) {
-			__m128i epi8 = _mm_loadu_epi8(yuv.addr(0, r, c));
-			__m512i epi32 = _mm512_cvtepu8_epi32(epi8);
-			__m512 ps = _mm512_cvtepi32_ps(epi32);
-			__m512 result = _mm512_mul_ps(ps, fps);
-			_mm512_storeu_ps(Y.row(r) + c, result);
-		}
-		//image width may not align to 16, handle trailing pixels individually
-		for (; c < mData.w; c++) {
-			Y.at(r, c) = yuv.at(0, r, c) * f;
-		}
-	}
+	yuvToFloat(yuv, 0, Y);
 
 	//create pyramid levels below by downsampling level above
 	int r = 0;
@@ -243,12 +322,46 @@ void AvxFrame::computeTerminate(int64_t frameIndex) {
 }
 
 void AvxFrame::outputData(const AffineTransform& trf, OutputContext outCtx) {
-	//TODO
+	size_t yuvidx = trf.frameIndex % mYUV.size();
+	const ImageYuv& input = mYUV[yuvidx];
+	assert(input.index == trf.frameIndex && "invalid frame index");
+	int h = mData.h;
+	int w = walign;
+	std::array<double, 6> arr = trf.toArray();
+	__m512d m00 = _mm512_set1_pd(arr[0]);
+	__m512d m01 = _mm512_set1_pd(arr[1]);
+	__m512d m02 = _mm512_set1_pd(arr[2]);
+	__m512d m10 = _mm512_set1_pd(arr[3]);
+	__m512d m11 = _mm512_set1_pd(arr[4]);
+	__m512d m12 = _mm512_set1_pd(arr[5]);
+
+	for (size_t z = 0; z < 3; z++) {
+		yuvToFloat(input, z, mYuvPlane);
+
+		for (int r = 0; r < h; r++) {
+			for (int c = 0; c < w; c += 8) {
+				__m256 bg = (mData.bgmode == BackgroundMode::COLOR ? _mm256_set1_ps(mData.bgcol_yuv.colors[z]) : _mm256_loadu_ps(mPrevOut[z].addr(r, c)));
+				__m512d x = _mm512_setr_pd(c, c + 1, c + 2, c + 3, c + 4, c + 5, c + 6, c + 7);
+				__m512d y = _mm512_set1_pd(r);
+
+				__m512d xx = m02;
+				xx = _mm512_fmadd_pd(y, m01, xx);
+				xx = _mm512_fmadd_pd(x, m00, xx);
+				__m256 xxps = _mm512_cvtpd_ps(xx);
+
+				__m512d yy = m12;
+				yy = _mm512_fmadd_pd(y, m11, yy);
+				yy = _mm512_fmadd_pd(x, m10, yy);
+				__m256 yyps = _mm512_cvtpd_ps(yy);
+
+				interpolate(mYuvPlane, mData.h, mData.w, xxps, yyps, mOutBuffer[z].addr(r, c));
+			}
+		}
+	}
 }
 
 Matf AvxFrame::getTransformedOutput() const {
-	//TODO
-	return Matf();
+	return Matf::concatVert(mOutBuffer[0], mOutBuffer[1], mOutBuffer[2]);
 }
 
 void AvxFrame::getTransformedOutput(int64_t frameIndex, ImagePPM& image) {

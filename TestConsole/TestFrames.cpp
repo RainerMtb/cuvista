@@ -102,8 +102,10 @@ void pyramid() {
 		results[3] = runPyramid<OpenClFrame>(data);
 	}
 	std::cout << std::endl;
-	results[0].pyramid.saveAsBinary("f:/0.dat");
-	results[1].pyramid.saveAsBinary("f:/1.dat");
+	//results[0].pyramid.saveAsBinary("f:/0.dat");
+	//results[1].pyramid.saveAsBinary("f:/1.dat");
+	//results[0].output.saveAsBinary("f:/0.dat");
+	//results[1].output.saveAsBinary("f:/1.dat");
 
 	//compare pyramid and output
 	Result& r1 = results[0];

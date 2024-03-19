@@ -32,6 +32,8 @@ public:
 
 	int w() const { return int(CoreMat::w); }
 	int h() const { return int(CoreMat::h); }
+	float* addr(size_t row, size_t col) override { return array + row * CoreMat::w + col; }
+	const float* addr(size_t row, size_t col) const override { return array + row * CoreMat::w + col; }
 	float* row(int r) { return addr(r, 0); }
 	void saveAsBinary(const std::string& filename) { Matf::fromArray(h(), w(), array, false).saveAsBinary(filename); }
 };
@@ -55,9 +57,12 @@ public:
 	std::string getClassId() const override;
 
 private:
+	int walign;
 	std::vector<ImageYuv> mYUV;
 	std::vector<AvxMatFloat> mPyr;
-	AvxMatFloat mFilterBuffer, mFilterResult;
+	std::vector<AvxMatFloat> mPrevOut;
+	std::vector<AvxMatFloat> mOutBuffer;
+	AvxMatFloat mFilterBuffer, mFilterResult, mYuvPlane;
 
 	__m512 filterKernels[3] = {
 		_mm512_setr_ps(0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f, 0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f, 0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f, 0),
@@ -66,10 +71,13 @@ private:
 	};
 
 	void downsample(const float* srcptr, int h, int w, int stride, float* destptr, int destStride);
+	void interpolate(const AvxMatFloat& src, int h, int w, __m256 x, __m256 y, float* dest);
 	void filter(const float* srcptr, int h, int w, int stride, float* destptr, int destStride, __m512 k);
 	float* filterTriple(__m512i index, __m512 input, __m512 k, float* dest, int destStride);
 	float* filterVector(__m512i index, __m512 input, __m512 k, float* dest, int destStride);
 
 	float sum(__m512 a, int from, int to);
 	float sum(__m256 a, int from, int to);
+
+	void yuvToFloat(const ImageYuv& yuv, size_t plane, AvxMatFloat& dest);
 };

@@ -68,7 +68,7 @@ void CpuFrame::inputData() {
 }
 
 void CpuFrame::createPyramid(int64_t frameIndex) {
-	util::ConsoleTimer ic("cpu pyramid");
+	//util::ConsoleTimer ic("cpu pyramid");
 	size_t pyrIdx = frameIndex % mPyr.size();
 	CpuPyramid& frame = mPyr[pyrIdx];
 	frame.frameIndex = frameIndex;
