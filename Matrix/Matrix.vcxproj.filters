@@ -67,12 +67,12 @@
     <ClInclude Include="MatInverter.h">
       <Filter>Main</Filter>
     </ClInclude>
+    <ClInclude Include="Image2.hpp">
+      <Filter>Image</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Image.cpp">
-      <Filter>Image</Filter>
-    </ClCompile>
-    <ClCompile Include="ImageSub.cpp">
       <Filter>Image</Filter>
     </ClCompile>
     <ClCompile Include="ImageUtil.cpp">
@@ -86,6 +86,9 @@
     </ClCompile>
     <ClCompile Include="ThreadPoolBase.cpp">
       <Filter>Main</Filter>
+    </ClCompile>
+    <ClCompile Include="Image2.cpp">
+      <Filter>Image</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

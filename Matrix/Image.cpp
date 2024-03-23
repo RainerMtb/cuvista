@@ -152,6 +152,18 @@ template <class T> void ImageBase<T>::convert8(ImageBase<unsigned char>& dest, i
 	pool.addAndWait(func, 0, h);
 }
 
+template <class T> void ImageBase<T>::shuffle8(ImageBase<T>& dest, int z0, int z1, int z2, ThreadPoolBase& pool) const {
+	assert(w == dest.w && h == dest.h && "dimensions mismatch");
+	auto func = [&] (size_t r) {
+		for (int c = 0; c < w; c++) {
+			dest.at(z0, r, c) = at(0, r, c);
+			dest.at(z1, r, c) = at(1, r, c);
+			dest.at(z2, r, c) = at(2, r, c);
+		}
+	};
+	pool.addAndWait(func, 0, h);
+}
+
 
 //------------------------
 //write text
@@ -386,8 +398,80 @@ template <class T> void ImageBase<T>::drawDot(double cx, double cy, double rx, d
 }
 
 
+//------------------------
+// image mat
+//------------------------
+
+//construct Mat per image plane
+template <class T> ImageMat<T>::ImageMat(T* data, int h, int w, int stride, int planeIdx) :
+	CoreMat<T>(data, h, stride, false) {}
+
+
+//------------------------
+// planar image
+//------------------------
+
+template <class T> ImagePlanar<T>::ImagePlanar(int h, int w, int stride, int numPlanes) :
+	ImageBase<T>(h, w, stride, numPlanes) {
+	for (int i = 0; i < numPlanes; i++) {
+		size_t offset = 1ull * i * h * stride;
+		mats.emplace_back(this->data() + offset, h, w, stride, i);
+	}
+}
+
+template <class T> ImagePlanar<T>::ImagePlanar(int h, int w, T* y, T* u, T* v) :
+	ImageBase<T>(h, w, w, 3, 0) {
+	mats.emplace_back(y, h, w, w, 0);
+	mats.emplace_back(u, h, w, w, 1);
+	mats.emplace_back(v, h, w, w, 2);
+}
+
+//read access one pixel on plane idx (0..2) and row / col
+template <class T> T* ImagePlanar<T>::addr(size_t idx, size_t r, size_t c) {
+	return mats[idx].addr(r, c);
+}
+
+//read access one pixel on plane idx (0..2) and row / col
+template <class T> const T* ImagePlanar<T>::addr(size_t idx, size_t r, size_t c) const {
+	return mats[idx].addr(r, c);
+}
+
+//pointer to start of color plane
+template <class T> T* ImagePlanar<T>::plane(size_t idx) {
+	return addr(idx, 0, 0);
+}
+
+//pointer to start of color plane
+template <class T> const T* ImagePlanar<T>::plane(size_t idx) const {
+	return addr(idx, 0, 0);
+}
+
+template <class T> void ImagePlanar<T>::scaleTo(ImagePlanar<T>& dest) const {
+	for (size_t z = 0; z < mats.size(); z++) {
+		scaleTo(z, dest, z);
+	}
+}
+
+template <class T> void ImagePlanar<T>::scaleTo(size_t srcPlane, ImageBase<T>& dest, size_t destPlane) const {
+	for (int r = 0; r < dest.h; r++) {
+		for (int c = 0; c < dest.w; c++) {
+			double py = (0.5 + r) * this->h / dest.h - 0.5;
+			double px = (0.5 + c) * this->w / dest.w - 0.5;
+			dest.at(destPlane, r, c) = this->sample(srcPlane, px, py);
+		}
+	}
+}
+
+template <class T> T ImagePlanar<T>::sample(size_t plane, double x, double y) const {
+	return (T) mats[plane].interp2clamped(x, y);
+}
+
+
 //------------------------------------------------
 //explicitly instantiate Image specializations
 //------------------------------------------------
-template class ImageBase<unsigned char>;
+
 template class ImageBase<float>;
+template class ImageBase<unsigned char>;
+template class ImagePlanar<float>;
+template class ImagePlanar<unsigned char>;

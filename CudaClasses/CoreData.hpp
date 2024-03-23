@@ -19,7 +19,7 @@
 #pragma once
 
 #include "ErrorLogger.hpp"
-#include "Image.hpp"
+#include "Image2.hpp"
 
 struct Triplet {
 	float y, u, v;

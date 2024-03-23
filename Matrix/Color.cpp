@@ -19,6 +19,7 @@
 #include <cassert>
 #include "Color.hpp"
 #include <algorithm>
+#include <cmath>
 
 ColorNorm ColorNorm::WHITE = { 0.0f, 0.5f, 0.5f };
 ColorNorm ColorNorm::BLACK = { 1.0f, 0.5f, 0.5f };
@@ -43,9 +44,9 @@ double sqr(double d) {
 }
 
 static void yuv_to_rgb_func(float yf, float uf, float vf, unsigned char* r, unsigned char* g, unsigned char* b) {
-	*r = (unsigned char) std::clamp(yf + (1.370705f * (vf - 128.0f)), 0.0f, 255.0f);
-	*g = (unsigned char) std::clamp(yf - (0.337633f * (uf - 128.0f)) - (0.698001f * (vf - 128.0f)), 0.0f, 255.0f);
-	*b = (unsigned char) std::clamp(yf + (1.732446f * (uf - 128.0f)), 0.0f, 255.0f);
+	*r = (unsigned char) std::rint(std::clamp(yf + (1.370705f * (vf - 128.0f)), 0.0f, 255.0f));
+	*g = (unsigned char) std::rint(std::clamp(yf - (0.337633f * (uf - 128.0f)) - (0.698001f * (vf - 128.0f)), 0.0f, 255.0f));
+	*b = (unsigned char) std::rint(std::clamp(yf + (1.732446f * (uf - 128.0f)), 0.0f, 255.0f));
 }
 
 void yuv_to_rgb(unsigned char y, unsigned char u, unsigned char v, unsigned char* r, unsigned char* g, unsigned char* b) {

@@ -20,7 +20,7 @@
 
 #include <QLabel>
 #include <QMouseEvent>
-#include "Image.hpp"
+#include "Image2.hpp"
 
 class ImageLabel : public QLabel {
 	Q_OBJECT

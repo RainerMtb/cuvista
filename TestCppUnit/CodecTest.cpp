@@ -19,7 +19,7 @@
 #include "pch.h"
 #include "CppUnitTest.h"
 #include "NvEncoder.hpp"
-#include "Image.hpp"
+#include "Image2.hpp"
 #include "FFmpegUtil.hpp"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;

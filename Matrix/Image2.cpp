@@ -16,76 +16,10 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
-#include "Image.hpp"
-#include <cassert>
+
 #include <format>
+#include "Image2.hpp"
 
-
-//construct Mat per image plane
-template <class T> ImageMat<T>::ImageMat(T* data, int h, int w, int stride, int planeIdx) : 
-	CoreMat<T>(data, h, stride, false) {}
-
-
-//------------------------
-// planar image
-//------------------------
-
-template <class T> ImagePlanar<T>::ImagePlanar(int h, int w, int stride, int numPlanes) : 
-	ImageBase<T>(h, w, stride, numPlanes) 
-{
-	for (int i = 0; i < numPlanes; i++) {
-		size_t offset = 1ull * i * h * stride;
-		mats.emplace_back(this->data() + offset, h, w, stride, i);
-	}
-}
-
-template <class T> ImagePlanar<T>::ImagePlanar(int h, int w, T* y, T* u, T* v) : 
-	ImageBase<T>(h, w, w, 3, 0) 
-{
-	mats.emplace_back(y, h, w, w, 0);
-	mats.emplace_back(u, h, w, w, 1);
-	mats.emplace_back(v, h, w, w, 2);
-}
-
-//read access one pixel on plane idx (0..2) and row / col
-template <class T> T* ImagePlanar<T>::addr(size_t idx, size_t r, size_t c) {
-	return mats[idx].addr(r, c);
-}
-
-//read access one pixel on plane idx (0..2) and row / col
-template <class T> const T* ImagePlanar<T>::addr(size_t idx, size_t r, size_t c) const {
-	return mats[idx].addr(r, c);
-}
-
-//pointer to start of color plane
-template <class T> T* ImagePlanar<T>::plane(size_t idx) {
-	return addr(idx, 0, 0);
-}
-
-//pointer to start of color plane
-template <class T> const T* ImagePlanar<T>::plane(size_t idx) const {
-	return addr(idx, 0, 0);
-}
-
-template <class T> void ImagePlanar<T>::scaleTo(ImagePlanar<T>& dest) const {
-	for (size_t z = 0; z < mats.size(); z++) {
-		scaleTo(z, dest, z);
-	}
-}
-
-template <class T> void ImagePlanar<T>::scaleTo(size_t srcPlane, ImageBase<T>& dest, size_t destPlane) const {
-	for (int r = 0; r < dest.h; r++) {
-		for (int c = 0; c < dest.w; c++) {
-			double py = (0.5 + r) * this->h / dest.h - 0.5;
-			double px = (0.5 + c) * this->w / dest.w - 0.5;
-			dest.at(destPlane, r, c) = this->sample(srcPlane, px, py);
-		}
-	}
-}
-
-template <class T> T ImagePlanar<T>::sample(size_t plane, double x, double y) const {
-	return (T) mats[plane].interp2clamped(x, y);
-}
 
 ImagePPM& ImageYuv3::toPPM(ImagePPM& dest, ThreadPoolBase& pool) const {
 	convert8(dest, 0, 1, 2, pool);
@@ -113,7 +47,7 @@ template <class T> const unsigned char* ImagePacked<T>::addr(size_t idx, size_t 
 	assert(c < this->w && "column index out of range");
 	return this->data() + (r * this->stride + c) * this->numPlanes + idx;
 }
- 
+
 
 //------------------------
 // YUV image stuff
@@ -175,7 +109,7 @@ ImageYuv& ImageYuv::fromNV12(const std::vector<unsigned char>& nv12, size_t stri
 		for (int r = 0; r < h2; r++) {
 			for (int c = 0; c < w2; c++) {
 				uv.at(z, r, c) = nv12[h * strideNV12 + r * strideNV12 + c * 2ull + z];
- 			}
+			}
 		}
 	}
 
@@ -260,7 +194,7 @@ bool ImageBGR::saveAsBMP(const std::string& filename) const {
 	assert(stride * 3 % 4 == 0 && "one image row must be multiple of 4 bytes");
 	std::ofstream os(filename, std::ios::binary);
 	BmpColorHeader(stride, h).writeHeader(os);
-	
+
 	for (int r = h - 1; r >= 0; r--) {
 		os.write(reinterpret_cast<const char*>(addr(0, r, 0)), stride * 3ull);
 	}
@@ -271,7 +205,7 @@ bool ImageBGR::saveAsBMP(const std::string& filename) const {
 // ImagePPM
 //-----------------------------------
 
-ImagePPM::ImagePPM(int h, int w) : ImagePacked(h, w, w, 3, h * w * 3 + headerSize) {
+ImagePPM::ImagePPM(int h, int w) : ImagePacked(h, w, w, 3, h* w * 3 + headerSize) {
 	//first 19 bytes are header for ppm format
 	std::format_to_n(array.data(), headerSize, "P6 {:5} {:5} 255 ", w, h);
 }
@@ -302,9 +236,8 @@ bool ImagePPM::saveAsPGM(const std::string& filename) const {
 	return os.good();
 }
 
-//------------------------------------------------
-// explicitly instantiate Image specializations
-//------------------------------------------------
-
-template class ImagePlanar<float>;
-template class ImagePlanar<unsigned char>;
+bool ImagePPM::saveAsBMP(const std::string& filename) const {
+	ImageBGR bgr(h, w);
+	shuffle8(bgr, 2, 1, 0);
+	return bgr.saveAsBMP(filename);
+}

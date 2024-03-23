@@ -20,7 +20,7 @@
 
 #include "AVException.hpp"
 #include "Stats.hpp"
-#include "Image.hpp"
+#include "Image2.hpp"
 
 class MovieReader : public ReaderStats {
 

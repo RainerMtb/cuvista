@@ -52,26 +52,34 @@ private:
 	std::vector<AvxMatFloat> mWarped;
 	AvxMatFloat mFilterBuffer, mFilterResult, mYuvPlane;
 
-	Vecf filterKernels[3] = {
-		{0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f, 0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f, 0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f, 0},
-		{0, 0.25f, 0.5f, 0.25f, 0, 0, 0.25f, 0.5f, 0.25f, 0, 0, 0.25f, 0.5f, 0.25f, 0, 0},
-		{0, 0.25f, 0.5f, 0.25f, 0, 0, 0.25f, 0.5f, 0.25f, 0, 0, 0.25f, 0.5f, 0.25f, 0, 0}
+	VF16 filterKernels16[3] = {
+		{ 0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f, 0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f, 0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f, 0 },
+		{ 0, 0.25f, 0.5f, 0.25f, 0, 0, 0.25f, 0.5f, 0.25f, 0, 0, 0.25f, 0.5f, 0.25f, 0, 0 },
+		{ 0, 0.25f, 0.5f, 0.25f, 0, 0, 0.25f, 0.5f, 0.25f, 0, 0, 0.25f, 0.5f, 0.25f, 0, 0 }
+	};
+
+	VF8 filterKernels8[3] = {
+		{ 0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f, 0, 0, 0 },
+		{       0, 0.25f,   0.5f, 0.25f,       0, 0, 0, 0 },
+		{       0, 0.25f,   0.5f, 0.25f,       0, 0, 0, 0 }
 	};
 
 	void unsharpAndWrite(const AvxMatFloat& warped, AvxMatFloat& gauss, float unsharp, ImageYuv* dest, size_t z);
 	void downsample(const float* srcptr, int h, int w, int stride, float* destptr, int destStride);
-	void filter(const AvxMatFloat& src, int r0, int h, int w, AvxMatFloat& destMat, Vecf k);
+	void filter(const AvxMatFloat& src, int r0, int h, int w, AvxMatFloat& destMat, size_t z);
+	float* filter(VF8 data, VF8 k, float* dest, int destStride);
+
 	std::pair<__m512d, __m512d> transform(__m512d x, __m512d y, __m512d m00, __m512d m01, __m512d m02, __m512d m10, __m512d m11, __m512d m12);
 	void warpBack(const AffineTransform& trf, const AvxMatFloat& input, AvxMatFloat& dest);
 
-	float* filterTriple(__m512i index, Vecf input, Vecf k, float* dest, int destStride);
-	float* filterVector(__m512i index, Vecf input, Vecf k, float* dest, int destStride);
+	float* filterTriple(__m512i index, VF16 input, VF16 k, float* dest, int destStride);
+	float* filterVector(__m512i index, VF16 input, VF16 k, float* dest, int destStride);
 
-	Vecf interpolate(Vecf f00, Vecf f10, Vecf f01, Vecf f11, Vecf dx, Vecf dy);
-	Vecf interpolate(Vecf f00, Vecf f10, Vecf f01, Vecf f11, Vecf dx, Vecf dy, Vecf dx1, Vecf dy1);
+	VF16 interpolate(VF16 f00, VF16 f10, VF16 f01, VF16 f11, VF16 dx, VF16 dy);
+	VF16 interpolate(VF16 f00, VF16 f10, VF16 f01, VF16 f11, VF16 dx, VF16 dy, VF16 dx1, VF16 dy1);
 
 	void yuvToFloat(const ImageYuv& yuv, size_t plane, AvxMatFloat& dest);
 	void yuvToRgb(const unsigned char* y, const unsigned char* u, const unsigned char* v, int h, int w, int stride, ImagePPM& dest);
 	void yuvToRgb(const float* y, const float* u, const float* v, int h, int w, int stride, ImagePPM& dest);
-	__m512i yuvToRgbPacked(Vecf y, Vecf u, Vecf v);
+	__m512i yuvToRgbPacked(VF16 y, VF16 u, VF16 v);
 };

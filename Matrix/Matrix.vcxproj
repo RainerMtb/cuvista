@@ -18,6 +18,7 @@
     <ClInclude Include="CoreMat.h" />
     <ClInclude Include="Decompositor.h" />
     <ClInclude Include="Image.hpp" />
+    <ClInclude Include="Image2.hpp" />
     <ClInclude Include="ImageUtil.hpp" />
     <ClInclude Include="LUDecompositor.h" />
     <ClInclude Include="Mat.h" />
@@ -34,7 +35,7 @@
     <ClCompile Include="Color.cpp" />
     <ClCompile Include="CoreMat.cpp" />
     <ClCompile Include="Image.cpp" />
-    <ClCompile Include="ImageSub.cpp" />
+    <ClCompile Include="Image2.cpp" />
     <ClCompile Include="ImageUtil.cpp" />
     <ClCompile Include="ThreadPoolBase.cpp" />
   </ItemGroup>

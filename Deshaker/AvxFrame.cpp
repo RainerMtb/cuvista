@@ -68,6 +68,7 @@ void AvxFrame::createPyramid(int64_t frameIndex) {
 	//util::ConsoleTimer ic("avx pyramid");
 	size_t pyrIdx = frameIndex % mPyr.size();
 	AvxMatFloat& Y = mPyr[pyrIdx];
+	Y.frameIndex = frameIndex;
 
 	//fill topmost level of pyramid
 	size_t yuvIdx = frameIndex % mYUV.size();
@@ -79,9 +80,9 @@ void AvxFrame::createPyramid(int64_t frameIndex) {
 	int h = mData.h;
 	int w = mData.w;
 	for (size_t z = 1; z < mData.pyramidLevels; z++) {
-		filter(Y, r, h, w, mFilterBuffer, filterKernels[0]);
+		filter(Y, r, h, w, mFilterBuffer, 0);
 		mFilterResult.fill(0.0f);
-		filter(mFilterBuffer, 0, w, h, mFilterResult, filterKernels[0]);
+		filter(mFilterBuffer, 0, w, h, mFilterResult, 0);
 		r += h;
 		downsample(mFilterResult.data(), h, w, mFilterResult.w(), Y.row(r), Y.w());
 		h /= 2;
@@ -92,7 +93,7 @@ void AvxFrame::createPyramid(int64_t frameIndex) {
 }
 
 void AvxFrame::outputData(const AffineTransform& trf, OutputContext outCtx) {
-	util::ConsoleTimer ic("avx output");
+	//util::ConsoleTimer ic("avx output");
 	size_t yuvidx = trf.frameIndex % mYUV.size();
 	const ImageYuv& input = mYUV[yuvidx];
 	assert(input.index == trf.frameIndex && "invalid frame index");
@@ -102,8 +103,8 @@ void AvxFrame::outputData(const AffineTransform& trf, OutputContext outCtx) {
 		yuvToFloat(input, z, mYuvPlane);
 		if (mData.bgmode == BackgroundMode::COLOR) mWarped[z].fill(mData.bgcol_yuv.colors[z]);
 		warpBack(trf, mYuvPlane, mWarped[z]);
-		filter(mWarped[z], 0, mData.h, mData.w, mFilterBuffer, filterKernels[z]);
-		filter(mFilterBuffer, 0, mData.w, mData.h, mFilterResult, filterKernels[z]);
+		filter(mWarped[z], 0, mData.h, mData.w, mFilterBuffer, z);
+		filter(mFilterBuffer, 0, mData.w, mData.h, mFilterResult, z);
 		unsharpAndWrite(mWarped[z], mFilterResult, mData.unsharp[z], outCtx.outputFrame, z);
 	}
 
@@ -151,100 +152,88 @@ ImageYuv AvxFrame::getInput(int64_t index) const {
 //----------------------------------------------------
 
 
-float* AvxFrame::filterTriple(__m512i index, Vecf input, Vecf k, float* dest, int destStride) {
-	Vecf a = _mm512_permutexvar_ps(index, input.a);
-	Vecf result = a * k;
-	*dest = result.sum(0, 5);
-	dest += destStride;
-	*dest = result.sum(5, 10);
-	dest += destStride;
-	*dest = result.sum(10, 15);
+float* AvxFrame::filter(VF8 data, VF8 k, float* dest, int destStride) {
+	*dest = (data * k).sum(0, 5);
 	return dest + destStride;
 }
 
-float* AvxFrame::filterVector(__m512i index, Vecf input, Vecf k, float* dest, int destStride) {
-	__m512i offset = _mm512_set1_epi32(3);
-	__m512i idxmin = _mm512_set1_epi32(0);
-	__m512i idxmax = _mm512_set1_epi32(15);
-	float* ptr = dest;
-	for (int i = 0; i < 4; i++) {
-		__m512i vindex = _mm512_max_epi32(index, idxmin);
-		vindex = _mm512_min_epi32(vindex, idxmax);
-		ptr = filterTriple(vindex, input, k, ptr, destStride);
-		index = _mm512_add_epi32(index, offset);
-	}
-	return ptr;
-}
+void AvxFrame::filter(const AvxMatFloat& src, int r0, int h, int w, AvxMatFloat& destMat, size_t z) {
+	//util::ConsoleTimer ic("avx filter " + std::to_string(h) + "p");
+	int s = 2;
+	int stride = destMat.w();
+	VF8 k = filterKernels8[z];
+	VF8 v;
 
-//float sum(__m256 v, int from, int to) {
-//	float s = 0.0f;
-//	for (int i = from; i < to; i++) s += v.m256_f32[i];
-//	return s;
-//}
-//
-//void AvxFrame::filter(const AvxMatFloat& src, int r0, int h, int w, AvxMatFloat& destMat, Vecf ignore) {
-//	__m256 k = _mm256_setr_ps(0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f, 0.0f, 0.0f, 0.0f);
-//	int ks = 5;
-//	int s = 2;
-//	int destStride = destMat.w();
-//
-//	for (int r = 0; r < h; r++) {
-//		const float* row = src.addr(r, 0);
-//		float* dest = destMat.addr(0, r);
-//
-//		__m256 input;
-//		input = _mm256_setr_ps(row[0], row[0], row[0], row[1], row[2], 0, 0, 0);
-//		*dest = sum(_mm256_mul_ps(input, k), 0, ks);
-//		dest += destStride;
-//
-//		input = _mm256_setr_ps(row[0], row[0], row[1], row[2], row[3], 0, 0, 0);
-//		*dest = sum(_mm256_mul_ps(input, k), 0, ks);
-//		dest += destStride;
-//
-//		for (int c = s; c < w - s; c++) {
-//			input = _mm256_loadu_ps(row + c - s);
-//			*dest = sum(_mm256_mul_ps(input, k), 0, ks);
-//			dest += destStride;
-//		}
-//
-//		input = _mm256_setr_ps(row[w - 4], row[w - 3], row[w - 2], row[w - 1], row[w - 1], 0, 0, 0);
-//		*dest = sum(_mm256_mul_ps(input, k), 0, ks);
-//		dest += destStride;
-//
-//		input = _mm256_setr_ps(row[w - 3], row[w - 2], row[w - 1], row[w - 1], row[w - 1], 0, 0, 0);
-//		*dest = sum(_mm256_mul_ps(input, k), 0, ks);
-//		dest += destStride;
-//	}
-//}
-
-void AvxFrame::filter(const AvxMatFloat& src, int r0, int h, int w, AvxMatFloat& destMat, Vecf k) {
 	for (int r = 0; r < h; r++) {
 		const float* row = src.addr(r0 + r, 0);
 		float* dest = destMat.addr(0, r);
-		__m512 input;
-		__m512i index;
 
-		input = _mm512_loadu_ps(row);
-		index = _mm512_setr_epi32(-2, -1, 0, 1, 2, -1, 0, 1, 2, 3, 0, 1, 2, 3, 4, 0);
-		dest = filterVector(index, input, k, dest, destMat.w());
+		dest = filter(VF8(row[0], row[0], row[0], row[1], row[2], 0, 0, 0), k, dest, stride);
+		dest = filter(VF8(row[0], row[0], row[1], row[2], row[3], 0, 0, 0), k, dest, stride);
 
-		for (int c = 10; c < w - 16; c += 12) {
-			input = _mm512_loadu_ps(row + c);
-			index = _mm512_setr_epi32(0, 1, 2, 3, 4, 1, 2, 3, 4, 5, 2, 3, 4, 5, 6, 0);
-			dest = filterVector(index, input, k, dest, destMat.w());
+		for (const float* ptr = row; ptr != row + w - s - s; ptr++) {
+			dest = filter(VF8(ptr), k, dest, stride);
 		}
 
-		input = _mm512_loadu_ps(row + w - 16);
-		index = _mm512_setr_epi32(2, 3, 4, 5, 6, 3, 4, 5, 6, 7, 4, 5, 6, 7, 8, 0);
-		dest = destMat.addr(w - 12, r);
-		filterVector(index, input, k, dest, destMat.w());
+		dest = filter(VF8(row[w - 4], row[w - 3], row[w - 2], row[w - 1], row[w - 1], 0, 0, 0), k, dest, stride);
+		dest = filter(VF8(row[w - 3], row[w - 2], row[w - 1], row[w - 1], row[w - 1], 0, 0, 0), k, dest, stride);
 	}
 }
+
+//float* AvxFrame::filterTriple(__m512i index, VF16 input, VF16 k, float* dest, int destStride) {
+//	VF16 a = _mm512_permutexvar_ps(index, input.a);
+//	VF16 result = a * k;
+//	*dest = result.sum(0, 5);
+//	dest += destStride;
+//	*dest = result.sum(5, 10);
+//	dest += destStride;
+//	*dest = result.sum(10, 15);
+//	return dest + destStride;
+//}
+//
+//float* AvxFrame::filterVector(__m512i index, VF16 input, VF16 k, float* dest, int destStride) {
+//	__m512i offset = _mm512_set1_epi32(3);
+//	__m512i idxmin = _mm512_set1_epi32(0);
+//	__m512i idxmax = _mm512_set1_epi32(15);
+//	float* ptr = dest;
+//	for (int i = 0; i < 4; i++) {
+//		__m512i vindex = _mm512_max_epi32(index, idxmin);
+//		vindex = _mm512_min_epi32(vindex, idxmax);
+//		ptr = filterTriple(vindex, input, k, ptr, destStride);
+//		index = _mm512_add_epi32(index, offset);
+//	}
+//	return ptr;
+//}
+//
+//void AvxFrame::filter(const AvxMatFloat& src, int r0, int h, int w, AvxMatFloat& destMat, size_t z) {
+//	__m512 k = filterKernels16[z].a;
+//	for (int r = 0; r < h; r++) {
+//		const float* row = src.addr(r0 + r, 0);
+//		float* dest = destMat.addr(0, r);
+//		__m512 input;
+//		__m512i index;
+//
+//		input = _mm512_loadu_ps(row);
+//		index = _mm512_setr_epi32(-2, -1, 0, 1, 2, -1, 0, 1, 2, 3, 0, 1, 2, 3, 4, 0);
+//		dest = filterVector(index, input, k, dest, destMat.w());
+//
+//		for (int c = 10; c < w - 16; c += 12) {
+//			input = _mm512_loadu_ps(row + c);
+//			index = _mm512_setr_epi32(0, 1, 2, 3, 4, 1, 2, 3, 4, 5, 2, 3, 4, 5, 6, 0);
+//			dest = filterVector(index, input, k, dest, destMat.w());
+//		}
+//
+//		input = _mm512_loadu_ps(row + w - 16);
+//		index = _mm512_setr_epi32(2, 3, 4, 5, 6, 3, 4, 5, 6, 7, 4, 5, 6, 7, 8, 0);
+//		dest = destMat.addr(w - 12, r);
+//		filterVector(index, input, k, dest, destMat.w());
+//	}
+//}
 
 void AvxFrame::downsample(const float* srcptr, int h, int w, int stride, float* destptr, int destStride) {
 	__m512i idx1 = _mm512_setr_epi32(0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30);
 	__m512i idx2 = _mm512_setr_epi32(1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31);
-	__m512 f = _mm512_set1_ps(0.5f);
+	VF16 f = 0.5f;
 
 	for (int r = 0; r < h - 1; r += 2) {
 		for (int c = 0; c < w; c += 32) {
@@ -258,7 +247,7 @@ void AvxFrame::downsample(const float* srcptr, int h, int w, int stride, float* 
 			__m512 f01 = _mm512_permutex2var_ps(x1, idx2, x2);
 			__m512 f10 = _mm512_permutex2var_ps(y1, idx1, y2);
 			__m512 f11 = _mm512_permutex2var_ps(y1, idx2, y2);
-			Vecf result = interpolate(f00, f10, f01, f11, f, f, f, f);
+			VF16 result = interpolate(f00, f10, f01, f11, f, f, f, f);
 
 			float* dest = destptr + r / 2 * destStride + c / 2;
 			result.storeu(dest);
@@ -267,12 +256,13 @@ void AvxFrame::downsample(const float* srcptr, int h, int w, int stride, float* 
 }
 
 void AvxFrame::yuvToFloat(const ImageYuv& yuv, size_t plane, AvxMatFloat& dest) {
+	//util::ConsoleTimer ic("avx yuv to float");
 	constexpr float f = 1.0f / 255.0f;
 	for (int r = 0; r < mData.h; r++) {
 		int c = 0;
 		//handle blocks of 16 pixels
 		for (; c < mData.w / 16 * 16; c += 16) {
-			Vecf result = yuv.addr(plane, r, c);
+			VF16 result = yuv.addr(plane, r, c);
 			result = result * f;
 			result.storeu(dest.row(r) + c);
 		}
@@ -291,13 +281,13 @@ void AvxFrame::computeTerminate(int64_t frameIndex) {
 
 //compute bilinear interpolation
 //result = (1 - dx) * (1 - dy) * f00 + (1 - dx) * dy * f10 + dx * (1 - dy) * f01 + dx * dy * f11;
-Vecf AvxFrame::interpolate(Vecf f00, Vecf f10, Vecf f01, Vecf f11, Vecf dx, Vecf dy) {
-	Vecf one = 1.0f;
+VF16 AvxFrame::interpolate(VF16 f00, VF16 f10, VF16 f01, VF16 f11, VF16 dx, VF16 dy) {
+	VF16 one = 1.0f;
 	return interpolate(f00, f10, f01, f11, dx, dy, one - dx, one - dy);
 }
 
 //compute bilinear interpolation
-Vecf AvxFrame::interpolate(Vecf f00, Vecf f10, Vecf f01, Vecf f11, Vecf dx, Vecf dy, Vecf dx1, Vecf dy1) {
+VF16 AvxFrame::interpolate(VF16 f00, VF16 f10, VF16 f01, VF16 f11, VF16 dx, VF16 dy, VF16 dx1, VF16 dy1) {
 	return dx1 * dy1 * f00 + dx1 * dy * f10 + dx * dy1 * f01 + dx * dy * f11;
 }
 
@@ -312,6 +302,7 @@ std::pair<__m512d, __m512d> AvxFrame::transform(__m512d x, __m512d y, __m512d m0
 }
 
 void AvxFrame::warpBack(const AffineTransform& trf, const AvxMatFloat& input, AvxMatFloat& dest) {
+	//util::ConsoleTimer ic("avx warp");
 	//transform parameters
 	__m512d m00 = _mm512_set1_pd(trf.arrayValue(0));
 	__m512d m01 = _mm512_set1_pd(trf.arrayValue(1));
@@ -342,7 +333,6 @@ void AvxFrame::warpBack(const AffineTransform& trf, const AvxMatFloat& input, Av
 			__m512 y = _mm512_permutex2var_ps(yy1, selector, yy2);
 
 			__m512 ps_zero = _mm512_set1_ps(0.0f);
-			__m512 ps_one = _mm512_set1_ps(1.0f);
 			__m512i epi_one = _mm512_set1_epi32(1);
 			__m512i epi_stride = _mm512_set1_epi32(input.w());
 			__m512i idx;
@@ -363,8 +353,6 @@ void AvxFrame::warpBack(const AffineTransform& trf, const AvxMatFloat& input, Av
 			__m512 fly = _mm512_floor_ps(y);
 			__m512 dx = _mm512_sub_ps(x, flx);
 			__m512 dy = _mm512_sub_ps(y, fly);
-			__m512 dx1 = _mm512_sub_ps(ps_one, dx);
-			__m512 dy1 = _mm512_sub_ps(ps_one, dy);
 
 			//compute index to load f00
 			__m512i ix = _mm512_cvtps_epi32(flx);
@@ -388,19 +376,25 @@ void AvxFrame::warpBack(const AffineTransform& trf, const AvxMatFloat& input, Av
 			__m512i idx4 = _mm512_mask_add_epi32(idx3, maskdxdy, idx3, epi_one);
 			__m512 f11 = _mm512_mask_i32gather_ps(ps_zero, mask, idx4, input.data(), 4);
 
-			Vecf result = interpolate(f00, f10, f01, f11, dx, dy, dx1, dy1);
+			VF16 result = interpolate(f00, f10, f01, f11, dx, dy);
 			result.storeu(dest.addr(r, c), mask);
 		}
 	}
 }
 
 void AvxFrame::unsharpAndWrite(const AvxMatFloat& warped, AvxMatFloat& gauss, float unsharp, ImageYuv* dest, size_t z) {
+	//util::ConsoleTimer ic("avx unsharp");
 	for (int r = 0; r < mData.h; r++) {
 		for (int c = 0; c < mData.w; c += 16) {
-			Vecf ps_warped = warped.addr(r, c);
-			Vecf ps_gauss = gauss.addr(r, c);
-			Vecf ps_unsharped = Vecf::clamp(ps_warped + (ps_warped - ps_gauss) * unsharp, 0.0f, 1.0f) * 255.0f;
+			VF16 ps_warped = warped.addr(r, c);
+			VF16 ps_gauss = gauss.addr(r, c);
+			VF16 ps_unsharped = VF16::clamp(ps_warped + (ps_warped - ps_gauss) * unsharp, 0.0f, 1.0f) * 255.0f;
 			__m512i chars32 = _mm512_cvt_roundps_epi32(ps_unsharped.a, _MM_FROUND_TO_NEAREST_INT);
+
+			//BUG in release mode???
+			//Vecf ps_unsharped = Vecf::clamp(ps_warped + (ps_warped - ps_gauss) * unsharp, 0.0f, 1.0f);
+			//ps_unsharped = _mm512_mul_round_ps(ps_unsharped.a, _mm512_set1_ps(255.0f), _MM_FROUND_TO_NEAREST_INT);
+			//__m512i chars32 = _mm512_cvtps_epi32(ps_unsharped.a);
 			__m128i chars8 = _mm512_cvtepi32_epi8(chars32);
 			_mm_storeu_epi8(dest->addr(z, r, c), chars8);
 			//if (r==755 && c==464) std::printf("avx %.14f %d\n", result.m512_f32[14], chars32.m512i_i32[14]);
@@ -409,41 +403,44 @@ void AvxFrame::unsharpAndWrite(const AvxMatFloat& warped, AvxMatFloat& gauss, fl
 }
 
 void AvxFrame::yuvToRgb(const unsigned char* y, const unsigned char* u, const unsigned char* v, int h, int w, int stride, ImagePPM& dest) {
-	uint64_t mask = (1LL << 48) - 1;
 	for (int r = 0; r < h; r++) {
-		int c = 0;
-		for (; c < w / 16 * 16; c += 16) {
-			Vecf yy = y + r * stride + c;
-			Vecf uu = u + r * stride + c;
-			Vecf vv = v + r * stride + c;
+		for (int c = 0; c < w; c += 16) {
+			int n = std::min(16, w - c);
+			__mmask16 maskLoad = (1LL << n) - 1;
+			VF16 yy(y + r * stride + c, maskLoad);
+			VF16 uu(u + r * stride + c, maskLoad);
+			VF16 vv(v + r * stride + c, maskLoad);
 			__m512i rgb = yuvToRgbPacked(yy, uu, vv);
+
+			__mmask64 mask = (1LL << n * 3) - 1;
 			_mm512_mask_storeu_epi8(dest.addr(0, r, c), mask, rgb);
 		}
-		//TODO rest
 	}
 }
 
 void AvxFrame::yuvToRgb(const float* y, const float* u, const float* v, int h, int w, int stride, ImagePPM& dest) {
-	uint64_t mask = (1LL << 48) - 1;
 	for (int r = 0; r < h; r++) {
-		int c = 0;
-		for (; c < w / 16 * 16; c += 16) {
-			Vecf yy = y + r * stride + c;
-			Vecf uu = u + r * stride + c;
-			Vecf vv = v + r * stride + c;
+		for (int c = 0; c < w; c += 16) {
+			int n = std::min(16, w - c);
+			__mmask16 maskLoad = (1LL << n) - 1;
+			VF16 yy(y + r * stride + c, maskLoad);
+			VF16 uu(u + r * stride + c, maskLoad);
+			VF16 vv(v + r * stride + c, maskLoad);
 			__m512i rgb = yuvToRgbPacked(yy * 255.0f, uu * 255.0f, vv * 255.0f);
+
+			__mmask64 mask = (1LL << n * 3) - 1;
 			_mm512_mask_storeu_epi8(dest.addr(0, r, c), mask, rgb);
 		}
-		//TODO rest
 	}
 }
 
-__m512i AvxFrame::yuvToRgbPacked(Vecf y, Vecf u, Vecf v) {
-	Vecf r = Vecf::clamp(y + ((v - 128.0f) * 1.370705f), 0.0f, 255.0f);
-	Vecf g = Vecf::clamp(y - ((u - 128.0f) * 0.337633f) - ((v - 128.0f) * 0.698001f), 0.0f, 255.0f);
-	Vecf b = Vecf::clamp(y + ((u - 128.0f) * 1.732446f), 0.0f, 255.0f);
+__m512i AvxFrame::yuvToRgbPacked(VF16 y, VF16 u, VF16 v) {
+	VF16 r = VF16::clamp(y + ((v - 128.0f) * 1.370705f), 0.0f, 255.0f);
+	VF16 g = VF16::clamp(y - ((u - 128.0f) * 0.337633f) - ((v - 128.0f) * 0.698001f), 0.0f, 255.0f);
+	VF16 b = VF16::clamp(y + ((u - 128.0f) * 1.732446f), 0.0f, 255.0f);
 
 	//convert floats to uint8 stored in 512 bits
+	//default conversion in avx uses rint()
 	__m512i ir = _mm512_zextsi128_si512(_mm512_cvtepi32_epi8(_mm512_cvtps_epi32(r.a)));
 	__m512i ig = _mm512_zextsi128_si512(_mm512_cvtepi32_epi8(_mm512_cvtps_epi32(g.a)));
 	__m512i ib = _mm512_zextsi128_si512(_mm512_cvtepi32_epi8(_mm512_cvtps_epi32(b.a)));
@@ -458,7 +455,7 @@ __m512i AvxFrame::yuvToRgbPacked(Vecf y, Vecf u, Vecf v) {
 	__m512i selectorB = _mm512_setr_epi8(
 		64,  65,   0,  67,  68,   1,  70,  71,   2,  73,  74,   3,  76,  77,   4,  79,
 		80,   5,  82,  83,   6,  85,  86,   7,  88,  89,   8,  91,  92,   9,  94,  95,
-		10,  97,  98,  11, 100, 101,  12, 103, 104,  13, 106, 107,  14, 108, 109,  15,
+		10,  97,  98,  11, 100, 101,  12, 103, 104,  13, 106, 107,  14, 109, 110,  15,
 		 0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0
 	);
 

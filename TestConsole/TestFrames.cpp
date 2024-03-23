@@ -24,6 +24,8 @@ struct Result {
 	std::vector<PointResult> results;
 	std::string name;
 	ImageYuv image;
+	ImagePPM input;
+	std::string error;
 };
 
 template <class T> Result runPyramid(MainData& data) {
@@ -45,21 +47,22 @@ template <class T> Result runPyramid(MainData& data) {
 	frame->computeStart(frame->mReader.frameIndex);
 	frame->computeTerminate(frame->mReader.frameIndex);
 
-	//ImagePPM im(1080, 1920);
-	//frame->getInput(0, im);
-	//im.saveAsPGM("f:/im.pgm");
+	ImagePPM im(data.h, data.w);
+	frame->getInput(0, im);
 
-	Result result;
-	if (errorLogger.hasError()) {
-		std::cout << errorLogger.getErrorMessage() << std::endl;
-
-	} else {
-		AffineTransform trf;
-		trf.addRotation(0.2).addTranslation(-40, 30);
-		trf.frameIndex = 0;
-		frame->outputData(trf, writer.getOutputContext());
-		result = { frame->getPyramid(0), frame->getTransformedOutput(), frame->mResultPoints, frame->getClassId(), writer.getOutputFrame()};
-	}
+	AffineTransform trf;
+	trf.addRotation(0.2).addTranslation(-40, 30);
+	trf.frameIndex = 0;
+	frame->outputData(trf, writer.getOutputContext());
+	Result result = {
+		frame->getPyramid(0),
+		frame->getTransformedOutput(),
+		frame->mResultPoints,
+		frame->getClassId(),
+		writer.getOutputFrame(),
+		im,
+		(errorLogger.hasError() ? errorLogger.getErrorMessage() : "")
+	};
 
 	return result;
 }
@@ -105,12 +108,14 @@ void compareAllFrames() {
 	std::cout << std::endl;
 	//results[0].pyramid.saveAsBinary("f:/0.dat");
 	//results[1].pyramid.saveAsBinary("f:/1.dat");
-	//results[0].output.saveAsBinary("f:/0.dat");
-	//results[1].output.saveAsBinary("f:/1.dat");
-	//results[0].image.saveAsColorBMP("f:/0.bmp");
-	//results[2].image.saveAsColorBMP("f:/1.bmp");
+	//results[0].input.saveAsBMP("f:/0.bmp");
+	//results[1].input.saveAsBMP("f:/1.bmp");
 
-	//compare pyramid and output
+	for (int i = 0; i < results.size(); i++) {
+		if (results[i].error.empty() == false) std::cout << "error " << i << " " << results[i].name << ": " << results[i].error << std::endl;
+	}
+
+	//compare image data
 	Result& r1 = results[0];
 	for (int i = 1; i < results.size(); i++) {
 		Result& r2 = results[i];
@@ -119,6 +124,7 @@ void compareAllFrames() {
 		std::cout << (r1.pyramid.equalsExact(r2.pyramid) ? "pyramids EQUAL" : "pyramids DIFFER <<<<<<") << std::endl;
 		std::cout << (r1.output.equalsExact(r2.output) ? "warped output EQUAL" : "warped output DIFFER <<<<<<") << std::endl;
 		std::cout << (r1.image == r2.image ? "image EQUAL" : "image DIFFER <<<<<<") << std::endl;
+		std::cout << (r1.input == r2.input ? "input EQUAL" : "input DIFFER <<<<<<<") << std::endl;
 	}
 	return;
 
