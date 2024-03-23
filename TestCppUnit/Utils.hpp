@@ -82,7 +82,7 @@ namespace Microsoft::VisualStudio::CppUnitTestFramework {
 	}
 
 	template <> static std::wstring ToString(const PointResult& res) {
-		return toWString("ix0=" + std::to_string(res.ix0) + ", iy0=" + std::to_string(res.iy0) + ", u=" + std::to_string(res.u) + ", v=" + std::to_string(res.v));
+		return toWString(std::format("ix0={}, iy0={}, u={}, v={}", res.ix0, res.iy0, res.u, res.v));
 	}
 
 	template <> static std::wstring ToString(const AffineTransform& res) {

@@ -43,6 +43,7 @@ enum class DeviceType {
 	CPU,
 	CUDA,
 	OPEN_CL,
+	AVX,
 };
 
 class DeviceInfo {

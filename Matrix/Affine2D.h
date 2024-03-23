@@ -20,8 +20,9 @@
 
 #include "Mat.h"
 #include <utility>
+#include <array>
 
-class Affine2D : public Mat<double> {
+class Affine2D : protected Mat<double> {
 
 protected:
 	void setParam(double m00, double m01, double m02, double m10, double m11, double m12) {
@@ -62,6 +63,14 @@ public:
 		return *this;
 	}
 
+	bool operator == (const Affine2D& other) const { 
+		return array == other.array;
+	}
+
+	bool equals(const Affine2D& other, double tolerance = 0.0) const {
+		return compare(other, tolerance) == 0;
+	}
+
 	Affine2D& setParam(double scale, double rot, double dx, double dy) {
 		setParam(scale, rot, dx, -rot, scale, dy);
 		return *this;
@@ -94,7 +103,9 @@ public:
 
 	//transform point x0, y0
 	std::pair<double, double> transform(double x0, double y0) const {
-		return std::make_pair(x0 * at(0, 0) + y0 * at(0, 1) + at(0, 2), x0 * at(1, 0) + y0 * at(1, 1) + at(1, 2));
+		double x = std::fma(x0, at(0, 0), std::fma(y0, at(0, 1), at(0, 2)));
+		double y = std::fma(x0, at(1, 0), std::fma(y0, at(1, 1), at(1, 2)));
+		return std::make_pair(x, y);
 	}
 
 	double scale() const {
@@ -119,6 +130,14 @@ public:
 		return at(1, 2); 
 	}
 
+	double arrayValue(int idx) const {
+		return array[idx];
+	}
+
+	std::array<double, 6> toArray() const {
+		return { array[0], array[1], array[2], array[3], array[4], array[5] };
+	}
+
 	std::string toString(const std::string& title = "", int digits = -1) const override {
 		int d = digits == -1 ? 3 : digits;
 		std::stringstream ss;
@@ -128,6 +147,11 @@ public:
 			", dx=" << at(0, 2) << ", dy=" << at(1, 2);
 
 		return ss.str();
+	}
+
+	std::wstring toWString(const std::string& title = "", int digits = -1) const override {
+		std::string str = toString(title, digits);
+		return std::wstring(str.begin(), str.end());
 	}
 
 	Affine2D& toConsole(const std::string& title = "", int digits = -1) override {

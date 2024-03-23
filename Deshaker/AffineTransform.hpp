@@ -79,9 +79,6 @@ public:
 	//compute affine transform from given points
 	bool computeAffine(std::vector<PointResult>& points);
 
-	//convert to cuda struct
-	std::array<double, 6> toArray() const;
-
 	friend std::ostream& operator << (std::ostream& os, const AffineTransform& trf);
 };
 

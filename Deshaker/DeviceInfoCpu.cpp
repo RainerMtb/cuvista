@@ -28,9 +28,21 @@ static const X86Info cpu = GetX86Info();
  //CPU Device Info
 std::string DeviceInfoCpu::getName() const {
 	X86Microarchitecture arch = GetX86Microarchitecture(&cpu);
-	return std::format("CPU: {}, {} threads", cpu.brand_string, std::to_string(std::thread::hardware_concurrency()));
+	return std::format("CPU, {}, {} threads", cpu.brand_string, std::to_string(std::thread::hardware_concurrency()));
 }
 
-std::string getCpuName() {
+//CPU Device Info
+std::string DeviceInfoAvx::getName() const {
+	X86Microarchitecture arch = GetX86Microarchitecture(&cpu);
+	return std::format("AVX 512, {}", cpu.brand_string);
+}
+
+//full name of this cpu
+std::string DeviceInfoCpu::getCpuName() const {
 	return cpu.brand_string;
+}
+
+//check if avx512 is available
+bool DeviceInfoAvx::hasAvx512() {
+	return cpu.features.avx512f & cpu.features.avx512vl;
 }

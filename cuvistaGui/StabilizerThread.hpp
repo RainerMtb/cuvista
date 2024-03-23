@@ -25,6 +25,7 @@
 #include "CpuFrame.hpp"
 #include "OpenClFrame.hpp"
 #include "CudaFrame.hpp"
+#include "AvxFrame.hpp"
 
 //background thread to work the stabilization
 class StabilizerThread : public QThread {

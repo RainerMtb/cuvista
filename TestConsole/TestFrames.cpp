@@ -23,6 +23,7 @@ struct Result {
 	Matf output;
 	std::vector<PointResult> results;
 	std::string name;
+	ImageYuv image;
 };
 
 template <class T> Result runPyramid(MainData& data) {
@@ -44,6 +45,10 @@ template <class T> Result runPyramid(MainData& data) {
 	frame->computeStart(frame->mReader.frameIndex);
 	frame->computeTerminate(frame->mReader.frameIndex);
 
+	//ImagePPM im(1080, 1920);
+	//frame->getInput(0, im);
+	//im.saveAsPGM("f:/im.pgm");
+
 	Result result;
 	if (errorLogger.hasError()) {
 		std::cout << errorLogger.getErrorMessage() << std::endl;
@@ -53,13 +58,13 @@ template <class T> Result runPyramid(MainData& data) {
 		trf.addRotation(0.2).addTranslation(-40, 30);
 		trf.frameIndex = 0;
 		frame->outputData(trf, writer.getOutputContext());
-		result = { frame->getPyramid(0), frame->getTransformedOutput(), frame->mResultPoints, frame->getClassId() };
+		result = { frame->getPyramid(0), frame->getTransformedOutput(), frame->mResultPoints, frame->getClassId(), writer.getOutputFrame()};
 	}
 
 	return result;
 }
 
-void pyramid() {
+void compareAllFrames() {
 	std::cout << "comparing platforms..." << std::endl;
 	std::vector<Result> results(4);
 	std::string fileName = "d:/VideoTest/02.mp4";
@@ -67,8 +72,6 @@ void pyramid() {
 	{
 		//CPU
 		MainData data;
-		data.deviceRequested = true;
-		data.deviceSelected = 0;
 		data.fileIn = fileName;
 		results[0] = runPyramid<CpuFrame>(data);
 	}
@@ -76,8 +79,6 @@ void pyramid() {
 	{
 		//AVX
 		MainData data;
-		data.deviceRequested = true;
-		data.deviceSelected = 0;
 		data.fileIn = fileName;
 		results[1] = runPyramid<AvxFrame>(data);
 	}
@@ -86,7 +87,7 @@ void pyramid() {
 		//Cuda
 		MainData data;
 		data.deviceRequested = true;
-		data.deviceSelected = 1;
+		data.deviceSelected = 2;
 		data.probeCuda();
 		data.fileIn = fileName;
 		results[2] = runPyramid<CudaFrame>(data);
@@ -96,7 +97,7 @@ void pyramid() {
 		//OpenCL
 		MainData data;
 		data.deviceRequested = true;
-		data.deviceSelected = 1;
+		data.deviceSelected = 2;
 		data.probeOpenCl();
 		data.fileIn = fileName;
 		results[3] = runPyramid<OpenClFrame>(data);
@@ -106,6 +107,8 @@ void pyramid() {
 	//results[1].pyramid.saveAsBinary("f:/1.dat");
 	//results[0].output.saveAsBinary("f:/0.dat");
 	//results[1].output.saveAsBinary("f:/1.dat");
+	//results[0].image.saveAsColorBMP("f:/0.bmp");
+	//results[2].image.saveAsColorBMP("f:/1.bmp");
 
 	//compare pyramid and output
 	Result& r1 = results[0];
@@ -115,6 +118,7 @@ void pyramid() {
 		std::cout << "comparing:" << std::endl << r1.name << " // " << r2.name << std::endl;
 		std::cout << (r1.pyramid.equalsExact(r2.pyramid) ? "pyramids EQUAL" : "pyramids DIFFER <<<<<<") << std::endl;
 		std::cout << (r1.output.equalsExact(r2.output) ? "warped output EQUAL" : "warped output DIFFER <<<<<<") << std::endl;
+		std::cout << (r1.image == r2.image ? "image EQUAL" : "image DIFFER <<<<<<") << std::endl;
 	}
 	return;
 

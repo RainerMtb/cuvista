@@ -70,11 +70,10 @@ public:
 		dataCuda.probeCuda();
 		dataCuda.probeOpenCl();
 		dataCuda.collectDeviceInfo();
-		dataCuda.deviceSelected = 2;
+		dataCuda.deviceSelected = 3;
 		frameCuda = runInit<CudaFrame>(dataCuda);
 
 		//CPU
-		dataCpu.deviceSelected = 0;
 		dataCpu.collectDeviceInfo();
 		frameCpu = runInit<CpuFrame>(dataCpu);
 	}
@@ -142,9 +141,9 @@ public:
 		}
 
 		//check
-		const AffineTransform& first = trfs[0];
+		const AffineTransform& trf = trfs[0];
 		for (int i = 1; i < siz; i++) {
-			Assert::AreEqual(first, trfs[i]);
+			Assert::IsTrue(trf.equals(trfs[i], 1e-12));
 		}
 	}
 

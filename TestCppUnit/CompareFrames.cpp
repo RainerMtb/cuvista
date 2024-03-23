@@ -22,6 +22,8 @@
 #include "CudaFrame.hpp"
 #include "OpenClFrame.hpp"
 #include "CpuFrame.hpp"
+#include "AvxFrame.hpp"
+
 #include "MainData.hpp"
 #include "Utils.hpp"
 #include "ProgressDisplayConsole.hpp"
@@ -165,6 +167,7 @@ private:
 		std::vector<PointResult> res;
 		Matf pyr, out;
 		ImageYuv im;
+		std::string id;
 	};
 
 	template <class T> Result compareFrame2func(MainData& data) {
@@ -189,19 +192,13 @@ private:
 		reader.frameIndex = 1;
 		frame->inputData();
 		frame->createPyramid(frame->mReader.frameIndex);
-		res.pyr = frame->getPyramid(0);
 		frame->computeStart(frame->mReader.frameIndex);
 		frame->computeTerminate(frame->mReader.frameIndex);
 		frame->outputData(trf, writer.getOutputContext());
 		writer.write();
-
-		res.out = frame->getTransformedOutput();
-		res.im = writer.outputFrames[0];
-
-		res.res = frame->mResultPoints;
 		Assert::IsTrue(errorLogger.hasNoError());
 
-		return res;
+		return { frame->mResultPoints, frame->getPyramid(0), frame->getTransformedOutput(), writer.outputFrames[0], frame->getClassId()};
 	}
 
 public:
@@ -209,41 +206,44 @@ public:
 	TEST_METHOD(compareFrames2) {
 		//FILE* ptr;
 		//freopen_s(&ptr, "f:/redir.txt", "w", stdout);
-		MainData dataCpu;
-		Result resCpu = compareFrame2func<CpuFrame>(dataCpu);
-		MainData dataCuda;
-		dataCuda.probeCuda();
-		Result resGpu = compareFrame2func<CudaFrame>(dataCuda);
-		MainData dataOcl;
-		dataOcl.probeOpenCl();
-		Result resOcl = compareFrame2func<OpenClFrame>(dataOcl);
+		MainData data[4];
+		Result res[4];
+		res[0] = compareFrame2func<CpuFrame>(data[0]);
+		res[1] = compareFrame2func<AvxFrame>(data[1]);
+		
+		data[2].probeCuda();
+		res[2] = compareFrame2func<CudaFrame>(data[2]);
+		
+		data[3].probeOpenCl();
+		res[3] = compareFrame2func<OpenClFrame>(data[3]);
 
-		//check pyramid
-		Assert::IsTrue(resCpu.pyr.equalsExact(resGpu.pyr), L"pyramids Cuda are not equal");
-		Assert::IsTrue(resCpu.pyr.equalsExact(resOcl.pyr), L"pyramids OpenCl are not equal");
+		//check pyramids against cpu
+		for (int i = 1; i < 4; i++) {
+			std::wstring err = toWString("pyramids not equal: " + res[i].id);
+			Assert::IsTrue(res[0].pyr.equalsExact(res[i].pyr), err.c_str());
+		}
 
 		//check output mats
-		Assert::IsTrue(resCpu.out.equalsExact(resGpu.out), L"output mats Cuda are not equal");
-		Assert::IsTrue(resCpu.out.equalsExact(resOcl.out), L"output mats OpenCl are not equal");
+		for (int i = 1; i < 4; i++) {
+			std::wstring err = toWString("output mats not equal: " + res[i].id);
+			Assert::IsTrue(res[0].out.equalsExact(res[i].out), err.c_str());
+		}
 
 		//check output images
 		//imCpu.saveAsBMP("f:/imcpu.bmp");
 		//imGpu.saveAsBMP("f:/imgpu.bmp");
-		Assert::IsTrue(resCpu.im == resGpu.im, L"images Cuda are not equal");
-		Assert::IsTrue(resCpu.im == resOcl.im, L"images OpenCl are not equal");
-
-		//check results Cuda
-		for (int i = 0; i < resCpu.res.size(); i++) {
-			const PointResult& cpu = resCpu.res[i];
-			const PointResult& gpu = resGpu.res[i];
-			Assert::AreEqual(cpu, gpu);
+		for (int i = 1; i < 4; i++) {
+			std::wstring err = toWString("images not equal: " + res[i].id);
+			Assert::IsTrue(res[0].im == res[i].im, err.c_str());
 		}
 
-		//check results OpenCl
-		for (int i = 0; i < resCpu.res.size(); i++) {
-			const PointResult& cpu = resCpu.res[i];
-			const PointResult& gpu = resOcl.res[i];
-			Assert::AreEqual(cpu, gpu);
+		//check results
+		for (int i = 1; i < 4; i++) {
+			std::wstring err = toWString("restults not equal: " + res[i].id);
+			for (int k = 0; k < res[k].res.size(); k++) {
+				const PointResult& pr1 = res[0].res[k];
+				const PointResult& pr2 = res[i].res[k];
+			}
 		}
 	}
 

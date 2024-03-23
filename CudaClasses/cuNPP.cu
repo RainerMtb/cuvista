@@ -145,13 +145,13 @@ __global__ void kernel_scale_8u32f_3(cudaTextureObject_t texObj, cuMatf4 dest) {
 }
 
 __global__ void kernel_warp_back_3(cudaTextureObject_t texObj, cuMatf4 dest, cu::Affine trf) {
-	uint x = blockIdx.x * blockDim.x + threadIdx.x;
-	uint y = blockIdx.y * blockDim.y + threadIdx.y;
+	double x = blockIdx.x * blockDim.x + threadIdx.x;
+	double y = blockIdx.y * blockDim.y + threadIdx.y;
 
-	float xx = (float) (x * trf.m00 + y * trf.m01 + trf.m02);
-	float yy = (float) (x * trf.m10 + y * trf.m11 + trf.m12);
+	float xx = (float) (__fma_rn(x, trf.m00, __fma_rn(y, trf.m01, trf.m02)));
+	float yy = (float) (__fma_rn(x, trf.m10, __fma_rn(y, trf.m11, trf.m12)));
 	if (x < dest.w && y < dest.h && xx >= 0.0f && xx <= dest.w - 1 && yy >= 0.0f && yy <= dest.h - 1) {
-		//dest.at(y, x) = tex2D<float>(texObj, xx + 0.5f, yy + 0.5f); //linear interpolation
+		//dest.at(y, x) = tex2D<float>(texObj, xx + 0.5f, yy + 0.5f); //linear interpolation does not match
 		dest.at(y, x) = tex2Dinterp_3(texObj, xx, yy);
 	}
 }
@@ -197,16 +197,16 @@ __global__ void kernel_output_host(float4* src, int srcStep, uchar* dest, int de
 	if (x < w && y < h) {
 		float4 yuv = src[y * srcStep + x];
 		int idx = y * destStep + x;
-		dest[idx] = (uchar) roundf(yuv.x * 255.0f);
+		dest[idx] = (uchar) rintf(yuv.x * 255.0f);
 		idx += h * destStep;
-		dest[idx] = (uchar) roundf(yuv.y * 255.0f);
+		dest[idx] = (uchar) rintf(yuv.y * 255.0f);
 		idx += h * destStep;
-		dest[idx] = (uchar) roundf(yuv.z * 255.0f);
+		dest[idx] = (uchar) rintf(yuv.z * 255.0f);
 	}
 }
 
 __device__ void output(float4 val, uchar* nv12, int idx, float* u, float* v) {
-	nv12[idx] = (uchar) roundf(val.x * 255.0f);
+	nv12[idx] = (uchar) rintf(val.x * 255.0f);
 	*u += val.y;
 	*v += val.z;
 }
@@ -226,8 +226,8 @@ __global__ void kernel_output_nvenc(float4* src, int srcStep, uchar* cudaNv12ptr
 		output(src[idx + w + 1], cudaNv12ptr, outIdx + cudaPitch + 1, &u, &v);
 
 		outIdx = (y + h) * cudaPitch + x * 2;
-		cudaNv12ptr[outIdx] = (uchar) roundf(u / 4 * 255);
-		cudaNv12ptr[outIdx + 1] = (uchar) roundf(v / 4 * 255);
+		cudaNv12ptr[outIdx] = (uchar) rintf(u / 4 * 255);
+		cudaNv12ptr[outIdx + 1] = (uchar) rintf(v / 4 * 255);
 	}
 }
 
@@ -248,7 +248,7 @@ __global__ void kernel_scale_32f8u(cudaTextureObject_t texObj, cuMatc dest) {
 
 	if (x < dest.w && y < dest.h) {
 		float val = tex2D<float>(texObj, x, y);
-		dest.at(y, x) = (uchar) roundf(val * 255.0f);
+		dest.at(y, x) = (uchar) rintf(val * 255.0f);
 	}
 }
 

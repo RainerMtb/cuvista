@@ -90,7 +90,7 @@ public:
 	* get most recently read input frame
 	* use to show progress
 	*/
-	virtual void getInputFrame(int64_t frameIndex, ImagePPM& image) {}
+	virtual void getInput(int64_t frameIndex, ImagePPM& image) {}
 
 	/*
 	* get most resently processed output frame

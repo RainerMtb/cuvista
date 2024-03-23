@@ -72,6 +72,8 @@ public:
 		outputFrame(data.h, data.w, data.cpupitch) {}
 
 	OutputContext getOutputContext() override;
+
+	const ImageYuv& getOutputFrame() { return outputFrame; }
 };
 
 

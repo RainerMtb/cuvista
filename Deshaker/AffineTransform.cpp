@@ -263,10 +263,6 @@ const AffineTransform& AffineSolverFast::computeSimilar(std::span<PointBase> poi
 	return *this;
 }
 
-std::array<double, 6> AffineTransform::toArray() const {
-	return { array[0], array[1], array[2], array[3], array[4], array[5] };
-}
-
 std::ostream& operator << (std::ostream& os, const AffineTransform& trf) {
 	os << "trf: s=" << trf.scale() << ", r=" << trf.rot() << ", dx=" << trf.dX() << ", dy=" << trf.dY();
 	return os;

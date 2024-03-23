@@ -84,5 +84,8 @@
     <ClCompile Include="Color.cpp">
       <Filter>Image</Filter>
     </ClCompile>
+    <ClCompile Include="ThreadPoolBase.cpp">
+      <Filter>Main</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

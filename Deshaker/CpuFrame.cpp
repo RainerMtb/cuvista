@@ -22,7 +22,7 @@
 #include "Util.hpp"
 
 std::string CpuFrame::getClassName() const {
-	return "Cpu only: " + getCpuName();
+	return "Cpu only: " + mData.getCpuName();
 }
 
 std::string CpuFrame::getClassId() const {
@@ -286,7 +286,8 @@ void CpuFrame::outputData(const AffineTransform& trf, OutputContext outCtx) {
 			for (size_t c = 0; c < mData.w; c++) {
 				float val = buf.at(r, c) + (buf.at(r, c) - mFilterResult.at(r, c)) * mData.unsharp[z];
 				val = std::clamp(val, 0.0f, 1.0f);
-				yuvrow[c] = (unsigned char) std::round(val * 255);
+				yuvrow[c] = (unsigned char) std::rint(val * 255);
+				//if (r==755 && c==478) std::printf("cpu %.14f %d\n", val * 255, yuvrow[c]);
 			}
 		};
 		//forward to thread pool for iteration there
@@ -310,7 +311,7 @@ Matf CpuFrame::getTransformedOutput() const {
 }
 
 void CpuFrame::getTransformedOutput(int64_t frameIndex, ImagePPM& image) {
-	ImageYuvMat(mData.h, mData.w, mBuffer[0], mBuffer[1], mBuffer[2]).toPPM(image, mPool);
+	ImageYuv3(mData.h, mData.w, mBuffer[0], mBuffer[1], mBuffer[2]).toPPM(image, mPool);
 }
 
 Matf CpuFrame::getPyramid(size_t idx) const {
@@ -324,7 +325,7 @@ Matf CpuFrame::getPyramid(size_t idx) const {
 	return out;
 }
 
-void CpuFrame::getInputFrame(int64_t frameIndex, ImagePPM& image) {
+void CpuFrame::getInput(int64_t frameIndex, ImagePPM& image) {
 	size_t idx = frameIndex % mYUV.size();
 	mYUV[idx].toPPM(image, mPool);
 }

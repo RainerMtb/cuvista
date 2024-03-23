@@ -165,11 +165,11 @@ public:
 class ImageBGR;
 class ImagePPM;
 
-class ImageYuvMat : public ImagePlanar<float> {
+class ImageYuv3 : public ImagePlanar<float> {
 
 public:
 
-	ImageYuvMat(int h, int w, CoreMat<float>& y, CoreMat<float>& u, CoreMat<float>& v) : 
+	ImageYuv3(int h, int w, CoreMat<float>& y, CoreMat<float>& u, CoreMat<float>& v) : 
 		ImagePlanar(h, w, y.data(), u.data(), v.data()) {}
 
 	ImagePPM& toPPM(ImagePPM& dest, ThreadPoolBase& pool = defaultPool) const;

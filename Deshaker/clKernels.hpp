@@ -57,7 +57,7 @@ __kernel void scale_32f8u_3(__read_only image2d_t src, __global uchar* dest, int
 	int r = get_global_id(1);
 	int h = get_global_size(1);
 
-	float4 val = round(read_imagef(src, (int2)(c, r)) * 255.0f);
+	float4 val = rint(read_imagef(src, (int2)(c, r)) * 255.0f);
 	int idx = r * pitch + c;
 	dest[idx] = (uchar)(val.x);
 	idx += h * pitch;
@@ -142,8 +142,8 @@ __kernel void warp_back(__read_only image2d_t src, __write_only image2d_t dest, 
 	int w = get_global_size(0);
 	int h = get_global_size(1);
 
-	float xx = (float) (x * trf.s0 + y * trf.s1 + trf.s2);
-	float yy = (float) (x * trf.s3 + y * trf.s4 + trf.s5);
+	float xx = (float) (fma(x, trf.s0, fma(y, trf.s1, trf.s2)));
+	float yy = (float) (fma(x, trf.s3, fma(y, trf.s4, trf.s5)));
 	if (xx >= 0.0f && xx <= w - 1 && yy >= 0.0f && yy <= h - 1) {
 		float4 f00 = read_imagef(src, sampler, (float2)(xx, yy));
 		float4 f01 = read_imagef(src, sampler, (float2)(xx + 1, yy));

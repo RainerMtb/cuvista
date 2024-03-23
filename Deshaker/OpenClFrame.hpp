@@ -71,7 +71,7 @@ public:
 		return cl::getInput(idx, mData);
 	}
 
-	void getInputFrame(int64_t frameIndex, ImagePPM& image) override {
+	void getInput(int64_t frameIndex, ImagePPM& image) override {
 		cl::getCurrentInputFrame(image, frameIndex);
 	}
 

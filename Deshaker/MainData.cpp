@@ -44,14 +44,14 @@ std::ostream& operator << (std::ostream& os, const DeviceInfoCuda& info) {
 }
 
 std::string DeviceInfoCuda::getName() const {
-	return std::format("Cuda: {}, Compute {}.{}", props.name, props.major, props.minor);
+	return std::format("Cuda, {}, Compute {}.{}", props.name, props.major, props.minor);
 }
 
 //OPENCL Info
 std::string DeviceInfoCl::getName() const {
 	std::string name = device.getInfo<CL_DEVICE_NAME>();
 	std::string vendor = device.getInfo<CL_DEVICE_VENDOR>();
-	return std::format("OpenCL: {}, {}", name, vendor);
+	return std::format("OpenCL, {}, {}", name, vendor);
 }
 
 std::ostream& operator << (std::ostream& os, const DeviceInfoCl& info) {
@@ -354,13 +354,18 @@ void MainData::collectDeviceInfo() {
 	};
 
 	//CPU device
-	deviceInfoCpu = DeviceInfoCpu();
 	deviceInfoCpu.encodingOptions = cpuEncoders;
 	if (cudaInfo.devices.size() > 0) {
 		DeviceInfoCuda& dic = cudaInfo.devices.front();
 		std::copy(dic.encodingOptions.begin(), dic.encodingOptions.end(), std::back_inserter(deviceInfoCpu.encodingOptions));
 	}
 	deviceList.push_back(&deviceInfoCpu);
+
+	//check for Avx512
+	if (deviceInfoAvx.hasAvx512()) {
+		deviceInfoAvx.encodingOptions = deviceInfoCpu.encodingOptions;
+		deviceList.push_back(&deviceInfoAvx);
+	}
 
 	//OpenCL devices
 	for (size_t i = 0; i < clinfo.devices.size(); i++) {
@@ -504,7 +509,7 @@ void MainData::showIntro(const std::string& deviceName, const MovieReader& reade
 	if (flowFile.empty() == false) *console << "OPTICAL FLOW VIDEO: " << flowFile << std::endl;
 
 	//device info
-	*console << "  USING DEVICE: " << deviceName << std::endl;
+	*console << "  USING: " << deviceName << std::endl;
 }
 
 //default output when no arguments are given
@@ -637,4 +642,8 @@ void MainData::probeOpenCl() {
 
 size_t MainData::deviceCountOpenCl() const {
 	return clinfo.devices.size();
+}
+
+std::string MainData::getCpuName() const {
+	return deviceInfoCpu.getCpuName();
 }

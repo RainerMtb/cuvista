@@ -35,12 +35,12 @@ namespace MatrixTest {
 
 public:
 	TEST_METHOD(times) {
-		Matd a = Matd::fromRows(3, 3, {1, 2, 3, 4, 5, 6, 7, 8, 9});
-		Matd result = Matd::fromRows(3, 3, {14, 32, 50, 32, 77, 122, 50, 122, 194});
+		Matd a = Matd::fromRowData(3, 3, {1, 2, 3, 4, 5, 6, 7, 8, 9});
+		Matd result = Matd::fromRowData(3, 3, {14, 32, 50, 32, 77, 122, 50, 122, 194});
 		Assert::AreEqual(result, a.times(a.trans()));
 		Assert::AreEqual(result, a.timesTransposed());
 
-		Matd b = Matd::fromRows(5, 5, {2, 2, 2, 2, 2, -2, 1, 2, 3, -2, -2, 4, 5, 6, -2, -2, 7, 8, 9, -2, 2, 2, 2, 2, 2});
+		Matd b = Matd::fromRowData(5, 5, {2, 2, 2, 2, 2, -2, 1, 2, 3, -2, -2, 4, 5, 6, -2, -2, 7, 8, 9, -2, 2, 2, 2, 2, 2});
 		SubMat<double> sb = SubMat<double>::from(b, 1, 1, 3, 3);
 		Assert::AreEqual(result, sb.times(sb.trans()));
 		Assert::AreEqual(result, sb.timesTransposed());
@@ -54,7 +54,7 @@ public:
 	}
 
 	TEST_METHOD(basic) {
-		Matd a = Matd::fromRows(3, 3, { 12, 6, -4, -51, 167, 24, 4, -68, -41 });
+		Matd a = Matd::fromRowData(3, 3, { 12, 6, -4, -51, 167, 24, 4, -68, -41 });
 		Assert::AreEqual(a, a);
 		Assert::IsTrue(a == a);
 		Assert::AreEqual(167.0, a.max());
@@ -93,8 +93,8 @@ public:
 	}
 
 	TEST_METHOD(swap) {
-		Matd a = Matd::fromRows(2, 3, { 1, 2, 3, 4, 5, 6 });
-		Matd b = Matd::fromRows(1, 4, { -1, -2, -3, -4 });
+		Matd a = Matd::fromRowData(2, 3, { 1, 2, 3, 4, 5, 6 });
+		Matd b = Matd::fromRowData(1, 4, { -1, -2, -3, -4 });
 		Matd s1 = a, s2 = b;
 		std::swap(s1, s2);
 		Assert::AreEqual(a, s2);
@@ -103,14 +103,14 @@ public:
 
 	TEST_METHOD(qr) {
 		Matd A[] = {
-				Matd::fromRows(3, 3, {12, 6, -4, -51, 167, 24, 4, -68, -41}).trans(),
-				Matd::fromRows(3, 3, {2.5, 0.7, -22.6, 17.3, -45, -9.9, 0.3456, -0.2345, 5.2345}),
-				Matd::fromRows(3, 3, {12, 47, 18, 36, 4, -13, 0, 5, 28}),
+				Matd::fromRowData(3, 3, {12, 6, -4, -51, 167, 24, 4, -68, -41}).trans(),
+				Matd::fromRowData(3, 3, {2.5, 0.7, -22.6, 17.3, -45, -9.9, 0.3456, -0.2345, 5.2345}),
+				Matd::fromRowData(3, 3, {12, 47, 18, 36, 4, -13, 0, 5, 28}),
 				Matd::eye(3),
 				Matd::eye(1),
 				Matd::fromRow({0.5}),
 				Matd::eye(50),
-				Matd::fromRows(3, 3, {2, -2, 7, 14, 9, -3, 7, -5, 8}),
+				Matd::fromRowData(3, 3, {2, -2, 7, 14, 9, -3, 7, -5, 8}),
 				Matd::hilb(4)
 		};
 		Matd B[] = {
@@ -138,11 +138,11 @@ public:
 	}
 
 	TEST_METHOD(svd) {
-		Matd s = Matd::fromRows(3, 3, { 2, 3, 4, -4, 2.5, -20, 0, 3, 6 });
+		Matd s = Matd::fromRowData(3, 3, { 2, 3, 4, -4, 2.5, -20, 0, 3, 6 });
 		Matd sp = s.pinv().pinv();
 		Assert::AreEqual(s, sp);
 
-		Matd ss = Matd::fromRows(7, 7, {
+		Matd ss = Matd::fromRowData(7, 7, {
 			0.56115, 0.06098, 0.09795, 0.69631, 0.46300, 0.94497, 0.41785,
 			0.73846, 0.55851, 0.81792, 0.40089, 0.46976, 0.17597, 0.46457,
 			0.85967, 0.49835, 0.29663, 0.84098, 0.23546, 0.39177, 0.94879,
@@ -196,7 +196,7 @@ public:
 	}
 
 	TEST_METHOD(constMat) {
-		const Matf f = Matf::fromRows(2, 3, { 1, 2, 3, 4, 5, 6 });
+		const Matf f = Matf::fromRowData(2, 3, { 1, 2, 3, 4, 5, 6 });
 		Assert::AreEqual(5.0f, f[1][1]);
 		auto r = f[0];
 		Assert::AreEqual(2.0f, r[1]);

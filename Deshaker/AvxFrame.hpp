@@ -19,24 +19,12 @@
 #pragma once
 
 #include "MovieFrame.hpp"
+#include "AvxMat.hpp"
+
 
  //---------------------------------------------------------------------
  //---------- AVX FRAME ------------------------------------------------
  //---------------------------------------------------------------------
-
-class AvxMatFloat : public CoreMat<float> {
-public:
-	AvxMatFloat() : CoreMat<float>() {}
-	AvxMatFloat(int h, int w) : CoreMat<float>(h, w) {}
-	AvxMatFloat(int h, int w, float value) : CoreMat<float>(h, w, value) {}
-
-	int w() const { return int(CoreMat::w); }
-	int h() const { return int(CoreMat::h); }
-	float* addr(size_t row, size_t col) override { return array + row * CoreMat::w + col; }
-	const float* addr(size_t row, size_t col) const override { return array + row * CoreMat::w + col; }
-	float* row(int r) { return addr(r, 0); }
-	void saveAsBinary(const std::string& filename) { Matf::fromArray(h(), w(), array, false).saveAsBinary(filename); }
-};
 
 class AvxFrame : public MovieFrame {
 
@@ -51,33 +39,39 @@ public:
 	Mat<float> getTransformedOutput() const override;
 	Mat<float> getPyramid(size_t idx) const override;
 	ImageYuv getInput(int64_t index) const override;
-	void getInputFrame(int64_t frameIndex, ImagePPM& image) override;
+	void getInput(int64_t frameIndex, ImagePPM& image) override;
 	void getTransformedOutput(int64_t frameIndex, ImagePPM& image) override;
 	std::string getClassName() const override;
 	std::string getClassId() const override;
 
 private:
-	int walign;
+	int walign = 32;
+	int pitch;
 	std::vector<ImageYuv> mYUV;
 	std::vector<AvxMatFloat> mPyr;
-	std::vector<AvxMatFloat> mPrevOut;
-	std::vector<AvxMatFloat> mOutBuffer;
+	std::vector<AvxMatFloat> mWarped;
 	AvxMatFloat mFilterBuffer, mFilterResult, mYuvPlane;
 
-	__m512 filterKernels[3] = {
-		_mm512_setr_ps(0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f, 0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f, 0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f, 0),
-		_mm512_setr_ps(0, 0.25f, 0.5f, 0.25f, 0, 0, 0, 0, 0, 0.25f, 0.5f, 0.25f, 0, 0, 0, 0),
-		_mm512_setr_ps(0, 0.25f, 0.5f, 0.25f, 0, 0, 0, 0, 0, 0.25f, 0.5f, 0.25f, 0, 0, 0, 0)
+	Vecf filterKernels[3] = {
+		{0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f, 0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f, 0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f, 0},
+		{0, 0.25f, 0.5f, 0.25f, 0, 0, 0.25f, 0.5f, 0.25f, 0, 0, 0.25f, 0.5f, 0.25f, 0, 0},
+		{0, 0.25f, 0.5f, 0.25f, 0, 0, 0.25f, 0.5f, 0.25f, 0, 0, 0.25f, 0.5f, 0.25f, 0, 0}
 	};
 
+	void unsharpAndWrite(const AvxMatFloat& warped, AvxMatFloat& gauss, float unsharp, ImageYuv* dest, size_t z);
 	void downsample(const float* srcptr, int h, int w, int stride, float* destptr, int destStride);
-	void interpolate(const AvxMatFloat& src, int h, int w, __m256 x, __m256 y, float* dest);
-	void filter(const float* srcptr, int h, int w, int stride, float* destptr, int destStride, __m512 k);
-	float* filterTriple(__m512i index, __m512 input, __m512 k, float* dest, int destStride);
-	float* filterVector(__m512i index, __m512 input, __m512 k, float* dest, int destStride);
+	void filter(const AvxMatFloat& src, int r0, int h, int w, AvxMatFloat& destMat, Vecf k);
+	std::pair<__m512d, __m512d> transform(__m512d x, __m512d y, __m512d m00, __m512d m01, __m512d m02, __m512d m10, __m512d m11, __m512d m12);
+	void warpBack(const AffineTransform& trf, const AvxMatFloat& input, AvxMatFloat& dest);
 
-	float sum(__m512 a, int from, int to);
-	float sum(__m256 a, int from, int to);
+	float* filterTriple(__m512i index, Vecf input, Vecf k, float* dest, int destStride);
+	float* filterVector(__m512i index, Vecf input, Vecf k, float* dest, int destStride);
+
+	Vecf interpolate(Vecf f00, Vecf f10, Vecf f01, Vecf f11, Vecf dx, Vecf dy);
+	Vecf interpolate(Vecf f00, Vecf f10, Vecf f01, Vecf f11, Vecf dx, Vecf dy, Vecf dx1, Vecf dy1);
 
 	void yuvToFloat(const ImageYuv& yuv, size_t plane, AvxMatFloat& dest);
+	void yuvToRgb(const unsigned char* y, const unsigned char* u, const unsigned char* v, int h, int w, int stride, ImagePPM& dest);
+	void yuvToRgb(const float* y, const float* u, const float* v, int h, int w, int stride, ImagePPM& dest);
+	__m512i yuvToRgbPacked(Vecf y, Vecf u, Vecf v);
 };

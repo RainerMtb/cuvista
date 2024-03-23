@@ -18,27 +18,29 @@
 
 #pragma once
 
-#include "DeviceInfo.hpp"
+#include <thread>
+#include <functional>
+#include <future>
+#include <mutex>
+#include <vector>
+#include <queue>
+#include <cassert>
+#include "ThreadPoolBase.h"
 
-class DeviceInfoCpu : public DeviceInfo {
+ //execute one job
+std::future<void> ThreadPoolBase::add(std::function<void()> job) const {
+	job();
+	return { std::async([] {}) };
+}
 
-public:
-	DeviceInfoCpu()
-		: DeviceInfo(DeviceType::CPU, 16384) {}
+//iterate over job array
+void ThreadPoolBase::addAndWait(std::function<void(size_t)> job, size_t iterStart, size_t iterEnd) const {
+	for (size_t i = iterStart; i < iterEnd; i++) {
+		std::bind(job, i)();
+	}
+}
 
-	std::string getName() const override;
-
-	std::string getCpuName() const;
-};
-
-class DeviceInfoAvx : public DeviceInfo {
-
-public:
-	DeviceInfoAvx()
-		: DeviceInfo(DeviceType::AVX, 16384) {}
-
-	std::string getName() const override;
-
-	bool hasAvx512();
-};
-
+//number of threads
+size_t ThreadPoolBase::size() const {
+	return mThreads.size();
+}

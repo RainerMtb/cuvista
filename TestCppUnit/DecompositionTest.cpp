@@ -33,14 +33,14 @@ namespace MatrixDecompTest {
 public:
 
 	Matd A[9] = {
-		Matd::fromRows(3, 3, {12, 6, -4, -51, 167, 24, 4, -68, -41}).trans(),
-		Matd::fromRows(3, 3, {2.5, 0.7, -22.6, 17.3, -45, -9.9, 0.3456, -0.2345, 5.2345}),
-		Matd::fromRows(3, 3, {12, 47, 18, 36, 4, -13, 0, 5, 28}),
+		Matd::fromRowData(3, 3, {12, 6, -4, -51, 167, 24, 4, -68, -41}).trans(),
+		Matd::fromRowData(3, 3, {2.5, 0.7, -22.6, 17.3, -45, -9.9, 0.3456, -0.2345, 5.2345}),
+		Matd::fromRowData(3, 3, {12, 47, 18, 36, 4, -13, 0, 5, 28}),
 		Matd::eye(3),
 		Matd::eye(1),
 		Matd::fromRow(0.5),
 		Matd::eye(50),
-		Matd::fromRows(3, 3, {2, -2, 7, 14, 9, -3, 7, -5, 8}),
+		Matd::fromRowData(3, 3, {2, -2, 7, 14, 9, -3, 7, -5, 8}),
 		Matd::hilb(4)
 	};
 	Matd B[9] = {
@@ -55,10 +55,10 @@ public:
 		Matd::fromRow({1, 1, 2, 2}).trans()
 	};
 	Matd overA[5] = {
-		Matd::fromRows(4, 3, {12, 47, 18, 36, 4, -13, 0, 5, 28, 34, -16, 9}),
-		Matd::fromRows(5, 3, {12, 47, 18, 36, 4, -13, 0, 5, 28, 34, -16, 9, 2.3, -17.54, 38}),
-		Matd::fromRows(6, 3, {12, 47, 18, 36, 4, -13, 0, 5, 28, 34, -16, 9, 2.3, -17.54, 38, 235, -853, 919}),
-		Matd::fromRows(2, 3, {1, 2, 3, 4, 5, 6}).trans(),
+		Matd::fromRowData(4, 3, {12, 47, 18, 36, 4, -13, 0, 5, 28, 34, -16, 9}),
+		Matd::fromRowData(5, 3, {12, 47, 18, 36, 4, -13, 0, 5, 28, 34, -16, 9, 2.3, -17.54, 38}),
+		Matd::fromRowData(6, 3, {12, 47, 18, 36, 4, -13, 0, 5, 28, 34, -16, 9, 2.3, -17.54, 38, 235, -853, 919}),
+		Matd::fromRowData(2, 3, {1, 2, 3, 4, 5, 6}).trans(),
 		Matd::fromRow({1, 1, 1}).trans()
 	};
 	Matd overB[5] = {
@@ -69,13 +69,13 @@ public:
 		Matd::fromRow(2.0, 2.0, 2.0).trans()
 	};
 	Matd underA[3] = {
-		Matd::fromRows(4, 5, {12, 47, 18, 36, 4, -13, 0, 5, 28, 34, -16, 9, 2.3, -17.54, 38, 235, -853, 919, -35, 75}),
-		Matd::fromRows(2, 3, {1, 2, 3, 4, 5, 6}),
+		Matd::fromRowData(4, 5, {12, 47, 18, 36, 4, -13, 0, 5, 28, 34, -16, 9, 2.3, -17.54, 38, 235, -853, 919, -35, 75}),
+		Matd::fromRowData(2, 3, {1, 2, 3, 4, 5, 6}),
 		Matd::fromRow(1.0, 1.0, 1.0)
 	};
 	Matd underB[3] = {
 		Matd::fromRow(2.0, 5.0, -7.0, 0.0).trans(),
-		Matd::fromRows(3, 2, {2, -1, 0.5, 1.5, -7, 23}).trans(),
+		Matd::fromRowData(3, 2, {2, -1, 0.5, 1.5, -7, 23}).trans(),
 		Matd::fromRow(1.0)
 	};
 
@@ -95,14 +95,14 @@ public:
 	}
 
 	TEST_METHOD(qrSingular) {
-		Matd m = Matd::fromRows(3, 3, {0, 1, 2, 3, 4, 5, 6, 7, 8}).trans();
+		Matd m = Matd::fromRowData(3, 3, {0, 1, 2, 3, 4, 5, 6, 7, 8}).trans();
 		Matd b = Matd::values(m.cols(), 1, 1.0);
 		//Assert::ExpectException<exception>([m, b] {QRDecompositor<double>(m).solve(b); });
 		//Assert::ExpectException<exception>([m, b] {QRDecompositor<double>(m.trans()).solve(b); });
 	}
 
 	TEST_METHOD(qrRank) {
-		Matd m = Matd::fromRows(3, 3, {2, 2, 2, 4, 4, 4, 8, 8, 8});
+		Matd m = Matd::fromRowData(3, 3, {2, 2, 2, 4, 4, 4, 8, 8, 8});
 		Assert::IsFalse(QRDecompositor(m).isFullRank());
 	}
 
@@ -155,7 +155,7 @@ public:
 	}
 
 	TEST_METHOD(lu_1) {
-		Matd a = Matd::fromRows(3, 3, { 12, 6, -4, -51, 167, 24, 4, -68, -41 });
+		Matd a = Matd::fromRowData(3, 3, { 12, 6, -4, -51, 167, 24, 4, -68, -41 });
 		Matd in = a;
 		LUDecompositor<double> lu(in);
 		lu.compute();
@@ -170,9 +170,9 @@ public:
 
 	TEST_METHOD(lu_2) {
 		std::vector<Matd> mats = {
-			Matd::fromRows(3, 3, { 2, 8, 1, 4, 16, -1, -1, 2, 12 }),
+			Matd::fromRowData(3, 3, { 2, 8, 1, 4, 16, -1, -1, 2, 12 }),
 			Matd::hilb(6),
-			Matd::fromRows(3, 3, { 1, 0, 0, 4, 5, 6, -3, -2, -1 })
+			Matd::fromRowData(3, 3, { 1, 0, 0, 4, 5, 6, -3, -2, -1 })
 		};
 
 		for (Matd m : mats) {

@@ -25,15 +25,14 @@
 #include <cassert>
 #include <iostream>
 
+//define device functions here to avoid red underlines
 void __syncthreads();
 void __trap();
 long long int clock64();
 double fabs(double);
 float __saturatef(float);
+double __fma_rn(double, double, double);
 bool isnan(double);
-double max(const double a, const double b);
-double min(const double a, const double b);
-
 
 namespace cu {
 	const int THREAD_COUNT = 16;	//number of threads used in kernels to access textures
@@ -47,16 +46,11 @@ namespace cu {
 	//memory copy on device
 	__device__ void memcpy(void* dest, const void* src, size_t count);
 
-	__device__ __host__ double sqr(double x);
+	__device__ double sqr(double x);
 
-	__device__ __host__ size_t clampUnsigned(size_t valueToAdd, size_t valueToSubtract, size_t lo, size_t hi);
+	__device__ size_t clampUnsigned(size_t valueToAdd, size_t valueToSubtract, size_t lo, size_t hi);
 
-	template <class T> T __device__ __host__ clamp(T val, T lo, T hi) {
-		T out = val;
-		if (val < lo) out = lo;
-		if (val > hi) out = hi;
-		return out;
-	}
+	__device__ double clamp(double val, double lo, double hi);
 
 	//-----------------------------------
 	//matrix implementation in device code

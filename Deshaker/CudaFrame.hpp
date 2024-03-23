@@ -78,7 +78,7 @@ public:
 		return cudaGetInput(index, mData);
 	}
 
-	void getInputFrame(int64_t frameIndex, ImagePPM& image) override {
+	void getInput(int64_t frameIndex, ImagePPM& image) override {
 		cudaGetCurrentInputFrame(image, mData, frameIndex);
 	}
 

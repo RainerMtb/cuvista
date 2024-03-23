@@ -36,6 +36,7 @@
     <ClCompile Include="Image.cpp" />
     <ClCompile Include="ImageSub.cpp" />
     <ClCompile Include="ImageUtil.cpp" />
+    <ClCompile Include="ThreadPoolBase.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

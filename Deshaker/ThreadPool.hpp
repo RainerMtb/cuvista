@@ -19,6 +19,7 @@
 #pragma once
 
 #include "ThreadPoolBase.h"
+#include <queue>
 
 //actual async thread pool
 class ThreadPool : public ThreadPoolBase {

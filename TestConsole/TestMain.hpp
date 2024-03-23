@@ -54,7 +54,7 @@ void openClInvGroupTest(int w1, int w2);
 void openClnorm1Test();
 
 void compare();
-void pyramid();
+void compareAllFrames();
 
 void imageOutput();
 void flow();

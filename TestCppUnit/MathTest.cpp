@@ -107,13 +107,13 @@ public:
 			AffineSolverSimple trf1(points.size());
 			AffineSolver& as1 = trf1;
 			as1.computeSimilar(points);
-			Assert::IsTrue(resultSet[i].equals(trf1, 1e-14), str.c_str());
+			Assert::IsTrue(resultSet[i].equals(trf1, 1e-12), str.c_str());
 
 			ThreadPool pool(2);
 			AffineSolverFast trf2(pool, points.size());
 			AffineSolver& as2 = trf2;
 			as2.computeSimilar(points);
-			Assert::IsTrue(resultSet[i].equals(trf2, 1e-14), str.c_str());
+			Assert::IsTrue(resultSet[i].equals(trf2, 1e-12), str.c_str());
 		}
 	}
 

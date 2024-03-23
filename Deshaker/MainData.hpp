@@ -156,6 +156,7 @@ public:
 	} limits;
 
 	DeviceInfoCpu deviceInfoCpu;
+	DeviceInfoAvx deviceInfoAvx;
 	std::vector<DeviceInfo*> deviceList;
 	CudaInfo cudaInfo;
 	OpenClInfo clinfo;
@@ -230,4 +231,6 @@ public:
 	void timeStart();
 
 	double timeElapsedSeconds() const;
+
+	std::string getCpuName() const;
 };

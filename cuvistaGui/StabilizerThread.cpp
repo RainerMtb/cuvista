@@ -44,6 +44,8 @@ void StabilizerThread::run() {
         DeviceType devtype = mData.deviceList[mData.deviceSelected]->type;
         if (devtype == DeviceType::CPU)
             frame = std::make_unique<CpuFrame>(mData, mReader, *writer);
+        else if (devtype == DeviceType::AVX)
+            frame = std::make_unique<AvxFrame>(mData, mReader, *writer);
         else if (devtype == DeviceType::CUDA)
             frame = std::make_unique<CudaFrame>(mData, mReader, *writer);
         else if (devtype == DeviceType::OPEN_CL)

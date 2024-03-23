@@ -87,12 +87,12 @@ template <class T> T ImagePlanar<T>::sample(size_t plane, double x, double y) co
 	return (T) mats[plane].interp2clamped(x, y);
 }
 
-ImagePPM& ImageYuvMat::toPPM(ImagePPM& dest, ThreadPoolBase& pool) const {
+ImagePPM& ImageYuv3::toPPM(ImagePPM& dest, ThreadPoolBase& pool) const {
 	convert8(dest, 0, 1, 2, pool);
 	return dest;
 }
 
-ImagePPM ImageYuvMat::toPPM() const {
+ImagePPM ImageYuv3::toPPM() const {
 	ImagePPM out(h, w);
 	return toPPM(out);
 }

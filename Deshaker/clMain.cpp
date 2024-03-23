@@ -403,14 +403,6 @@ void cl::readImage(Image src, size_t destPitch, void* dest, CommandQueue queue) 
 	queue.enqueueReadImage(src, CL_TRUE, Size2(), Size2(w, h), destPitch, 0, dest);
 }
 
-ImageYuv cl::getInput(int64_t idx, const CoreData& core) {
-	ImageYuv out(core.h, core.w, core.w);
-	int64_t fr = idx % core.bufferCount;
-	Image im = clData.yuv[fr];
-	clData.queue.enqueueReadImage(im, CL_TRUE, Size2(), Size2(core.w, core.h * 3), core.w, 0, out.data());
-	return out;
-}
-
 void cl::getPyramid(float* pyramid, size_t idx, const CoreData& core) {
 	size_t pyrIdx = idx % core.pyramidCount;
 	size_t wbytes = core.w * sizeof(float);
@@ -436,6 +428,14 @@ Matf cl::getTransformedOutput(const CoreData& core) {
 		}
 	}
 	return warped;
+}
+
+ImageYuv cl::getInput(int64_t idx, const CoreData& core) {
+	ImageYuv out(core.h, core.w, core.w);
+	int64_t fr = idx % core.bufferCount;
+	Image im = clData.yuv[fr];
+	clData.queue.enqueueReadImage(im, CL_TRUE, Size2(), Size2(core.w, core.h * 3), core.w, 0, out.data());
+	return out;
 }
 
 void cl::getCurrentInputFrame(ImagePPM& image, int64_t idx) {

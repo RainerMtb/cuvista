@@ -27,6 +27,9 @@
     <Filter Include="Frame">
       <UniqueIdentifier>{ec8b31a3-908b-47a3-b139-3be3c03485f0}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Avx">
+      <UniqueIdentifier>{84592743-f293-4c0d-9c2e-c62d6651c3da}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ProgressDisplay.cpp">
@@ -234,6 +237,9 @@
     </ClInclude>
     <ClInclude Include="AvxFrame.hpp">
       <Filter>Frame</Filter>
+    </ClInclude>
+    <ClInclude Include="AvxMat.hpp">
+      <Filter>Avx</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

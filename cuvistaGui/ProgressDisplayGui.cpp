@@ -30,7 +30,7 @@ void ProgressDisplayGui::update(bool force) {
 
     if (imageDue && frame.mReader.frameIndex > 0) {
         timePoint = timePointNow;
-        frame.getInputFrame(frame.mReader.frameIndex - 1, ppmInput);
+        frame.getInput(frame.mReader.frameIndex - 1, ppmInput);
         QPixmap im(ppmInput.w, ppmInput.h);
         im.loadFromData(ppmInput.header(), ppmInput.sizeTotal(), "PPM");
         thread->updateInput(im);

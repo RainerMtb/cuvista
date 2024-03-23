@@ -43,7 +43,7 @@ public:
 	Matf getTransformedOutput() const override;
 	Matf getPyramid(size_t idx) const override;
 	ImageYuv getInput(int64_t index) const override;
-	void getInputFrame(int64_t frameIndex, ImagePPM& image) override;
+	void getInput(int64_t frameIndex, ImagePPM& image) override;
 	void getTransformedOutput(int64_t frameIndex, ImagePPM& image) override;
 	std::string getClassName() const override;
 	std::string getClassId() const override;

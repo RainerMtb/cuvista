@@ -20,11 +20,8 @@
 
 #include <thread>
 #include <functional>
-#include <future>
-#include <mutex>
 #include <vector>
-#include <queue>
-#include <cassert>
+#include <future>
 
 //base class syncronously executes jobs
 class ThreadPoolBase {
@@ -33,26 +30,17 @@ protected:
 	std::vector<std::thread> mThreads;
 
 public:
-	virtual ~ThreadPoolBase() {}
+	virtual ~ThreadPoolBase() = default;
 	virtual void wait() const {}
 	virtual void cancel() {}
 	virtual void shutdown() {}
 
 	//execute one job
-	virtual std::future<void> add(std::function<void()> job) const {
-		job();
-		return { std::async([] {}) };
-	}
+	virtual std::future<void> add(std::function<void()> job) const;
 
 	//iterate over job array
-	virtual void addAndWait(std::function<void(size_t)> job, size_t iterStart, size_t iterEnd) const {
-		for (size_t i = iterStart; i < iterEnd; i++) {
-			std::bind(job, i)();
-		}
-	}
+	virtual void addAndWait(std::function<void(size_t)> job, size_t iterStart, size_t iterEnd) const;
 
 	//number of threads
-	size_t size() const {
-		return mThreads.size();
-	}
+	size_t size() const;
 };

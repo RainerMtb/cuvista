@@ -23,6 +23,8 @@
 #include "CpuFrame.hpp"
 #include "CudaFrame.hpp"
 #include "OpenClFrame.hpp"
+#include "AvxFrame.hpp"
+
 #include "FrameResult.hpp"
 #include "ProgressDisplayConsole.hpp"
 #include "UserInputConsole.hpp"
@@ -80,6 +82,10 @@ int deshake(int argsCount, char** args) {
 		} else if (data.deviceList[data.deviceSelected]->type == DeviceType::CPU) {
 			//only on CPU
 			frame = std::make_unique<CpuFrame>(data, *reader, *writer);
+
+		} else if (data.deviceList[data.deviceSelected]->type == DeviceType::AVX) {
+			//run Avx512
+			frame = std::make_unique<AvxFrame>(data, *reader, *writer);
 
 		} else if (data.deviceList[data.deviceSelected]->type == DeviceType::CUDA) {
 			//use CUDA GPU
