@@ -20,6 +20,10 @@
 #include "AvxFrame.hpp"
 #include "Util.hpp"
 
+//---------------------------------
+// ---- AVX stream output ---------
+//---------------------------------
+
  std::ostream& operator << (std::ostream& os, __m512 v) {
  	for (int i = 0; i < 16; i++) os << v.m512_f32[i] << " ";
  	return os;
@@ -35,6 +39,10 @@
  	return os;
  }
 
+ //---------------------------------
+ // ---- constructor ---------------
+ //---------------------------------
+
 AvxFrame::AvxFrame(MainData& data, MovieReader& reader, MovieWriter& writer) :
 	MovieFrame(data, reader, writer),
 	pitch { alignValue(data.w, walign) } 
@@ -47,9 +55,13 @@ AvxFrame::AvxFrame(MainData& data, MovieReader& reader, MovieWriter& writer) :
 	mWarped.push_back(AvxMatFloat(data.h, pitch, data.bgcol_yuv.colors[1]));
 	mWarped.push_back(AvxMatFloat(data.h, pitch, data.bgcol_yuv.colors[2]));
 
+	mFilterBuffer = AvxMatFloat(data.w, alignValue(data.h, walign)); //transposed
 	mFilterResult = AvxMatFloat(data.h, pitch);
-	mFilterBuffer = AvxMatFloat(data.w, pitch);
 }
+
+//---------------------------------
+// ---- main functions ------------
+//---------------------------------
 
 std::string AvxFrame::getClassName() const {
 	return "AVX 512: " + mData.getCpuName();
@@ -125,7 +137,7 @@ void AvxFrame::outputData(const AffineTransform& trf, OutputContext outCtx) {
 }
 
 Matf AvxFrame::getTransformedOutput() const {
-	return Matf::concatVert(mWarped[0], mWarped[1], mWarped[2]);
+	return Matf::concatVert(mWarped[0].core(), mWarped[1].core(), mWarped[2].core());
 }
 
 void AvxFrame::getTransformedOutput(int64_t frameIndex, ImagePPM& image) {
@@ -133,7 +145,7 @@ void AvxFrame::getTransformedOutput(int64_t frameIndex, ImagePPM& image) {
 }
 
 Matf AvxFrame::getPyramid(size_t idx) const {
-	return mPyr[idx];
+	return mPyr[idx].core();
 }
 
 void AvxFrame::getInput(int64_t frameIndex, ImagePPM& image) {
@@ -152,83 +164,24 @@ ImageYuv AvxFrame::getInput(int64_t index) const {
 //----------------------------------------------------
 
 
-float* AvxFrame::filter(VF8 data, VF8 k, float* dest, int destStride) {
-	*dest = (data * k).sum(0, 5);
-	return dest + destStride;
-}
-
-void AvxFrame::filter(const AvxMatFloat& src, int r0, int h, int w, AvxMatFloat& destMat, size_t z) {
+void AvxFrame::filter(const AvxMatFloat& src, int r0, int h, int w, AvxMatFloat& dest, size_t z) {
 	//util::ConsoleTimer ic("avx filter " + std::to_string(h) + "p");
-	int s = 2;
-	int stride = destMat.w();
 	VF8 k = filterKernels8[z];
 	VF8 v;
 
 	for (int r = 0; r < h; r++) {
 		const float* row = src.addr(r0 + r, 0);
-		float* dest = destMat.addr(0, r);
+		dest.at(0, r) = VF8(row[0], row[0], row[0], row[1], row[2], 0, 0, 0).mul(k).sum(0, 5);
+		dest.at(1, r) = VF8(row[0], row[0], row[1], row[2], row[3], 0, 0, 0).mul(k).sum(0, 5);
 
-		dest = filter(VF8(row[0], row[0], row[0], row[1], row[2], 0, 0, 0), k, dest, stride);
-		dest = filter(VF8(row[0], row[0], row[1], row[2], row[3], 0, 0, 0), k, dest, stride);
-
-		for (const float* ptr = row; ptr != row + w - s - s; ptr++) {
-			dest = filter(VF8(ptr), k, dest, stride);
+		for (int c = 0; c < w - 4; c++) {
+			dest.at(c + 2, r) = VF8(row + c).mul(k).sum(0, 5);
 		}
 
-		dest = filter(VF8(row[w - 4], row[w - 3], row[w - 2], row[w - 1], row[w - 1], 0, 0, 0), k, dest, stride);
-		dest = filter(VF8(row[w - 3], row[w - 2], row[w - 1], row[w - 1], row[w - 1], 0, 0, 0), k, dest, stride);
+		dest.at(w - 2, r) = VF8(row[w - 4], row[w - 3], row[w - 2], row[w - 1], row[w - 1], 0, 0, 0).mul(k).sum(0, 5);
+		dest.at(w - 1, r) = VF8(row[w - 3], row[w - 2], row[w - 1], row[w - 1], row[w - 1], 0, 0, 0).mul(k).sum(0, 5);
 	}
 }
-
-//float* AvxFrame::filterTriple(__m512i index, VF16 input, VF16 k, float* dest, int destStride) {
-//	VF16 a = _mm512_permutexvar_ps(index, input.a);
-//	VF16 result = a * k;
-//	*dest = result.sum(0, 5);
-//	dest += destStride;
-//	*dest = result.sum(5, 10);
-//	dest += destStride;
-//	*dest = result.sum(10, 15);
-//	return dest + destStride;
-//}
-//
-//float* AvxFrame::filterVector(__m512i index, VF16 input, VF16 k, float* dest, int destStride) {
-//	__m512i offset = _mm512_set1_epi32(3);
-//	__m512i idxmin = _mm512_set1_epi32(0);
-//	__m512i idxmax = _mm512_set1_epi32(15);
-//	float* ptr = dest;
-//	for (int i = 0; i < 4; i++) {
-//		__m512i vindex = _mm512_max_epi32(index, idxmin);
-//		vindex = _mm512_min_epi32(vindex, idxmax);
-//		ptr = filterTriple(vindex, input, k, ptr, destStride);
-//		index = _mm512_add_epi32(index, offset);
-//	}
-//	return ptr;
-//}
-//
-//void AvxFrame::filter(const AvxMatFloat& src, int r0, int h, int w, AvxMatFloat& destMat, size_t z) {
-//	__m512 k = filterKernels16[z].a;
-//	for (int r = 0; r < h; r++) {
-//		const float* row = src.addr(r0 + r, 0);
-//		float* dest = destMat.addr(0, r);
-//		__m512 input;
-//		__m512i index;
-//
-//		input = _mm512_loadu_ps(row);
-//		index = _mm512_setr_epi32(-2, -1, 0, 1, 2, -1, 0, 1, 2, 3, 0, 1, 2, 3, 4, 0);
-//		dest = filterVector(index, input, k, dest, destMat.w());
-//
-//		for (int c = 10; c < w - 16; c += 12) {
-//			input = _mm512_loadu_ps(row + c);
-//			index = _mm512_setr_epi32(0, 1, 2, 3, 4, 1, 2, 3, 4, 5, 2, 3, 4, 5, 6, 0);
-//			dest = filterVector(index, input, k, dest, destMat.w());
-//		}
-//
-//		input = _mm512_loadu_ps(row + w - 16);
-//		index = _mm512_setr_epi32(2, 3, 4, 5, 6, 3, 4, 5, 6, 7, 4, 5, 6, 7, 8, 0);
-//		dest = destMat.addr(w - 12, r);
-//		filterVector(index, input, k, dest, destMat.w());
-//	}
-//}
 
 void AvxFrame::downsample(const float* srcptr, int h, int w, int stride, float* destptr, int destStride) {
 	__m512i idx1 = _mm512_setr_epi32(0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30);
@@ -354,24 +307,24 @@ void AvxFrame::warpBack(const AffineTransform& trf, const AvxMatFloat& input, Av
 			__m512 dx = _mm512_sub_ps(x, flx);
 			__m512 dy = _mm512_sub_ps(y, fly);
 
-			//compute index to load f00
+			//index to load f00
 			__m512i ix = _mm512_cvtps_epi32(flx);
 			__m512i iy = _mm512_cvtps_epi32(fly);
 			idx = _mm512_mullo_epi32(epi_stride, iy);
 			idx = _mm512_add_epi32(idx, ix);
 			__m512 f00 = _mm512_mask_i32gather_ps(ps_zero, mask, idx, input.data(), 4);
 
-			//compute index to load f01
+			//index to load f01
 			__mmask16 maskdx = _mm512_cmp_ps_mask(dx, ps_zero, _CMP_NEQ_OS); //not equal
 			__m512i idx2 = _mm512_mask_add_epi32(idx, maskdx, idx, epi_one);
 			__m512 f01 = _mm512_mask_i32gather_ps(ps_zero, mask, idx2, input.data(), 4);
 
-			//compute index to load f10
+			//index to load f10
 			__mmask16 maskdy = _mm512_cmp_ps_mask(dy, ps_zero, _CMP_NEQ_OS); //not equal
 			__m512i idx3 = _mm512_mask_add_epi32(idx, maskdy, idx, epi_stride);
 			__m512 f10 = _mm512_mask_i32gather_ps(ps_zero, mask, idx3, input.data(), 4);
 
-			//compute index to load f11
+			//index to load f11
 			__mmask16 maskdxdy = maskdx & maskdy;
 			__m512i idx4 = _mm512_mask_add_epi32(idx3, maskdxdy, idx3, epi_one);
 			__m512 f11 = _mm512_mask_i32gather_ps(ps_zero, mask, idx4, input.data(), 4);
@@ -395,6 +348,7 @@ void AvxFrame::unsharpAndWrite(const AvxMatFloat& warped, AvxMatFloat& gauss, fl
 			//Vecf ps_unsharped = Vecf::clamp(ps_warped + (ps_warped - ps_gauss) * unsharp, 0.0f, 1.0f);
 			//ps_unsharped = _mm512_mul_round_ps(ps_unsharped.a, _mm512_set1_ps(255.0f), _MM_FROUND_TO_NEAREST_INT);
 			//__m512i chars32 = _mm512_cvtps_epi32(ps_unsharped.a);
+
 			__m128i chars8 = _mm512_cvtepi32_epi8(chars32);
 			_mm_storeu_epi8(dest->addr(z, r, c), chars8);
 			//if (r==755 && c==464) std::printf("avx %.14f %d\n", result.m512_f32[14], chars32.m512i_i32[14]);
@@ -402,6 +356,7 @@ void AvxFrame::unsharpAndWrite(const AvxMatFloat& warped, AvxMatFloat& gauss, fl
 	}
 }
 
+//from uchar yuv to uchar rgb
 void AvxFrame::yuvToRgb(const unsigned char* y, const unsigned char* u, const unsigned char* v, int h, int w, int stride, ImagePPM& dest) {
 	for (int r = 0; r < h; r++) {
 		for (int c = 0; c < w; c += 16) {
@@ -418,6 +373,7 @@ void AvxFrame::yuvToRgb(const unsigned char* y, const unsigned char* u, const un
 	}
 }
 
+//from float yuv to uchar rgb
 void AvxFrame::yuvToRgb(const float* y, const float* u, const float* v, int h, int w, int stride, ImagePPM& dest) {
 	for (int r = 0; r < h; r++) {
 		for (int c = 0; c < w; c += 16) {
@@ -434,6 +390,7 @@ void AvxFrame::yuvToRgb(const float* y, const float* u, const float* v, int h, i
 	}
 }
 
+//convert individual vectors in float for Y U V to one vector holding uchar packed RGB
 __m512i AvxFrame::yuvToRgbPacked(VF16 y, VF16 u, VF16 v) {
 	VF16 r = VF16::clamp(y + ((v - 128.0f) * 1.370705f), 0.0f, 255.0f);
 	VF16 g = VF16::clamp(y - ((u - 128.0f) * 0.337633f) - ((v - 128.0f) * 0.698001f), 0.0f, 255.0f);

@@ -22,7 +22,7 @@
 
 
 //specialization of mat for use with avx
-class AvxMatFloat : public CoreMat<float> {
+class AvxMatFloat : protected CoreMat<float> {
 public:
 	int64_t frameIndex = -1;
 
@@ -32,12 +32,21 @@ public:
 
 	int w() const { return int(CoreMat::w); }
 	int h() const { return int(CoreMat::h); }
-	float* addr(size_t row, size_t col) override { return array + row * CoreMat::w + col; }
-	const float* addr(size_t row, size_t col) const override { return array + row * CoreMat::w + col; }
+
+	float& at(int row, int col) { return CoreMat::at(row, col); }
+	const float& at(int row, int col) const { return CoreMat::at(row, col); }
+	float* addr(int row, int col) { return CoreMat::addr(row, col); }
+	const float* addr(int row, int col) const { return CoreMat::addr(row, col); }
+	float* data() { return CoreMat::data(); }
+	const float* data() const { return CoreMat::data(); }
+
 	float* row(int r) { return addr(r, 0); }
 	const float* row(int r) const { return addr(r, 0); }
+
 	void fill(float value) { std::fill(array, array + numel(), value); }
 	void saveAsBinary(const std::string& filename) { Matf::fromArray(h(), w(), array, false).saveAsBinary(filename); }
+
+	const CoreMat<float>& core() const{ return *this; }
 };
 
 

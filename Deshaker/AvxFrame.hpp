@@ -66,14 +66,10 @@ private:
 
 	void unsharpAndWrite(const AvxMatFloat& warped, AvxMatFloat& gauss, float unsharp, ImageYuv* dest, size_t z);
 	void downsample(const float* srcptr, int h, int w, int stride, float* destptr, int destStride);
-	void filter(const AvxMatFloat& src, int r0, int h, int w, AvxMatFloat& destMat, size_t z);
-	float* filter(VF8 data, VF8 k, float* dest, int destStride);
+	void filter(const AvxMatFloat& src, int r0, int h, int w, AvxMatFloat& dest, size_t z);
 
 	std::pair<__m512d, __m512d> transform(__m512d x, __m512d y, __m512d m00, __m512d m01, __m512d m02, __m512d m10, __m512d m11, __m512d m12);
 	void warpBack(const AffineTransform& trf, const AvxMatFloat& input, AvxMatFloat& dest);
-
-	float* filterTriple(__m512i index, VF16 input, VF16 k, float* dest, int destStride);
-	float* filterVector(__m512i index, VF16 input, VF16 k, float* dest, int destStride);
 
 	VF16 interpolate(VF16 f00, VF16 f10, VF16 f01, VF16 f11, VF16 dx, VF16 dy);
 	VF16 interpolate(VF16 f00, VF16 f10, VF16 f01, VF16 f11, VF16 dx, VF16 dy, VF16 dx1, VF16 dy1);

@@ -375,7 +375,7 @@ public:
 		return concat(catDim, matsList.begin(), matsList.end());
 	}
 
-	static Mat<T> concat(Direction catDim, auto... mats) {
+	static Mat<T> concat(Direction catDim, auto&... mats) {
 		size_t count = sizeof...(mats);
 		Mat<T> args[] { mats... };
 		return concat(catDim, args, args + count);

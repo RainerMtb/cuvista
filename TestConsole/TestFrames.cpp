@@ -120,7 +120,7 @@ void compareAllFrames() {
 	for (int i = 1; i < results.size(); i++) {
 		Result& r2 = results[i];
 
-		std::cout << "comparing:" << std::endl << r1.name << " // " << r2.name << std::endl;
+		std::cout << "comparing:" << std::endl << r1.name << " vs " << r2.name << std::endl;
 		std::cout << (r1.pyramid.equalsExact(r2.pyramid) ? "pyramids EQUAL" : "pyramids DIFFER <<<<<<") << std::endl;
 		std::cout << (r1.output.equalsExact(r2.output) ? "warped output EQUAL" : "warped output DIFFER <<<<<<") << std::endl;
 		std::cout << (r1.image == r2.image ? "image EQUAL" : "image DIFFER <<<<<<") << std::endl;
