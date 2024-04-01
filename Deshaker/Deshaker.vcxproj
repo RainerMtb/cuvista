@@ -201,6 +201,7 @@
     <ClInclude Include="AVException.hpp" />
     <ClInclude Include="AvxFrame.hpp" />
     <ClInclude Include="AvxMat.hpp" />
+    <ClInclude Include="AvxWrapper.hpp" />
     <ClInclude Include="clFunctions.hpp" />
     <ClInclude Include="clHeaders.hpp" />
     <ClInclude Include="clKernelCompute.hpp" />

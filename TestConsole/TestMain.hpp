@@ -35,11 +35,9 @@ void subMat();
 void matPerf();
 
 void iteratorTest();
-void similarTransformPerformance();
+void similarTransform();
 void readAndWriteOneFrame();
 void checkVersions();
-
-void transform();
 void draw();
 void filterCompare();
 
@@ -47,14 +45,13 @@ void cudaInvSimple();
 void cudaInvPerformanceTest();
 void cudaInvEqualityTest();
 void cudaInvParallel();
-
 void cudaInvTest(size_t s1, size_t s2);
+
 void openClInvTest(size_t s1, size_t s2);
 void openClInvGroupTest(int w1, int w2);
 void openClnorm1Test();
 
-void compare();
-void compareAllFrames();
+void compareFramesPlatforms();
 
 void imageOutput();
 void flow();

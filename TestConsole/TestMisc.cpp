@@ -18,10 +18,23 @@
 
 #include "TestMain.hpp"
 
-void similarTransformPerformance() {
+Matd similarTransformFunc(std::vector<PointResult>& points, AffineSolver& solver) {
+	solver.computeSimilar(points);
+	Matd x = Matd::fromRow(solver.scale(), solver.rot(), solver.dX(), solver.dY()).trans();
+	x.toConsole("X");
+	for (int i = 0; i < 8; i++) {
+		auto t1 = std::chrono::high_resolution_clock::now();
+		solver.computeSimilar(points);
+		auto t2 = std::chrono::high_resolution_clock::now();
+		auto time = std::chrono::duration<double, std::milli>(t2 - t1);
+		std::cout << "time : " << time.count() << " ms" << std::endl;
+	}
+	return x;
+}
+
+void similarTransform() {
 	//load PointResults
 	Matd::precision(10);
-	std::chrono::microseconds time;
 
 	int w = 100;
 	int h = 75;
@@ -39,35 +52,21 @@ void similarTransformPerformance() {
 	std::cout << n << " points" << std::endl;
 
 	//slow method
-	AffineSolverSimple trans1(points.size());
-	AffineSolver& as1 = trans1;
-	as1.computeSimilar(points);
-	Matd x1 = Matd::fromRow(trans1.scale(), trans1.rot(), trans1.dX(), trans1.dY()).trans();
-	x1.toConsole("V1");
-	for (int i = 0; i < 15; i++) {
-		auto t1 = std::chrono::high_resolution_clock::now();
-		as1.computeSimilar(points);
-		auto t2 = std::chrono::high_resolution_clock::now();
-		time = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1);
-		std::cout << "time : " << time.count() / 1000.0 << " ms" << std::endl;
-	}
+	AffineSolverSimple s1(points.size());
+	Matd x1 = similarTransformFunc(points, s1);
 
 	//direct method
 	ThreadPool thr(4);
-	AffineSolverFast trans2(thr, points.size());
-	AffineSolver& as2 = trans2;
-	as2.computeSimilar(points);
-	Matd x2 = Matd::fromRow(trans2.scale(), trans2.rot(), trans2.dX(), trans2.dY()).trans();
-	x2.toConsole("V2");
-	for (int i = 0; i < 15; i++) {
-		auto t1 = std::chrono::high_resolution_clock::now();
-		as2.computeSimilar(points);
-		auto t2 = std::chrono::high_resolution_clock::now();
-		time = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1);
-		std::cout << "time : " << time.count() / 1000.0 << " ms" << std::endl;
-	}
+	AffineSolverFast s2(thr, points.size());
+	Matd x2 = similarTransformFunc(points, s2);
 
-	std::cout << std::endl << "results equal: " << (x1 == x2 ? "YES" : "NO") << std::endl;
+	//avx solver
+	AffineSolverAvx s3(points.size());
+	Matd x3 = similarTransformFunc(points, s3);
+
+	std::cout << std::endl;
+	std::cout << "results equal 1-2: " << (x1 == x2 ? "YES" : "NO") << std::endl;
+	std::cout << "results equal 1-3: " << (x1 == x3 ? "YES" : "NO") << std::endl;
 }
 
 void readAndWriteOneFrame() {
@@ -116,27 +115,6 @@ void checkVersions() {
 		data.probeOpenCl();
 		data.showDeviceInfo();
 	} catch (CancelException ignore) {}
-}
-
-void transform() {
-	std::vector<PointResult> points = {
-		{ 0, 0, 0, 0, 0, 3, 6, 0.5, 0.4 },
-		{ 1, 0, 0, 0, 0, 5, 5, 0.5, 0.4 },
-	};
-
-	AffineSolverSimple trf1(points.size());
-	AffineSolver& as1 = trf1;
-	as1.computeSimilar(points);
-
-	ThreadPool pool(2);
-	AffineSolverFast trf2(pool, points.size());
-	AffineSolver& as2 = trf2;
-	as2.computeSimilar(points);
-
-	trf1.toConsole("result classic loop ");
-	trf2.toConsole("result direct method");
-	bool isEqual = trf1.equals(trf2, 1e-14);
-	std::cout << "results equal: " << std::boolalpha << isEqual << std::endl;
 }
 
 void draw() {

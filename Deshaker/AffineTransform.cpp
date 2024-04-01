@@ -17,6 +17,7 @@
  */
 
 #include "AffineTransform.hpp"
+#include "AvxWrapper.hpp"
 
 const AffineTransform& AffineTransform::computeAffineDirect(const PointResult& p1, const PointResult& p2, const PointResult& p3) {
 	//set up A and b, members of AffineTransform
@@ -134,14 +135,14 @@ const AffineTransform& AffineSolverFast::computeSimilar(std::span<PointBase> poi
 	size_t m = points.size() * 2;
 	Matd A = Adata.share(6, m);  //A is transposed when compared to loop version
 
-	int dy = points[0].y;         //represents a2, needs to be smallest value
-	int dx = points[1].x;         //represents a3
-	long long int nn = 0;      //int could overflow
-	long long int s0 = 0;      //in docs s1
-	long long int s1 = 0;      //in docs s2
+	int dy = points[0].y;        //represents a2, needs to be smallest value
+	int dx = points[1].x;        //represents a3
+	long long int nn = 0;        //int could overflow
+	long long int s0 = 0;        //in docs s1
+	long long int s1 = 0;        //in docs s2
 
-	double* p = A.data() + m * 4; //5th row holds adjusted x and y values
-	double* q = A.data() + m * 5; //6th row holds adjusted b values
+	double* p = A.addr(4, 0);    //5th row holds adjusted x and y values
+	double* q = A.addr(5, 0);    //6th row holds adjusted b values
 
 	//accumulate s0, s1, nn and adjust coords
 	auto it = points.begin();
@@ -242,11 +243,136 @@ const AffineTransform& AffineSolverFast::computeSimilar(std::span<PointBase> poi
 
 	//back substitution step 1
 	for (size_t k = 0; k < 4; k++) {
-		double* row = A.data() + m * k;
+		double* row = A.addr(k, 0);
 		double s = std::inner_product(row + k, row + m, q + k, 0.0);
 		s /= -A[k][k];
 		for (size_t i = k; i < m; i++) {
 			q[i] += s * A[k][i];
+		}
+	}
+
+	//back substitution step 2, only need first four values
+	for (int k = 3; k >= 0; k--) {
+		q[k] /= -rd[k];
+		for (int i = 0; i < k; i++) {
+			q[i] -= q[k] * A[k][i];
+		}
+	}
+
+	//readjust transform parameter values back to given points
+	setParam(q[0], q[1], -dx * q[0] - dy * q[1] + q[2] + dx, dx * q[1] - dy * q[0] + q[3] + dy);
+	return *this;
+}
+
+const AffineTransform& AffineSolverAvx::computeSimilar(std::span<PointBase> points) {
+	assert(points.size() >= 2 && "similar transform needs at least two points");
+	size_t m = points.size() * 2;
+	Matd A = M.share(6, m + 8);
+
+	int dy = points[0].y;        //represents a2, needs to be smallest value
+	int dx = points[1].x;        //represents a3
+	long long int nn = 0;        //int could overflow
+	long long int s0 = 0;        //in docs s1
+	long long int s1 = 0;        //in docs s2
+
+	double* p = A.addr(4, 0);
+	double* q = A.addr(5, 0);
+
+	//accumulate s0, s1, nn and adjust coords
+	for (size_t idx = 0, k = 0; idx < points.size(); idx++) {
+		PointBase& pb = points[idx];
+		int x = pb.x - dx;
+		p[k] = x;
+		s0 += x;
+		nn += x * x;
+		q[k] = pb.x + pb.u - dx;
+		k++;
+
+		int y = pb.y - dy;
+		p[k] = y;
+		s1 += y;
+		nn += y * y;
+		q[k] = pb.y + pb.v - dy;
+		k++;
+	}
+
+	//compute parameters
+	double sign0 = p[0] < 0 ? -1.0 : 1.0;
+	double n = std::sqrt(nn) * sign0;
+	double b = p[0] + n;
+	double sign2 = sign0 * n * b < p[3] * s1 ? -1.0 : 1.0;
+	double t = sign2 * std::sqrt(points.size() * nn - s0 * s0 - s1 * s1);
+	double z = b * (n + t) - p[3] * s1;
+	double e = n / t;
+	double f = s1 / (b * t);
+
+	double sn = s0 + n;
+	double g = sn / (b * t);
+	double h = (p[3] / b * (sn * sn + s1 * s1) - s1 * (n + t)) / (t * z);
+	double j = sn * (t + n) / (t * z);
+	double k = p[3] * n * sn / (t * z);
+
+	double rd[] = { n, -n, t / n, t / n };
+
+	//------------
+	A[0][0] = b / n;
+	A[0][1] = 0.0;
+	A[0][2] = 0.0;
+	A[0][3] = p[3] / n;
+
+	A[1][0] = 0.0;
+	A[1][1] = 1.0 + p[0] / n;
+	A[1][2] = -p[3] / n;
+	A[1][3] = 0.0;
+
+	A[2][0] = -s0 / n;
+	A[2][1] = s1 / n;
+	A[2][2] = 1.0 + e - p[3] * f;
+	A[2][3] = -p[3] * g;
+
+	A[3][0] = -s1 / n;
+	A[3][1] = -s0 / n;
+	A[3][2] = 0.0;
+	A[3][3] = 1.0 + e + p[3] * h;
+
+	VD8 pd_n0 = n;
+	VD8 pd_n1 = VD8(-n, n);
+	VD8 pd_e = VD8(e, 0);
+	VD8 pd_f = VD8(-f, f);
+	VD8 pd_g = g;
+	VD8 pd_ek = VD8(-k, e);
+	VD8 pd_h = h;
+	VD8 pd_j = VD8(j, -j);
+	for (size_t idx = 4; idx < m; idx += 8) {
+		VD8 pd_a = p + idx;
+		VD8 pd_b = _mm512_permute_pd(pd_a, 0b0101'0101); //switch idx <-> idx+1
+		(pd_a / pd_n0).storeu(A.addr(0, idx));
+		(pd_b / pd_n1).storeu(A.addr(1, idx));
+		(pd_e + pd_b * pd_f - pd_a * pd_g).storeu(A.addr(2, idx));
+		(pd_ek + pd_a * pd_h + pd_b * pd_j).storeu(A.addr(3, idx));
+	}
+
+	//clear padding values to 0
+	for (size_t i = 0; i < 6; i++) {
+		for (size_t idx = m; idx < m + 8; idx++) {
+			A.at(i, idx) = 0.0;
+		}
+	}
+
+	//back substitution step 1
+	for (size_t k = 0; k < 4; k++) {
+		double s = 0.0;
+		for (size_t i = k; i < m; i += 8) {
+			VD8 a = A.addr(k, i);
+			VD8 b = A.addr(5, i);
+			s += _mm512_reduce_add_pd(a.mul(b));
+		}
+		s /= -A[k][k];
+		VD8 pd_s = s;
+		for (size_t i = k; i < m; i += 8) {
+			VD8 a = A.addr(k, i);
+			VD8 b = A.addr(5, i);
+			(b + a * s).storeu(A.addr(5, i));
 		}
 	}
 

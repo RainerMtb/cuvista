@@ -20,6 +20,7 @@
 
 #include "MovieFrame.hpp"
 #include "AvxMat.hpp"
+#include "AvxWrapper.hpp"
 
 
  //---------------------------------------------------------------------
@@ -52,11 +53,11 @@ private:
 	std::vector<AvxMatFloat> mWarped;
 	AvxMatFloat mFilterBuffer, mFilterResult, mYuvPlane;
 
-	VF16 filterKernels16[3] = {
-		{ 0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f, 0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f, 0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f, 0 },
-		{ 0, 0.25f, 0.5f, 0.25f, 0, 0, 0.25f, 0.5f, 0.25f, 0, 0, 0.25f, 0.5f, 0.25f, 0, 0 },
-		{ 0, 0.25f, 0.5f, 0.25f, 0, 0, 0.25f, 0.5f, 0.25f, 0, 0, 0.25f, 0.5f, 0.25f, 0, 0 }
-	};
+	//VF16 filterKernels16[3] = {
+	//	{ 0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f, 0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f, 0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f, 0 },
+	//	{ 0, 0.25f, 0.5f, 0.25f, 0, 0, 0.25f, 0.5f, 0.25f, 0, 0, 0.25f, 0.5f, 0.25f, 0, 0 },
+	//	{ 0, 0.25f, 0.5f, 0.25f, 0, 0, 0.25f, 0.5f, 0.25f, 0, 0, 0.25f, 0.5f, 0.25f, 0, 0 }
+	//};
 
 	VF8 filterKernels8[3] = {
 		{ 0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f, 0, 0, 0 },
@@ -66,9 +67,9 @@ private:
 
 	void unsharpAndWrite(const AvxMatFloat& warped, AvxMatFloat& gauss, float unsharp, ImageYuv* dest, size_t z);
 	void downsample(const float* srcptr, int h, int w, int stride, float* destptr, int destStride);
-	void filter(const AvxMatFloat& src, int r0, int h, int w, AvxMatFloat& dest, size_t z);
+	void filter(const AvxMatFloat& src, int r0, int h, int w, AvxMatFloat& dest, VF8 k);
 
-	std::pair<__m512d, __m512d> transform(__m512d x, __m512d y, __m512d m00, __m512d m01, __m512d m02, __m512d m10, __m512d m11, __m512d m12);
+	std::pair<VD8, VD8> transform(VD8 x, VD8 y, VD8 m00, VD8 m01, VD8 m02, VD8 m10, VD8 m11, VD8 m12);
 	void warpBack(const AffineTransform& trf, const AvxMatFloat& input, AvxMatFloat& dest);
 
 	VF16 interpolate(VF16 f00, VF16 f10, VF16 f01, VF16 f11, VF16 dx, VF16 dy);

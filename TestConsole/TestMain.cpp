@@ -28,7 +28,6 @@ int main() {
 	//matTest();
 	//subMat();
 	//iteratorTest();
-	//similarTransformPerformance();
 	//cudaInvSimple();
 	//cudaInvPerformanceTest();
 	//cudaInvEqualityTest();
@@ -44,5 +43,6 @@ int main() {
 	//openClnorm1Test();
 	//flow();
 	//pinvTest();
-	compareAllFrames();
+	compareFramesPlatforms();
+	//similarTransform();
 }

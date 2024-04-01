@@ -241,5 +241,8 @@
     <ClInclude Include="AvxMat.hpp">
       <Filter>Avx</Filter>
     </ClInclude>
+    <ClInclude Include="AvxWrapper.hpp">
+      <Filter>Avx</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

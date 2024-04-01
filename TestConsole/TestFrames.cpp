@@ -67,7 +67,7 @@ template <class T> Result runPyramid(MainData& data) {
 	return result;
 }
 
-void compareAllFrames() {
+void compareFramesPlatforms() {
 	std::cout << "comparing platforms..." << std::endl;
 	std::vector<Result> results(4);
 	std::string fileName = "d:/VideoTest/02.mp4";

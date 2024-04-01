@@ -121,3 +121,15 @@ public:
 		threadPool { threadPool },
 		Adata { Matd::allocate(6, maxPoints * 2) } {}
 };
+
+class AffineSolverAvx : public AffineSolver {
+
+private:
+	Matd M;
+
+	const AffineTransform& computeSimilar(std::span<PointBase> points) override;
+
+public:
+	AffineSolverAvx(size_t maxPoints) :
+		M { Matd::allocate(6, maxPoints * 2 + 8) } {}
+};
