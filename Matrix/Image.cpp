@@ -399,15 +399,6 @@ template <class T> void ImageBase<T>::drawDot(double cx, double cy, double rx, d
 
 
 //------------------------
-// image mat
-//------------------------
-
-//construct Mat per image plane
-template <class T> ImageMat<T>::ImageMat(T* data, int h, int w, int stride, int planeIdx) :
-	CoreMat<T>(data, h, stride, false) {}
-
-
-//------------------------
 // planar image
 //------------------------
 
@@ -419,11 +410,22 @@ template <class T> ImagePlanar<T>::ImagePlanar(int h, int w, int stride, int num
 	}
 }
 
-template <class T> ImagePlanar<T>::ImagePlanar(int h, int w, T* y, T* u, T* v) :
-	ImageBase<T>(h, w, w, 3, 0) {
-	mats.emplace_back(y, h, w, w, 0);
-	mats.emplace_back(u, h, w, w, 1);
-	mats.emplace_back(v, h, w, w, 2);
+template <class T> ImagePlanar<T>::ImagePlanar(CoreMat<T>& y, CoreMat<T>& u, CoreMat<T>& v) :
+	ImageBase<T>(int(y.rows()), int(y.cols()), int(y.cols()), 3, 0) {
+	assert(y.rows() == u.rows() && y.rows() == v.rows() && y.cols() == u.cols() && y.cols() == v.cols() && "image dimensions mismatch");
+	mats.emplace_back(y);
+	mats.emplace_back(u);
+	mats.emplace_back(v);
+}
+
+template <class T> ImagePlanar<T>::ImagePlanar(CoreMat<T>& mat) :
+	ImageBase<T>(int(mat.rows()), int(mat.cols()), int(mat.cols()), 1, 0) {
+	mats.emplace_back(mat);
+}
+
+template <class T> ImagePlanar<T>::ImagePlanar(CoreMat<T>* mat) :
+	ImageBase<T>(int(mat->rows()), int(mat->cols()), int(mat->cols()), 1, 0) {
+	mats.emplace_back(*mat);
 }
 
 //read access one pixel on plane idx (0..2) and row / col
@@ -464,6 +466,25 @@ template <class T> void ImagePlanar<T>::scaleTo(size_t srcPlane, ImageBase<T>& d
 
 template <class T> T ImagePlanar<T>::sample(size_t plane, double x, double y) const {
 	return (T) mats[plane].interp2clamped(x, y);
+}
+
+template <class T> bool ImagePlanar<T>::saveAsBMP(const std::string& filename, T scale) const {
+	std::ofstream os(filename, std::ios::binary);
+	int h = this->h;
+	int w = this->w;
+	int siz = int(mats.size());
+
+	BmpGrayHeader(w, h * siz).writeHeader(os);
+	size_t stridedWidth = alignValue(w, 4);
+	std::vector<char> data(stridedWidth);
+
+	for (int i = siz - 1; i >= 0; i--) {
+		for (int r = h - 1; r >= 0; r--) {
+			for (int c = 0; c < w; c++) data[c] = (unsigned char) std::round(*addr(i, r, c) * scale);
+			os.write(data.data(), stridedWidth);
+		}
+	}
+	return os.good();
 }
 
 

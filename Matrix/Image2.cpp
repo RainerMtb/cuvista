@@ -21,12 +21,12 @@
 #include "Image2.hpp"
 
 
-ImagePPM& ImageYuv3::toPPM(ImagePPM& dest, ThreadPoolBase& pool) const {
+ImagePPM& ImageYuvFloat::toPPM(ImagePPM& dest, ThreadPoolBase& pool) const {
 	convert8(dest, 0, 1, 2, pool);
 	return dest;
 }
 
-ImagePPM ImageYuv3::toPPM() const {
+ImagePPM ImageYuvFloat::toPPM() const {
 	ImagePPM out(h, w);
 	return toPPM(out);
 }
@@ -52,19 +52,6 @@ template <class T> const unsigned char* ImagePacked<T>::addr(size_t idx, size_t 
 //------------------------
 // YUV image stuff
 //------------------------
-
-bool ImageYuv::saveAsBMP(const std::string& filename) const {
-	assert(stride % 4 == 0 && "image stride must be multiple of 4");
-	std::ofstream os(filename, std::ios::binary);
-	BmpGrayHeader(stride, h).writeHeader(os);
-
-	for (int z = 2; z >= 0; z--) {
-		for (int r = h - 1; r >= 0; r--) {
-			os.write(reinterpret_cast<const char*>(addr(z, r, 0)), stride);
-		}
-	}
-	return os.good();
-}
 
 bool ImageYuv::saveAsColorBMP(const std::string& filename) const {
 	return toBGR().saveAsBMP(filename);
@@ -186,6 +173,7 @@ ImagePPM ImageYuv::toPPM() const {
 	return toPPM(out);
 }
 
+
 //-----------------------------
 // ImageBGR
 //-----------------------------
@@ -200,6 +188,7 @@ bool ImageBGR::saveAsBMP(const std::string& filename) const {
 	}
 	return os.good();
 }
+
 
 //-----------------------------------
 // ImagePPM

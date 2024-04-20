@@ -43,8 +43,23 @@ public:
 	float* row(int r) { return addr(r, 0); }
 	const float* row(int r) const { return addr(r, 0); }
 
-	void fill(float value) { std::fill(array, array + numel(), value); }
-	void saveAsBinary(const std::string& filename) { Matf::fromArray(h(), w(), array, false).saveAsBinary(filename); }
+	void fill(float value) { 
+		std::fill(array, array + numel(), value); 
+	}
 
-	const CoreMat<float>& core() const{ return *this; }
+	void saveAsBinary(const std::string& filename) const { 
+		Matf::fromArray(h(), w(), array, false).saveAsBinary(filename); 
+	}
+
+	void saveAsBMP(const std::string& filename) {
+		ImagePlanar<float>(this).saveAsBMP(filename, 255.0f);
+	}
+
+	Matf toMatfCopy() const { 
+		return Matf::fromRowData(h(), w(), w(), array); 
+	}
+
+	Matf toMatf() const { 
+		return Matf::fromArray(h(), w(), array, false); 
+	}
 };

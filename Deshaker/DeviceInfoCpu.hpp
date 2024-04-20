@@ -39,6 +39,6 @@ public:
 
 	std::string getName() const override;
 
-	bool hasAvx512();
+	bool hasAvx512() const;
 };
 

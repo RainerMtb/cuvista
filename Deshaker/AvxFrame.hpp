@@ -53,21 +53,16 @@ private:
 	std::vector<AvxMatFloat> mWarped;
 	AvxMatFloat mFilterBuffer, mFilterResult, mYuvPlane;
 
-	//VF16 filterKernels16[3] = {
-	//	{ 0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f, 0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f, 0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f, 0 },
-	//	{ 0, 0.25f, 0.5f, 0.25f, 0, 0, 0.25f, 0.5f, 0.25f, 0, 0, 0.25f, 0.5f, 0.25f, 0, 0 },
-	//	{ 0, 0.25f, 0.5f, 0.25f, 0, 0, 0.25f, 0.5f, 0.25f, 0, 0, 0.25f, 0.5f, 0.25f, 0, 0 }
-	//};
-
-	VF8 filterKernels8[3] = {
-		{ 0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f, 0, 0, 0 },
-		{       0, 0.25f,   0.5f, 0.25f,       0, 0, 0, 0 },
-		{       0, 0.25f,   0.5f, 0.25f,       0, 0, 0, 0 }
+	float filterKernels[3][5] = {
+		{ 0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f },
+		{ 0,       0.25f, 0.5f,   0.25f, 0 },
+		{ 0,       0.25f, 0.5f,   0.25f, 0 }
 	};
 
 	void unsharpAndWrite(const AvxMatFloat& warped, AvxMatFloat& gauss, float unsharp, ImageYuv* dest, size_t z);
 	void downsample(const float* srcptr, int h, int w, int stride, float* destptr, int destStride);
-	void filter(const AvxMatFloat& src, int r0, int h, int w, AvxMatFloat& dest, VF8 k);
+	void filter(const AvxMatFloat& src, int r0, int h, int w, AvxMatFloat& dest, std::span<float> k);
+	void filter(std::span<VF16> v, std::span<float> k, AvxMatFloat& dest, int r0, int c0);
 
 	std::pair<VD8, VD8> transform(VD8 x, VD8 y, VD8 m00, VD8 m01, VD8 m02, VD8 m10, VD8 m11, VD8 m12);
 	void warpBack(const AffineTransform& trf, const AvxMatFloat& input, AvxMatFloat& dest);
@@ -78,5 +73,4 @@ private:
 	void yuvToFloat(const ImageYuv& yuv, size_t plane, AvxMatFloat& dest);
 	void yuvToRgb(const unsigned char* y, const unsigned char* u, const unsigned char* v, int h, int w, int stride, ImagePPM& dest);
 	void yuvToRgb(const float* y, const float* u, const float* v, int h, int w, int stride, ImagePPM& dest);
-	__m512i yuvToRgbPacked(VF16 y, VF16 u, VF16 v);
 };

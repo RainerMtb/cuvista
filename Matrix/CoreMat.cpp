@@ -138,9 +138,11 @@ template <class T> size_t CoreMat<T>::index(size_t row, size_t col) const {
 
 template <class T> template <class R> R CoreMat<T>::interpFunc(size_t ix, size_t iy, R dx, R dy) const {
 	T f00 = at(iy, ix);
-	T f01 = dx == 0 ? f00 : at(iy, ix + 1);
-	T f10 = dy == 0 ? f00 : at(iy + 1, ix);
-	T f11 = dx == 0 || dy == 0 ? f00 : at(iy + 1, ix + 1);
+	size_t x = dx != 0;
+	size_t y = dy != 0;
+	T f01 = at(iy, ix + x);
+	T f10 = at(iy + y, ix);
+	T f11 = at(iy + y, ix + x);
 	R result = (R) ((1 - dx) * (1 - dy) * f00 + (1 - dx) * dy * f10 + dx * (1 - dy) * f01 + dx * dy * f11);
 	return result;
 }

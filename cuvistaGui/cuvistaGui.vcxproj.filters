@@ -75,6 +75,9 @@
     <QtMoc Include="Eula.h">
       <Filter>Header Files</Filter>
     </QtMoc>
+    <QtMoc Include="ClickLabel.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
   </ItemGroup>
   <ItemGroup>
     <QtUic Include="progress.ui">

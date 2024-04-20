@@ -19,6 +19,16 @@
 #include "FrameResult.hpp"
 #include "Util.hpp"
 
+FrameResult::FrameResult(MainData& data, ThreadPool& threadPool) :
+	mData { data } 
+{
+	if (data.deviceInfoAvx.hasAvx512()) {
+		mAffineSolver = std::make_unique<AffineSolverAvx>(data.resultCount);
+	} else {
+		mAffineSolver = std::make_unique<AffineSolverFast>(threadPool, data.resultCount);
+	}
+}
+
 void FrameResult::computeTransform(std::vector<PointResult>& results, ThreadPool& threadPool, int64_t frameIndex, RNGbase* rng) {
 	computeExperimental(results, threadPool, frameIndex, rng);
 }

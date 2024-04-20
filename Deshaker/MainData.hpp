@@ -233,4 +233,6 @@ public:
 	double timeElapsedSeconds() const;
 
 	std::string getCpuName() const;
+
+	bool hasAvx512() const;
 };

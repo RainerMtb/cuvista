@@ -149,6 +149,7 @@
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="Eula.h" />
+    <QtMoc Include="ClickLabel.h" />
     <ClInclude Include="ProgressDisplayGui.hpp" />
     <QtMoc Include="StabilizerThread.hpp" />
     <ClInclude Include="UserInputGui.hpp" />

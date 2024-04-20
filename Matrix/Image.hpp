@@ -22,20 +22,6 @@
 #include "CoreMat.h"
 #include "ThreadPoolBase.h"
 
-template <class T> class ImageMat : public CoreMat<T> {
-
-public:
-
-	ImageMat(T* data, int h, int w, int stride, int planeIdx);
-
-	ImageMat(const T* data, int h, int w, int stride, int planeIdx);
-
-	ImageMat() : 
-		ImageMat(nullptr, 0, 0, 0, 0) {}
-
-	using CoreMat<T>::addr;
-};
-
 class ImageGray;
 
 template <class T> class ImageBase {
@@ -47,7 +33,7 @@ public:
 
 protected:
 
-	std::vector<T> array;
+	std::vector<T> array; //holds the pixel data, planar images will hold ImageMat within this data
 	static inline ThreadPoolBase defaultPool;
 
 	int colorValue(T pixelValue) const;
@@ -73,8 +59,7 @@ public:
 	ImageBase(int h, int w, int stride, int numPlanes);
 
 	ImageBase() : 
-		ImageBase(0, 0, 0, 0) 
-	{}
+		ImageBase(0, 0, 0, 0) {}
 
 	//start of data array
 	virtual T* data();
@@ -127,6 +112,24 @@ private:
 };
 
 
+
+template <class T> class ImageMat : public CoreMat<T> {
+
+public:
+
+	ImageMat(T* data, int h, int w, int stride, int planeIdx) :
+		CoreMat<T>(data, h, stride, false) {}
+
+	ImageMat() :
+		ImageMat(nullptr, 0, 0, 0, 0) {}
+
+	ImageMat(CoreMat<T>& mat) :
+		CoreMat<T>(mat.data(), mat.rows(), mat.cols(), false) {}
+
+	using CoreMat<T>::addr;
+};
+
+
 template <class T> class ImagePlanar : public ImageBase<T> {
 
 protected:
@@ -137,7 +140,11 @@ public:
 
 	ImagePlanar(int h, int w, int stride, int numPlanes);
 
-	ImagePlanar(int h, int w, T* y, T* u, T* v);
+	ImagePlanar(CoreMat<T>& y, CoreMat<T>& u, CoreMat<T>& v);
+
+	ImagePlanar(CoreMat<T>& mat);
+
+	ImagePlanar(CoreMat<T>* mat);
 
 	ImagePlanar() : 
 		ImagePlanar(0, 0, 0, 0) {}
@@ -161,6 +168,8 @@ public:
 
 	//scale image
 	void scaleTo(ImagePlanar<T>& dest) const;
+
+	bool saveAsBMP(const std::string& filename, T scale = 1) const;
 };
 
 
@@ -169,6 +178,9 @@ class ImageGray : public ImagePlanar<unsigned char> {
 public:
 	ImageGray(int h, int w) :
 		ImagePlanar(h, w, w, 1) {}
+
+	ImageGray(CoreMat<unsigned char>& mat) :
+		ImagePlanar(mat) {}
 
 	ImageGray() :
 		ImageGray(0, 0) {}

@@ -106,10 +106,10 @@ void compareFramesPlatforms() {
 		results[3] = runPyramid<OpenClFrame>(data);
 	}
 	std::cout << std::endl;
-	//results[0].pyramid.saveAsBinary("f:/0.dat");
-	//results[1].pyramid.saveAsBinary("f:/1.dat");
-	//results[0].input.saveAsBMP("f:/0.bmp");
-	//results[1].input.saveAsBMP("f:/1.bmp");
+	results[0].output.saveAsBinary("f:/0.dat");
+	results[1].output.saveAsBinary("f:/1.dat");
+	//results[0].image.saveAsBMP("f:/0.bmp");
+	//results[1].image.saveAsBMP("f:/1.bmp");
 
 	for (int i = 0; i < results.size(); i++) {
 		if (results[i].error.empty() == false) std::cout << "error " << i << " " << results[i].name << ": " << results[i].error << std::endl;

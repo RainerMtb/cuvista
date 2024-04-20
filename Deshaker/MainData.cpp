@@ -647,3 +647,7 @@ size_t MainData::deviceCountOpenCl() const {
 std::string MainData::getCpuName() const {
 	return deviceInfoCpu.getCpuName();
 }
+
+bool MainData::hasAvx512() const {
+	return deviceInfoAvx.hasAvx512();
+}

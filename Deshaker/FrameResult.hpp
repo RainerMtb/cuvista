@@ -27,9 +27,7 @@ class ThreadPool;
 class FrameResult {
 
 public:
-	FrameResult(MainData& data, ThreadPool& threadPool) :
-		mData { data },
-		mAffineSolver { std::make_unique<AffineSolverFast>(threadPool, data.resultCount) } {}
+	FrameResult(MainData& data, ThreadPool& threadPool);
 
 	//compute resulting transformation for this frame
 	void computeTransform(std::vector<PointResult>& results, ThreadPool& threadPool, int64_t frameIndex, RNGbase* rng);

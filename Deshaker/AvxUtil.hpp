@@ -16,34 +16,17 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
-#include "TestMain.hpp"
+#pragma once
 
-int main() {
-	std::cout << "----------------------------" << std::endl << "TestMain:" << std::endl;
-	//imageOutput();
-	//qrdec();
-	//draw();
-	//filterCompare();
-	//matPerf();
-	//matTest();
-	//subMat();
-	//iteratorTest();
-	//cudaInvSimple();
-	//cudaInvPerformanceTest();
-	//cudaInvEqualityTest();
-	//cudaFMAD();
-	//cudaInvParallel();
-	//readAndWriteOneFrame();
-	//checkVersions();
-	//transform();
-	//cudaInvTest(1, 32);
+#include <span>
+#include "immintrin.h"
+#include "AvxWrapper.hpp"
 
-	//openClInvTest(1, 32);
-	//openClInvGroupTest(1, 9);
-	//openClnorm1Test();
-	//flow();
-	//pinvTest();
-	//similarTransform();
+namespace Avx {
 
-	compareFramesPlatforms();
+	void transpose16x8(std::span<VF16> data);
+
+	void transpose16x4(std::span<VF16> data);
+
+	__m512i yuvToRgbPacked(VF16 y, VF16 u, VF16 v);
 }

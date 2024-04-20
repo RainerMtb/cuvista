@@ -43,6 +43,6 @@ std::string DeviceInfoCpu::getCpuName() const {
 }
 
 //check if avx512 is available
-bool DeviceInfoAvx::hasAvx512() {
+bool DeviceInfoAvx::hasAvx512() const {
 	return cpu.features.avx512f & cpu.features.avx512vl;
 }

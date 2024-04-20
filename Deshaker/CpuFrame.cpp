@@ -311,7 +311,7 @@ Matf CpuFrame::getTransformedOutput() const {
 }
 
 void CpuFrame::getTransformedOutput(int64_t frameIndex, ImagePPM& image) {
-	ImageYuv3(mData.h, mData.w, mBuffer[0], mBuffer[1], mBuffer[2]).toPPM(image, mPool);
+	ImageYuvFloat(mBuffer[0], mBuffer[1], mBuffer[2]).toPPM(image, mPool);
 }
 
 Matf CpuFrame::getPyramid(size_t idx) const {

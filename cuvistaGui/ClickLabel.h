@@ -16,34 +16,23 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
-#include "TestMain.hpp"
+#pragma once
 
-int main() {
-	std::cout << "----------------------------" << std::endl << "TestMain:" << std::endl;
-	//imageOutput();
-	//qrdec();
-	//draw();
-	//filterCompare();
-	//matPerf();
-	//matTest();
-	//subMat();
-	//iteratorTest();
-	//cudaInvSimple();
-	//cudaInvPerformanceTest();
-	//cudaInvEqualityTest();
-	//cudaFMAD();
-	//cudaInvParallel();
-	//readAndWriteOneFrame();
-	//checkVersions();
-	//transform();
-	//cudaInvTest(1, 32);
+#include <QLabel>
 
-	//openClInvTest(1, 32);
-	//openClInvGroupTest(1, 9);
-	//openClnorm1Test();
-	//flow();
-	//pinvTest();
-	//similarTransform();
+//label that can receive a click
+class ClickLabel : public QLabel {
+    Q_OBJECT
 
-	compareFramesPlatforms();
-}
+public:
+    ClickLabel(QWidget* parent = nullptr) :
+        QLabel(parent) {}
+
+signals:
+    void clicked();
+
+protected:
+    void mousePressEvent(QMouseEvent* event) {
+        clicked();
+    }
+};

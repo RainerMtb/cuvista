@@ -77,17 +77,18 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     //color selection
     const ColorRgb& rgb = mData.bgcol_rgb;
     mBackgroundColor.setRgb(rgb.r(), rgb.g(), rgb.b());
-    setColorIcon(ui.btnColor, mBackgroundColor);
+    setColorIcon(ui.lblColor, mBackgroundColor);
 
     auto fcnColorSelection = [&] () {
-        QColor result = QColorDialog().getColor(mBackgroundColor, this, QString("select background color"));
+        QColorDialog::ColorDialogOptions options = QColorDialog::ColorDialogOption::NoEyeDropperButton;
+        QColor result = QColorDialog::getColor(mBackgroundColor, this, QString("Select Background Color"), options);
         if (result.isValid()) {
             mBackgroundColor = result;
-            setColorIcon(ui.btnColor, mBackgroundColor);
+            setColorIcon(ui.lblColor, mBackgroundColor);
             ui.radioColor->setChecked(true);
         }
     };
-    connect(ui.btnColor, &QToolButton::clicked, this, fcnColorSelection);
+    connect(ui.lblColor, &ClickLabel::clicked, this, fcnColorSelection);
 
     //limits
     ui.spinRadius->setMinimum(mData.limits.radsecMin);
@@ -339,8 +340,8 @@ void cuvistaGui::showInfo() {
     msgBox.exec();
 }
 
-void cuvistaGui::setColorIcon(QPushButton* btn, QColor& color) {
-    QPixmap icon(btn->iconSize());
+void cuvistaGui::setColorIcon(ClickLabel* btn, QColor& color) {
+    QPixmap icon(30, 24);
     icon.fill(color);
-    btn->setIcon(icon);
+    btn->setPixmap(icon);
 }

@@ -23,12 +23,12 @@
 class ImageBGR;
 class ImagePPM;
 
-class ImageYuv3 : public ImagePlanar<float> {
+class ImageYuvFloat : public ImagePlanar<float> {
 
 public:
 
-	ImageYuv3(int h, int w, CoreMat<float>& y, CoreMat<float>& u, CoreMat<float>& v) :
-		ImagePlanar(h, w, y.data(), u.data(), v.data()) {}
+	ImageYuvFloat(CoreMat<float>& y, CoreMat<float>& u, CoreMat<float>& v) :
+		ImagePlanar(y, u, v) {}
 
 	ImagePPM& toPPM(ImagePPM& dest, ThreadPoolBase& pool = defaultPool) const;
 
@@ -99,11 +99,8 @@ public:
 
 	void readFromPGM(const std::string& filename);
 
-	//write grayscale image in bmp format, Y-U-V planes one after the other, including stride
-	bool saveAsBMP(const std::string& filename) const;
-
 	//convert to ImageBGR and save to file
-	//for repeated use consider preallocating BGR image
+	//for repeated use BGR image should be preallocated
 	bool saveAsColorBMP(const std::string& filename) const;
 };
 

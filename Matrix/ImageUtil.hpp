@@ -30,14 +30,14 @@
 class ImageHeader {
 
 protected:
+	char header[54] = { 0 };
+
 	virtual void writeHeader(std::ofstream& os) const {}
 };
 
 class BmpHeader : public ImageHeader {
 
 protected:
-	char header[54] = { 0 };
-
 	BmpHeader(int w, int h, int offset, int bits);
 
 public:
@@ -51,7 +51,7 @@ public:
 		BmpHeader(w, h, 54, 24) {}
 };
 
-class BmpGrayHeader : public BmpHeader {
+class BmpGrayHeader : public ImageHeader {
 
 protected:
 	char colorMap[1024] = { 0 };

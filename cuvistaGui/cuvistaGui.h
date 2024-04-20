@@ -27,6 +27,7 @@
 #include "FrameResult.hpp"
 #include "ProgressDisplayGui.hpp"
 #include "StabilizerThread.hpp"
+#include "ClickLabel.h"
 
 struct EncoderSetting {
     QString text;
@@ -80,5 +81,5 @@ private:
     void updateInputImage();
     void setInputFile(const QString& filename);
     void showMessage(const QString& msg);
-    void setColorIcon(QPushButton* btn, QColor& color);
+    void setColorIcon(ClickLabel* btn, QColor& color);
 };

@@ -126,6 +126,31 @@ protected:
 		return out;
 	}
 
+	static Mat<T> concatFunc(Direction catDim, std::span<const Mat<T>*> span) {
+		if (span.size() == 0) return Mat<T>();
+
+		//compute dimension of resulting mat
+		size_t cat = static_cast<size_t>(catDim);
+		std::vector<size_t> dims = { span[0]->rows(), span[0]->cols() };
+
+		for (size_t i = 1; i < span.size(); i++) {
+			std::vector<size_t> d = { span[i]->rows(), span[i]->cols() };
+			dims[cat] += d[cat];
+			assert(dims[1 - cat] == d[1 - cat] && "dimensions do not agree for concatenation");
+		}
+
+		//allocate space for combined mat
+		Mat<T> out = allocate(dims[0], dims[1]);
+		dims = { 0, 0 };
+
+		//fill in mats
+		for (const Mat<T>* ptr : span) {
+			out.setArea(dims[0], dims[1], *ptr);
+			dims[cat] += ptr->dim(cat);
+		}
+		return out;
+	}
+
 private:
 	inline static T EPS = std::numeric_limits<T>::epsilon() * 1000;
 
@@ -355,57 +380,36 @@ public:
 		return generate(n, n, [] (size_t r, size_t c) {return 1 / (1 + (T) r + (T) c); });
 	}
 
-	static Mat<T> concatVert(const std::initializer_list<Mat<T>>& matsList) {
-		return concat(Direction::VERTICAL, matsList.begin(), matsList.end());
+	static Mat<T> concatVert(std::initializer_list<Mat<T>> matsList) {
+		return concat(Direction::VERTICAL, matsList);
+	}
+
+	static Mat<T> concatHorz(std::initializer_list<Mat<T>> matsList) {
+		return concat(Direction::HORIZONTAL, matsList);
+	}
+
+	static Mat<T> concat(Direction catDim, std::initializer_list<Mat<T>> matsList) {
+		std::vector<const Mat<T>*> vec(matsList.size());
+		std::transform(matsList.begin(), matsList.end(), vec.begin(), [&] (const Mat<T>& m) { return &m; });
+		return concatFunc(catDim, vec);
 	}
 
 	static Mat<T> concatVert(auto... mats) {
-		return concat(Direction::VERTICAL, mats...);
-	}
-
-	static Mat<T> concatHorz(const std::initializer_list<Mat<T>>& matsList) {
-		return concat(Direction::HORIZONTAL, matsList.begin(), matsList.end());
+		std::vector<const Mat<T>*> vec;
+		([&] { vec.push_back(&mats); } (), ...);
+		return concatFunc(Direction::VERTICAL, vec);
 	}
 
 	static Mat<T> concatHorz(auto... mats) {
-		return concat(Direction::HORIZONTAL, mats...);
+		std::vector<const Mat<T>*> vec;
+		([&] { vec.push_back(&mats); } (), ...);
+		return concatFunc(Direction::HORIZONTAL, vec);
 	}
 
-	static Mat<T> concat(Direction catDim, const std::initializer_list<Mat<T>>& matsList) {
-		return concat(catDim, matsList.begin(), matsList.end());
-	}
-
-	static Mat<T> concat(Direction catDim, auto&... mats) {
-		size_t count = sizeof...(mats);
-		Mat<T> args[] { mats... };
-		return concat(catDim, args, args + count);
-	}
-
-	static Mat<T> concat(Direction catDim, auto iterBegin, auto iterEnd) {
-		if (iterBegin == iterEnd) return Mat<T>();
-
-		//compute dimension of resulting mat
-		auto it = iterBegin;
-		std::vector<size_t> dims = { it->rows(), it->cols() };
-		it++;
-		size_t cat = static_cast<size_t>(catDim);
-
-		for (; it != iterEnd; it++) {
-			std::vector<size_t> d = { it->rows(), it->cols() };
-			dims[cat] += d[cat];
-			assert(dims[1 - cat] == d[1 - cat] && "dimensions do not agree for concatenation");
-		}
-		
-		//allocate space for combined mat
-		Mat<T> out = allocate(dims[0], dims[1]);
-		dims = { 0, 0 };
-
-		//fill in mats
-		for (it = iterBegin; it != iterEnd; it++) {
-			out.setArea(dims[0], dims[1], *it);
-			dims[cat] += it->dim(cat);
-		}
-		return out;
+	static Mat<T> concat(Direction catDim, auto... mats) {
+		std::vector<const Mat<T>*> vec;
+		([&] { vec.push_back(&mats); } (), ...);
+		return concatFunc(catDim, vec);
 	}
 
 	//---------------------------------------------------------

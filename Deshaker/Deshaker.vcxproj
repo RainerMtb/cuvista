@@ -165,6 +165,7 @@
     <ClCompile Include="AffineTransform.cpp" />
     <ClCompile Include="AuxiliaryWriter.cpp" />
     <ClCompile Include="AvxFrame.cpp" />
+    <ClCompile Include="AvxUtil.cpp" />
     <ClCompile Include="clFunctions.cpp" />
     <ClCompile Include="clMain.cpp" />
     <ClCompile Include="clTest.cpp" />
@@ -201,6 +202,7 @@
     <ClInclude Include="AVException.hpp" />
     <ClInclude Include="AvxFrame.hpp" />
     <ClInclude Include="AvxMat.hpp" />
+    <ClInclude Include="AvxUtil.hpp" />
     <ClInclude Include="AvxWrapper.hpp" />
     <ClInclude Include="clFunctions.hpp" />
     <ClInclude Include="clHeaders.hpp" />
