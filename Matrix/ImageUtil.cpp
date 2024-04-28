@@ -21,40 +21,8 @@
 #include <cassert>
 
 BmpHeader::BmpHeader(int w, int h, int offset, int bits) {
-	int imh = h * 24 / bits;
-	int bitmapSize = w * h * 3;
-	int siz = bitmapSize + offset;
-
-	header[0] = 'B';
-	header[1] = 'M';
-	header[2] = siz;
-	header[3] = siz >> 8;
-	header[4] = siz >> 16;
-	header[5] = siz >> 24;
-	header[10] = offset;
-	header[11] = offset >> 8;
-	header[12] = offset >> 16;
-	header[13] = offset >> 24;
-	header[14] = 40;
-	header[18] = w;
-	header[19] = w >> 8;
-	header[20] = w >> 16;
-	header[21] = w >> 24;
-	header[22] = imh;
-	header[23] = imh >> 8;
-	header[24] = imh >> 16;
-	header[25] = imh >> 24;
-	header[26] = 1;
-	header[28] = bits;
-	header[34] = bitmapSize;
-	header[35] = bitmapSize >> 8;
-	header[36] = bitmapSize >> 16;
-	header[37] = bitmapSize >> 24;
-}
-
-BmpGrayHeader::BmpGrayHeader(int w, int h) {
-	int offset = 1078;
-	int bitmapSize = w * h;
+	int bytes = bits / 8;
+	int bitmapSize = w * h * bytes;
 	int siz = bitmapSize + offset;
 
 	header[0] = 'B';
@@ -77,12 +45,19 @@ BmpGrayHeader::BmpGrayHeader(int w, int h) {
 	header[24] = h >> 16;
 	header[25] = h >> 24;
 	header[26] = 1;
-	header[28] = 8;
+	header[28] = bits;
 	header[34] = bitmapSize;
 	header[35] = bitmapSize >> 8;
 	header[36] = bitmapSize >> 16;
 	header[37] = bitmapSize >> 24;
+}
 
+BmpColorHeader::BmpColorHeader(int w, int h) :
+	BmpHeader(w, h, 54, 24) {}
+
+BmpGrayHeader::BmpGrayHeader(int w, int h) :
+	BmpHeader(w, h, 1078, 8)
+{
 	for (size_t i = 0; i < 1024; ) {
 		char ch = char(i / 4);
 		colorMap[i++] = ch;

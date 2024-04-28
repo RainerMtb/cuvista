@@ -56,3 +56,5 @@ void compareFramesPlatforms();
 void imageOutput();
 void flow();
 void pinvTest();
+
+void avxInv();

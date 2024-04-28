@@ -114,6 +114,11 @@ public:
 	*/
 	virtual std::string getClassId() const { return "None"; }
 
+	/*
+	* play time for given frame
+	*/
+	std::string getTimeForFrame(uint64_t frameIndex);
+
 	ThreadPool mPool;
 	FrameResult mFrameResult;
 	ImageYuv mBufferFrame;

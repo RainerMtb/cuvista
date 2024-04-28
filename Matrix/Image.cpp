@@ -21,34 +21,14 @@
 #include <algorithm>
 
 //allocate frame given height, width, and stride
-template <class T> ImageBase<T>::ImageBase(int h, int w, int stride, int numPlanes, int arraySize) : 
+template <class T> ImageBase<T>::ImageBase(int h, int w, int stride, int numPlanes) : 
 	h { h }, 
 	w { w }, 
 	stride { stride }, 
-	numPlanes { numPlanes }, 
-	array(arraySize) 
+	numPlanes { numPlanes }
 {
 	assert(h >= 0 && w >= 0 && "invalid dimensions");
 	assert(stride >= w && "stride must be equal or greater to width");
-}
-
-template <class T> ImageBase<T>::ImageBase(int h, int w, int stride, int numPlanes) : 
-	h { h },
-	w { w },
-	stride { stride },
-	numPlanes { numPlanes },
-	array(1ull * h * stride * numPlanes) 
-{
-	assert(h >= 0 && w >= 0 && "invalid dimensions");
-	assert(stride >= w && "stride must be equal or greater to width");
-}
-
-template <class T> T* ImageBase<T>::data() {
-	return array.data();
-}
-
-template <class T> const T* ImageBase<T>::data() const {
-	return array.data();
 }
 
 //access one pixel on plane idx (0..2) and row / col
@@ -136,10 +116,6 @@ template <class T> void ImageBase<T>::setArea(size_t r0, size_t c0, const ImageB
 			}
 		}
 	}
-}
-
-template <class T> size_t ImageBase<T>::dataSizeInBytes() const {
-	return array.size();
 }
 
 template <class T> void ImageBase<T>::convert8(ImageBase<unsigned char>& dest, int z0, int z1, int z2, ThreadPoolBase& pool) const {
@@ -403,15 +379,18 @@ template <class T> void ImageBase<T>::drawDot(double cx, double cy, double rx, d
 //------------------------
 
 template <class T> ImagePlanar<T>::ImagePlanar(int h, int w, int stride, int numPlanes) :
-	ImageBase<T>(h, w, stride, numPlanes) {
+	ImageBase<T>(h, w, stride, numPlanes),
+	array(1ull * h * stride * numPlanes)
+{
 	for (int i = 0; i < numPlanes; i++) {
-		size_t offset = 1ull * i * h * stride;
-		mats.emplace_back(this->data() + offset, h, w, stride, i);
+		int offset = h * stride * i;
+		mats.emplace_back(array.data() + offset, h, stride, i);
 	}
 }
 
 template <class T> ImagePlanar<T>::ImagePlanar(CoreMat<T>& y, CoreMat<T>& u, CoreMat<T>& v) :
-	ImageBase<T>(int(y.rows()), int(y.cols()), int(y.cols()), 3, 0) {
+	ImageBase<T>(int(y.rows()), int(y.cols()), int(y.cols()), 3) 
+{
 	assert(y.rows() == u.rows() && y.rows() == v.rows() && y.cols() == u.cols() && y.cols() == v.cols() && "image dimensions mismatch");
 	mats.emplace_back(y);
 	mats.emplace_back(u);
@@ -419,13 +398,20 @@ template <class T> ImagePlanar<T>::ImagePlanar(CoreMat<T>& y, CoreMat<T>& u, Cor
 }
 
 template <class T> ImagePlanar<T>::ImagePlanar(CoreMat<T>& mat) :
-	ImageBase<T>(int(mat.rows()), int(mat.cols()), int(mat.cols()), 1, 0) {
+	ImageBase<T>(int(mat.rows()), int(mat.cols()), int(mat.cols()), 1) 
+{
 	mats.emplace_back(mat);
 }
 
 template <class T> ImagePlanar<T>::ImagePlanar(CoreMat<T>* mat) :
-	ImageBase<T>(int(mat->rows()), int(mat->cols()), int(mat->cols()), 1, 0) {
+	ImageBase<T>(int(mat->rows()), int(mat->cols()), int(mat->cols()), 1) {
 	mats.emplace_back(*mat);
+}
+
+template <class T> size_t ImagePlanar<T>::dataSizeInBytes() const {
+	size_t sum = 0;
+	for (auto& mat : mats) sum += mat.numel();
+	return sum * sizeof(T);
 }
 
 //read access one pixel on plane idx (0..2) and row / col
@@ -488,6 +474,35 @@ template <class T> bool ImagePlanar<T>::saveAsBMP(const std::string& filename, T
 }
 
 
+//------------------------
+// packed image
+//------------------------
+
+template <class T> T* ImagePacked<T>::data() {
+	return array.data();
+}
+
+template <class T> const T* ImagePacked<T>::data() const {
+	return array.data();
+}
+
+template <class T> size_t ImagePacked<T>::dataSizeInBytes() const {
+	return array.size();
+}
+
+template <class T> T* ImagePacked<T>::addr(size_t idx, size_t r, size_t c) {
+	assert(r < this->h && "row index out of range");
+	assert(c < this->w && "column index out of range");
+	return this->data() + (r * this->stride + c) * this->numPlanes + idx;
+}
+
+template <class T> const T* ImagePacked<T>::addr(size_t idx, size_t r, size_t c) const {
+	assert(r < this->h && "row index out of range");
+	assert(c < this->w && "column index out of range");
+	return this->data() + (r * this->stride + c) * this->numPlanes + idx;
+}
+
+
 //------------------------------------------------
 //explicitly instantiate Image specializations
 //------------------------------------------------
@@ -496,3 +511,5 @@ template class ImageBase<float>;
 template class ImageBase<unsigned char>;
 template class ImagePlanar<float>;
 template class ImagePlanar<unsigned char>;
+template class ImagePacked<float>;
+template class ImagePacked<unsigned char>;

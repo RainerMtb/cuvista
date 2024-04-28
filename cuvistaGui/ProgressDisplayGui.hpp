@@ -21,6 +21,7 @@
 #include "ProgressDisplay.hpp"
 #include "MovieFrame.hpp"
 #include <QPixmap>
+#include <QDebug>
 
 class StabilizerThread;
 

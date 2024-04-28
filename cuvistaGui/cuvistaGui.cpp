@@ -272,8 +272,8 @@ void cuvistaGui::stabilize() {
 
     //begin stabilizing
     mThread->start();
-    mProgressWindow->updateInput(mPixmapWorking);
-    mProgressWindow->updateOutput(mPixmapWorking);
+    mProgressWindow->updateInput(mPixmapWorking, "");
+    mProgressWindow->updateOutput(mPixmapWorking, "");
     mProgressWindow->show();
 }
 

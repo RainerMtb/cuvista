@@ -33,25 +33,16 @@ ImagePPM ImageYuvFloat::toPPM() const {
 
 
 //------------------------
-// packed image
-//------------------------
-
-template <class T> unsigned char* ImagePacked<T>::addr(size_t idx, size_t r, size_t c) {
-	assert(r < this->h && "row index out of range");
-	assert(c < this->w && "column index out of range");
-	return this->data() + (r * this->stride + c) * this->numPlanes + idx;
-}
-
-template <class T> const unsigned char* ImagePacked<T>::addr(size_t idx, size_t r, size_t c) const {
-	assert(r < this->h && "row index out of range");
-	assert(c < this->w && "column index out of range");
-	return this->data() + (r * this->stride + c) * this->numPlanes + idx;
-}
-
-
-//------------------------
 // YUV image stuff
 //------------------------
+
+unsigned char* ImageYuv::data() {
+	return array.data();
+}
+
+const unsigned char* ImageYuv::data() const {
+	return array.data();
+}
 
 bool ImageYuv::saveAsColorBMP(const std::string& filename) const {
 	return toBGR().saveAsBMP(filename);
@@ -60,7 +51,9 @@ bool ImageYuv::saveAsColorBMP(const std::string& filename) const {
 bool ImageYuv::saveAsPGM(const std::string& filename) const {
 	std::ofstream os(filename, std::ios::binary);
 	PgmHeader(stride, h).writeHeader(os);
-	os.write(reinterpret_cast<const char*>(array.data()), dataSizeInBytes());
+	for (int i = 0; i < 3; i++) {
+		os.write(reinterpret_cast<const char*>(mats[i].data()), mats[i].numel());
+	}
 	return os.good();
 }
 
@@ -75,8 +68,11 @@ void ImageYuv::readFromPGM(const std::string& filename) {
 		if (inw > stride) throw std::exception("invalid width");
 		if (inh != h * 3) throw std::exception("invalid height");
 		file.get(); //read delimiter
-		for (size_t row = 0; row < inh; row++) {
-			file.read(reinterpret_cast<char*>(array.data() + row * stride), w);
+
+		for (int i = 0; i < 3; i++) {
+			for (size_t row = 0; row < h; row++) {
+				file.read(reinterpret_cast<char*>(mats[i].data() + row * stride), w);
+			}
 		}
 
 	} catch (const std::exception& e) {
@@ -194,7 +190,7 @@ bool ImageBGR::saveAsBMP(const std::string& filename) const {
 // ImagePPM
 //-----------------------------------
 
-ImagePPM::ImagePPM(int h, int w) : ImagePacked(h, w, w, 3, h* w * 3 + headerSize) {
+ImagePPM::ImagePPM(int h, int w) : ImagePacked(h, w, w, 3, h * w * 3 + headerSize) {
 	//first 19 bytes are header for ppm format
 	std::format_to_n(array.data(), headerSize, "P6 {:5} {:5} 255 ", w, h);
 }

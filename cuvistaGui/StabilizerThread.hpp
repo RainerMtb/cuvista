@@ -48,6 +48,6 @@ signals:
     void failed(const std::string& msg) const;
     void cancelled(const std::string& msg) const;
     void progress(bool isFinite, double value) const;
-    void updateInput(QPixmap pm) const;
-    void updateOutput(QPixmap pm) const;
+    void updateInput(QPixmap pm, QString time) const;
+    void updateOutput(QPixmap pm, QString time) const;
 };

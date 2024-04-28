@@ -58,14 +58,14 @@ public:
 	template <int i> VF16 rot() { return _mm512_castsi512_ps(_mm512_alignr_epi32(_mm512_castps_si512(a), _mm512_castps_si512(a), i)); }
 
 	float operator [] (size_t i) const { return at(i); }
+	float& operator [] (size_t i) { return at(i); }
+
+	float at(size_t i) const { return a.m512_f32[i]; }
+	float& at(size_t i) { return a.m512_f32[i]; }
 
 	friend std::ostream& operator << (std::ostream& os, const VF16& vec) {
 		for (int i = 0; i < 16; i++) os << vec[i] << " ";
 		return os;
-	}
-
-	float at(size_t i) const {
-		return a.m512_f32[i];
 	}
 
 	float sum(int from, int to) const {
@@ -130,14 +130,14 @@ public:
 	template <int i> VF8 rot() { return _mm256_castsi256_ps(_mm256_alignr_epi32(_mm256_castps_si256(a), _mm256_castps_si256(a), i)); }
 
 	float operator [] (size_t i) const { return at(i); }
+	float& operator [] (size_t i) { return at(i); }
+
+	float at(size_t i) const { return a.m256_f32[i]; }
+	float& at(size_t i) { return a.m256_f32[i]; }
 
 	friend std::ostream& operator << (std::ostream& os, const VF8& vec) {
 		for (int i = 0; i < 8; i++) os << vec[i] << " ";
 		return os;
-	}
-
-	float at(size_t i) const {
-		return a.m256_f32[i];
 	}
 
 	float sum(int from, int to) const {
@@ -199,19 +199,21 @@ public:
 	VD8 mul(VD8 other) { return _mm512_mul_pd(a, other.a); }
 	VD8 div(VD8 other) { return _mm512_div_pd(a, other.a); }
 
+	template <int i> VD8 rot() { return _mm512_castsi512_pd(_mm512_alignr_epi64(_mm512_castpd_si512(a), _mm512_castpd_si512(a), i)); }
+
 	double operator [] (size_t i) const { return at(i); }
+	double& operator [] (size_t i) { return at(i); }
+
+	double at(size_t i) const { return a.m512d_f64[i]; }
+	double& at(size_t i) { return a.m512d_f64[i]; }
 
 	friend std::ostream& operator << (std::ostream& os, const VD8& vec) {
 		for (int i = 0; i < 8; i++) os << vec[i] << " ";
 		return os;
 	}
 
-	double at(size_t i) const {
-		return a.m512d_f64[i];
-	}
-
 	double sum(int from, int to) const {
-		double sum = 0.0f;
+		double sum = 0.0;
 		for (int i = from; i < to; i++) sum += at(i);
 		return sum;
 	}

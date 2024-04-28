@@ -31,6 +31,17 @@ std::future<void> MovieReader::readAsync(ImageYuv& inputFrame) {
     return std::async(std::launch::async, [&] { read(inputFrame); });
 }
 
+std::string MovieReader::getTimeForFrame(uint64_t frameIndex) {
+    std::string t;
+    auto fcn = [&] (const VideoPacketContext& vpc) { return vpc.readIndex == frameIndex; };
+    auto result = std::find_if(packetList.cbegin(), packetList.cend(), fcn);
+    if (result != packetList.end()) {
+        int64_t millis = result->bestTimestamp * 1000 * videoStream->time_base.num / videoStream->time_base.den;
+        t = timeString(millis);
+    }
+    return t;
+}
+
 
 //----------------------------------
 //-------- Placeholder Class
@@ -73,11 +84,11 @@ void FFmpegReader::open(std::string_view source) {
     for (size_t i = 0; i < av_format_ctx->nb_streams; i++) {
         AVStream* stream = av_format_ctx->streams[i];
 
-        if (av_stream == nullptr && stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
+        if (videoStream == nullptr && stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
             //store first video stream
             av_codec = avcodec_find_decoder(stream->codecpar->codec_id);
             if (av_codec) {
-                videoStream = av_stream = stream;
+                videoStream = stream;
             }
         }
 
@@ -85,13 +96,13 @@ void FFmpegReader::open(std::string_view source) {
         inputStreams.push_back({ stream });
     }
     //continue only when there is a video stream to decode
-    if (av_stream == nullptr || av_codec == nullptr) 
+    if (videoStream == nullptr || av_codec == nullptr)
         throw AVException("could not find a valid video stream");
 
     // Set up a codec context for the decoder
     if ((av_codec_ctx = avcodec_alloc_context3(av_codec)) == nullptr) 
         throw AVException("could not create AVCodecContext");
-    if (avcodec_parameters_to_context(av_codec_ctx, av_stream->codecpar) < 0) 
+    if (avcodec_parameters_to_context(av_codec_ctx, videoStream->codecpar) < 0)
         throw AVException("could not initialize AVCodecContext");
 
     //enable multi threading for decoder
@@ -110,14 +121,14 @@ void FFmpegReader::open(std::string_view source) {
 
     //set values in InputContext object
     avformatDuration = av_format_ctx->duration;
-    fpsNum = av_stream->avg_frame_rate.num;
-    fpsDen = av_stream->avg_frame_rate.den;
-    timeBaseNum = av_stream->time_base.num;
-    timeBaseDen = av_stream->time_base.den;
+    fpsNum = videoStream->avg_frame_rate.num;
+    fpsDen = videoStream->avg_frame_rate.den;
+    timeBaseNum = videoStream->time_base.num;
+    timeBaseDen = videoStream->time_base.den;
     h = av_codec_ctx->height;
     w = av_codec_ctx->width;
     sourceName = source;
-    frameCount = av_stream->nb_frames;
+    frameCount = videoStream->nb_frames;
     //av_dump_format(av_format_ctx, av_stream->index, av_format_ctx->url, 0); //uses av_log
 }
 
@@ -134,7 +145,7 @@ void FFmpegReader::read(ImageYuv& frame) {
             int sidx = av_packet->stream_index;
             StreamHandling sh = sidx < inputStreams.size() ? inputStreams[sidx].handling : StreamHandling::STREAM_IGNORE;
 
-            if (sidx == av_stream->index) {
+            if (sidx == videoStream->index) {
                 //we have a video packet
                 response = avcodec_send_packet(av_codec_ctx, av_packet); //send packet to decoder
                 if (response < 0) {
@@ -183,7 +194,7 @@ void FFmpegReader::read(ImageYuv& frame) {
 
     if (endOfInput == false) {
         //convert to YUV444 data
-        frame.index = this->frameIndex;
+        frame.index = frameIndex;
         int w = av_codec_ctx->width;
         int h = av_codec_ctx->height;
 
@@ -201,7 +212,7 @@ void FFmpegReader::read(ImageYuv& frame) {
         sws_scale(sws_scaler_ctx, av_frame->data, av_frame->linesize, 0, av_frame->height, frame_buffer, linesizes);
 
         //store parameters for writer
-        packetList.emplace_back(frameIndex, this->frameIndex, av_frame->pts, av_frame->pkt_dts, av_frame->duration);
+        packetList.emplace_back(frameIndex, av_frame->pts, av_frame->pkt_dts, av_frame->duration, av_frame->best_effort_timestamp);
 
         //in some cases pts values are not in proper sequence, but actual footage seems to be in order
         //in that case just reorder pts values
@@ -252,7 +263,7 @@ void FFmpegReader::close() {
     avformat_close_input(&av_format_ctx);
     avformat_free_context(av_format_ctx);
 
-    av_stream = nullptr;
+    videoStream = nullptr;
     sws_scaler_ctx = nullptr;
 }
 

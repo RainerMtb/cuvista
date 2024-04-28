@@ -33,7 +33,6 @@ public:
 
 protected:
 
-	std::vector<T> array; //holds the pixel data, planar images will hold ImageMat within this data
 	static inline ThreadPoolBase defaultPool;
 
 	int colorValue(T pixelValue) const;
@@ -50,22 +49,17 @@ protected:
 
 public:
 
-	virtual T* addr(size_t idx, size_t r, size_t c) = 0;
-
-	virtual const T* addr(size_t idx, size_t r, size_t c) const = 0;
-
-	ImageBase(int h, int w, int stride, int numPlanes, int arraySize);
-
 	ImageBase(int h, int w, int stride, int numPlanes);
 
 	ImageBase() : 
 		ImageBase(0, 0, 0, 0) {}
 
-	//start of data array
-	virtual T* data();
+	virtual T* addr(size_t idx, size_t r, size_t c) = 0;
 
-	//start of data array
-	virtual const T* data() const;
+	virtual const T* addr(size_t idx, size_t r, size_t c) const = 0;
+
+	//size of data array in bytes
+	virtual size_t dataSizeInBytes() const = 0;
 
 	//access one pixel on plane idx (0..2) and row / col
 	T& at(size_t idx, size_t r, size_t c);
@@ -91,9 +85,6 @@ public:
 	//compute median value of differences
 	double compareTo(const ImageBase& other) const;
 
-	//size of data array in bytes
-	size_t dataSizeInBytes() const;
-
 	//imprint text
 	void writeText(std::string_view text, int x0, int y0, int scaleX, int scaleY, ColorBase<T> fg, ColorBase<T> bg = { 0, 0, 0, 0.0 });
 
@@ -117,11 +108,14 @@ template <class T> class ImageMat : public CoreMat<T> {
 
 public:
 
-	ImageMat(T* data, int h, int w, int stride, int planeIdx) :
-		CoreMat<T>(data, h, stride, false) {}
+	ImageMat(T* array, int h, int stride, int planeIdx) :
+		CoreMat<T>(array, h, stride, false) {}
+
+	ImageMat(int h, int stride, int planeIdx) :
+		CoreMat<T>(h, stride) {}
 
 	ImageMat() :
-		ImageMat(nullptr, 0, 0, 0, 0) {}
+		ImageMat(0, 0, 0) {}
 
 	ImageMat(CoreMat<T>& mat) :
 		CoreMat<T>(mat.data(), mat.rows(), mat.cols(), false) {}
@@ -135,9 +129,9 @@ template <class T> class ImagePlanar : public ImageBase<T> {
 protected:
 
 	std::vector<ImageMat<T>> mats;
+	std::vector<T> array;
 
 public:
-
 	ImagePlanar(int h, int w, int stride, int numPlanes);
 
 	ImagePlanar(CoreMat<T>& y, CoreMat<T>& u, CoreMat<T>& v);
@@ -148,6 +142,8 @@ public:
 
 	ImagePlanar() : 
 		ImagePlanar(0, 0, 0, 0) {}
+
+	size_t dataSizeInBytes() const override;
 
 	//pointer to start of color plane
 	T* plane(size_t idx);
@@ -184,4 +180,30 @@ public:
 
 	ImageGray() :
 		ImageGray(0, 0) {}
+};
+
+
+template <class T> class ImagePacked : public ImageBase<T> {
+
+protected:
+	std::vector<T> array;
+
+public:
+
+	ImagePacked(int h, int w, int stride, int planes, int arraysize) :
+		ImageBase<T>(h, w, stride, planes),
+		array(arraysize) {}
+
+	ImagePacked(int h, int w, int stride, int planes) :
+		ImagePacked(h, w, stride, planes, h * stride * planes) {}
+
+	virtual T* data();
+
+	virtual const T* data() const;
+
+	size_t dataSizeInBytes() const override;
+
+	T* addr(size_t idx, size_t r, size_t c) override;
+
+	const T* addr(size_t idx, size_t r, size_t c) const override;
 };

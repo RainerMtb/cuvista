@@ -33,8 +33,8 @@ signals:
 
 public slots:
     void progress(bool isFinite, double value);
-    void updateInput(QPixmap pm);
-    void updateOutput(QPixmap pm);
+    void updateInput(QPixmap pm, QString time);
+    void updateOutput(QPixmap pm, QString time);
 
 public:
     ProgressWindow(QWidget* parent = nullptr);

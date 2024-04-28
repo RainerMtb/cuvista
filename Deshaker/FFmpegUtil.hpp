@@ -70,10 +70,10 @@ struct StreamContext {
 //timing values for input packets
 struct VideoPacketContext {
 	int64_t readIndex;
-	int64_t codedIndex;
 	int64_t pts;
 	int64_t dts;
 	int64_t duration;
+	int64_t bestTimestamp;
 };
 
 //structure holding timing infos

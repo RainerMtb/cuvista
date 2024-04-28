@@ -37,6 +37,7 @@ public:
 	virtual void close() {}
 	virtual void rewind() {}
 	virtual void seek(double fraction) {}
+	virtual std::string getTimeForFrame(uint64_t frameIndex);
 };
 
 //main class to decode input
@@ -45,25 +46,24 @@ class FFmpegReader : public MovieReader {
 private:
 	AVFormatContext* av_format_ctx = nullptr;
 	AVCodecContext* av_codec_ctx = nullptr;
-	AVStream* av_stream = nullptr;
 	AVFrame* av_frame = nullptr;
 	AVPacket* av_packet = nullptr;
 	SwsContext* sws_scaler_ctx = nullptr;
 
 public:
-	virtual ~FFmpegReader() override;
-	virtual void open(std::string_view source) override;
+	~FFmpegReader() override;
+	void open(std::string_view source) override;
 
-	virtual void read(ImageYuv& frame) override;
-	virtual void close() override;
-	virtual void rewind() override;
-	virtual void seek(double fraction);
+	void read(ImageYuv& frame) override;
+	void close() override;
+	void rewind() override;
+	void seek(double fraction);
 };
 
 
 class NullReader : public MovieReader {
 
 public:
-	virtual void open(std::string_view source) override {};
-	virtual void read(ImageYuv& frame) override;
+	void open(std::string_view source) override {};
+	void read(ImageYuv& frame) override;
 };

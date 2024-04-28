@@ -100,7 +100,7 @@ void AvxFrame::createPyramid(int64_t frameIndex) {
 		h /= 2;
 		w /= 2;
 		//if (z == 1) std::printf("avx %.14f\n", Y.at(r + 100, 100));
-		//if (z == 1) mFilterBuffer.saveAsBinary("f:/filterAvx.dat");
+		//if (z == 1) mFilterBuffer.saveAsBMP("f:/filterAvx.bmp");
 	}
 }
 
@@ -207,8 +207,8 @@ void AvxFrame::filter(std::span<VF16> v, std::span<float> k, AvxMatFloat& dest, 
 }
 
 void AvxFrame::filter(const AvxMatFloat& src, int r0, int h, int w, AvxMatFloat& dest, std::span<float> k) {
+	//util::ConsoleTimer ic("avx filter " + std::to_string(w) + "x" + std::to_string(h));
 	assert(h >= 16 && w >= 16 && "invalid dimensions");
-	util::ConsoleTimer ic("avx filter " + std::to_string(w) + "x" + std::to_string(h));
 
 	//always handle block of data of 4 rows of 16 values
 	std::vector<VF16> v(4);

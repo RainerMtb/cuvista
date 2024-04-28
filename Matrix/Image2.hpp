@@ -53,15 +53,13 @@ public:
 class ImageYuv : public ImagePlanar<unsigned char> {
 
 public:
-	//allocate frame given height, width, and stride
+
 	ImageYuv(int h, int w, int stride, int planes) :
 		ImagePlanar(h, w, stride, planes) {}
 
-	//allocate frame given height, width, and stride
 	ImageYuv(int h, int w, int stride) :
 		ImageYuv(h, w, stride, 3) {}
 
-	//allocate frame given height, width, and stride
 	ImageYuv(int h, int w, size_t stride) :
 		ImageYuv(h, w, int(stride)) {}
 
@@ -69,7 +67,11 @@ public:
 		ImageYuv(h, w, w) {}
 
 	ImageYuv() :
-		ImageYuv(0, 0, 0, 1) {}
+		ImageYuv(0, 0) {}
+
+	virtual unsigned char* data();
+
+	virtual const unsigned char* data() const;
 
 	//downsample and copy pixeldata to given array in nv12 format
 	void toNV12(std::vector<unsigned char>& nv12, size_t strideNV12) const;
@@ -102,22 +104,6 @@ public:
 	//convert to ImageBGR and save to file
 	//for repeated use BGR image should be preallocated
 	bool saveAsColorBMP(const std::string& filename) const;
-};
-
-
-template <class T> class ImagePacked : public ImageBase<T> {
-
-public:
-
-	ImagePacked(int h, int w, int stride, int planes) :
-		ImageBase<T>(h, w, stride, planes) {}
-
-	ImagePacked(int h, int w, int stride, int planes, int arraySize) :
-		ImageBase<T>(h, w, stride, planes, arraySize) {}
-
-	unsigned char* addr(size_t idx, size_t r, size_t c) override;
-
-	const unsigned char* addr(size_t idx, size_t r, size_t c) const override;
 };
 
 

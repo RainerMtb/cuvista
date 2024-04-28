@@ -134,52 +134,45 @@ void NvEncoder::createEncoder(int fpsNum, int fpsDen, uint32_t gopLen, uint8_t c
 	int hasBframesRefMode;
 	handleResult(encFuncList.nvEncGetEncodeCaps(encoder, guid, &capsParam, &hasBframesRefMode), "cannot query ref mode");
 
+	//create encoder preset
+	NV_ENC_TUNING_INFO tuning = NV_ENC_TUNING_INFO_HIGH_QUALITY;
+	GUID presetGuid = NV_ENC_PRESET_P5_GUID;
+	NV_ENC_PRESET_CONFIG presetConfig = { NV_ENC_PRESET_CONFIG_VER, 0, { NV_ENC_CONFIG_VER } };
+	encFuncList.nvEncGetEncodePresetConfigEx(encoder, guid, presetGuid, tuning, &presetConfig);
+
+	NV_ENC_CONFIG encoderConfig = presetConfig.presetCfg;
+	encoderConfig.rcParams.rateControlMode = NV_ENC_PARAMS_RC_VBR;
+	encoderConfig.gopLength = gopLen;
+	encoderConfig.rcParams.targetQuality = crf;
+	encoderConfig.frameIntervalP = 1; //picture pattern
+	encoderConfig.rcParams.targetQuality = crf;
+	encoderConfig.rcParams.enableLookahead = hasEnableLookahead;
+	encoderConfig.rcParams.lookaheadDepth = 8;
+
+	////encodeCodecConfig is a union
+	NV_ENC_BFRAME_REF_MODE refmode = hasBframesRefMode ? NV_ENC_BFRAME_REF_MODE_MIDDLE : NV_ENC_BFRAME_REF_MODE_DISABLED;
+	if (guid == NV_ENC_CODEC_HEVC_GUID) {
+		encoderConfig.encodeCodecConfig.hevcConfig.chromaFormatIDC = 1; //for yuv444 formats = 3
+		encoderConfig.encodeCodecConfig.hevcConfig.useBFramesAsRef = refmode;
+
+	} else if (guid == NV_ENC_CODEC_H264_GUID) {
+		encoderConfig.encodeCodecConfig.h264Config.chromaFormatIDC = 1;
+		encoderConfig.encodeCodecConfig.h264Config.useBFramesAsRef = refmode;
+	}
+
 	//set init parameters structure
-	NV_ENC_CONFIG encodeConfig = { NV_ENC_CONFIG_VER };
 	NV_ENC_INITIALIZE_PARAMS initParams = { NV_ENC_INITIALIZE_PARAMS_VER };
-	initParams.encodeConfig = &encodeConfig;
+	initParams.encodeConfig = &encoderConfig;
 	initParams.encodeGUID = guid;
-	initParams.presetGUID = NV_ENC_PRESET_P5_GUID;
+	initParams.presetGUID = presetGuid;
 	initParams.encodeWidth = w;
 	initParams.encodeHeight = h;
-	initParams.darWidth = w;
-	initParams.darHeight = h;
-	initParams.maxEncodeWidth = w;
-	initParams.maxEncodeHeight = h;
 	initParams.frameRateNum = fpsNum;
 	initParams.frameRateDen = fpsDen;
 	initParams.enablePTD = 1; //send input in display order
-	initParams.enableMEOnlyMode = false;
-	initParams.enableOutputInVidmem = false;
-	initParams.enableEncodeAsync = false;
-	initParams.tuningInfo = NV_ENC_TUNING_INFO_HIGH_QUALITY;
-	
-	NV_ENC_PRESET_CONFIG presetConfig = { NV_ENC_PRESET_CONFIG_VER, { NV_ENC_CONFIG_VER } };
-	encFuncList.nvEncGetEncodePresetConfigEx(encoder, initParams.encodeGUID, initParams.presetGUID, initParams.tuningInfo, &presetConfig);
-	memcpy(&encodeConfig, &presetConfig.presetCfg, sizeof(NV_ENC_CONFIG));
-	encodeConfig.profileGUID = NV_ENC_CODEC_PROFILE_AUTOSELECT_GUID;
-	encodeConfig.rcParams.rateControlMode = NV_ENC_PARAMS_RC_VBR;
-	encodeConfig.gopLength = gopLen;
-	encodeConfig.rcParams.targetQuality = crf;
-	encodeConfig.frameIntervalP = 1; //picture pattern
-	encodeConfig.rcParams.targetQuality = crf;
-	encodeConfig.rcParams.enableLookahead = hasEnableLookahead;
-	encodeConfig.rcParams.lookaheadDepth = 8;
-
-	//encodeCodecConfig is a union
-	NV_ENC_BFRAME_REF_MODE refmode = hasBframesRefMode ? NV_ENC_BFRAME_REF_MODE_MIDDLE : NV_ENC_BFRAME_REF_MODE_DISABLED;
-	if (guid == NV_ENC_CODEC_HEVC_GUID) {
-		encodeConfig.encodeCodecConfig.hevcConfig.pixelBitDepthMinus8 = 0; //set to 0 for 8bit, set to 2 for 10bit input data
-		encodeConfig.encodeCodecConfig.hevcConfig.chromaFormatIDC = 1; //for yuv444 formats = 3
-		encodeConfig.encodeCodecConfig.hevcConfig.useBFramesAsRef = refmode;
-
-	} else if (guid == NV_ENC_CODEC_H264_GUID) {
-		encodeConfig.encodeCodecConfig.h264Config.chromaFormatIDC = 1;
-		encodeConfig.encodeCodecConfig.h264Config.useBFramesAsRef = refmode;
-	}
+	initParams.tuningInfo = tuning;
 
 	//initialize encoder
-	initParams.version = NV_ENC_INITIALIZE_PARAMS_VER;
 	handleResult(encFuncList.nvEncInitializeEncoder(encoder, &initParams), "cannot initialize encoder");
 
 	//get sequence parameters needed for extradata field in ffmpeg stream
@@ -192,7 +185,7 @@ void NvEncoder::createEncoder(int fpsNum, int fpsDen, uint32_t gopLen, uint8_t c
 
 	//size of buffer vector
 	const int32_t extraDelay = 4; //taken from samples
-	encBufferSize = encodeConfig.frameIntervalP + encodeConfig.rcParams.lookaheadDepth + extraDelay;
+	encBufferSize = encoderConfig.frameIntervalP + encoderConfig.rcParams.lookaheadDepth + extraDelay;
 	outputDelay = encBufferSize - 1;
 
 	size_t pitch;

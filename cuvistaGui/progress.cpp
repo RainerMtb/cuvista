@@ -54,10 +54,12 @@ void ProgressWindow::progress(bool isFinite, double value) {
 	}
 }
 
-void ProgressWindow::updateInput(QPixmap pm) {
+void ProgressWindow::updateInput(QPixmap pm, QString time) {
 	ui.imageInput->setImage(pm);
+	ui.lblTimeInput->setText(time);
 }
 
-void ProgressWindow::updateOutput(QPixmap pm) {
+void ProgressWindow::updateOutput(QPixmap pm, QString time) {
 	ui.imageOutput->setImage(pm);
+	ui.lblTimeOutput->setText(time);
 }
