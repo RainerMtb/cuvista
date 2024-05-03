@@ -486,7 +486,7 @@ void cudaComputeTerminate(int64_t frameIdx, const CudaData& core, std::vector<Po
 //-------- OUTPUT
 //----------------------------------
 
-void cudaOutput(int64_t frameIdx, const CudaData& core, OutputContext outCtx, std::array<double, 6> trf) {
+void cudaOutput(int64_t frameIdx, const CudaData& core, std::array<double, 6> trf) {
 	//ConsoleTimer timer;
 	//interrupt compute kernel
 	handleStatus(cudaMemsetAsync(d_interrupt, 1, sizeof(char), cs[1]), "error @output #10");
@@ -516,36 +516,28 @@ void cudaOutput(int64_t frameIdx, const CudaData& core, OutputContext outCtx, st
 	//combine unsharp mask
 	cu::unsharp_32f_3(out.warped, out.filterV, out.final, core.strideFloat4N, w, h, cs[1]);
 
-	//output to host if requested
-	if (outCtx.encodeCpu) {
-		cu::outputHost(out.final, core.strideFloat4N, d_yuvOut, core.strideChar, w, h, cs[1]);
-		ImageYuv* im = outCtx.outputFrame;
-		cu::copy_32f_3(d_yuvOut, core.strideChar, im->data(), im->stride, w, h * 3, cs[1]);
-		outCtx.outputFrame->index = frameIdx;
-	}
-	//output to nvenc if requested
-	if (outCtx.encodeCuda) {
-		cu::outputNvenc(out.final, core.strideFloat4N, outCtx.cudaNv12ptr, outCtx.cudaPitch, w, h, cs[1]);
-	}
-	//provide input if requested
-	if (outCtx.requestInput) {
-		ImageYuv* im = outCtx.inputFrame;
-		cudaMemcpy2D(im->data(), im->stride, yuvSrc, core.strideChar, w, h * 3ll, cudaMemcpyDefault);
-		outCtx.inputFrame->index = frameIdx;
-	}
-
 	//writeText(std::to_string(frameIdx), 10, 10, 2, 3, bufferFrames[18], core);
 
 	handleStatus(cudaStreamSynchronize(cs[1]), "error @output #99");
 	handleStatus(cudaGetLastError(), "error @output #100");
 }
 
+void cudaOutputCpu(int64_t frameIndex, ImageYuv& image, const CudaData& core) {
+	cu::outputHost(out.final, core.strideFloat4N, d_yuvOut, core.strideChar, core.w, core.h, cs[1]);
+	cu::copy_32f_3(d_yuvOut, core.strideChar, image.data(), image.stride, core.w, core.h * 3, cs[1]);
+	image.index = frameIndex;
+}
+
+void cudaOutputCuda(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch, const CudaData& core) {
+	cu::outputNvenc(out.final, core.strideFloat4N, cudaNv12ptr, cudaPitch, core.w, core.h, cs[1]);
+}
+
 void encodeNvData(const std::vector<unsigned char>& nv12, unsigned char* nvencPtr) {
 	handleStatus(cudaMemcpy(nvencPtr, nv12.data(), nv12.size(), cudaMemcpyHostToDevice), "error @simple encode #1 cannot copy to device");
 }
 
-void getNvData(std::vector<unsigned char>& nv12, OutputContext outCtx) {
-	handleStatus(cudaMemcpy(nv12.data(), outCtx.cudaNv12ptr, nv12.size(), cudaMemcpyDeviceToHost), "error getting nv12 data");
+void getNvData(std::vector<unsigned char>& nv12, unsigned char* cudaNv12ptr) {
+	handleStatus(cudaMemcpy(nv12.data(), cudaNv12ptr, nv12.size(), cudaMemcpyDeviceToHost), "error getting nv12 data");
 }
 
 
@@ -568,14 +560,12 @@ void cudaGetPyramid(float* pyramid, size_t idx, const CudaData& core) {
 	cudaMemcpy2D(pyramid, wbytes, devptr, core.strideFloat, wbytes, core.pyramidRowCount, cudaMemcpyDefault);
 }
 
-ImageYuv cudaGetInput(int64_t index, const CudaData& core) {
-	ImageYuv out(core.h, core.w, core.w);
+void cudaGetInput(int64_t index, ImageYuv& image, const CudaData& core) {
 	int64_t fr = index % core.bufferCount;
 	//start of input yuv data
 	unsigned char* yuvSrc = d_yuvData + fr * 3 * core.h * core.strideChar;
 	//copy 2D data without stride
-	cudaMemcpy2D(out.data(), out.w, yuvSrc, core.strideChar, out.w, 3ll * out.h, cudaMemcpyDefault);
-	return out;
+	cudaMemcpy2D(image.data(), image.stride, yuvSrc, core.strideChar, image.w, 3ll * image.h, cudaMemcpyDefault);
 }
 
 void cudaGetCurrentInputFrame(ImagePPM& image, const CudaData& core, int64_t idx) {

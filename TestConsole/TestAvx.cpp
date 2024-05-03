@@ -19,12 +19,13 @@
 #include "TestMain.hpp"
 #include "AvxUtil.hpp"
 
-void avxInv() {
-	for (size_t s = 4; s <= 4; s++) {
-		for (int i = 0; i < 40; i++) {
+void avxCompute() {
+	for (size_t s = 1; s <= 8; s++) {
+		for (int i = 0; i < 4; i++) {
 			Matd a = Matd::rand(s, s, -20, 50, 1000);
 			Matd ainvCPU = a.inv().value();
 
+			//test inverse
 			std::vector<VD8> vector(s);
 			__mmask8 mask = (1 << s) - 1;
 			for (int i = 0; i < s; i++) vector[i] = VD8(a.addr(i, 0), mask);
@@ -45,6 +46,19 @@ void avxInv() {
 				//a.toConsole("A");
 				//ainvCPU.toConsole("cpu");
 				//ainvAvx.toConsole("avx");
+			}
+
+			//test norm1
+			double anCPU = a.norm1();
+			for (int i = 0; i < s; i++) vector[i] = VD8(a.addr(i, 0), mask);
+			double anAvx = Avx::norm1(vector);
+			double d = anCPU - anAvx;
+
+			if (d == 0.0) {
+				std::cout << "avx norm1 test, dim=" << s << " EXACT" << std::endl;
+
+			} else {
+				std::cout << "avx norm1 test, dim=" << s << " FAIL " << d << std::endl;
 			}
 		}
 	}

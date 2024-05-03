@@ -105,9 +105,19 @@ void cudaCompute(int64_t frameIdx, const CudaData& core, const cudaDeviceProp& p
 void cudaComputeTerminate(int64_t frameIdx, const CudaData& core, std::vector<PointResult>& results);
 
 /*
-@brief transform a frame and output pixel data to host and/or device memory
+@brief transform a frame and prepare for output of pixel data
 */
-void cudaOutput(int64_t frameIdx, const CudaData& core, OutputContext outCtx, std::array<double, 6> trf);
+void cudaOutput(int64_t frameIdx, const CudaData& core, std::array<double, 6> trf);
+
+/*
+@brief output pixel data to host
+*/
+void cudaOutputCpu(int64_t frameIndex, ImageYuv& image, const CudaData& core);
+
+/*
+@brief output pixel data to cuda encoding
+*/
+void cudaOutputCuda(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch, const CudaData& core);
 
 /*
 @brief only encode given nv12 data
@@ -117,7 +127,7 @@ void encodeNvData(const std::vector<unsigned char>& nv12, unsigned char* nvencPt
 /*
 @brief get NV12 data prepared for cuda encoding
 */
-void getNvData(std::vector<unsigned char>& nv12, OutputContext outCtx);
+void getNvData(std::vector<unsigned char>& nv12, unsigned char* cudaNv12ptr);
 
 /*
 @brief shutdown cuda device
@@ -143,7 +153,7 @@ void cudaGetPyramid(float* pyramid, size_t idx, const CudaData& core);
 /*
 @brief get input iomage from buffers
 */
-ImageYuv cudaGetInput(int64_t index, const CudaData& core);
+void cudaGetInput(int64_t index, ImageYuv& image, const CudaData& core);
 
 /*
 @brief get current input frame for progress display

@@ -22,7 +22,7 @@
 
 
 ImagePPM& ImageYuvFloat::toPPM(ImagePPM& dest, ThreadPoolBase& pool) const {
-	convert8(dest, 0, 1, 2, pool);
+	yuvToRgb(dest, 0, 1, 2, pool);
 	return dest;
 }
 
@@ -109,26 +109,26 @@ ImageYuv& ImageYuv::fromNV12(const std::vector<unsigned char>& nv12, size_t stri
 	return *this;
 }
 
-void ImageYuv::toNV12(std::vector<unsigned char>& nv12, size_t strideNV12) const {
+void ImageYuv::toNV12(std::vector<unsigned char>& nv12, size_t strideNV12, ThreadPoolBase& pool) const {
 	//copy Y plane
-	const unsigned char* y = plane(0);
+	unsigned char* dest = nv12.data();
 	for (int r = 0; r < h; r++) {
-		for (int c = 0; c < w; c++) {
-			nv12[r * strideNV12 + c] = y[r * stride + c];
-		}
+		std::copy(addr(0, r, 0), addr(0, r, w), dest);
+		dest += strideNV12;
 	}
 
 	//interleave U and V plane, simple bilinear downsampling
 	unsigned char* outptr = nv12.data() + h * strideNV12;
 	for (size_t z = 0; z < 2; z++) {
 		const unsigned char* inptr = plane(z + 1); //U and V plane of input data
-		for (size_t r = 0; r < h / 2; r++) {
+		auto fcn = [&] (size_t r) {
 			for (size_t c = 0; c < w / 2; c++) {
 				size_t idx = r * 2 * stride + c * 2;
 				int sum = (int) inptr[idx] + inptr[idx + 1] + inptr[idx + stride] + inptr[idx + stride + 1];
 				outptr[r * strideNV12 + c * 2 + z] = sum / 4;
 			}
-		}
+		};
+		pool.addAndWait(fcn, 0, h / 2);
 	}
 }
 
@@ -138,8 +138,8 @@ std::vector<unsigned char> ImageYuv::toNV12(size_t strideNV12) const {
 	return data;
 }
 
-ImageRGB& ImageYuv::toRGB(ImageRGB& dest) const {
-	convert8(dest, 0, 1, 2);
+ImageRGB& ImageYuv::toRGB(ImageRGB& dest, ThreadPoolBase& pool) const {
+	yuvToRgb(dest, 0, 1, 2, pool);
 	return dest;
 }
 
@@ -149,7 +149,7 @@ ImageRGB ImageYuv::toRGB() const {
 }
 
 ImageBGR& ImageYuv::toBGR(ImageBGR& dest, ThreadPoolBase& pool) const {
-	convert8(dest, 2, 1, 0);
+	yuvToRgb(dest, 2, 1, 0, pool);
 	return dest;
 }
 
@@ -160,7 +160,7 @@ ImageBGR ImageYuv::toBGR() const {
 
 ImagePPM& ImageYuv::toPPM(ImagePPM& dest, ThreadPoolBase& pool) const {
 	assert(dest.size() == 3ull * h * w && "dimensions mismatch");
-	convert8(dest, 0, 1, 2);
+	yuvToRgb(dest, 0, 1, 2, pool);
 	return dest;
 }
 
@@ -223,6 +223,6 @@ bool ImagePPM::saveAsPGM(const std::string& filename) const {
 
 bool ImagePPM::saveAsBMP(const std::string& filename) const {
 	ImageBGR bgr(h, w);
-	shuffle8(bgr, 2, 1, 0);
+	shufflePlanes(bgr, 2, 1, 0);
 	return bgr.saveAsBMP(filename);
 }

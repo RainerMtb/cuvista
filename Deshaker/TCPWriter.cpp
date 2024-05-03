@@ -17,8 +17,10 @@
  */
 
 #include "MovieWriter.hpp"
+#include "MovieWriter.hpp"
 #include <ws2tcpip.h>
 #include <WinSock2.h>
+
 #undef max
 #undef min
 
@@ -64,7 +66,7 @@ void TCPWriter::open(EncodingOption videoCodec) {
 	*mData.console << "established TCP connection" << std::endl;
 }
 
-void TCPWriter::write() {
+void TCPWriter::write(const MovieFrame& frame) {
 	packYuv();
 	int retval = send(sockets->mConn, yuvPacked.data(), (int) yuvPacked.size(), 0);
 	if (retval < 0 || retval != yuvPacked.size()) {

@@ -58,8 +58,16 @@ public:
 		cudaComputeTerminate(frameIndex, mData, mResultPoints);
 	}
 
-	void outputData(const AffineTransform& trf, OutputContext outCtx) override {
-		cudaOutput(trf.frameIndex, mData, outCtx, trf.toArray());
+	void outputData(const AffineTransform& trf) override {
+		cudaOutput(trf.frameIndex, mData, trf.toArray());
+	}
+
+	void outputCpu(int64_t frameIndex, ImageYuv& image) override {
+		cudaOutputCpu(frameIndex, image, mData);
+	}
+
+	void outputCuda(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) override {
+		cudaOutputCuda(frameIndex, cudaNv12ptr, cudaPitch, mData);
 	}
 
 	Mat<float> getTransformedOutput() const override {
@@ -74,15 +82,15 @@ public:
 		return out;
 	}
 
-	ImageYuv getInput(int64_t index) const override {
-		return cudaGetInput(index, mData);
+	void getInput(int64_t index, ImageYuv& image) const override {
+		return cudaGetInput(index, image, mData);
 	}
 
 	void getInput(int64_t frameIndex, ImagePPM& image) override {
 		cudaGetCurrentInputFrame(image, mData, frameIndex);
 	}
 
-	void getTransformedOutput(int64_t frameIndex, ImagePPM& image) override {
+	void outputRgbWarped(int64_t frameIndex, ImagePPM& image) override {
 		cudaGetTransformedOutput(image, mData);
 	}
 

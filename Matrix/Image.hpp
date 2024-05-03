@@ -33,6 +33,8 @@ public:
 
 protected:
 
+	std::vector<T> array;
+
 	static inline ThreadPoolBase defaultPool;
 
 	int colorValue(T pixelValue) const;
@@ -43,13 +45,18 @@ protected:
 
 	void plot4(double cx, double cy, double dx, double dy, double a, ColorBase<T> color);
 
-	void convert8(ImageBase<unsigned char>& dest, int z0, int z1, int z2, ThreadPoolBase& pool = defaultPool) const;
+	void yuvToRgb(ImageBase<unsigned char>& dest, int z0, int z1, int z2, ThreadPoolBase& pool = defaultPool) const;
 
-	void shuffle8(ImageBase<T>& dest, int z0, int z1, int z2, ThreadPoolBase& pool = defaultPool) const;
+	void shufflePlanes(ImageBase<T>& dest, int z0, int z1, int z2, ThreadPoolBase& pool = defaultPool) const;
+
+	void copy2D(const std::vector<T>& src, std::vector<T>& dest, int rows, int cols, int srcStride, int destStride) const;
 
 public:
 
-	ImageBase(int h, int w, int stride, int numPlanes);
+	ImageBase(int h, int w, int stride, int numPlanes, int arraysize);
+
+	ImageBase(int h, int w, int stride, int numPlanes) :
+		ImageBase(h, w, stride, numPlanes, 1ull * h * stride * numPlanes) {}
 
 	ImageBase() : 
 		ImageBase(0, 0, 0, 0) {}
@@ -59,7 +66,7 @@ public:
 	virtual const T* addr(size_t idx, size_t r, size_t c) const = 0;
 
 	//size of data array in bytes
-	virtual size_t dataSizeInBytes() const = 0;
+	virtual size_t dataSizeInBytes() const;
 
 	//access one pixel on plane idx (0..2) and row / col
 	T& at(size_t idx, size_t r, size_t c);
@@ -96,7 +103,12 @@ public:
 
 	void drawDot(double cx, double cy, double rx, double ry, ColorBase<T> color);
 
+	virtual void copyTo(ImageBase<T>& other) const;
+
+	virtual void copyFrom(const ImageBase<T>& other);
+
 private:
+
 	double fpart(double d);
 
 	double rfpart(double d);
@@ -129,9 +141,9 @@ template <class T> class ImagePlanar : public ImageBase<T> {
 protected:
 
 	std::vector<ImageMat<T>> mats;
-	std::vector<T> array;
 
 public:
+
 	ImagePlanar(int h, int w, int stride, int numPlanes);
 
 	ImagePlanar(CoreMat<T>& y, CoreMat<T>& u, CoreMat<T>& v);
@@ -142,8 +154,6 @@ public:
 
 	ImagePlanar() : 
 		ImagePlanar(0, 0, 0, 0) {}
-
-	size_t dataSizeInBytes() const override;
 
 	//pointer to start of color plane
 	T* plane(size_t idx);
@@ -172,6 +182,7 @@ public:
 class ImageGray : public ImagePlanar<unsigned char> {
 
 public:
+
 	ImageGray(int h, int w) :
 		ImagePlanar(h, w, w, 1) {}
 
@@ -185,14 +196,10 @@ public:
 
 template <class T> class ImagePacked : public ImageBase<T> {
 
-protected:
-	std::vector<T> array;
-
 public:
 
 	ImagePacked(int h, int w, int stride, int planes, int arraysize) :
-		ImageBase<T>(h, w, stride, planes),
-		array(arraysize) {}
+		ImageBase<T>(h, w, stride, planes, arraysize) {}
 
 	ImagePacked(int h, int w, int stride, int planes) :
 		ImagePacked(h, w, stride, planes, h * stride * planes) {}
@@ -200,8 +207,6 @@ public:
 	virtual T* data();
 
 	virtual const T* data() const;
-
-	size_t dataSizeInBytes() const override;
 
 	T* addr(size_t idx, size_t r, size_t c) override;
 

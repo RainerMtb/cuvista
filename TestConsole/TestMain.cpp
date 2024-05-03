@@ -46,5 +46,5 @@ int main() {
 	//similarTransform();
 
 	//compareFramesPlatforms();
-	avxInv();
+	avxCompute();
 }

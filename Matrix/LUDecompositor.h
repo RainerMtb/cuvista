@@ -73,6 +73,8 @@ public:
 			// Compute multipliers.
 			for (size_t i = j + 1; i < m; i++) A[i][j] /= A[j][j];
 		}
+
+		//A.toConsole();
 		dirty = false;
 		return *this;
 	}
@@ -131,6 +133,7 @@ public:
 				x[i][k] = b.at(piv[i], k);
 			}
 		}
+
 		// Solve L*Y = B(piv,:)
 		for (size_t k = 0; k < n; k++) {
 			for (size_t i = k + 1; i < n; i++) {

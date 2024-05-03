@@ -17,21 +17,25 @@
  */
 
 #include "MovieWriter.hpp"
+#include "MovieFrame.hpp"
 
 void StackedWriter::open(EncodingOption videoCodec) {
-	FFmpegWriter::open(videoCodec, widthTotal, mData.h, mData.fileOut);
+	FFmpegWriter::open(videoCodec, mData.h, widthTotal, widthTotal, mData.fileOut);
 
 	ColorYuv bgcol = mData.bgcol_rgb.toYuv();
 	for (int z = 0; z < 3; z++) {
-		for (int i = 0; i < mData.h; i++) bg.push_back(bgcol.colors.at(z));
+		for (int i = 0; i < mData.h; i++) background.push_back(bgcol.colors.at(z));
 	}
 }
 
-OutputContext StackedWriter::getOutputContext() {
-	return { true, false, &outputFrame, nullptr, 0, true, &inputFrame };
+void StackedWriter::prepareOutput(int64_t inputIndex, int64_t outputIndex, MovieFrame& frame) {
+	frame.outputCpu(outputIndex, outputFrame);
 }
 
-void StackedWriter::write() {
+void StackedWriter::write(const MovieFrame& frame) {
+	frame.getInput(frameIndex, inputFrame);
+
+	ImageYuv& combinedFrame = imageBuffer[0];
 	int offset = int(mData.w * (1 + mData.blendInput.position) / 8);
 	unsigned char* in = inputFrame.data() + offset;
 	unsigned char* out = outputFrame.data() + offset;
@@ -43,17 +47,13 @@ void StackedWriter::write() {
 		//output frame on right side
 		std::copy(out, out + combinedFrame.w / 2, dest + combinedFrame.w / 2);
 		//middle 1% of width in background color
-		for (int col = combinedFrame.w * 99 / 200; col < combinedFrame.w * 101 / 200; col++) {
-			dest[col] = bg[row];
-		}
+		for (int col = combinedFrame.w * 99 / 200; col < combinedFrame.w * 101 / 200; col++) dest[col] = background[row];
 
 		in += inputFrame.stride;
 		out += outputFrame.stride;
 		dest += combinedFrame.stride;
 	}
 
-	assert(inputFrame.index == outputFrame.index && "frame index mismatch");
-	combinedFrame.index = inputFrame.index;
-
+	combinedFrame.index = frameIndex;
 	FFmpegWriter::write(combinedFrame);
 }

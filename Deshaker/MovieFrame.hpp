@@ -27,9 +27,9 @@
 #include "clMain.hpp"
 
 
-//---------------------------------------------------------------------
-//---------- MOVIE FRAME BASE CLASS -----------------------------------
-//---------------------------------------------------------------------
+ //---------------------------------------------------------------------
+ //---------- MOVIE FRAME BASE CLASS -----------------------------------
+ //---------------------------------------------------------------------
 
 class ProgressDisplay;
 
@@ -52,7 +52,13 @@ public:
 	//start computation asynchronously for second part and get results
 	virtual void computeTerminate(int64_t frameIndex) = 0;
 	//prepare data for output to writer
-	virtual void outputData(const AffineTransform& trf, OutputContext outCtx) = 0;
+	virtual void outputData(const AffineTransform& trf) = 0;
+	//prepare data for encoding on cpu
+	virtual void outputCpu(int64_t frameIndex, ImageYuv& image) = 0;
+	//prepare data for encoding on cuda
+	virtual void outputCuda(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) = 0;
+	//output rgb data warped but not unsharped
+	virtual void outputRgbWarped(int64_t frameIndex, ImagePPM& image) = 0;
 
 	/*
 	* run the stabilizing loop
@@ -84,20 +90,13 @@ public:
 	/*
 	* get input image as stored in frame buffers
 	*/
-	virtual ImageYuv getInput(int64_t index) const { return {}; }
+	virtual void getInput(int64_t frameIndex, ImageYuv& image) const {}
 
 	/*
 	* get most recently read input frame
 	* use to show progress
 	*/
 	virtual void getInput(int64_t frameIndex, ImagePPM& image) {}
-
-	/*
-	* get most resently processed output frame
-	* image is warped output before unsharping
-	* use to show progress
-	*/
-	virtual void getTransformedOutput(int64_t frameIndex, ImagePPM& image) {}
 
 	/*
 	* read transforms from previous pass
@@ -119,6 +118,7 @@ public:
 	*/
 	std::string getTimeForFrame(uint64_t frameIndex);
 
+
 	ThreadPool mPool;
 	FrameResult mFrameResult;
 	ImageYuv mBufferFrame;
@@ -138,8 +138,7 @@ protected:
 		mPool(data.cpuThreads),
 		mFrameResult(data, mPool),
 		mBufferFrame(data.h, data.w, data.cpupitch),
-		mResultPoints(data.resultCount) 
-	{
+		mResultPoints(data.resultCount) {
 		//set a reference to this frame class into writer object
 		writer.movieFrame = this;
 
@@ -159,8 +158,7 @@ private:
 	void read();
 	std::future<void> readAsync();
 	void write();
-	std::future<void> writeAsync();
-	bool continueLoop(UserInput& input);
+	bool doLoop(UserInput& input);
 
 	void runLoopCombined(ProgressDisplay& progress, UserInput& input, AuxWriters& auxWriters);
 	void runLoopFirst(ProgressDisplay& progress, UserInput& input, AuxWriters& auxWriters);
@@ -190,8 +188,11 @@ public:
 	void createPyramid(int64_t frameIndex) override {}
 	void computeStart(int64_t frameIndex) override {}
 	void computeTerminate(int64_t frameIndex) override {}
-	void outputData(const AffineTransform& trf, OutputContext outCtx) override;
-	ImageYuv getInput(int64_t index) const override;
+	void outputData(const AffineTransform& trf) override;
+	void outputCpu(int64_t frameIndex, ImageYuv& image) override;
+	void outputCuda(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) override;
+	void outputRgbWarped(int64_t frameIndex, ImagePPM& image) override;
+	void getInput(int64_t index, ImageYuv& image) const override;
 };
 
 
@@ -201,11 +202,15 @@ public:
 
 class DefaultFrame : public MovieFrame {
 public:
-	DefaultFrame(MainData& data, MovieReader& reader, MovieWriter& writer) : 
+	DefaultFrame(MainData& data, MovieReader& reader, MovieWriter& writer) :
 		MovieFrame(data, reader, writer) {}
+
 	void inputData() override {}
 	void createPyramid(int64_t frameIndex) override {}
 	void computeStart(int64_t frameIndex) override {}
 	void computeTerminate(int64_t frameIndex) override {}
-	void outputData(const AffineTransform& trf, OutputContext outCtx) override {};
+	void outputData(const AffineTransform& trf) override {};
+	void outputCpu(int64_t frameIndex, ImageYuv& image) override {};
+	void outputCuda(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) override {};
+	void outputRgbWarped(int64_t frameIndex, ImagePPM& image) override {};
 };

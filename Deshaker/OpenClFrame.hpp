@@ -53,8 +53,20 @@ public:
 		cl::computeTerminate(frameIndex, mData, mResultPoints);
 	}
 
-	void outputData(const AffineTransform& trf, OutputContext outCtx) override {
-		cl::outputData(trf.frameIndex, mData, outCtx, trf.toArray());
+	void outputData(const AffineTransform& trf) override {
+		cl::outputData(trf.frameIndex, mData, trf.toArray());
+	}
+
+	void outputCpu(int64_t frameIndex, ImageYuv& image) override {
+		cl::outputDataCpu(frameIndex, mData, image);
+	}
+
+	void outputCuda(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) override {
+		throw std::exception("not supported");
+	}
+
+	void outputRgbWarped(int64_t frameIndex, ImagePPM& image) override {
+		cl::getTransformedOutput(image);
 	}
 
 	Mat<float> getPyramid(size_t idx) const override {
@@ -67,16 +79,12 @@ public:
 		return cl::getTransformedOutput(mData);
 	}
 
-	ImageYuv getInput(int64_t idx) const override {
-		return cl::getInput(idx, mData);
+	void getInput(int64_t idx, ImageYuv& image) const override {
+		return cl::getInput(idx, image, mData);
 	}
 
 	void getInput(int64_t frameIndex, ImagePPM& image) override {
 		cl::getCurrentInputFrame(image, frameIndex);
-	}
-
-	void getTransformedOutput(int64_t frameIndex, ImagePPM& image) override {
-		cl::getTransformedOutput(image);
 	}
 
 	std::string getClassName() const override {

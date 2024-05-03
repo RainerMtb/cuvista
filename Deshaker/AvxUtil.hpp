@@ -31,4 +31,6 @@ namespace Avx {
 	__m512i yuvToRgbPacked(VF16 y, VF16 u, VF16 v);
 
 	void inv(std::span<VD8> v);
+
+	double norm1(std::span<VD8> v);
 }

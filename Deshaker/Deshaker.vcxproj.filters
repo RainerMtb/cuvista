@@ -119,9 +119,6 @@
     <ClCompile Include="ThreadPool.cpp">
       <Filter>Util</Filter>
     </ClCompile>
-    <ClCompile Include="AuxiliaryWriter.cpp">
-      <Filter>Writer</Filter>
-    </ClCompile>
     <ClCompile Include="MatrixInverter.cpp">
       <Filter>Util</Filter>
     </ClCompile>
@@ -199,9 +196,6 @@
     <ClInclude Include="clKernelCompute.hpp">
       <Filter>OpenCl</Filter>
     </ClInclude>
-    <ClInclude Include="MovieFrame.hpp">
-      <Filter>Frame</Filter>
-    </ClInclude>
     <ClInclude Include="CudaFrame.hpp">
       <Filter>Frame</Filter>
     </ClInclude>
@@ -229,9 +223,6 @@
     <ClInclude Include="ThreadPool.hpp">
       <Filter>Util</Filter>
     </ClInclude>
-    <ClInclude Include="AuxiliaryWriter.hpp">
-      <Filter>Writer</Filter>
-    </ClInclude>
     <ClInclude Include="MovieWriter.hpp">
       <Filter>Writer</Filter>
     </ClInclude>
@@ -249,6 +240,9 @@
     </ClInclude>
     <ClInclude Include="AvxUtil.hpp">
       <Filter>Avx</Filter>
+    </ClInclude>
+    <ClInclude Include="MovieFrame.hpp">
+      <Filter>Frame</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

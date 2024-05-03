@@ -39,12 +39,14 @@ public:
 	void createPyramid(int64_t frameIndex) override;
 	void computeStart(int64_t frameIndex) override;
 	void computeTerminate(int64_t frameIndex) override;
-	void outputData(const AffineTransform& trf, OutputContext outCtx) override;
+	void outputData(const AffineTransform& trf) override;
+	void outputCpu(int64_t frameIndex, ImageYuv& image) override;
+	void outputCuda(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) override;
 	Matf getTransformedOutput() const override;
 	Matf getPyramid(size_t idx) const override;
-	ImageYuv getInput(int64_t index) const override;
+	void getInput(int64_t index, ImageYuv& image) const override;
 	void getInput(int64_t frameIndex, ImagePPM& image) override;
-	void getTransformedOutput(int64_t frameIndex, ImagePPM& image) override;
+	void outputRgbWarped(int64_t frameIndex, ImagePPM& image) override;
 	std::string getClassName() const override;
 	std::string getClassId() const override;
 
@@ -77,4 +79,7 @@ private:
 	//buffer for generating output from input yuv and transformation
 	std::vector<Matf> mBuffer;
 	Matf mYuvPlane, mFilterBuffer, mFilterResult;
+
+	//final output
+	ImageYuv mOutput;
 };

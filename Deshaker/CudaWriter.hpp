@@ -29,6 +29,7 @@ private:
 	std::unique_ptr<NvEncoder> nvenc;
 
 	void writePacketToFile(const NvPacket& nvpkt, bool terminate);
+	void writePacketsToFile(std::list<NvPacket> nvpkts, bool terminate);
 	void encodePackets();
 
 public:
@@ -36,9 +37,8 @@ public:
 	~CudaFFmpegWriter() override;
 
 	void open(EncodingOption videoCodec) override;
-	OutputContext getOutputContext() override;
-	void write() override;
-	std::future<void> writeAsync() override;
+	void prepareOutput(int64_t inputIndex, int64_t outputIndex, MovieFrame& frame) override;
+	void write(const MovieFrame& frame) override;
 	bool startFlushing() override;
 	bool flush() override;
 };

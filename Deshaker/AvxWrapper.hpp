@@ -50,6 +50,10 @@ public:
 	VF16 operator - (VF16 other) { return _mm512_sub_ps(a, other.a); }
 	VF16 operator * (VF16 other) { return _mm512_mul_ps(a, other.a); }
 	VF16 operator / (VF16 other) { return _mm512_div_ps(a, other.a); }
+	VF16 operator += (VF16 other) { a = _mm512_add_ps(a, other.a); return *this; }
+	VF16 operator -= (VF16 other) { a = _mm512_sub_ps(a, other.a); return *this; }
+	VF16 operator *= (VF16 other) { a = _mm512_mul_ps(a, other.a); return *this; }
+	VF16 operator /= (VF16 other) { a = _mm512_div_ps(a, other.a); return *this; }
 	VF16 add(VF16 other) { return _mm512_add_ps(a, other.a); }
 	VF16 sub(VF16 other) { return _mm512_sub_ps(a, other.a); }
 	VF16 mul(VF16 other) { return _mm512_mul_ps(a, other.a); }
@@ -122,6 +126,10 @@ public:
 	VF8 operator - (VF8 other) { return _mm256_sub_ps(a, other.a); }
 	VF8 operator * (VF8 other) { return _mm256_mul_ps(a, other.a); }
 	VF8 operator / (VF8 other) { return _mm256_div_ps(a, other.a); }
+	VF8 operator += (VF8 other) { a = _mm256_add_ps(a, other.a); return *this; }
+	VF8 operator -= (VF8 other) { a = _mm256_sub_ps(a, other.a); return *this; }
+	VF8 operator *= (VF8 other) { a = _mm256_mul_ps(a, other.a); return *this; }
+	VF8 operator /= (VF8 other) { a = _mm256_div_ps(a, other.a); return *this; }
 	VF8 add(VF8 other) { return _mm256_add_ps(a, other.a); }
 	VF8 sub(VF8 other) { return _mm256_sub_ps(a, other.a); }
 	VF8 mul(VF8 other) { return _mm256_mul_ps(a, other.a); }
@@ -194,6 +202,10 @@ public:
 	VD8 operator - (VD8 other) { return _mm512_sub_pd(a, other.a); }
 	VD8 operator * (VD8 other) { return _mm512_mul_pd(a, other.a); }
 	VD8 operator / (VD8 other) { return _mm512_div_pd(a, other.a); }
+	VD8 operator += (VD8 other) { a = _mm512_add_pd(a, other.a); return *this; }
+	VD8 operator -= (VD8 other) { a = _mm512_sub_pd(a, other.a); return *this; }
+	VD8 operator *= (VD8 other) { a = _mm512_mul_pd(a, other.a); return *this; }
+	VD8 operator /= (VD8 other) { a = _mm512_div_pd(a, other.a); return *this; }
 	VD8 add(VD8 other) { return _mm512_add_pd(a, other.a); }
 	VD8 sub(VD8 other) { return _mm512_sub_pd(a, other.a); }
 	VD8 mul(VD8 other) { return _mm512_mul_pd(a, other.a); }

@@ -29,10 +29,14 @@ AVStream* FFmpegFormatWriter::newStream(AVFormatContext* fmt_ctx, AVStream* inSt
 }
 
 //setup output format
-void FFmpegFormatWriter::open(EncodingOption videoCodec, const std::string& sourceName) {
+void FFmpegFormatWriter::open(EncodingOption videoCodec, const std::string& sourceName, int queueSize) {
     //av_log_set_level(AV_LOG_ERROR);
     //custom callback to log ffmpeg errors
     av_log_set_callback(ffmpeg_log);
+
+    for (int i = 0; i < queueSize - 1; i++) {
+        encodingQueue.push_back(std::async([] {}));
+    }
 
     //setup output file
     int result = avformat_alloc_output_context2(&fmt_ctx, NULL, NULL, sourceName.c_str());

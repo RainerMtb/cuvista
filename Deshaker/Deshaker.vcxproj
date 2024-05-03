@@ -159,7 +159,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="AffineTransform.cpp" />
-    <ClCompile Include="AuxiliaryWriter.cpp" />
     <ClCompile Include="AvxFrame.cpp" />
     <ClCompile Include="AvxUtil.cpp" />
     <ClCompile Include="clFunctions.cpp" />
@@ -194,7 +193,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AffineTransform.hpp" />
-    <ClInclude Include="AuxiliaryWriter.hpp" />
     <ClInclude Include="AVException.hpp" />
     <ClInclude Include="AvxFrame.hpp" />
     <ClInclude Include="AvxMat.hpp" />
@@ -217,6 +215,7 @@
     <ClInclude Include="DeshakerHelpText.hpp" />
     <ClInclude Include="MainData.hpp" />
     <ClInclude Include="MatrixInverter.hpp" />
+    <ClInclude Include="MovieFrame.hpp" />
     <ClInclude Include="MovieWriter.hpp" />
     <ClInclude Include="NvidiaDriver.hpp" />
     <ClInclude Include="OpenClFrame.hpp" />
@@ -224,7 +223,6 @@
     <ClInclude Include="ProgressDisplayConsole.hpp" />
     <ClInclude Include="Stats.hpp" />
     <ClInclude Include="RandomSource.hpp" />
-    <ClInclude Include="MovieFrame.hpp" />
     <ClInclude Include="MovieReader.hpp" />
     <ClInclude Include="NvEncoder.hpp" />
     <ClInclude Include="ThreadPool.hpp" />

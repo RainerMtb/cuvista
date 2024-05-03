@@ -45,7 +45,8 @@ void runInit(MainData& data, std::unique_ptr<MovieFrame>& frame, AffineTransform
 
 	frame->computeStart(frame->mReader.frameIndex);
 	frame->computeTerminate(frame->mReader.frameIndex);
-	frame->outputData(trf, frame->mWriter.getOutputContext());
+	frame->outputData(trf);
+	frame->mWriter.prepareOutput(frame->mReader.frameIndex, frame->mWriter.frameIndex, *frame);
 }
 
 void filterCompare() {
@@ -66,7 +67,7 @@ void filterCompare() {
 		FFmpegReader reader;
 		reader.open(file);
 		dataGpu.validate(reader);
-		NullWriter writer(dataGpu, reader);
+		BaseWriter writer(dataGpu, reader);
 		gpu = std::make_unique<CudaFrame>(dataGpu, reader, writer);
 		runInit(dataGpu, gpu, trf);
 	}
@@ -79,7 +80,7 @@ void filterCompare() {
 		FFmpegReader reader;
 		reader.open(file);
 		dataCpu.validate(reader);
-		NullWriter writer(dataCpu, reader);
+		BaseWriter writer(dataCpu, reader);
 		cpu = std::make_unique<CpuFrame>(dataCpu, reader, writer);
 		runInit(dataCpu, cpu, trf);
 	}

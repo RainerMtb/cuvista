@@ -54,15 +54,11 @@ std::future<void> MovieFrame::readAsync() {
 
 //output frame to main writer class
 void MovieFrame::write() {
-	mWriter.write();
-}
-
-std::future<void> MovieFrame::writeAsync() {
-	return mWriter.writeAsync();
+	mWriter.write(*this);
 }
 
 //check if we should continue with the next frame
-bool MovieFrame::continueLoop(UserInput& input) {
+bool MovieFrame::doLoop(UserInput& input) {
 	return errorLogger.hasNoError() && input.doContinue() && mReader.endOfInput == false && mReader.frameIndex < mData.maxFrames;
 }
 
@@ -76,25 +72,28 @@ void DummyFrame::inputData() {
 	frames[idx] = mBufferFrame;
 }
 
-void DummyFrame::outputData(const AffineTransform& trf, OutputContext outCtx) {
-	ImageYuv& frameToEncode = frames[trf.frameIndex % frames.size()];
+void DummyFrame::outputData(const AffineTransform& trf) {
+	int64_t index = trf.frameIndex % frames.size();
+	ImageYuv& frameToEncode = frames[index];
 	assert(frameToEncode.index == trf.frameIndex && "invalid frame index to output");
-
-	if (outCtx.encodeCpu) {
-		*outCtx.outputFrame = frameToEncode;
-	}
-
-	if (outCtx.encodeCuda) {
-		encodeNvData(frameToEncode.toNV12(outCtx.cudaPitch), outCtx.cudaNv12ptr);
-	}
-
-	if (outCtx.requestInput) {
-		*outCtx.inputFrame = frameToEncode;
-	}
 }
 
-ImageYuv DummyFrame::getInput(int64_t index) const {
-	return frames[index % frames.size()];
+void DummyFrame::outputCpu(int64_t frameIndex, ImageYuv& image) {
+	frames[frameIndex].copyTo(image);
+}
+
+void DummyFrame::outputCuda(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) {
+	static std::vector<unsigned char> nv12(cudaPitch * mData.h * 3 / 2);
+	frames[frameIndex].toNV12(nv12, cudaPitch);
+	encodeNvData(nv12, cudaNv12ptr);
+}
+
+void DummyFrame::outputRgbWarped(int64_t frameIndex, ImagePPM& image) {
+	frames[frameIndex].toPPM(image);
+}
+
+void DummyFrame::getInput(int64_t index, ImageYuv& image) const {
+	image = frames[index % frames.size()];
 }
 
 
@@ -144,7 +143,7 @@ void MovieFrame::runLoopCombined(ProgressDisplay& progress, UserInput& input, Au
 	loopInit(progress);
 
 	//fill input buffer and compute transformations
-	while (continueLoop(input) && mReader.frameIndex < mData.bufferCount - 1LL) {
+	while (doLoop(input) && mReader.frameIndex < mData.bufferCount - 1LL) {
 		//process current frame
 		inputData();
 		createPyramid(mReader.frameIndex);
@@ -165,7 +164,7 @@ void MovieFrame::runLoopCombined(ProgressDisplay& progress, UserInput& input, Au
 
 	//main loop
 	//read data and compute frame results
-	while (continueLoop(input)) {
+	while (doLoop(input)) {
 		//util::ConsoleTimer timer_fr("frame");
 		int64_t readIndex = mReader.frameIndex;
 		assert(readIndex % mData.bufferCount != mWriter.frameIndex % mData.bufferCount && "accessing the same buffer for read and write");
@@ -181,10 +180,11 @@ void MovieFrame::runLoopCombined(ProgressDisplay& progress, UserInput& input, Au
 		computeTransform(readIndex - 1);
 		mTrajectory.addTrajectoryTransform(mFrameResult.getTransform());
 		const AffineTransform& finalTransform = mTrajectory.computeSmoothTransform(mData, mWriter.frameIndex);
-		outputData(finalTransform, mWriter.getOutputContext());
+		outputData(finalTransform);
+		mWriter.prepareOutput(mReader.frameIndex, mWriter.frameIndex, *this);
 		
 		//write output
-		std::future<void> futWrite = writeAsync();
+		write();
 		auxWriters.writeAll(*this);
 		
 		//get computed flow for current frame
@@ -192,7 +192,6 @@ void MovieFrame::runLoopCombined(ProgressDisplay& progress, UserInput& input, Au
 
 		//wait for async to complete
 		futRead.wait();
-		futWrite.wait();
 
 		//check if there is input on the console
 		input.checkState();
@@ -204,17 +203,19 @@ void MovieFrame::runLoopCombined(ProgressDisplay& progress, UserInput& input, Au
 		computeTransform(mReader.frameIndex);
 		mTrajectory.addTrajectoryTransform(mFrameResult.getTransform());
 		const AffineTransform& finalTransform = mTrajectory.computeSmoothTransform(mData, mWriter.frameIndex);
-		outputData(finalTransform, mWriter.getOutputContext());
+		outputData(finalTransform);
+		mWriter.prepareOutput(mReader.frameIndex, mWriter.frameIndex, *this);
+		write();
 		auxWriters.writeAll(*this);
-		writeAsync().wait();
 		progress.update();
 	}
 
 	//write remaining frames
 	while (errorLogger.hasNoError() && mWriter.frameIndex < mReader.frameIndex && input.current <= UserInputEnum::END) {
 		const AffineTransform& tf = mTrajectory.computeSmoothTransform(mData, mWriter.frameIndex);
-		outputData(tf, mWriter.getOutputContext());
-		writeAsync().wait();
+		outputData(tf);
+		mWriter.prepareOutput(mReader.frameIndex, mWriter.frameIndex, *this);
+		write();
 
 		//check if there is input on the console
 		input.checkState();
@@ -232,7 +233,7 @@ void MovieFrame::runLoopFirst(ProgressDisplay& progress, UserInput& input, AuxWr
 	write();
 	auxWriters.writeAll(*this);
 
-	while (continueLoop(input)) {
+	while (doLoop(input)) {
 		inputData();
 		createPyramid(mReader.frameIndex);
 
@@ -262,12 +263,13 @@ void MovieFrame::runLoopSecond(ProgressDisplay& progress, UserInput& input, AuxW
 	progress.update();
 
 	//looping for output
-	while (continueLoop(input)) {
+	while (doLoop(input)) {
 		inputData();
 		read();
 
 		const AffineTransform& tf = mTrajectory.computeSmoothTransform(mData, mWriter.frameIndex);
-		outputData(tf, mWriter.getOutputContext());
+		outputData(tf);
+		mWriter.prepareOutput(mReader.frameIndex, mWriter.frameIndex, *this);
 		write();
 
 		//check if there is input on the console
@@ -286,7 +288,7 @@ void MovieFrame::runLoopConsecutive(ProgressDisplay& progress, UserInput& input,
 	auxWriters.writeAll(*this);
 
 	//first run - analyse
-	while (continueLoop(input)) {
+	while (doLoop(input)) {
 		inputData();
 		createPyramid(mReader.frameIndex);
 
@@ -310,11 +312,12 @@ void MovieFrame::runLoopConsecutive(ProgressDisplay& progress, UserInput& input,
 	progress.update();
 
 	read();
-	while (continueLoop(input)) {
+	while (doLoop(input)) {
 		inputData();
 
 		const AffineTransform& tf = mTrajectory.computeSmoothTransform(mData, mWriter.frameIndex);
-		outputData(tf, mWriter.getOutputContext());
+		outputData(tf);
+		mWriter.prepareOutput(mReader.frameIndex, mWriter.frameIndex, *this);
 		write();
 		read();
 

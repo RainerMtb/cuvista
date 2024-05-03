@@ -37,7 +37,7 @@ int deshake(int argsCount, char** args) {
 	//main program start
 	MainData data;
 	std::unique_ptr<MovieReader> reader = std::make_unique<NullReader>();
-	std::unique_ptr<MovieWriter> writer = std::make_unique<NullWriter>(data, *reader);
+	std::unique_ptr<MovieWriter> writer = std::make_unique<BaseWriter>(data, *reader);
 	std::unique_ptr<MovieFrame> frame;
 	AuxWriters auxWriters;
 	
@@ -70,7 +70,7 @@ int deshake(int argsCount, char** args) {
 		else if (data.videoOutputType == OutputType::VIDEO_FILE && data.selectedEncoding.device == EncodingDevice::NVENC)
 			writer = std::make_unique<CudaFFmpegWriter>(data, *reader);
 		else 
-			writer = std::make_unique<NullWriter>(data, *reader);
+			writer = std::make_unique<BaseWriter>(data, *reader);
 
 		writer->open(data.requestedEncoding);
 

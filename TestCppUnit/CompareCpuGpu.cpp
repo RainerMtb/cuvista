@@ -57,7 +57,8 @@ private:
 		frame->createPyramid(reader.frameIndex);
 		frame->computeStart(reader.frameIndex);
 		frame->computeTerminate(reader.frameIndex);
-		frame->outputData(trf, writer.getOutputContext());
+		frame->outputData(trf);
+		writer.prepareOutput(reader.frameIndex, writer.frameIndex, *frame);
 		return frame;
 	}
 	

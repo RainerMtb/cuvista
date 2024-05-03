@@ -31,7 +31,7 @@ std::string CpuFrame::getClassId() const {
 
 //constructor
 CpuFrame::CpuFrame(MainData& data, MovieReader& reader, MovieWriter& writer) : 
-	MovieFrame(data, reader, writer) 
+	MovieFrame(data, reader, writer)
 {
 	//buffer to hold input frames in yuv format
 	mYUV.assign(data.bufferCount, ImageYuv());
@@ -49,6 +49,7 @@ CpuFrame::CpuFrame(MainData& data, MovieReader& reader, MovieWriter& writer) :
 	mFilterBuffer = Matf::allocate(data.h, data.w);
 	mFilterResult = Matf::allocate(data.h, data.w);
 	mYuvPlane = Matf::allocate(data.h, data.w);
+	mOutput = ImageYuv(data.h, data.w, data.cpupitch);
 }
 
 //construct data for one pyramid
@@ -253,7 +254,7 @@ void CpuFrame::computeTerminate(int64_t frameIndex) {
 //	return std::round(f * 256.0f) / 256.0f;
 //}
 
-void CpuFrame::outputData(const AffineTransform& trf, OutputContext outCtx) {
+void CpuFrame::outputData(const AffineTransform& trf) {
 	size_t yuvidx = trf.frameIndex % mYUV.size();
 	const ImageYuv& input = mYUV[yuvidx];
 	assert(input.index == trf.frameIndex && "invalid frame index");
@@ -279,8 +280,7 @@ void CpuFrame::outputData(const AffineTransform& trf, OutputContext outCtx) {
 
 		//write output
 		//define function with respect to row index
-		ImageYuv* out = outCtx.outputFrame;
-		unsigned char* yuvp = out->plane(z); //one plane for output
+		unsigned char* yuvp = mOutput.plane(z); //one plane for output
 		auto func2 = [&] (size_t r) {
 			unsigned char* yuvrow = yuvp + r * mData.cpupitch;
 			for (size_t c = 0; c < mData.w; c++) {
@@ -293,25 +293,27 @@ void CpuFrame::outputData(const AffineTransform& trf, OutputContext outCtx) {
 		//forward to thread pool for iteration there
 		mPool.addAndWait(func2, 0, mData.h);
 	}
-	if (outCtx.requestInput) {
-		*outCtx.inputFrame = input;
-	}
-	outCtx.outputFrame->index = trf.frameIndex;
+	mOutput.index = trf.frameIndex;
+}
 
-	//when encoding on gpu is selected
-	if (outCtx.encodeCuda) {
-		static std::vector<unsigned char> nv12(outCtx.cudaPitch * mData.h * 3 / 2);
-		outCtx.outputFrame->toNV12(nv12, outCtx.cudaPitch);
-		encodeNvData(nv12, outCtx.cudaNv12ptr);
-	}
+void CpuFrame::outputCpu(int64_t frameIndex, ImageYuv& image) {
+	assert(frameIndex == mOutput.index && "invalid frame index");
+	image = mOutput;
+}
+
+void CpuFrame::outputCuda(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) {
+	assert(frameIndex == mOutput.index && "invalid frame index");
+	static std::vector<unsigned char> nv12(cudaPitch * mData.h * 3 / 2);
+	mOutput.toNV12(nv12, cudaPitch, mPool);
+	encodeNvData(nv12, cudaNv12ptr);
+}
+
+void CpuFrame::outputRgbWarped(int64_t frameIndex, ImagePPM& image) {
+	ImageYuvFloat(mBuffer[0], mBuffer[1], mBuffer[2]).toPPM(image, mPool);
 }
 
 Matf CpuFrame::getTransformedOutput() const {
 	return Matf::concatVert(mBuffer[0], mBuffer[1], mBuffer[2]);
-}
-
-void CpuFrame::getTransformedOutput(int64_t frameIndex, ImagePPM& image) {
-	ImageYuvFloat(mBuffer[0], mBuffer[1], mBuffer[2]).toPPM(image, mPool);
 }
 
 Matf CpuFrame::getPyramid(size_t idx) const {
@@ -330,7 +332,7 @@ void CpuFrame::getInput(int64_t frameIndex, ImagePPM& image) {
 	mYUV[idx].toPPM(image, mPool);
 }
 
-ImageYuv CpuFrame::getInput(int64_t index) const {
+void CpuFrame::getInput(int64_t index, ImageYuv& image) const {
 	size_t idx = index % mYUV.size();
-	return mYUV[idx];
+	mYUV[idx].copyTo(image);
 }

@@ -57,4 +57,4 @@ void imageOutput();
 void flow();
 void pinvTest();
 
-void avxInv();
+void avxCompute();

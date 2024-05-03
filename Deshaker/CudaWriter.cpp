@@ -2,6 +2,7 @@
 #include "Util.hpp"
 #include "NvEncoder.hpp"
 #include "ThreadPool.hpp"
+#include "MovieFrame.hpp"
 
 class FunctorLess {
 public:
@@ -34,7 +35,7 @@ void CudaFFmpegWriter::open(EncodingOption videoCodec) {
     GUID guid = guidMap[videoCodec.codec];
 
     //open ffmpeg output format
-    FFmpegFormatWriter::open(videoCodec, mData.fileOut);
+    FFmpegFormatWriter::open(videoCodec, mData.fileOut, 4);
 
     //setup nvenc class
     nvenc->createEncoder(mReader.fpsNum, mReader.fpsDen, GOP_SIZE, mData.crf, guid, dic->cudaIndex);
@@ -69,8 +70,8 @@ void CudaFFmpegWriter::open(EncodingOption videoCodec) {
 }
 
 
-OutputContext CudaFFmpegWriter::getOutputContext() {
-    return { false, true, &outputFrame, reinterpret_cast<unsigned char*>(nvenc->getNextInputFramePtr()), nvenc->cudaPitch };
+void CudaFFmpegWriter::prepareOutput(int64_t inputIndex, int64_t outputIndex, MovieFrame& frame) {
+    frame.outputCuda(outputIndex, reinterpret_cast<unsigned char*>(nvenc->getNextInputFramePtr()), nvenc->cudaPitch);
 }
 
 
@@ -94,6 +95,13 @@ void CudaFFmpegWriter::writePacketToFile(const NvPacket& nvpkt, bool terminate) 
 }
 
 
+void CudaFFmpegWriter::writePacketsToFile(std::list<NvPacket> nvpkts, bool terminate) {
+    for (const NvPacket& nvpkt : nvpkts) {
+        writePacketToFile(nvpkt, terminate);
+    }
+}
+
+
 void CudaFFmpegWriter::encodePackets() {
     try {
         nvenc->encodeFrame(nvPackets);
@@ -104,32 +112,18 @@ void CudaFFmpegWriter::encodePackets() {
 }
 
 
-void CudaFFmpegWriter::write() {
+void CudaFFmpegWriter::write(const MovieFrame& frame) {
     encodePackets();
-
-    for (NvPacket& nvpkt : nvPackets) {
-        writePacketToFile(nvpkt, false);
-    }
+    encodingQueue.push_back(encoderPool.add([=] { writePacketsToFile(nvPackets, false); }));
+    encodingQueue.front().wait();
+    encodingQueue.pop_front();
     this->frameIndex++;
-}
-
-
-std::future<void> CudaFFmpegWriter::writeAsync() {
-    encodePackets();
-
-    auto fcn = [&] () {
-        //util::ConsoleTimer ct("write cuda");
-        for (NvPacket& nvpkt : nvPackets) {
-            writePacketToFile(nvpkt, false);
-        }
-    };
-    this->frameIndex++;
-    return std::async(std::launch::async, fcn);
 }
 
 
 //flush encoder buffer
 bool CudaFFmpegWriter::startFlushing() {
+    for (auto& futs : encodingQueue) futs.wait();
     nvenc->endEncode();
     return nvenc->hasBufferedFrame();
 }

@@ -32,16 +32,6 @@ struct Triplet {
 	}
 };
 
-struct OutputContext {
-	bool encodeCpu;
-	bool encodeCuda;
-	ImageYuv* outputFrame;
-	unsigned char* cudaNv12ptr;
-	int cudaPitch;
-	bool requestInput;
-	ImageYuv* inputFrame;
-};
-
 //how to deal with background when frame does not cover complete output canvas
 enum class BackgroundMode {
 	BLEND,

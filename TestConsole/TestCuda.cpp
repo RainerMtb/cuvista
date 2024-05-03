@@ -27,9 +27,8 @@ void imageOutput() {
 	data.collectDeviceInfo();
 	reader.open("d:/VideoTest/02.mp4");
 	data.validate(reader);
-	NullWriter writer(data, reader);
+	BaseWriter writer(data, reader);
 	AvxFrame frame(data, reader, writer);
-	OutputContext oc = { false, false, nullptr, nullptr };
 	ResultImageWriter resim(data);
 	data.resultImageFile = "f:/im%03d.bmp";
 

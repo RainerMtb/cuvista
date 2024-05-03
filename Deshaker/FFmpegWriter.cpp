@@ -17,20 +17,16 @@
  */
 
 #include "MovieWriter.hpp"
+#include "MovieFrame.hpp"
 #include "Util.hpp"
 #include <filesystem>
 
 
 //set up ffmpeg encoder
 void FFmpegWriter::open(EncodingOption videoCodec) {
-    open(videoCodec, mData.w, mData.h, mData.fileOut);
+    open(videoCodec, mData.h, mData.w, mData.cpupitch, mData.fileOut);
 }
 
-
-//relay output to buffer
-OutputContext FFmpegWriter::getOutputContext() {
-    return { true, false, &outputFrame, nullptr };
-}
 
 void FFmpegWriter::openEncoder(const AVCodec* codec, const std::string& sourceName) {
     int result = 0;
@@ -60,34 +56,27 @@ void FFmpegWriter::openEncoder(const AVCodec* codec, const std::string& sourceNa
     if (!videoPacket)
         throw AVException("Could not allocate encoder packet");
 
-    //allocate av_frames to be cycled through on encoding
-    for (int i = 0; i < writeBufferSize; i++) {
-        AVFrame* av_frame = av_frame_alloc();
-        if (!av_frame)
-            throw AVException("Could not allocate video frame");
+    //allocate one av_frame to be used on encoding
+    av_frame = av_frame_alloc();
+    if (!av_frame)
+        throw AVException("Could not allocate video frame");
 
-        av_frame->format = codec_ctx->pix_fmt;
-        av_frame->width = codec_ctx->width;
-        av_frame->height = codec_ctx->height;
+    av_frame->format = codec_ctx->pix_fmt;
+    av_frame->width = codec_ctx->width;
+    av_frame->height = codec_ctx->height;
 
-        result = av_frame_get_buffer(av_frame, 0);
-        if (result < 0)
-            throw AVException("Could not get frame buffer");
+    result = av_frame_get_buffer(av_frame, 0);
+    if (result < 0)
+        throw AVException("Could not get frame buffer");
 
-        result = av_frame_make_writable(av_frame);
-        if (result < 0)
-            throw AVException("Could not make frame writable");
-
-        av_frames.push_back(av_frame);
-    }
-    for (int i = 0; i < writeBufferSize - 1; i++) {
-        futures.push_back(std::async([] {}));
-    }
+    result = av_frame_make_writable(av_frame);
+    if (result < 0)
+        throw AVException("Could not make frame writable");
 }
 
 
 //set up ffmpeg encoder
-void FFmpegWriter::open(EncodingOption videoCodec, int w, int h, const std::string& sourceName) {
+void FFmpegWriter::open(EncodingOption videoCodec, int h, int w, int stride, const std::string& sourceName) {
     const AVCodec* codec = avcodec_find_encoder(codecMap[videoCodec.codec]);
     //const AVCodec* codec = avcodec_find_encoder_by_name("libsvtav1");
     if (!codec) 
@@ -98,7 +87,7 @@ void FFmpegWriter::open(EncodingOption videoCodec, int w, int h, const std::stri
         throw AVException("Could not allocate encoder context");
 
     //open container format
-    FFmpegFormatWriter::open(videoCodec, sourceName);
+    FFmpegFormatWriter::open(videoCodec, sourceName, imageBufferSize);
 
     codec_ctx->width = w;
     codec_ctx->height = h;
@@ -120,24 +109,17 @@ void FFmpegWriter::open(EncodingOption videoCodec, int w, int h, const std::stri
     sws_scaler_ctx = sws_getContext(w, h, AV_PIX_FMT_YUV444P, w, h, pixfmt, SWS_BICUBIC, NULL, NULL, NULL);
     if (!sws_scaler_ctx) 
         throw AVException("Could not get scaler context");
+
+    //allocate images to be cycled through
+    for (int i = 0; i < imageBufferSize; i++) {
+        imageBuffer.emplace_back(h, w, stride);
+    }
 }
 
 
-AVFrame* FFmpegWriter::putAVFrame(ImageYuv& fr) {
-    //get storage
-    size_t idx = fr.index % writeBufferSize;
-    AVFrame* av_frame = av_frames[idx];
-
-    //fr.writeText(std::to_string(status.frameWriteIndex), 10, 10, 2, 3, ColorYuv::BLACK, ColorYuv::WHITE);
-    //scale and put into av_frame
-    uint8_t* src[] = { fr.plane(0), fr.plane(1), fr.plane(2), nullptr };
-    int strides[] = { fr.stride, fr.stride, fr.stride, 0 }; //if only three values are provided, we get a warning "data not aligned"
-    int sliceHeight = sws_scale(sws_scaler_ctx, src, strides, 0, fr.h, av_frame->data, av_frame->linesize);
-
-    //set pts into frame to later name packet
-    av_frame->pts = this->frameIndex;
-
-    return av_frame;
+void FFmpegWriter::prepareOutput(int64_t inputIndex, int64_t outputIndex, MovieFrame& frame) {
+    int64_t idx = outputIndex % imageBufferSize;
+    frame.outputCpu(outputIndex, imageBuffer[idx]);
 }
 
 
@@ -169,48 +151,46 @@ int FFmpegWriter::writeFFmpegPacket(AVFrame* av_frame) {
 }
 
 
-void FFmpegWriter::write() {
-    write(outputFrame);
-}
+void FFmpegWriter::write(ImageYuv& fr) {
+    assert(frameIndex == fr.index && "invalid frame index");
 
+    auto fcn = [&] {
+        //fr.writeText(std::to_string(fr.index), 10, 10, 2, 3, ColorYuv::BLACK, ColorYuv::WHITE);
+        //scale and put into av_frame
+        uint8_t* src[] = { fr.plane(0), fr.plane(1), fr.plane(2), nullptr };
+        int strides[] = { fr.stride, fr.stride, fr.stride, 0 }; //if only three values are provided, we get a warning "data not aligned"
+        int sliceHeight = sws_scale(sws_scaler_ctx, src, strides, 0, fr.h, av_frame->data, av_frame->linesize);
 
-void FFmpegWriter::write(ImageYuv& frame) {
-    //put yuv frame into ffmpeg frame storage
-    AVFrame* av_frame = putAVFrame(frame);
+        //set pts into frame to later name packet
+        av_frame->pts = fr.index;
 
-    //generate and write packet
-    int result = sendFFmpegFrame(av_frame);
-    while (result >= 0) {
-        result = writeFFmpegPacket(av_frame);
-    }
-    this->frameIndex++;
-}
-
-
-std::future<void> FFmpegWriter::writeAsync() {
-    //put yuv frame into ffmpeg frame storage
-    AVFrame* av_frame = putAVFrame(outputFrame);
-
-    //enqueue ffmpeg process
-    auto fcn = [this, av_frame] {
+        //generate and write packet
         int result = sendFFmpegFrame(av_frame);
         while (result >= 0) {
             result = writeFFmpegPacket(av_frame);
         }
     };
+
+    //enqueue new task and wait for oldest task
+    encodingQueue.push_back(encoderPool.add(fcn));
+    encodingQueue.front().wait();
+    encodingQueue.pop_front();
+
     this->frameIndex++;
-    futures.push_back(encoderPool.add(fcn));
-    std::future<void> f = std::move(futures.front());
-    futures.pop_front();
-    return f;
+}
+
+
+void FFmpegWriter::write(const MovieFrame& frame) {
+    assert(frame.mWriter.frameIndex == this->frameIndex && "invalid frame index");
+    int64_t idx = frame.mWriter.frameIndex % imageBufferSize;
+    ImageYuv& fr = imageBuffer[idx];
+    write(fr);
 }
 
 
 //flush encoder buffer
 bool FFmpegWriter::startFlushing() {
-    for (auto& f : futures) {
-        f.wait();
-    }
+    for (auto& f : encodingQueue) f.wait();
     int result = sendFFmpegFrame(nullptr);
     return result >= 0;
 }
@@ -223,7 +203,7 @@ bool FFmpegWriter::flush() {
 
 //clean up encoder stuff
 FFmpegWriter::~FFmpegWriter() {
-    for (AVFrame* af : av_frames) av_frame_free(&af);
+    av_frame_free(&av_frame);
     avcodec_close(codec_ctx);
     avcodec_free_context(&codec_ctx);
     sws_freeContext(sws_scaler_ctx);

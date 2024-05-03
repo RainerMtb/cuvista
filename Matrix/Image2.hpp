@@ -74,7 +74,7 @@ public:
 	virtual const unsigned char* data() const;
 
 	//downsample and copy pixeldata to given array in nv12 format
-	void toNV12(std::vector<unsigned char>& nv12, size_t strideNV12) const;
+	void toNV12(std::vector<unsigned char>& nv12, size_t strideNV12, ThreadPoolBase& pool = defaultPool) const;
 
 	//downsample and copy pixeldata
 	std::vector<unsigned char> toNV12(size_t strideNV12) const;
@@ -83,7 +83,7 @@ public:
 	ImageYuv& fromNV12(const std::vector<unsigned char>& nv12, size_t strideNV12);
 
 	//convert to planar RGB format
-	ImageRGB& toRGB(ImageRGB& dest) const;
+	ImageRGB& toRGB(ImageRGB& dest, ThreadPoolBase& pool = defaultPool) const;
 
 	ImageRGB toRGB() const;
 

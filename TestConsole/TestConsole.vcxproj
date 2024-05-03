@@ -19,7 +19,7 @@
     <ClCompile Include="TestMain.cpp" />
     <ClCompile Include="TestMisc.cpp" />
     <ClCompile Include="TestOpenCl.cpp" />
-    <ClCompile Include="TextAvx.cpp" />
+    <ClCompile Include="TestAvx.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="TestMain.hpp" />

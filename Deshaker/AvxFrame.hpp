@@ -36,12 +36,14 @@ public:
 	void createPyramid(int64_t frameIndex) override;
 	void computeStart(int64_t frameIndex) override;
 	void computeTerminate(int64_t frameIndex) override;
-	void outputData(const AffineTransform& trf, OutputContext outCtx) override;
+	void outputData(const AffineTransform& trf) override;
+	void outputCpu(int64_t frameIndex, ImageYuv& image) override;
+	void outputCuda(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) override;
 	Mat<float> getTransformedOutput() const override;
 	Mat<float> getPyramid(size_t idx) const override;
-	ImageYuv getInput(int64_t index) const override;
+	void getInput(int64_t index, ImageYuv& image) const override;
 	void getInput(int64_t frameIndex, ImagePPM& image) override;
-	void getTransformedOutput(int64_t frameIndex, ImagePPM& image) override;
+	void outputRgbWarped(int64_t frameIndex, ImagePPM& image) override;
 	std::string getClassName() const override;
 	std::string getClassId() const override;
 
@@ -51,6 +53,7 @@ private:
 	std::vector<ImageYuv> mYUV;
 	std::vector<AvxMatFloat> mPyr;
 	std::vector<AvxMatFloat> mWarped;
+	std::vector<AvxMatFloat> mOutput;
 	AvxMatFloat mFilterBuffer, mFilterResult, mYuvPlane;
 
 	float filterKernels[3][5] = {
@@ -59,7 +62,9 @@ private:
 		{ 0,       0.25f, 0.5f,   0.25f, 0 }
 	};
 
-	void unsharpAndWrite(const AvxMatFloat& warped, AvxMatFloat& gauss, float unsharp, ImageYuv* dest, size_t z);
+	void unsharp(const AvxMatFloat& warped, AvxMatFloat& gauss, float unsharp, size_t z);
+	void write(ImageYuv& dest);
+	void write(std::span<unsigned char> nv12, int cudaPitch);
 	void downsample(const float* srcptr, int h, int w, int stride, float* destptr, int destStride);
 	void filter(const AvxMatFloat& src, int r0, int h, int w, AvxMatFloat& dest, std::span<float> k);
 	void filter(std::span<VF16> v, std::span<float> k, AvxMatFloat& dest, int r0, int c0);

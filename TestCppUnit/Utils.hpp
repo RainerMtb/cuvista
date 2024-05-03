@@ -53,15 +53,15 @@ public:
 };
 
  //store resulting images in vector
-class TestWriter : public NullWriter {
+class TestWriter : public BaseWriter {
 
 public:
 	std::vector<ImageYuv> outputFrames;
 
 	TestWriter(MainData& data, MovieReader& reader) :
-		NullWriter(data, reader) {}
+		BaseWriter(data, reader) {}
 
-	void write() override {
+	void write(const MovieFrame& frame) override {
 		outputFrames.push_back(outputFrame);
 		this->frameIndex++;
 	}

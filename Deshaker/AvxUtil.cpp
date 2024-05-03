@@ -122,27 +122,31 @@ void Avx::inv(std::span<VD8> v) {
 	size_t m = v.size();
 	std::vector<size_t> piv(m);
 	std::iota(piv.begin(), piv.end(), 0);
+	VD8 tmp;
 
 	for (size_t j = 0; j < m; j++) {
 		__mmask8 mask = 1 << j;
 
 		for (size_t i = 0; i < j; i++) {
+			__m512i idx = _mm512_set1_epi64(i);
 			for (size_t k = i + 1; k < m; k++) {
-				v[k][j] -= v[k][i] * v[i][j];
+				tmp = _mm512_permutexvar_pd(idx, v[k]);
+				v[k] = _mm512_mask_sub_pd(v[k], mask, v[k], tmp * v[i]);
 			}
 		}
 
 		//find pivot and exchange if necessary
 		size_t p = j;
+		tmp = _mm512_maskz_abs_pd(mask, v[p]);
 		for (size_t i = j + 1; i < m; i++) {
 			VD8 a = _mm512_maskz_abs_pd(mask, v[i]);
-			VD8 b = _mm512_maskz_abs_pd(mask, v[p]);
-			if (_mm512_cmp_pd_mask(a, b, _CMP_GT_OS)) p = i;
+			if (_mm512_cmp_pd_mask(a, tmp, _CMP_GT_OS)) {
+				tmp = a;
+				p = i;
+			}
 		}
-		if (p != j) {
-			std::swap(v[p], v[j]);
-			std::swap(piv[p], piv[j]);
-		}
+		std::swap(v[p], v[j]);
+		std::swap(piv[p], piv[j]);
 
 		// Compute multipliers.
 		for (size_t i = j + 1; i < m; i++) {
@@ -150,29 +154,45 @@ void Avx::inv(std::span<VD8> v) {
 		}
 	}
 
-	//prepare temporary and destination vectors
-	VD8 tmp = VD8(1, 0, 0, 0, 0, 0, 0, 0);
+	// prepare temporary and destination vectors
+	// v indentity matrix but rows reordered according to piv - will turn into result
+	// x holds decomposed matrix
 	std::vector<VD8> x(m);
 	for (int i = 0; i < m; i++) {
+		double p[8] = {};
 		size_t idx = piv[i];
-		x[idx] = v[idx];
-		v[idx] = tmp;
-		tmp = tmp.rot<7>();
+		p[idx] = 1.0;
+		x[i] = v[i];
+		v[i] = p;
 	}
 
 	//solve against identity
 	for (size_t k = 0; k < m; k++) {
+		__m512i tk = _mm512_set1_epi64(k);
 		for (size_t i = k + 1; i < m; i++) {
-			tmp = _mm512_permutexvar_pd(_mm512_set1_epi64(k), x[i]); //broadcast x[i][k]
-			v[i] = v[i] - v[k] * tmp;
+			tmp = _mm512_permutexvar_pd(tk, x[i]); //broadcast x[i][k]
+			v[i] -= v[k] * tmp;
 		}
 	}
 	for (int64_t k = m - 1; k >= 0; k--) {
-		tmp = _mm512_permutexvar_pd(_mm512_set1_epi64(k), x[k]); //broadcast x[k][k]
-		v[k] = v[k] / tmp;
+		__m512i tk = _mm512_set1_epi64(k);
+		tmp = _mm512_permutexvar_pd(tk, x[k]); //broadcast x[k][k]
+		v[k] /= tmp;
 		for (int64_t i = 0; i < k; i++) {
-			tmp = _mm512_permutexvar_pd(_mm512_set1_epi64(k), x[i]); //broadcast x[i][k]
-			v[i] = v[i] - v[k] * tmp;
+			tmp = _mm512_permutexvar_pd(tk, x[i]); //broadcast x[i][k]
+			v[i] -= v[k] * tmp;
 		}
 	}
+}
+
+
+//compute 1-norm of square matrix given in avx vectors
+double Avx::norm1(std::span<VD8> v) {
+	VD8 sum;
+	size_t m = v.size();
+	for (size_t i = 0; i < m; i++) {
+		sum += _mm512_abs_pd(v[i]);
+	}
+	__mmask8 mask = (1 << m) - 1;
+	return _mm512_mask_reduce_max_pd(mask, sum);
 }

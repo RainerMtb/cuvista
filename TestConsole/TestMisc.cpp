@@ -78,7 +78,7 @@ void readAndWriteOneFrame() {
 		reader.w = 1920;
 		reader.h = 1080;
 		data.validate(reader);
-		NullWriter writer(data, reader);
+		BaseWriter writer(data, reader);
 		CudaFrame frame(data, reader, writer);
 
 		frame.mBufferFrame.readFromPGM("d:/VideoTest/v00.pgm");
@@ -98,11 +98,11 @@ void readAndWriteOneFrame() {
 		AffineTransform trf;
 		trf.addRotation(0.3).addTranslation(-200, 100);
 		trf.frameIndex = 0;
-		OutputContext oc = writer.getOutputContext();
-		frame.outputData(trf, oc);
+		frame.outputData(trf);
+		writer.prepareOutput(reader.frameIndex, writer.frameIndex, frame);
 		std::string fileOut = "f:/test.bmp";
 		std::cout << "writing file " << fileOut << std::endl;
-		oc.outputFrame->saveAsBMP(fileOut);
+		writer.getOutputFrame().saveAsBMP(fileOut);
 	}
 	std::cout << errorLogger.getErrorMessage() << std::endl;
 }
@@ -190,7 +190,7 @@ void flow() {
 	FFmpegReader reader;
 	reader.open(file);
 	data.validate(reader);
-	NullWriter writer(data, reader);
+	BaseWriter writer(data, reader);
 	CpuFrame frame(data, reader, writer);
 	reader.read(frame.mBufferFrame);
 	frame.inputData();

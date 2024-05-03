@@ -21,11 +21,12 @@
 #include <algorithm>
 
 //allocate frame given height, width, and stride
-template <class T> ImageBase<T>::ImageBase(int h, int w, int stride, int numPlanes) : 
+template <class T> ImageBase<T>::ImageBase(int h, int w, int stride, int numPlanes, int arraysize) : 
 	h { h }, 
 	w { w }, 
 	stride { stride }, 
-	numPlanes { numPlanes }
+	numPlanes { numPlanes },
+	array(arraysize)
 {
 	assert(h >= 0 && w >= 0 && "invalid dimensions");
 	assert(stride >= w && "stride must be equal or greater to width");
@@ -39,6 +40,10 @@ template <class T> T& ImageBase<T>::at(size_t idx, size_t r, size_t c) {
 //read access one pixel on plane idx (0..2) and row / col
 template <class T> const T& ImageBase<T>::at(size_t idx, size_t r, size_t c) const {
 	return *addr(idx, r, c);
+}
+
+template <class T> size_t ImageBase<T>::dataSizeInBytes() const {
+	return array.size();
 }
 
 template <class T> void ImageBase<T>::setPixel(size_t row, size_t col, std::vector<T> colors) {
@@ -118,7 +123,7 @@ template <class T> void ImageBase<T>::setArea(size_t r0, size_t c0, const ImageB
 	}
 }
 
-template <class T> void ImageBase<T>::convert8(ImageBase<unsigned char>& dest, int z0, int z1, int z2, ThreadPoolBase& pool) const {
+template <class T> void ImageBase<T>::yuvToRgb(ImageBase<unsigned char>& dest, int z0, int z1, int z2, ThreadPoolBase& pool) const {
 	assert(w == dest.w && h == dest.h && "dimensions mismatch");
 	auto func = [&] (size_t r) {
 		for (int c = 0; c < w; c++) {
@@ -128,8 +133,8 @@ template <class T> void ImageBase<T>::convert8(ImageBase<unsigned char>& dest, i
 	pool.addAndWait(func, 0, h);
 }
 
-template <class T> void ImageBase<T>::shuffle8(ImageBase<T>& dest, int z0, int z1, int z2, ThreadPoolBase& pool) const {
-	assert(w == dest.w && h == dest.h && "dimensions mismatch");
+template <class T> void ImageBase<T>::shufflePlanes(ImageBase<T>& dest, int z0, int z1, int z2, ThreadPoolBase& pool) const {
+	assert(w == dest.w && h == dest.h && numPlanes == 3 && dest.numPlanes == 3 && "dimensions mismatch");
 	auto func = [&] (size_t r) {
 		for (int c = 0; c < w; c++) {
 			dest.at(z0, r, c) = at(0, r, c);
@@ -138,6 +143,25 @@ template <class T> void ImageBase<T>::shuffle8(ImageBase<T>& dest, int z0, int z
 		}
 	};
 	pool.addAndWait(func, 0, h);
+}
+
+template <class T> void ImageBase<T>::copyFrom(const ImageBase<T>& other) {
+	other.copyTo(*this);
+}
+
+template <class T> void ImageBase<T>::copyTo(ImageBase<T>& other) const {
+	assert(this->numPlanes == other.numPlanes && this->w == other.w && this->h == other.h && this->stride <= other.stride && "invalid dimensions for copy");
+	this->copy2D(this->array, other.array, this->h * this->numPlanes, this->w, this->stride, other.stride);
+}
+
+template <class T> void ImageBase<T>::copy2D(const std::vector<T>& src, std::vector<T>& dest, int rows, int cols, int srcStride, int destStride) const {
+	auto it1 = src.cbegin();
+	auto it2 = dest.begin();
+	for (; it1 < src.end(); ) {
+		std::copy(it1, it1 + cols, it2);
+		it1 += srcStride;
+		it2 += destStride;
+	}
 }
 
 
@@ -379,12 +403,11 @@ template <class T> void ImageBase<T>::drawDot(double cx, double cy, double rx, d
 //------------------------
 
 template <class T> ImagePlanar<T>::ImagePlanar(int h, int w, int stride, int numPlanes) :
-	ImageBase<T>(h, w, stride, numPlanes),
-	array(1ull * h * stride * numPlanes)
+	ImageBase<T>(h, w, stride, numPlanes, 1ull * h * stride * numPlanes)
 {
 	for (int i = 0; i < numPlanes; i++) {
 		int offset = h * stride * i;
-		mats.emplace_back(array.data() + offset, h, stride, i);
+		mats.emplace_back(this->array.data() + offset, h, stride, i);
 	}
 }
 
@@ -406,12 +429,6 @@ template <class T> ImagePlanar<T>::ImagePlanar(CoreMat<T>& mat) :
 template <class T> ImagePlanar<T>::ImagePlanar(CoreMat<T>* mat) :
 	ImageBase<T>(int(mat->rows()), int(mat->cols()), int(mat->cols()), 1) {
 	mats.emplace_back(*mat);
-}
-
-template <class T> size_t ImagePlanar<T>::dataSizeInBytes() const {
-	size_t sum = 0;
-	for (auto& mat : mats) sum += mat.numel();
-	return sum * sizeof(T);
 }
 
 //read access one pixel on plane idx (0..2) and row / col
@@ -479,15 +496,11 @@ template <class T> bool ImagePlanar<T>::saveAsBMP(const std::string& filename, T
 //------------------------
 
 template <class T> T* ImagePacked<T>::data() {
-	return array.data();
+	return this->array.data();
 }
 
 template <class T> const T* ImagePacked<T>::data() const {
-	return array.data();
-}
-
-template <class T> size_t ImagePacked<T>::dataSizeInBytes() const {
-	return array.size();
+	return this->array.data();
 }
 
 template <class T> T* ImagePacked<T>::addr(size_t idx, size_t r, size_t c) {

@@ -20,25 +20,6 @@
 #include "AvxFrame.hpp"
 #include "Util.hpp"
 
-//---------------------------------
-// ---- AVX stream output ---------
-//---------------------------------
-
- std::ostream& operator << (std::ostream& os, __m512 v) {
- 	for (int i = 0; i < 16; i++) os << v.m512_f32[i] << " ";
- 	return os;
- }
-
- std::ostream& operator << (std::ostream& os, __m512d v) {
- 	for (int i = 0; i < 8; i++) os << v.m512d_f64[i] << " ";
- 	return os;
- }
- 
- std::ostream& operator << (std::ostream& os, __m256 v) {
- 	for (int i = 0; i < 8; i++) os << v.m256_f32[i] << " ";
- 	return os;
- }
-
  //---------------------------------
  // ---- constructor ---------------
  //---------------------------------
@@ -57,6 +38,8 @@ AvxFrame::AvxFrame(MainData& data, MovieReader& reader, MovieWriter& writer) :
 
 	mFilterBuffer = AvxMatFloat(data.w, alignValue(data.h, walign)); //transposed
 	mFilterResult = AvxMatFloat(data.h, pitch);
+
+	mOutput.assign(3, AvxMatFloat(data.h, pitch));
 }
 
 //---------------------------------
@@ -104,7 +87,7 @@ void AvxFrame::createPyramid(int64_t frameIndex) {
 	}
 }
 
-void AvxFrame::outputData(const AffineTransform& trf, OutputContext outCtx) {
+void AvxFrame::outputData(const AffineTransform& trf) {
 	//util::ConsoleTimer ic("avx output");
 	size_t yuvidx = trf.frameIndex % mYUV.size();
 	const ImageYuv& input = mYUV[yuvidx];
@@ -117,29 +100,26 @@ void AvxFrame::outputData(const AffineTransform& trf, OutputContext outCtx) {
 		warpBack(trf, mYuvPlane, mWarped[z]);
 		filter(mWarped[z], 0, mData.h, mData.w, mFilterBuffer, filterKernels[z]);
 		filter(mFilterBuffer, 0, mData.w, mData.h, mFilterResult, filterKernels[z]);
-		unsharpAndWrite(mWarped[z], mFilterResult, mData.unsharp[z], outCtx.outputFrame, z);
+		unsharp(mWarped[z], mFilterResult, mData.unsharp[z], z);
 	}
+}
 
-	outCtx.outputFrame->index = trf.frameIndex;
+void AvxFrame::outputCpu(int64_t frameIndex, ImageYuv& image) {
+	write(image);
+	image.index = frameIndex;
+}
 
-	//copy input if requested
-	if (outCtx.requestInput) {
-		*outCtx.inputFrame = input;
-		outCtx.inputFrame->index = trf.frameIndex;
-	}
-	//send to cuda for encoding if requested
-	if (outCtx.encodeCuda) {
-		static std::vector<unsigned char> nv12(outCtx.cudaPitch * mData.h * 3 / 2);
-		outCtx.outputFrame->toNV12(nv12, outCtx.cudaPitch);
-		encodeNvData(nv12, outCtx.cudaNv12ptr);
-	}
+void AvxFrame::outputCuda(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) {
+	static std::vector<unsigned char> nv12(cudaPitch * mData.h * 3 / 2);
+	write(nv12, cudaPitch);
+	encodeNvData(nv12, cudaNv12ptr);
 }
 
 Matf AvxFrame::getTransformedOutput() const {
 	return Matf::concatVert(mWarped[0].toMatf(), mWarped[1].toMatf(), mWarped[2].toMatf());
 }
 
-void AvxFrame::getTransformedOutput(int64_t frameIndex, ImagePPM& image) {
+void AvxFrame::outputRgbWarped(int64_t frameIndex, ImagePPM& image) {
 	yuvToRgb(mWarped[0].data(), mWarped[1].data(), mWarped[2].data(), mData.h, mData.w, pitch, image);
 }
 
@@ -153,8 +133,9 @@ void AvxFrame::getInput(int64_t frameIndex, ImagePPM& image) {
 	yuvToRgb(yuv.plane(0), yuv.plane(1), yuv.plane(2), mData.h, mData.w, yuv.stride, image);
 }
 
-ImageYuv AvxFrame::getInput(int64_t index) const {
-	return mYUV[index % mYUV.size()];
+void AvxFrame::getInput(int64_t index, ImageYuv& image) const {
+	size_t idx = index % mYUV.size();
+	mYUV[idx].copyTo(image);
 }
 
 
@@ -391,19 +372,45 @@ void AvxFrame::warpBack(const AffineTransform& trf, const AvxMatFloat& input, Av
 	}
 }
 
-void AvxFrame::unsharpAndWrite(const AvxMatFloat& warped, AvxMatFloat& gauss, float unsharp, ImageYuv* dest, size_t z) {
+void AvxFrame::unsharp(const AvxMatFloat& warped, AvxMatFloat& gauss, float unsharp, size_t z) {
 	//util::ConsoleTimer ic("avx unsharp");
 	for (int r = 0; r < mData.h; r++) {
 		for (int c = 0; c < mData.w; c += 16) {
 			VF16 ps_warped = warped.addr(r, c);
 			VF16 ps_gauss = gauss.addr(r, c);
 			VF16 ps_unsharped = (ps_warped + (ps_warped - ps_gauss) * unsharp).clamp(0.0f, 1.0f) * 255.0f;
-			__m512i chars32 = _mm512_cvt_roundps_epi32(ps_unsharped, _MM_FROUND_TO_NEAREST_INT);
-			__m128i chars8 = _mm512_cvtepi32_epi8(chars32);
-			_mm_storeu_epi8(dest->addr(z, r, c), chars8);
-			//if (r==755 && c==464) std::printf("avx %.14f %d\n", result.m512_f32[14], chars32.m512i_i32[14]);
+			ps_unsharped.storeu(mOutput[z].addr(r, c));
 		}
 	}
+}
+
+void AvxFrame::write(ImageYuv& dest) {
+	for (int z = 0; z < 3; z++) {
+		for (int r = 0; r < mData.h; r++) {
+			for (int c = 0; c < mData.w; c += 16) {
+				VF16 out = mOutput[z].addr(r, c);
+				__m512i chars32 = _mm512_cvt_roundps_epi32(out, _MM_FROUND_TO_NEAREST_INT);
+				__m128i chars8 = _mm512_cvtepi32_epi8(chars32);
+				_mm_storeu_epi8(dest.addr(z, r, c), chars8);
+			}
+		}
+	}
+}
+
+void AvxFrame::write(std::span<unsigned char> nv12, int cudaPitch) {
+	//Y-Plane
+	for (int r = 0; r < mData.h; r++) {
+		unsigned char* dest = nv12.data() + r * cudaPitch;
+		for (int c = 0; c < mData.w; c += 16) {
+			VF16 out = mOutput[0].addr(r, c);
+			__m512i chars32 = _mm512_cvt_roundps_epi32(out, _MM_FROUND_TO_NEAREST_INT);
+			__m128i chars8 = _mm512_cvtepi32_epi8(chars32);
+			_mm_storeu_epi8(dest + c, chars8);
+		}
+	}
+
+	//U-V-Planes
+
 }
 
 //from uchar yuv to uchar rgb

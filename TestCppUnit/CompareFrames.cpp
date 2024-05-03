@@ -115,7 +115,7 @@ public:
 			reader.open(file);
 			data.collectDeviceInfo();
 			data.validate(reader);
-			NullWriter writer(data, reader);
+			BaseWriter writer(data, reader);
 			CpuFrame frame(data, reader, writer);
 
 			resCpu = run(frame, data);
@@ -130,7 +130,7 @@ public:
 			reader.open(file);
 			data.collectDeviceInfo();
 			data.validate(reader);
-			NullWriter writer(data, reader);
+			BaseWriter writer(data, reader);
 			CudaFrame frame(data, reader, writer);
 
 			resGpu = run(frame, data);
@@ -194,8 +194,9 @@ private:
 		frame->createPyramid(frame->mReader.frameIndex);
 		frame->computeStart(frame->mReader.frameIndex);
 		frame->computeTerminate(frame->mReader.frameIndex);
-		frame->outputData(trf, writer.getOutputContext());
-		writer.write();
+		frame->outputData(trf);
+		writer.prepareOutput(reader.frameIndex, writer.frameIndex, *frame);
+		writer.write(*frame);
 		Assert::IsTrue(errorLogger.hasNoError());
 
 		return { frame->mResultPoints, frame->getPyramid(0), frame->getTransformedOutput(), writer.outputFrames[0], frame->getClassId()};

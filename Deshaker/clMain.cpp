@@ -353,7 +353,7 @@ void cl::computeTerminate(int64_t frameIdx, const CoreData& core, std::vector<Po
 //-------- OUTPUT STABILIZED -------
 //----------------------------------
 
-void cl::outputData(int64_t frameIdx, const CoreData& core, OutputContext outCtx, std::array<double, 6> trf) {
+void cl::outputData(int64_t frameIdx, const CoreData& core, std::array<double, 6> trf) {
 	//util::ConsoleTimer timer("ocl output");
 	int64_t frIdx = frameIdx % core.bufferCount;
 	auto& [outStart, outWarped, outFilterH, outFilterV, outFinal] = clData.out;
@@ -380,16 +380,15 @@ void cl::outputData(int64_t frameIdx, const CoreData& core, OutputContext outCtx
 		//convert to YUV444 for output
 		scale_32f8u_3(outFinal, clData.yuvOut, core.cpupitch, clData);
 
-		//copy output to host
-		if (outCtx.encodeCpu) {
-			clData.queue.enqueueReadBuffer(clData.yuvOut, CL_TRUE, 0, 3ull * core.cpupitch * core.h, outCtx.outputFrame->data());
-			outCtx.outputFrame->index = frameIdx;
-		}
-		//copy input if requested
-		if (outCtx.requestInput) {
-			readImage(clData.yuv[frIdx], core.cpupitch, outCtx.inputFrame->data(), clData.queue);
-			outCtx.inputFrame->index = frameIdx;
-		}
+	} catch (const Error& err) {
+		errorLogger.logError("OpenCL output error: ", err.what());
+	}
+}
+
+void cl::outputDataCpu(int64_t frameIndex, const CoreData& core, ImageYuv& image) {
+	try {
+		clData.queue.enqueueReadBuffer(clData.yuvOut, CL_TRUE, 0, 3ull * core.cpupitch * core.h, image.data());
+		image.index = frameIndex;
 
 	} catch (const Error& err) {
 		errorLogger.logError("OpenCL output error: ", err.what());
@@ -430,12 +429,10 @@ Matf cl::getTransformedOutput(const CoreData& core) {
 	return warped;
 }
 
-ImageYuv cl::getInput(int64_t idx, const CoreData& core) {
-	ImageYuv out(core.h, core.w, core.w);
+void cl::getInput(int64_t idx, ImageYuv& image, const CoreData& core) {
 	int64_t fr = idx % core.bufferCount;
 	Image im = clData.yuv[fr];
-	clData.queue.enqueueReadImage(im, CL_TRUE, Size2(), Size2(core.w, core.h * 3), core.w, 0, out.data());
-	return out;
+	clData.queue.enqueueReadImage(im, CL_TRUE, Size2(), Size2(image.w, image.h * 3), image.stride, 0, image.data());
 }
 
 void cl::getCurrentInputFrame(ImagePPM& image, int64_t idx) {
