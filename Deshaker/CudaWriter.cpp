@@ -70,8 +70,8 @@ void CudaFFmpegWriter::open(EncodingOption videoCodec) {
 }
 
 
-void CudaFFmpegWriter::prepareOutput(int64_t inputIndex, int64_t outputIndex, MovieFrame& frame) {
-    frame.outputCuda(outputIndex, reinterpret_cast<unsigned char*>(nvenc->getNextInputFramePtr()), nvenc->cudaPitch);
+void CudaFFmpegWriter::prepareOutput(MovieFrame& frame) {
+    frame.getOutput(frame.mWriter.frameIndex, reinterpret_cast<unsigned char*>(nvenc->getNextInputFramePtr()), nvenc->cudaPitch);
 }
 
 

@@ -61,6 +61,9 @@
     <ClCompile Include="Eula.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="player.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="ImageLabel.h">
@@ -78,12 +81,18 @@
     <QtMoc Include="ClickLabel.h">
       <Filter>Header Files</Filter>
     </QtMoc>
+    <QtMoc Include="player.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
   </ItemGroup>
   <ItemGroup>
     <QtUic Include="progress.ui">
       <Filter>Form Files</Filter>
     </QtUic>
     <QtUic Include="eula.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="player.ui">
       <Filter>Form Files</Filter>
     </QtUic>
   </ItemGroup>

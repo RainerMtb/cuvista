@@ -25,11 +25,17 @@
 #include "Trajectory.hpp"
 #include "cuDeshaker.cuh"
 #include "clMain.hpp"
+#include "ProgressBase.hpp"
 
 
  //---------------------------------------------------------------------
  //---------- MOVIE FRAME BASE CLASS -----------------------------------
  //---------------------------------------------------------------------
+
+struct MovieFrameId {
+	std::string nameShort;
+	std::string nameLong;
+};
 
 class ProgressDisplay;
 
@@ -54,21 +60,30 @@ public:
 	//prepare data for output to writer
 	virtual void outputData(const AffineTransform& trf) = 0;
 	//prepare data for encoding on cpu
-	virtual void outputCpu(int64_t frameIndex, ImageYuv& image) = 0;
+	virtual void getOutput(int64_t frameIndex, ImageYuv& image) = 0;
 	//prepare data for encoding on cuda
-	virtual void outputCuda(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) = 0;
+	virtual void getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) = 0;
 	//output rgb data warped but not unsharped
-	virtual void outputRgbWarped(int64_t frameIndex, ImagePPM& image) = 0;
+	virtual void getWarped(int64_t frameIndex, ImagePPM& image) = 0;
+	//get input image as stored in frame buffers
+	virtual void getInput(int64_t frameIndex, ImageYuv& image) const {}
+	//get input image as stored in frame buffers
+	virtual void getInput(int64_t frameIndex, ImagePPM& image) {}
 
 	/*
 	* run the stabilizing loop
 	*/
-	virtual void runLoop(DeshakerPass pass, ProgressDisplay& progress, UserInput& input, AuxWriters& secondaryWriters);
+	virtual void runLoop(DeshakerPass pass, ProgressBase& progress, UserInput& input, AuxWriters& secondaryWriters);
 
 	/*
 	* call transform calculation
 	*/
 	virtual void computeTransform(int64_t frameIndex) final;
+
+	/*
+	* read transforms from previous pass
+	*/
+	virtual std::map<int64_t, TransformValues> readTransforms() final;
 
 	/*
 	* get the current frame transform
@@ -88,30 +103,9 @@ public:
 	virtual Mat<float> getPyramid(size_t idx) const { return {}; }
 
 	/*
-	* get input image as stored in frame buffers
+	* identify instance
 	*/
-	virtual void getInput(int64_t frameIndex, ImageYuv& image) const {}
-
-	/*
-	* get most recently read input frame
-	* use to show progress
-	*/
-	virtual void getInput(int64_t frameIndex, ImagePPM& image) {}
-
-	/*
-	* read transforms from previous pass
-	*/
-	virtual std::map<int64_t, TransformValues> readTransforms() final;
-
-	/*
-	* printable name of MovieFrame instance in use
-	*/
-	virtual std::string getClassName() const { return "None"; }
-
-	/*
-	* short id string for frame instance
-	*/
-	virtual std::string getClassId() const { return "None"; }
+	virtual MovieFrameId getId() const { return { "None", "None" }; }
 
 	/*
 	* play time for given frame
@@ -157,16 +151,15 @@ protected:
 private:
 	void read();
 	std::future<void> readAsync();
-	void write();
 	bool doLoop(UserInput& input);
 
-	void runLoopCombined(ProgressDisplay& progress, UserInput& input, AuxWriters& auxWriters);
-	void runLoopFirst(ProgressDisplay& progress, UserInput& input, AuxWriters& auxWriters);
-	void runLoopSecond(ProgressDisplay& progress, UserInput& input, AuxWriters& auxWriters);
-	void runLoopConsecutive(ProgressDisplay& progress, UserInput& input, AuxWriters& auxWriters);
+	void runLoopCombined(ProgressBase& progress, UserInput& input, AuxWriters& auxWriters);
+	void runLoopFirst(ProgressBase& progress, UserInput& input, AuxWriters& auxWriters);
+	void runLoopSecond(ProgressBase& progress, UserInput& input, AuxWriters& auxWriters);
+	void runLoopConsecutive(ProgressBase& progress, UserInput& input, AuxWriters& auxWriters);
 
-	void loopInit(ProgressDisplay& progress, const std::string& message = "");
-	void loopTerminate(ProgressDisplay& progress, UserInput& input, AuxWriters& auxWriters);
+	void loopInit(ProgressBase& progress, const std::string& message = "");
+	void loopTerminate(ProgressBase& progress, UserInput& input, AuxWriters& auxWriters);
 };
 
 
@@ -189,9 +182,9 @@ public:
 	void computeStart(int64_t frameIndex) override {}
 	void computeTerminate(int64_t frameIndex) override {}
 	void outputData(const AffineTransform& trf) override;
-	void outputCpu(int64_t frameIndex, ImageYuv& image) override;
-	void outputCuda(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) override;
-	void outputRgbWarped(int64_t frameIndex, ImagePPM& image) override;
+	void getOutput(int64_t frameIndex, ImageYuv& image) override;
+	void getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) override;
+	void getWarped(int64_t frameIndex, ImagePPM& image) override;
 	void getInput(int64_t index, ImageYuv& image) const override;
 };
 
@@ -210,7 +203,7 @@ public:
 	void computeStart(int64_t frameIndex) override {}
 	void computeTerminate(int64_t frameIndex) override {}
 	void outputData(const AffineTransform& trf) override {};
-	void outputCpu(int64_t frameIndex, ImageYuv& image) override {};
-	void outputCuda(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) override {};
-	void outputRgbWarped(int64_t frameIndex, ImagePPM& image) override {};
+	void getOutput(int64_t frameIndex, ImageYuv& image) override {};
+	void getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) override {};
+	void getWarped(int64_t frameIndex, ImagePPM& image) override {};
 };

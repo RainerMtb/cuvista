@@ -195,11 +195,11 @@ private:
 		frame->computeStart(frame->mReader.frameIndex);
 		frame->computeTerminate(frame->mReader.frameIndex);
 		frame->outputData(trf);
-		writer.prepareOutput(reader.frameIndex, writer.frameIndex, *frame);
+		writer.prepareOutput(*frame);
 		writer.write(*frame);
 		Assert::IsTrue(errorLogger.hasNoError());
 
-		return { frame->mResultPoints, frame->getPyramid(0), frame->getTransformedOutput(), writer.outputFrames[0], frame->getClassId()};
+		return { frame->mResultPoints, frame->getPyramid(0), frame->getTransformedOutput(), writer.outputFrames[0], frame->getId().nameShort};
 	}
 
 public:

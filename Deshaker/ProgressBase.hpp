@@ -18,27 +18,12 @@
 
 #pragma once
 
-#include "MovieWriter.hpp"
-
-struct NvPacket;
-class NvEncoder; //do not fully include NvEncoder.hpp here
-
-class CudaFFmpegWriter : public FFmpegFormatWriter {
-
-private:
-	std::unique_ptr<NvEncoder> nvenc;
-
-	void writePacketToFile(const NvPacket& nvpkt, bool terminate);
-	void writePacketsToFile(std::list<NvPacket> nvpkts, bool terminate);
-	void encodePackets();
+class ProgressBase {
 
 public:
-	CudaFFmpegWriter(MainData& data, MovieReader& reader);
-	~CudaFFmpegWriter() override;
-
-	void open(EncodingOption videoCodec) override;
-	void prepareOutput(MovieFrame& frame) override;
-	void write(const MovieFrame& frame) override;
-	bool startFlushing() override;
-	bool flush() override;
+	virtual void init() {}
+	virtual void update(bool force = false) = 0;
+	virtual void forceUpdate() { update(true); }
+	virtual void terminate() {}
+	virtual void writeMessage(const std::string& msg) {}
 };

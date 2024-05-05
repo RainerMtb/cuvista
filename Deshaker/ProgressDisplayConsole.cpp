@@ -19,8 +19,7 @@
 #include <format>
 #include "ProgressDisplayConsole.hpp"
 #include "Util.hpp"
-#include "MovieReader.hpp"
-#include "MovieWriter.hpp"
+#include "MovieFrame.hpp"
 
 ProgressDisplayConsole::ProgressDisplayConsole(MovieFrame& frame, std::ostream* outstream) :
 	ProgressDisplay(frame, 500), 

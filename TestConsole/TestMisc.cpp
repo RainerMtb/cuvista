@@ -99,7 +99,7 @@ void readAndWriteOneFrame() {
 		trf.addRotation(0.3).addTranslation(-200, 100);
 		trf.frameIndex = 0;
 		frame.outputData(trf);
-		writer.prepareOutput(reader.frameIndex, writer.frameIndex, frame);
+		writer.prepareOutput(frame);
 		std::string fileOut = "f:/test.bmp";
 		std::cout << "writing file " << fileOut << std::endl;
 		writer.getOutputFrame().saveAsBMP(fileOut);

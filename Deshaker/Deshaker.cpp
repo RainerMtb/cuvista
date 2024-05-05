@@ -31,7 +31,7 @@
 
 int deshake(int argsCount, char** args) {
 	//command line arguments for debugging
-	//std::vector<std::string> argsInput = { "-device", "0", "-frames", "10", "-i", "d:/VideoTest/02.mp4", "-y", "-resim", "d:/VideoTest/im/im%04d.bmp"};
+	//std::vector<std::string> argsInput = { "-device", "0", "-frames", "10", "-i", "d:/VideoTest/02.mp4", "-y", "-o", "f:/im%04d.jpg"};
 	std::vector<std::string> argsInput(args, args + argsCount);
 
 	//main program start

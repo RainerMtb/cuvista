@@ -39,7 +39,7 @@ void ProgressDisplayGui::update(bool force) {
     if (imageDue && frame.mWriter.frameIndex > 0) {
         timePoint = timePointNow;
         uint64_t idx = frame.mWriter.frameIndex - 1;
-        frame.outputRgbWarped(idx, ppmOutput);
+        frame.getWarped(idx, ppmOutput);
         QPixmap im(ppmOutput.w, ppmOutput.h);
         im.loadFromData(ppmOutput.header(), ppmInput.sizeTotal(), "PPM");
         thread->updateOutput(im, QString::fromStdString(frame.getTimeForFrame(idx)));

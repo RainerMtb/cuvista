@@ -517,19 +517,20 @@ void cudaOutput(int64_t frameIdx, const CudaData& core, std::array<double, 6> tr
 	cu::unsharp_32f_3(out.warped, out.filterV, out.final, core.strideFloat4N, w, h, cs[1]);
 
 	//writeText(std::to_string(frameIdx), 10, 10, 2, 3, bufferFrames[18], core);
-
-	handleStatus(cudaStreamSynchronize(cs[1]), "error @output #99");
-	handleStatus(cudaGetLastError(), "error @output #100");
 }
 
 void cudaOutputCpu(int64_t frameIndex, ImageYuv& image, const CudaData& core) {
 	cu::outputHost(out.final, core.strideFloat4N, d_yuvOut, core.strideChar, core.w, core.h, cs[1]);
 	cu::copy_32f_3(d_yuvOut, core.strideChar, image.data(), image.stride, core.w, core.h * 3, cs[1]);
 	image.index = frameIndex;
+	handleStatus(cudaStreamSynchronize(cs[1]), "error @output #90");
+	handleStatus(cudaGetLastError(), "error @output #91");
 }
 
 void cudaOutputCuda(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch, const CudaData& core) {
 	cu::outputNvenc(out.final, core.strideFloat4N, cudaNv12ptr, cudaPitch, core.w, core.h, cs[1]);
+	handleStatus(cudaStreamSynchronize(cs[1]), "error @output #95");
+	handleStatus(cudaGetLastError(), "error @output #96");
 }
 
 void encodeNvData(const std::vector<unsigned char>& nv12, unsigned char* nvencPtr) {

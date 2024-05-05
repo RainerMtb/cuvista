@@ -19,10 +19,11 @@
 #pragma once
 
 #include <chrono>
-#include "MovieFrame.hpp"
+#include "ProgressBase.hpp"
 
-//base class
-class ProgressDisplay {
+class MovieFrame;
+
+class ProgressDisplay : public ProgressBase {
 
 protected:
 	MovieFrame& frame;
@@ -39,11 +40,4 @@ protected:
 	bool isDue(bool forceUpdate);
 	double progressPercent();
 	bool isFinite();
-
-public:
-	virtual void init() {}
-	virtual void update(bool force = false) = 0;
-	virtual void forceUpdate() { update(true); }
-	virtual void terminate() {}
-	virtual void writeMessage(const std::string& msg) {}
 };

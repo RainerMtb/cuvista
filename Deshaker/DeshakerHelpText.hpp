@@ -92,7 +92,7 @@ quality and performance settings:
 -cputhreads n   number of threads on the cpu to use for computations
                 default: based on hardware
 -crf n          constant rate factor used for encoding
-                default: 22
+                default: encoder specific default value
 
 misc options:
 -y              overwrite output file without asking

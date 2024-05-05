@@ -32,6 +32,7 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
 {
     ui.setupUi(this);
     mProgressWindow = new ProgressWindow(this); //destructs when parent destructs
+    mPlayerWindow = new Player(this);
     mMovieDir = QStandardPaths::locate(QStandardPaths::MoviesLocation, QString(), QStandardPaths::LocateDirectory);
     mInputDir = mMovieDir;
     mOutputDir = mMovieDir;
@@ -111,6 +112,9 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     //info button
     connect(ui.btnInfo, &QPushButton::clicked, this, &cuvistaGui::showInfo);
 
+    //play button
+    connect(ui.btnPlay, &QPushButton::clicked, this, &cuvistaGui::play);
+
     //set window to minimal size
     resize(minimumSize());
 
@@ -130,15 +134,15 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     }
 
     //label to show file link in status bar upon success
-    statusLinkLabel = new QLabel();
-    statusLinkLabel->setTextFormat(Qt::RichText);
-    statusLinkLabel->setIndent(5);
+    mStatusLinkLabel = new QLabel();
+    mStatusLinkLabel->setTextFormat(Qt::RichText);
+    mStatusLinkLabel->setIndent(5);
     auto fileOpener = [] (const QString& file) {
         QUrl qurl = QUrl::fromLocalFile(file);
         QDesktopServices::openUrl(qurl);
     };
-    connect(statusLinkLabel, &QLabel::linkActivated, this, fileOpener);
-    statusBar()->addWidget(statusLinkLabel);
+    connect(mStatusLinkLabel, &QLabel::linkActivated, this, fileOpener);
+    statusBar()->addWidget(mStatusLinkLabel);
 
     //enabling stacked output disables encoder selection and sets cpu encoding
     auto stackEnable = [&] (int state) {
@@ -285,12 +289,12 @@ void cuvistaGui::doneSuccess(const std::string& fileString, const std::string& s
     mProgressWindow->hide();
     QString file = QString::fromStdString(fileString);
     QString url = QString("file:///") + file;
-    QFontMetrics metrics(statusLinkLabel->font());
+    QFontMetrics metrics(mStatusLinkLabel->font());
     QString fileElided = metrics.elidedText(file, Qt::ElideMiddle, 300);
     QString labelText = QString("<a href='%1'>%2</a> %3").arg(url).arg(fileElided).arg(QString::fromStdString(str));
     statusBar()->clearMessage(); //will show the label which was added in the constructor
-    statusLinkLabel->setText(labelText);
-    statusLinkLabel->show();
+    mStatusLinkLabel->setText(labelText);
+    mStatusLinkLabel->show();
 }
 
 void cuvistaGui::doneFail(const std::string& str) {
@@ -344,4 +348,8 @@ void cuvistaGui::setColorIcon(ClickLabel* btn, QColor& color) {
     QPixmap icon(30, 24);
     icon.fill(color);
     btn->setPixmap(icon);
+}
+
+void cuvistaGui::play() {
+    mPlayerWindow->show();
 }

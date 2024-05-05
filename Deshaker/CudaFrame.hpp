@@ -62,11 +62,11 @@ public:
 		cudaOutput(trf.frameIndex, mData, trf.toArray());
 	}
 
-	void outputCpu(int64_t frameIndex, ImageYuv& image) override {
+	void getOutput(int64_t frameIndex, ImageYuv& image) override {
 		cudaOutputCpu(frameIndex, image, mData);
 	}
 
-	void outputCuda(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) override {
+	void getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) override {
 		cudaOutputCuda(frameIndex, cudaNv12ptr, cudaPitch, mData);
 	}
 
@@ -90,15 +90,11 @@ public:
 		cudaGetCurrentInputFrame(image, mData, frameIndex);
 	}
 
-	void outputRgbWarped(int64_t frameIndex, ImagePPM& image) override {
+	void getWarped(int64_t frameIndex, ImagePPM& image) override {
 		cudaGetTransformedOutput(image, mData);
 	}
-
-	std::string getClassName() const override {
-		return device->getName();
-	}
-
-	std::string getClassId() const override {
-		return "Cuda";
+	
+	MovieFrameId getId() const override {
+		return { "Cuda", device->getName() };
 	}
 };

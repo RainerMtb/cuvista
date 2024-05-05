@@ -28,6 +28,7 @@
 #include "ProgressDisplayGui.hpp"
 #include "StabilizerThread.hpp"
 #include "ClickLabel.h"
+#include "player.h"
 
 struct EncoderSetting {
     QString text;
@@ -44,6 +45,7 @@ public:
 public slots:
     void seek(double frac);
     void stabilize();
+    void play();
     void cancelRequest();
     void doneSuccess(const std::string& file, const std::string& str);
     void doneFail(const std::string& str);
@@ -62,6 +64,7 @@ private:
     QFileInfo mFileInput;
     QFileInfo mFileOutput;
 
+    Player* mPlayerWindow;
     ProgressWindow* mProgressWindow;
     StabilizerThread* mThread = nullptr;
 
@@ -71,7 +74,7 @@ private:
 
     QColor mBackgroundColor;
     QString mDefaultMessage = QString("select file for input, then click 'stabilize'...");
-    QLabel* statusLinkLabel;
+    QLabel* mStatusLinkLabel;
 
     bool mInputReady = false;
     bool mOutputReady = false;

@@ -37,15 +37,14 @@ public:
 	void computeStart(int64_t frameIndex) override;
 	void computeTerminate(int64_t frameIndex) override;
 	void outputData(const AffineTransform& trf) override;
-	void outputCpu(int64_t frameIndex, ImageYuv& image) override;
-	void outputCuda(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) override;
+	void getOutput(int64_t frameIndex, ImageYuv& image) override;
+	void getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) override;
 	Mat<float> getTransformedOutput() const override;
 	Mat<float> getPyramid(size_t idx) const override;
 	void getInput(int64_t index, ImageYuv& image) const override;
 	void getInput(int64_t frameIndex, ImagePPM& image) override;
-	void outputRgbWarped(int64_t frameIndex, ImagePPM& image) override;
-	std::string getClassName() const override;
-	std::string getClassId() const override;
+	void getWarped(int64_t frameIndex, ImagePPM& image) override;
+	MovieFrameId getId() const override;
 
 private:
 	int walign = 32;
@@ -62,7 +61,7 @@ private:
 		{ 0,       0.25f, 0.5f,   0.25f, 0 }
 	};
 
-	void unsharp(const AvxMatFloat& warped, AvxMatFloat& gauss, float unsharp, size_t z);
+	void unsharp(const AvxMatFloat& warped, AvxMatFloat& gauss, float unsharp, AvxMatFloat& out);
 	void write(ImageYuv& dest);
 	void write(std::span<unsigned char> nv12, int cudaPitch);
 	void downsample(const float* srcptr, int h, int w, int stride, float* destptr, int destStride);

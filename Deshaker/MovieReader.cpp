@@ -214,9 +214,8 @@ void FFmpegReader::read(ImageYuv& frame) {
         //store parameters for writer
         packetList.emplace_back(frameIndex, av_frame->pts, av_frame->pkt_dts, av_frame->duration, av_frame->best_effort_timestamp);
 
-        //in some cases pts values are not in proper sequence, but actual footage seems to be in order
-        //in that case just reorder pts values
-        //maybe this is a bug in ffmpeg?
+        //in some cases pts values are not in proper sequence, but frames decoded by ffmpeg are indeed in correct order
+        //in that case just reorder pts values -- bug in ffmpeg
         auto it = packetList.end();
         it--;
         while (it != packetList.begin() && it->pts < std::prev(it)->pts) {
@@ -256,7 +255,6 @@ void FFmpegReader::rewind() {
 
 void FFmpegReader::close() {
     sws_freeContext(sws_scaler_ctx);
-    avcodec_close(av_codec_ctx);
     avcodec_free_context(&av_codec_ctx);
     av_packet_free(&av_packet);
     av_frame_free(&av_frame);

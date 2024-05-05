@@ -46,7 +46,7 @@ void runInit(MainData& data, std::unique_ptr<MovieFrame>& frame, AffineTransform
 	frame->computeStart(frame->mReader.frameIndex);
 	frame->computeTerminate(frame->mReader.frameIndex);
 	frame->outputData(trf);
-	frame->mWriter.prepareOutput(frame->mReader.frameIndex, frame->mWriter.frameIndex, *frame);
+	frame->mWriter.prepareOutput(*frame);
 }
 
 void filterCompare() {

@@ -33,11 +33,11 @@
     <Import Project="$(QtMsBuild)\qt_defaults.props" />
   </ImportGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'" Label="QtSettings">
-    <QtModules>core;gui;widgets</QtModules>
+    <QtModules>core;gui;widgets;multimediawidgets</QtModules>
     <QtBuildConfig>debug</QtBuildConfig>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'" Label="QtSettings">
-    <QtModules>core;gui;widgets</QtModules>
+    <QtModules>core;gui;widgets;multimediawidgets</QtModules>
     <QtBuildConfig>release</QtBuildConfig>
   </PropertyGroup>
   <Target Name="QtMsBuildNotFound" BeforeTargets="CustomBuild;ClCompile" Condition="!Exists('$(QtMsBuild)\qt.targets') or !Exists('$(QtMsBuild)\qt.props')">
@@ -113,6 +113,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Eula.cpp" />
+    <ClCompile Include="player.cpp" />
     <ClCompile Include="progress.cpp" />
     <ClCompile Include="ProgressDisplayGui.cpp" />
     <ClCompile Include="StabilizerThread.cpp" />
@@ -134,6 +135,7 @@
     </ClCompile>
     <None Include="cuvistaGui.ico" />
     <QtUic Include="eula.ui" />
+    <QtUic Include="player.ui" />
     <QtUic Include="progress.ui" />
     <ResourceCompile Include="cuvistaGui.rc" />
   </ItemGroup>
@@ -146,6 +148,7 @@
   <ItemGroup>
     <QtMoc Include="Eula.h" />
     <QtMoc Include="ClickLabel.h" />
+    <QtMoc Include="player.h" />
     <ClInclude Include="ProgressDisplayGui.hpp" />
     <QtMoc Include="StabilizerThread.hpp" />
     <ClInclude Include="UserInputGui.hpp" />

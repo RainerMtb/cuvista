@@ -227,7 +227,7 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 			bgmode = BackgroundMode::COLOR;
 
 		} else if (args.nextArg("crf", next)) {
-			crf = std::stoi(next); //output encoder crf value
+			*crf = std::stoi(next); //output encoder crf value
 
 		} else if (args.nextArg("y")) {
 			overwriteOutput = DecideYNA::YES; //always overwrite
@@ -505,6 +505,8 @@ void MainData::showIntro(const std::string& deviceName, const MovieReader& reade
 	if (videoOutputType == OutputType::VIDEO_FILE && pass != DeshakerPass::FIRST_PASS) *console << "FILE OUT: " << fileOut << std::endl;
 	if (trajectoryFile.empty() == false) *console << "TRAJECTORY FILE: " << trajectoryFile << std::endl;
 	if (resultsFile.empty() == false) *console << "CALCULATION DETAIL OUTPUT: " << resultsFile << std::endl;
+	if (videoOutputType == OutputType::BMP) *console << "IMAGE SEQUENCE: " << ImageWriter::makeFilenameSamples(fileOut) << std::endl;
+	if (videoOutputType == OutputType::JPG) *console << "IMAGE SEQUENCE: " << ImageWriter::makeFilenameSamples(fileOut) << std::endl;
 	if (resultImageFile.empty() == false) *console << "CALCULATION DETAIL IMAGES: " << ImageWriter::makeFilenameSamples(resultImageFile) << std::endl;
 	if (flowFile.empty() == false) *console << "OPTICAL FLOW VIDEO: " << flowFile << std::endl;
 

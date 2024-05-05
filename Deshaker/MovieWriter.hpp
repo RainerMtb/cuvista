@@ -41,7 +41,7 @@ public:
 	virtual ~MovieWriter() = default;
 	virtual void open(EncodingOption videoCodec) {}
 	virtual void open() {}
-	virtual void prepareOutput(int64_t inputIndex, int64_t outputIndex, MovieFrame& frame) {}
+	virtual void prepareOutput(MovieFrame& frame) {}
 	virtual void write(const MovieFrame& frame) { frameIndex++; }
 	virtual bool startFlushing() { return false; }
 	virtual bool flush() { return false; }
@@ -73,7 +73,7 @@ public:
 		outputFrame(data.h, data.w, data.cpupitch) {}
 
 	const ImageYuv& getOutputFrame() { return outputFrame; }
-	void prepareOutput(int64_t inputIndex, int64_t outputIndex, MovieFrame& frame) override;
+	void prepareOutput(MovieFrame& frame) override;
 };
 
 
@@ -227,7 +227,7 @@ protected:
 
 	void openEncoder(const AVCodec* codec, const std::string& sourceName);
 	void open(EncodingOption videoCodec, int h, int w, int stride, const std::string& sourceName);
-	void write(ImageYuv& frame);
+	void write(int bufferIndex);
 
 	FFmpegWriter(MainData& data, MovieReader& reader, int writeBufferSize) :
 		FFmpegFormatWriter(data, reader),
@@ -239,7 +239,7 @@ public:
 
 	~FFmpegWriter() override;
 	void open(EncodingOption videoCodec) override;
-	void prepareOutput(int64_t inputIndex, int64_t outputIndex, MovieFrame& frame) override;
+	void prepareOutput(MovieFrame& frame) override;
 	void write(const MovieFrame& frame) override;
 	bool startFlushing() override;
 	bool flush() override;
@@ -263,7 +263,7 @@ public:
 		outputFrame(data.h, data.w, data.cpupitch) {}
 
 	void open(EncodingOption videoCodec) override;
-	void prepareOutput(int64_t inputIndex, int64_t outputIndex, MovieFrame& frame) override;
+	void prepareOutput(MovieFrame& frame) override;
 	void write(const MovieFrame& frame) override;
 };
 

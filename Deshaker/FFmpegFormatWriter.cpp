@@ -189,11 +189,9 @@ FFmpegFormatWriter::~FFmpegFormatWriter() {
 
     for (StreamContext& sc : mReader.inputStreams) {
         if (sc.audioInCtx) {
-            avcodec_close(sc.audioInCtx);
             avcodec_free_context(&sc.audioInCtx);
         }
         if (sc.audioOutCtx) {
-            avcodec_close(sc.audioOutCtx);
             avcodec_free_context(&sc.audioOutCtx);
         }
         if (sc.outpkt) {
@@ -421,7 +419,7 @@ void FFmpegFormatWriter::writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsI
     //write packet to output
     writePacket(pkt);
     encodedBytesTotal += encodedBytes;
-    outputBytesWritten = encodedBytesTotal; //how to get proper progress from AVFormatContext
+    outputBytesWritten = encodedBytesTotal; //fmt_ctx->pb->bytes_written does not include everything
 
     //advance encoded counter
     this->frameEncoded++;

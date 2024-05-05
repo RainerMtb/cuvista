@@ -35,7 +35,7 @@ template <class T> Result runPyramid(MainData& data) {
 	data.validate(reader);
 	BaseWriter writer(data, reader);
 	std::unique_ptr<MovieFrame> frame = std::make_unique<T>(data, reader, writer);
-	std::cout << "running " << frame->getClassId() << std::endl;
+	std::cout << "running " << frame->getId().nameShort << std::endl;
 	reader.read(frame->mBufferFrame);
 	frame->inputData();
 	frame->createPyramid(frame->mReader.frameIndex);
@@ -54,12 +54,12 @@ template <class T> Result runPyramid(MainData& data) {
 	trf.addRotation(0.2).addTranslation(-40, 30);
 	trf.frameIndex = 0;
 	frame->outputData(trf);
-	writer.prepareOutput(reader.frameIndex, writer.frameIndex, *frame);
+	writer.prepareOutput(*frame);
 	Result result = {
 		frame->getPyramid(0),
 		frame->getTransformedOutput(),
 		frame->mResultPoints,
-		frame->getClassId(),
+		frame->getId().nameShort,
 		writer.getOutputFrame(),
 		im,
 		(errorLogger.hasError() ? errorLogger.getErrorMessage() : "")

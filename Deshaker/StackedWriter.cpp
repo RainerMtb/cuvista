@@ -28,14 +28,15 @@ void StackedWriter::open(EncodingOption videoCodec) {
 	}
 }
 
-void StackedWriter::prepareOutput(int64_t inputIndex, int64_t outputIndex, MovieFrame& frame) {
-	frame.outputCpu(outputIndex, outputFrame);
+void StackedWriter::prepareOutput(MovieFrame& frame) {
+	frame.getOutput(frame.mWriter.frameIndex, outputFrame);
 }
 
 void StackedWriter::write(const MovieFrame& frame) {
 	frame.getInput(frameIndex, inputFrame);
 
-	ImageYuv& combinedFrame = imageBuffer[0];
+	int bufferIndex = 0;
+	ImageYuv& combinedFrame = imageBuffer[bufferIndex];
 	int offset = int(mData.w * (1 + mData.blendInput.position) / 8);
 	unsigned char* in = inputFrame.data() + offset;
 	unsigned char* out = outputFrame.data() + offset;
@@ -55,5 +56,5 @@ void StackedWriter::write(const MovieFrame& frame) {
 	}
 
 	combinedFrame.index = frameIndex;
-	FFmpegWriter::write(combinedFrame);
+	FFmpegWriter::write(bufferIndex);
 }

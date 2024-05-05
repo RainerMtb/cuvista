@@ -46,12 +46,8 @@ AvxFrame::AvxFrame(MainData& data, MovieReader& reader, MovieWriter& writer) :
 // ---- main functions ------------
 //---------------------------------
 
-std::string AvxFrame::getClassName() const {
-	return "AVX 512: " + mData.getCpuName();
-}
-
-std::string AvxFrame::getClassId() const {
-	return "AVX 512";
+MovieFrameId AvxFrame::getId() const {
+	return { "AVX 512", "AVX 512: " + mData.getCpuName() };
 }
 
 void AvxFrame::inputData() {
@@ -100,16 +96,16 @@ void AvxFrame::outputData(const AffineTransform& trf) {
 		warpBack(trf, mYuvPlane, mWarped[z]);
 		filter(mWarped[z], 0, mData.h, mData.w, mFilterBuffer, filterKernels[z]);
 		filter(mFilterBuffer, 0, mData.w, mData.h, mFilterResult, filterKernels[z]);
-		unsharp(mWarped[z], mFilterResult, mData.unsharp[z], z);
+		unsharp(mWarped[z], mFilterResult, mData.unsharp[z], mOutput[z]);
 	}
 }
 
-void AvxFrame::outputCpu(int64_t frameIndex, ImageYuv& image) {
+void AvxFrame::getOutput(int64_t frameIndex, ImageYuv& image) {
 	write(image);
 	image.index = frameIndex;
 }
 
-void AvxFrame::outputCuda(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) {
+void AvxFrame::getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) {
 	static std::vector<unsigned char> nv12(cudaPitch * mData.h * 3 / 2);
 	write(nv12, cudaPitch);
 	encodeNvData(nv12, cudaNv12ptr);
@@ -119,7 +115,7 @@ Matf AvxFrame::getTransformedOutput() const {
 	return Matf::concatVert(mWarped[0].toMatf(), mWarped[1].toMatf(), mWarped[2].toMatf());
 }
 
-void AvxFrame::outputRgbWarped(int64_t frameIndex, ImagePPM& image) {
+void AvxFrame::getWarped(int64_t frameIndex, ImagePPM& image) {
 	yuvToRgb(mWarped[0].data(), mWarped[1].data(), mWarped[2].data(), mData.h, mData.w, pitch, image);
 }
 
@@ -372,14 +368,14 @@ void AvxFrame::warpBack(const AffineTransform& trf, const AvxMatFloat& input, Av
 	}
 }
 
-void AvxFrame::unsharp(const AvxMatFloat& warped, AvxMatFloat& gauss, float unsharp, size_t z) {
+void AvxFrame::unsharp(const AvxMatFloat& warped, AvxMatFloat& gauss, float unsharp, AvxMatFloat& out) {
 	//util::ConsoleTimer ic("avx unsharp");
 	for (int r = 0; r < mData.h; r++) {
 		for (int c = 0; c < mData.w; c += 16) {
 			VF16 ps_warped = warped.addr(r, c);
 			VF16 ps_gauss = gauss.addr(r, c);
 			VF16 ps_unsharped = (ps_warped + (ps_warped - ps_gauss) * unsharp).clamp(0.0f, 1.0f) * 255.0f;
-			ps_unsharped.storeu(mOutput[z].addr(r, c));
+			ps_unsharped.storeu(out.addr(r, c));
 		}
 	}
 }
@@ -410,7 +406,35 @@ void AvxFrame::write(std::span<unsigned char> nv12, int cudaPitch) {
 	}
 
 	//U-V-Planes
+	unsigned char* dest = nv12.data() + mData.h * cudaPitch;
+	for (int rr = 0; rr < mData.h / 2; rr++) {
+		int r = rr * 2;
+		__m512i a, b, x, sumU, sumV, sum;
 
+		for (int c = 0; c < mData.w; c += 16) {
+			a = _mm512_cvt_roundps_epi32(_mm512_loadu_ps(mOutput[1].addr(r, c)), _MM_FROUND_TO_NEAREST_INT);
+			b = _mm512_cvt_roundps_epi32(_mm512_loadu_ps(mOutput[1].addr(r + 1, c)), _MM_FROUND_TO_NEAREST_INT);
+			sumU = _mm512_add_epi32(a, b);
+
+			a = _mm512_cvt_roundps_epi32(_mm512_loadu_ps(mOutput[2].addr(r, c)), _MM_FROUND_TO_NEAREST_INT);
+			b = _mm512_cvt_roundps_epi32(_mm512_loadu_ps(mOutput[2].addr(r + 1, c)), _MM_FROUND_TO_NEAREST_INT);
+			sumV = _mm512_add_epi32(a, b);
+
+			//cross over and combine
+			x = _mm512_shuffle_epi32(sumU, 0b11110101);
+			x = _mm512_mask_shuffle_epi32(x, 0b10101010'10101010, sumV, 0b10100000);
+			//combine without crossing
+			sum = _mm512_mask_blend_epi32(0b10101010'10101010, sumU, sumV);
+			//add the blocks
+			sum = _mm512_add_epi32(sum, x);
+			//divide sum by 4
+			sum = _mm512_srli_epi32(sum, 2);
+			__m128i uv8 = _mm512_cvtepi32_epi8(sum);
+			_mm_storeu_epi8(dest + c, uv8);
+		}
+
+		dest += cudaPitch;
+	}
 }
 
 //from uchar yuv to uchar rgb

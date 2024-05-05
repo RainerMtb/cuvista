@@ -87,7 +87,7 @@ void NvEncoder::probeSupportedCodecs(DeviceInfoCuda& deviceInfoCuda) {
 }
 
 
-void NvEncoder::createEncoder(int fpsNum, int fpsDen, uint32_t gopLen, uint8_t crf, GUID guid, int deviceNum) {
+void NvEncoder::createEncoder(int fpsNum, int fpsDen, uint32_t gopLen, std::optional<uint8_t> crf, GUID guid, int deviceNum) {
 	CUcontext cuctx;
 	handleResult(cuCtxGetCurrent(&cuctx), "cannot get device context");
 	if (cuctx == NULL) 
@@ -96,7 +96,7 @@ void NvEncoder::createEncoder(int fpsNum, int fpsDen, uint32_t gopLen, uint8_t c
 }
 
 
-void NvEncoder::createEncoder(int fpsNum, int fpsDen, uint32_t gopLen, uint8_t crf, GUID guid, CUcontext cuctx) {
+void NvEncoder::createEncoder(int fpsNum, int fpsDen, uint32_t gopLen, std::optional<uint8_t> crf, GUID guid, CUcontext cuctx) {
 	this->cuctx = cuctx;
 	handleResult(NvEncodeAPICreateInstance(&encFuncList), "cannot create api instance");
 	handleResult(encFuncList.nvEncOpenEncodeSession == NULL, "error opening encode session");
@@ -143,9 +143,8 @@ void NvEncoder::createEncoder(int fpsNum, int fpsDen, uint32_t gopLen, uint8_t c
 	NV_ENC_CONFIG encoderConfig = presetConfig.presetCfg;
 	encoderConfig.rcParams.rateControlMode = NV_ENC_PARAMS_RC_VBR;
 	encoderConfig.gopLength = gopLen;
-	encoderConfig.rcParams.targetQuality = crf;
+	if (crf) encoderConfig.rcParams.targetQuality = *crf;
 	encoderConfig.frameIntervalP = 1; //picture pattern
-	encoderConfig.rcParams.targetQuality = crf;
 	encoderConfig.rcParams.enableLookahead = hasEnableLookahead;
 	encoderConfig.rcParams.lookaheadDepth = 8;
 

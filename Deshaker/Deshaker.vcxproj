@@ -219,6 +219,7 @@
     <ClInclude Include="MovieWriter.hpp" />
     <ClInclude Include="NvidiaDriver.hpp" />
     <ClInclude Include="OpenClFrame.hpp" />
+    <ClInclude Include="ProgressBase.hpp" />
     <ClInclude Include="ProgressDisplay.hpp" />
     <ClInclude Include="ProgressDisplayConsole.hpp" />
     <ClInclude Include="Stats.hpp" />

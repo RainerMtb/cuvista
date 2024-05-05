@@ -57,15 +57,15 @@ public:
 		cl::outputData(trf.frameIndex, mData, trf.toArray());
 	}
 
-	void outputCpu(int64_t frameIndex, ImageYuv& image) override {
+	void getOutput(int64_t frameIndex, ImageYuv& image) override {
 		cl::outputDataCpu(frameIndex, mData, image);
 	}
 
-	void outputCuda(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) override {
+	void getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) override {
 		throw std::exception("not supported");
 	}
 
-	void outputRgbWarped(int64_t frameIndex, ImagePPM& image) override {
+	void getWarped(int64_t frameIndex, ImagePPM& image) override {
 		cl::getTransformedOutput(image);
 	}
 
@@ -87,11 +87,7 @@ public:
 		cl::getCurrentInputFrame(image, frameIndex);
 	}
 
-	std::string getClassName() const override {
-		return device->getName();
-	}
-
-	std::string getClassId() const override {
-		return "OpenCL";
+	MovieFrameId getId() const override {
+		return { "OpenCL", device->getName() };
 	}
 };

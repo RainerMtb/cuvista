@@ -244,5 +244,8 @@
     <ClInclude Include="MovieFrame.hpp">
       <Filter>Frame</Filter>
     </ClInclude>
+    <ClInclude Include="ProgressBase.hpp">
+      <Filter>Main</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

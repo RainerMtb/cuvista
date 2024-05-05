@@ -27,8 +27,8 @@ void AuxWriters::writeAll(const MovieFrame& frame) {
 	}
 }
 
-void BaseWriter::prepareOutput(int64_t inputIndex, int64_t outputIndex, MovieFrame& frame) {
-	frame.outputCpu(outputIndex, outputFrame);
+void BaseWriter::prepareOutput(MovieFrame& frame) {
+	frame.getOutput(frame.mWriter.frameIndex, outputFrame);
 }
 
 std::string ImageWriter::makeFilename(const std::string& pattern, int64_t index) {
@@ -58,7 +58,8 @@ std::string ImageWriter::makeFilename() const {
 //-----------------------------------------------------------------------------------
 
 void BmpImageWriter::write(const MovieFrame& frame) {
-	outputFrame.toBGR(image).saveAsBMP(makeFilename());
+	std::string fname = makeFilename();
+	outputFrame.toBGR(image).saveAsBMP(fname);
 	outputBytesWritten += image.dataSizeInBytes();
 	this->frameIndex++;
 }

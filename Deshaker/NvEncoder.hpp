@@ -28,6 +28,7 @@
 #include <vector>
 #include <list>
 #include <map>
+#include <optional>
 
 inline std::map<Codec, GUID> guidMap = {
 	{ Codec::H264, NV_ENC_CODEC_H264_GUID },
@@ -74,8 +75,8 @@ public:
 
 	static void probeEncoding(CudaInfo& cudaInfo);
 	static void probeSupportedCodecs(DeviceInfoCuda& deviceInfoCuda);
-	void createEncoder(int fpsNum, int fpsDen, uint32_t gopLen, uint8_t crf, GUID guid, int deviceNum);
-	void createEncoder(int fpsNum, int fpsDen, uint32_t gopLen, uint8_t crf, GUID guid, CUcontext cuctx);
+	void createEncoder(int fpsNum, int fpsDen, uint32_t gopLen, std::optional<uint8_t> crf, GUID guid, int deviceNum);
+	void createEncoder(int fpsNum, int fpsDen, uint32_t gopLen, std::optional<uint8_t> crf, GUID guid, CUcontext cuctx);
 	void destroyEncoder();
 
 	CUdeviceptr getNextInputFramePtr();

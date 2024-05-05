@@ -172,7 +172,7 @@ public:
 	std::ostream* console = &std::cout;
 	OutputType videoOutputType = OutputType::NONE;
 	DecideYNA overwriteOutput = DecideYNA::ASK;
-	uint8_t crf = 22;
+	std::optional<uint8_t> crf = std::nullopt;
 	BlendInput blendInput;
 
 	bool showHeader = true;

@@ -21,12 +21,8 @@
 #include "MatrixInverter.hpp"
 #include "Util.hpp"
 
-std::string CpuFrame::getClassName() const {
-	return "Cpu only: " + mData.getCpuName();
-}
-
-std::string CpuFrame::getClassId() const {
-	return "Cpu only";
+MovieFrameId CpuFrame::getId() const {
+	return { "Cpu only", "Cpu only: " + mData.getCpuName() };
 }
 
 //constructor
@@ -296,19 +292,19 @@ void CpuFrame::outputData(const AffineTransform& trf) {
 	mOutput.index = trf.frameIndex;
 }
 
-void CpuFrame::outputCpu(int64_t frameIndex, ImageYuv& image) {
+void CpuFrame::getOutput(int64_t frameIndex, ImageYuv& image) {
 	assert(frameIndex == mOutput.index && "invalid frame index");
 	image = mOutput;
 }
 
-void CpuFrame::outputCuda(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) {
+void CpuFrame::getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) {
 	assert(frameIndex == mOutput.index && "invalid frame index");
 	static std::vector<unsigned char> nv12(cudaPitch * mData.h * 3 / 2);
 	mOutput.toNV12(nv12, cudaPitch, mPool);
 	encodeNvData(nv12, cudaNv12ptr);
 }
 
-void CpuFrame::outputRgbWarped(int64_t frameIndex, ImagePPM& image) {
+void CpuFrame::getWarped(int64_t frameIndex, ImagePPM& image) {
 	ImageYuvFloat(mBuffer[0], mBuffer[1], mBuffer[2]).toPPM(image, mPool);
 }
 

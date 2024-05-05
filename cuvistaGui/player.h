@@ -18,27 +18,16 @@
 
 #pragma once
 
-#include "MovieWriter.hpp"
+#include <QtWidgets/QMainWindow>
+#include "ui_player.h"
 
-struct NvPacket;
-class NvEncoder; //do not fully include NvEncoder.hpp here
-
-class CudaFFmpegWriter : public FFmpegFormatWriter {
-
-private:
-	std::unique_ptr<NvEncoder> nvenc;
-
-	void writePacketToFile(const NvPacket& nvpkt, bool terminate);
-	void writePacketsToFile(std::list<NvPacket> nvpkts, bool terminate);
-	void encodePackets();
+//player window
+class Player : public QMainWindow {
+    Q_OBJECT
 
 public:
-	CudaFFmpegWriter(MainData& data, MovieReader& reader);
-	~CudaFFmpegWriter() override;
+    Player(QWidget* parent);
 
-	void open(EncodingOption videoCodec) override;
-	void prepareOutput(MovieFrame& frame) override;
-	void write(const MovieFrame& frame) override;
-	bool startFlushing() override;
-	bool flush() override;
+private:
+    Ui::playerWindow ui;
 };

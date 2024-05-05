@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>playerWindow</class>
+ <widget class="QMainWindow" name="playerWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>800</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>MainWindow</string>
+  </property>
+  <widget class="QWidget" name="main">
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <item>
+     <widget class="QVideoWidget" name="player" native="true">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="minimumSize">
+       <size>
+        <width>400</width>
+        <height>250</height>
+       </size>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="layButtons">
+      <property name="spacing">
+       <number>6</number>
+      </property>
+      <item>
+       <spacer name="horizontalSpacer">
+        <property name="orientation">
+         <enum>Qt::Orientation::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_1">
+        <property name="text">
+         <string>Frame:</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="lblFrameindex">
+        <property name="minimumSize">
+         <size>
+          <width>40</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>0001</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_2">
+        <property name="text">
+         <string>Timestamp:</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="lblTimestamp">
+        <property name="minimumSize">
+         <size>
+          <width>75</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="layoutDirection">
+         <enum>Qt::LayoutDirection::LeftToRight</enum>
+        </property>
+        <property name="text">
+         <string>00:00.000</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="btnRestart">
+        <property name="minimumSize">
+         <size>
+          <width>75</width>
+          <height>28</height>
+         </size>
+        </property>
+        <property name="text">
+         <string> Restart</string>
+        </property>
+        <property name="icon">
+         <iconset resource="cuvistaGui.qrc">
+          <normaloff>:/cuvistaGui/res/07_rotate-left-solid.png</normaloff>:/cuvistaGui/res/07_rotate-left-solid.png</iconset>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="btnPause">
+        <property name="minimumSize">
+         <size>
+          <width>75</width>
+          <height>28</height>
+         </size>
+        </property>
+        <property name="text">
+         <string> Pause</string>
+        </property>
+        <property name="icon">
+         <iconset resource="cuvistaGui.qrc">
+          <normaloff>:/cuvistaGui/res/06_pause-solid.png</normaloff>:/cuvistaGui/res/06_pause-solid.png</iconset>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="btnPlay">
+        <property name="minimumSize">
+         <size>
+          <width>75</width>
+          <height>28</height>
+         </size>
+        </property>
+        <property name="text">
+         <string> Play</string>
+        </property>
+        <property name="icon">
+         <iconset resource="cuvistaGui.qrc">
+          <normaloff>:/cuvistaGui/res/04_play-solid.png</normaloff>:/cuvistaGui/res/04_play-solid.png</iconset>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>QVideoWidget</class>
+   <extends>QWidget</extends>
+   <header location="global">qvideowidget.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources>
+  <include location="cuvistaGui.qrc"/>
+ </resources>
+ <connections/>
+</ui>

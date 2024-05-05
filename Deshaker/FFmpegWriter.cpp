@@ -77,7 +77,8 @@ void FFmpegWriter::openEncoder(const AVCodec* codec, const std::string& sourceNa
 
 //set up ffmpeg encoder
 void FFmpegWriter::open(EncodingOption videoCodec, int h, int w, int stride, const std::string& sourceName) {
-    const AVCodec* codec = avcodec_find_encoder(codecMap[videoCodec.codec]);
+    AVCodecID id = codecMap[videoCodec.codec];
+    const AVCodec* codec = avcodec_find_encoder(id);
     //const AVCodec* codec = avcodec_find_encoder_by_name("libsvtav1");
     if (!codec) 
         throw AVException("Could not find encoder");
@@ -92,14 +93,14 @@ void FFmpegWriter::open(EncodingOption videoCodec, int h, int w, int stride, con
     codec_ctx->width = w;
     codec_ctx->height = h;
     codec_ctx->pix_fmt = pixfmt;
-    //codec_ctx->framerate = { data.inputCtx.fpsNum, data.inputCtx.fpsDen };
+    codec_ctx->framerate = { mReader.fpsNum, mReader.fpsDen };
     codec_ctx->time_base = { (int) mReader.timeBaseNum, (int) mReader.timeBaseDen };
     codec_ctx->gop_size = GOP_SIZE;
     codec_ctx->max_b_frames = 4;
     //av_opt_set(codec_ctx->priv_data, "preset", "slow", 0);
     av_opt_set(codec_ctx->priv_data, "profile", "main", 0);
     av_opt_set(codec_ctx->priv_data, "x265-params", "log-level=error", 0);
-    av_opt_set(codec_ctx->priv_data, "crf", std::to_string(mData.crf).c_str(), 0); //?????
+    if (mData.crf) av_opt_set(codec_ctx->priv_data, "crf", std::to_string(mData.crf.value()).c_str(), 0);
 
     if (fmt_ctx->oformat->flags & AVFMT_GLOBALHEADER)
         codec_ctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
@@ -117,9 +118,9 @@ void FFmpegWriter::open(EncodingOption videoCodec, int h, int w, int stride, con
 }
 
 
-void FFmpegWriter::prepareOutput(int64_t inputIndex, int64_t outputIndex, MovieFrame& frame) {
-    int64_t idx = outputIndex % imageBufferSize;
-    frame.outputCpu(outputIndex, imageBuffer[idx]);
+void FFmpegWriter::prepareOutput(MovieFrame& frame) {
+    int64_t idx = frame.mWriter.frameIndex % imageBufferSize;
+    frame.getOutput(frame.mWriter.frameIndex, imageBuffer[idx]);
 }
 
 
@@ -151,10 +152,10 @@ int FFmpegWriter::writeFFmpegPacket(AVFrame* av_frame) {
 }
 
 
-void FFmpegWriter::write(ImageYuv& fr) {
-    assert(frameIndex == fr.index && "invalid frame index");
-
-    auto fcn = [&] {
+void FFmpegWriter::write(int bufferIndex) {
+    assert(frameIndex == imageBuffer[bufferIndex].index && "invalid frame index");
+    auto fcn = [this, bufferIndex] {
+        ImageYuv& fr = imageBuffer[bufferIndex];
         //fr.writeText(std::to_string(fr.index), 10, 10, 2, 3, ColorYuv::BLACK, ColorYuv::WHITE);
         //scale and put into av_frame
         uint8_t* src[] = { fr.plane(0), fr.plane(1), fr.plane(2), nullptr };
@@ -182,9 +183,8 @@ void FFmpegWriter::write(ImageYuv& fr) {
 
 void FFmpegWriter::write(const MovieFrame& frame) {
     assert(frame.mWriter.frameIndex == this->frameIndex && "invalid frame index");
-    int64_t idx = frame.mWriter.frameIndex % imageBufferSize;
-    ImageYuv& fr = imageBuffer[idx];
-    write(fr);
+    int idx = frame.mWriter.frameIndex % imageBufferSize;
+    write(idx);
 }
 
 
@@ -204,7 +204,6 @@ bool FFmpegWriter::flush() {
 //clean up encoder stuff
 FFmpegWriter::~FFmpegWriter() {
     av_frame_free(&av_frame);
-    avcodec_close(codec_ctx);
     avcodec_free_context(&codec_ctx);
     sws_freeContext(sws_scaler_ctx);
 }
