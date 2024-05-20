@@ -45,6 +45,6 @@ int main() {
 	//pinvTest();
 	//similarTransform();
 
-	//compareFramesPlatforms();
-	avxCompute();
+	compareFramesPlatforms();
+	//avxCompute();
 }

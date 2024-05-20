@@ -66,7 +66,7 @@ struct CoreData {
 	double dnan = std::numeric_limits<double>::quiet_NaN();
 
 	Triplet unsharp = { 0.6f, 0.3f, 0.3f };	//ffmpeg unsharp=5:5:0.6:3:3:0.3
-	ColorNorm bgcol_yuv = {};				//background fill colors in yuv
+	im::ColorNorm bgcol_yuv = {};				//background fill colors in yuv
 	BackgroundMode bgmode = BackgroundMode::BLEND;
 
 	int radius = -1;			//number of frames before and after used for smoothing

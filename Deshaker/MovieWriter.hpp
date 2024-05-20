@@ -84,11 +84,11 @@ protected:
 	ImageWriter(MainData& data, MovieReader& reader) :
 		BaseWriter(data, reader) {}
 
-	std::string makeFilename() const;
+	std::string makeFilename(const std::string& extension) const;
 
 public:
-	static std::string makeFilename(const std::string& pattern, int64_t index);
-	static std::string makeFilenameSamples(const std::string& pattern);
+	static std::string makeFilename(const std::string& pattern, int64_t index, const std::string& extension);
+	static std::string makeFilenameSamples(const std::string& pattern, const std::string& extension);
 };
 
 //-----------------------------------------------------------------------------------
@@ -250,17 +250,19 @@ public:
 class StackedWriter : public FFmpegWriter {
 
 private:
-	int widthTotal;
-	ImageYuv inputFrame;
-	ImageYuv outputFrame;
-	std::vector<unsigned char> background;
+	int mWidthTotal;
+	double mStackPosition;
+	ImageYuv mInputFrame;
+	ImageYuv mOutputFrame;
+	std::vector<unsigned char> mBackground;
 
 public:
-	StackedWriter(MainData& data, MovieReader& reader) :
+	StackedWriter(MainData& data, MovieReader& reader, double stackPosition) :
 		FFmpegWriter(data, reader, 1),
-		widthTotal { data.w * 3 / 2 },
-		inputFrame(data.h, data.w, data.cpupitch),
-		outputFrame(data.h, data.w, data.cpupitch) {}
+		mWidthTotal { data.w * 3 / 2 },
+		mStackPosition { stackPosition },
+		mInputFrame(data.h, data.w, data.cpupitch),
+		mOutputFrame(data.h, data.w, data.cpupitch) {}
 
 	void open(EncodingOption videoCodec) override;
 	void prepareOutput(MovieFrame& frame) override;
@@ -334,8 +336,7 @@ protected:
 	AVRational timeBase = { 1, 10 };
 
 	int legendSize = 64;
-	ImageBGR legend = ImageBGR(legendSize, legendSize);
-	ImageGray legendMask = ImageGray(legendSize, legendSize);
+	ImageARGB legend = ImageARGB(legendSize, legendSize);
 
 	void open(const std::string& sourceName);
 	void writeFlow(const MovieFrame& frame);

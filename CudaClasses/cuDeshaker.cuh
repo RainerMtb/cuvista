@@ -115,6 +115,11 @@ void cudaOutput(int64_t frameIdx, const CudaData& core, std::array<double, 6> tr
 void cudaOutputCpu(int64_t frameIndex, ImageYuv& image, const CudaData& core);
 
 /*
+@brief output pixel data in ARGB format to host
+*/
+void cudaOutputCpu(int64_t frameIndex, ImageARGB& argb, const CudaData& mData);
+
+/*
 @brief output pixel data to cuda encoding
 */
 void cudaOutputCuda(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch, const CudaData& core);

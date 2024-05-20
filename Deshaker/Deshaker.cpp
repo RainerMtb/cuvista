@@ -37,7 +37,7 @@ int deshake(int argsCount, char** args) {
 	//main program start
 	MainData data;
 	std::unique_ptr<MovieReader> reader = std::make_unique<NullReader>();
-	std::unique_ptr<MovieWriter> writer = std::make_unique<BaseWriter>(data, *reader);
+	std::unique_ptr<MovieWriter> writer = std::make_unique<NullWriter>(data, *reader);
 	std::unique_ptr<MovieFrame> frame;
 	AuxWriters auxWriters;
 	
@@ -55,15 +55,15 @@ int deshake(int argsCount, char** args) {
 		//----------- create appropriate MovieWriter
 		if (data.pass == DeshakerPass::FIRST_PASS)
 			writer = std::make_unique<TransformsWriterMain>(data, *reader);
-		else if (data.blendInput.enabled)
-			writer = std::make_unique<StackedWriter>(data, *reader);
+		else if (data.stackPosition)
+			writer = std::make_unique<StackedWriter>(data, *reader, *data.stackPosition);
 		else if (data.videoOutputType == OutputType::PIPE)
 			writer = std::make_unique<PipeWriter>(data, *reader);
 		else if (data.videoOutputType == OutputType::TCP)
 			writer = std::make_unique<TCPWriter>(data, *reader);
-		else if (data.videoOutputType == OutputType::BMP)
+		else if (data.videoOutputType == OutputType::SEQUENCE_BMP)
 			writer = std::make_unique<BmpImageWriter>(data, *reader);
-		else if (data.videoOutputType == OutputType::JPG)
+		else if (data.videoOutputType == OutputType::SEQUENCE_JPG)
 			writer = std::make_unique<JpegImageWriter>(data, *reader);
 		else if (data.videoOutputType == OutputType::VIDEO_FILE && data.selectedEncoding.device == EncodingDevice::CPU)
 			writer = std::make_unique<FFmpegWriter>(data, *reader);

@@ -395,6 +395,10 @@ void cl::outputDataCpu(int64_t frameIndex, const CoreData& core, ImageYuv& image
 	}
 }
 
+void cl::outputDataCpu(int64_t frameIndex, const CoreData& core, ImageARGB& argb) {
+	//TODO
+}
+
 //utility function to read from image
 void cl::readImage(Image src, size_t destPitch, void* dest, CommandQueue queue) {
 	size_t w = src.getImageInfo<CL_IMAGE_WIDTH>();

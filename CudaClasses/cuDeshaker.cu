@@ -165,7 +165,7 @@ void writeText(const std::string& text, int x0, int y0, int scaleX, int scaleY, 
 	//create Image<float>
 	int imh = 10 * scaleY;
 	int siz = imh * core.strideFloat;
-	ImagePlanar<float> im(imh, core.w, core.strideFloatN, 3);
+	im::ImageBase<float> im(imh, core.w, core.strideFloatN, 3);
 
 	//copy three horizontal stripes into host memory
 	for (size_t z = 0; z < 3; z++) {
@@ -175,7 +175,7 @@ void writeText(const std::string& text, int x0, int y0, int scaleX, int scaleY, 
 	}
 
 	//write text
-	im.writeText(text, x0, 0, scaleX, scaleY, ColorNorm::WHITE, ColorNorm::BLACK); //write into host memory
+	im.writeText(text, x0, 0, scaleX, scaleY, im::ColorNorm::WHITE, im::ColorNorm::BLACK); //write into host memory
 
 	//copy YUV planes back into device memory
 	for (size_t z = 0; z < 3; z++) {
@@ -223,7 +223,7 @@ std::vector<cudaDeviceProp> cudaProbeRuntime(CudaInfo& cudaInfo) {
 void cudaInit(CudaData& core, int devIdx, const cudaDeviceProp& prop, ImageYuv& yuvFrame) {
 	//pin memory of transfer object
 	registeredMemPtr = yuvFrame.data();
-	handleStatus(cudaHostRegister(registeredMemPtr, yuvFrame.dataSizeInBytes(), cudaHostRegisterDefault), "error @init #2");
+	handleStatus(cudaHostRegister(registeredMemPtr, yuvFrame.bytes(), cudaHostRegisterDefault), "error @init #2");
 
 	const size_t h = core.h;
 	const size_t w = core.w;
@@ -527,6 +527,10 @@ void cudaOutputCpu(int64_t frameIndex, ImageYuv& image, const CudaData& core) {
 	handleStatus(cudaGetLastError(), "error @output #91");
 }
 
+void cudaOutputCpu(int64_t frameIndex, ImageARGB& argb, const CudaData& mData) {
+	//TODO
+}
+
 void cudaOutputCuda(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch, const CudaData& core) {
 	cu::outputNvenc(out.final, core.strideFloat4N, cudaNv12ptr, cudaPitch, core.w, core.h, cs[1]);
 	handleStatus(cudaStreamSynchronize(cs[1]), "error @output #95");
@@ -629,7 +633,7 @@ void getDebugData(const CudaData& core, const std::string& imageFile, std::funct
 			}
 		}
 	}
-	kernelTimerImage.saveAsBMP(imageFile);
+	kernelTimerImage.saveAsColorBMP(imageFile);
 }
 
 void cudaShutdown(const CudaData& core) {

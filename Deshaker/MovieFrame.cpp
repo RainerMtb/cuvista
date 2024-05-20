@@ -63,32 +63,40 @@ bool MovieFrame::doLoop(UserInput& input) {
 //---------------------------------------------------------------------
 
 void DummyFrame::inputData() {
-	size_t idx = mBufferFrame.index % frames.size();
-	frames[idx] = mBufferFrame;
+	size_t idx = mBufferFrame.index % mFrames.size();
+	mBufferFrame.copyTo(mFrames[idx], mPool);
 }
 
 void DummyFrame::outputData(const AffineTransform& trf) {
-	int64_t index = trf.frameIndex % frames.size();
-	ImageYuv& frameToEncode = frames[index];
-	assert(frameToEncode.index == trf.frameIndex && "invalid frame index to output");
+	size_t idx = trf.frameIndex % mFrames.size();
+	assert(mFrames[idx].index == trf.frameIndex && "invalid frame index to output");
 }
 
 void DummyFrame::getOutput(int64_t frameIndex, ImageYuv& image) {
-	frames[frameIndex].copyTo(image);
+	size_t idx = frameIndex % mFrames.size();
+	mFrames[idx].copyTo(image, mPool);
 }
 
 void DummyFrame::getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) {
 	static std::vector<unsigned char> nv12(cudaPitch * mData.h * 3 / 2);
-	frames[frameIndex].toNV12(nv12, cudaPitch);
+	size_t idx = frameIndex % mFrames.size();
+	mFrames[idx].toNV12(nv12, cudaPitch, mPool);
 	encodeNvData(nv12, cudaNv12ptr);
 }
 
-void DummyFrame::getWarped(int64_t frameIndex, ImagePPM& image) {
-	frames[frameIndex].toPPM(image);
+void DummyFrame::getOutput(int64_t frameIndex, ImageARGB& argb) {
+	size_t idx = frameIndex % mFrames.size();
+	mFrames[idx].toARGB(argb, mPool);
 }
 
-void DummyFrame::getInput(int64_t index, ImageYuv& image) const {
-	image = frames[index % frames.size()];
+void DummyFrame::getWarped(int64_t frameIndex, ImagePPM& image) {
+	size_t idx = frameIndex % mFrames.size();
+	mFrames[idx].toPPM(image, mPool);
+}
+
+void DummyFrame::getInput(int64_t frameIndex, ImageYuv& image) const {
+	size_t idx = frameIndex % mFrames.size();
+	mFrames[idx].copyTo(image);
 }
 
 

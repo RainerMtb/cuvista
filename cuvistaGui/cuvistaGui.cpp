@@ -24,19 +24,24 @@
 #include <QColorDialog>
 #include <QDesktopServices>
 
-#include "MainData.hpp"
-#include "UserInput.hpp"
+#include "UserInputGui.hpp"
+#include "MovieFrame.hpp"
+#include "CpuFrame.hpp"
+#include "OpenClFrame.hpp"
+#include "CudaFrame.hpp"
+#include "AvxFrame.hpp"
+#include "progress.h"
 
 cuvistaGui::cuvistaGui(QWidget *parent) : 
     QMainWindow(parent) 
 {
     ui.setupUi(this);
-    mProgressWindow = new ProgressWindow(this); //destructs when parent destructs
     mPlayerWindow = new Player(this);
+    mProgressWindow = new ProgressWindow(this);
     mMovieDir = QStandardPaths::locate(QStandardPaths::MoviesLocation, QString(), QStandardPaths::LocateDirectory);
     mInputDir = mMovieDir;
     mOutputDir = mMovieDir;
-    QString version = QString("Version %1").arg(CUVISTA_VERSION.c_str());
+    QString version = QString("Version ") + QString::fromStdString(CUVISTA_VERSION);
     ui.labelVersion->setText(version);
 
     mData.console = &mData.nullStream;
@@ -51,16 +56,15 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
 
     //combo box for encoding options for selected device
     auto fcnEncoding = [&] (int index) {
-        mEncoderSettings.clear();
         ui.comboEncoding->clear();
 
         std::vector<EncodingOption>& options = mData.deviceList[index]->encodingOptions;
         for (EncodingOption e : options) {
+            QVariant qv = QVariant::fromValue(e);
             std::string str = std::format("{} - {}", mData.mapDeviceToString[e.device], mData.mapCodecToString[e.codec]);
             QString qs = QString::fromStdString(str);
 
-            mEncoderSettings.emplace_back(qs, e);
-            ui.comboEncoding->addItem(qs);
+            ui.comboEncoding->addItem(qs, qv);
         }
     };
     //set encoding options when device changes
@@ -76,7 +80,7 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     connect(ui.btnOpen, &QToolButton::clicked, this, fcnOpen);
 
     //color selection
-    const ColorRgb& rgb = mData.bgcol_rgb;
+    const im::ColorRgb& rgb = mData.bgcol_rgb;
     mBackgroundColor.setRgb(rgb.r(), rgb.g(), rgb.b());
     setColorIcon(ui.lblColor, mBackgroundColor);
 
@@ -90,6 +94,10 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
         }
     };
     connect(ui.lblColor, &ClickLabel::clicked, this, fcnColorSelection);
+
+    //image sequences
+    ui.comboImageType->addItem("BMP", QVariant::fromValue(OutputType::SEQUENCE_BMP));
+    ui.comboImageType->addItem("JPG", QVariant::fromValue(OutputType::SEQUENCE_JPG));
 
     //limits
     ui.spinRadius->setMinimum(mData.limits.radsecMin);
@@ -106,14 +114,17 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     //start stabilizing
     connect(ui.btnStart, &QPushButton::clicked, this, &cuvistaGui::stabilize);
 
-    //cancel signal
-    connect(mProgressWindow, &ProgressWindow::cancel, this, &cuvistaGui::cancelRequest);
-
     //info button
     connect(ui.btnInfo, &QPushButton::clicked, this, &cuvistaGui::showInfo);
 
-    //play button
-    connect(ui.btnPlay, &QPushButton::clicked, this, &cuvistaGui::play);
+    //progress handler
+    connect(mProgressWindow, &ProgressWindow::cancel, this, &cuvistaGui::cancelRequest);
+    connect(mProgressWindow, &ProgressWindow::sigProgress, mProgressWindow, &ProgressWindow::progress);
+    connect(mProgressWindow, &ProgressWindow::sigUpdateInput, mProgressWindow, &ProgressWindow::updateInput);
+    connect(mProgressWindow, &ProgressWindow::sigUpdateOutput, mProgressWindow, &ProgressWindow::updateOutput);
+
+    connect(mPlayerWindow, &Player::signalProgress, mPlayerWindow, &Player::progress);
+    connect(mPlayerWindow, &Player::signalPlay, mPlayerWindow, &Player::play);
 
     //set window to minimal size
     resize(minimumSize());
@@ -143,23 +154,6 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     };
     connect(mStatusLinkLabel, &QLabel::linkActivated, this, fileOpener);
     statusBar()->addWidget(mStatusLinkLabel);
-
-    //enabling stacked output disables encoder selection and sets cpu encoding
-    auto stackEnable = [&] (int state) {
-        if (state == Qt::Checked) {
-            ui.comboEncoding->setEnabled(false);
-            EncoderSetting es = mEncoderSettings[ui.comboEncoding->currentIndex()];
-            if (es.encoder.device != EncodingDevice::CPU) {
-                int idx = 0;
-                while (mEncoderSettings[idx].encoder.device != EncodingDevice::CPU) idx++;
-                ui.comboEncoding->setCurrentIndex(idx);
-            }
-
-        } else {
-            ui.comboEncoding->setEnabled(true);
-        }
-    };
-    connect(ui.chkStack, &QCheckBox::stateChanged, this, stackEnable);
 }
 
 //open and read new input file
@@ -229,13 +223,25 @@ void cuvistaGui::stabilize() {
         return; //nothing to do
     }
 
-    //get output file
-    QFileDialog::Options op = ui.chkOverwrite->isChecked() ? QFileDialog::Option::DontConfirmOverwrite : QFileDialog::Options();
-    QString fileFilter("Video Files (*.mp4; *.mkv);;All Files (*.*)");
-    QString outFile = QFileDialog::getSaveFileName(this, QString("Select Video file to save"), mOutputDir, fileFilter, &mOutputFilterSelected, op);
-    if (outFile.isEmpty()) {
-        statusBar()->showMessage(mDefaultMessage);
-        return;
+    //get output video file
+    QString outFile;
+    if (ui.chkEncode->isChecked() || ui.chkStack->isChecked()) {
+        QFileDialog::Options op = ui.chkOverwrite->isChecked() ? QFileDialog::Option::DontConfirmOverwrite : QFileDialog::Options();
+        QString fileFilter("Video Files (*.mp4; *.mkv);;All Files (*.*)");
+        outFile = QFileDialog::getSaveFileName(this, QString("Select Video file to save"), mOutputDir, fileFilter, &mOutputFilterSelected, op);
+        if (outFile.isEmpty()) {
+            statusBar()->showMessage(mDefaultMessage);
+            return;
+        }
+    }
+
+    //get output sequence folder
+    if (ui.chkSequence->isChecked()) {
+        outFile = QFileDialog::getExistingDirectory(this, QString("Select Output Folder"), mOutputDir);
+        if (outFile.isEmpty()) {
+            statusBar()->showMessage(mDefaultMessage);
+            return;
+        }
     }
 
     //check if input and output point to same file
@@ -252,37 +258,107 @@ void cuvistaGui::stabilize() {
     mData.fileOut = outFile.toStdString();
     mData.deviceRequested = true;
     mData.deviceSelected = ui.comboDevice->currentIndex();
-    EncoderSetting settings = mEncoderSettings[ui.comboEncoding->currentIndex()];
-    mData.requestedEncoding = settings.encoder;
+    mData.requestedEncoding = ui.comboEncoding->currentData().value<EncodingOption>();
     mData.radsec = ui.spinRadius->value();
     mData.imZoom = ui.spinZoom->value();
     mData.bgmode = ui.radioBlend->isChecked() ? BackgroundMode::BLEND : BackgroundMode::COLOR;
 
-    mData.blendInput.enabled = ui.chkStack->isChecked();
-    mData.blendInput.position = ui.slideStack->value() / 100.0;
-
     using uchar = unsigned char;
     mData.bgcol_rgb = { (uchar) mBackgroundColor.red(), (uchar) mBackgroundColor.green(), (uchar) mBackgroundColor.blue() };
 
+    //rewind reader to beginning of input
+    mReader.rewind();
+    //check input parameters
+    mData.validate(mReader);
+    //reset input handler
+    mInputHandler.reset();
+
+    //select writer
+    if (ui.chkStack->isChecked())
+        mWriter = std::make_unique<StackedWriter>(mData, mReader, ui.slideStack->value() / 100.0);
+    else if (ui.chkSequence->isChecked() && ui.comboImageType->currentData().value<OutputType>() == OutputType::SEQUENCE_BMP)
+        mWriter = std::make_unique<BmpImageWriter>(mData, mReader);
+    else if (ui.chkSequence->isChecked() && ui.comboImageType->currentData().value<OutputType>() == OutputType::SEQUENCE_JPG)
+        mWriter = std::make_unique<JpegImageWriter>(mData, mReader);
+    else if (ui.chkPlayer->isChecked())
+        mWriter = std::make_unique<PlayerWriter>(mData, mReader, mPlayerWindow);
+    else if (ui.chkEncode->isChecked() && mData.requestedEncoding.device == EncodingDevice::NVENC)
+        mWriter = std::make_unique<CudaFFmpegWriter>(mData, mReader);
+    else if (ui.chkEncode->isChecked())
+        mWriter = std::make_unique<FFmpegWriter>(mData, mReader);
+    else
+        return;
+
+    //open writer
+    mWriter->open(mData.requestedEncoding);
+
+    //select frame handler class
+    DeviceType devtype = mData.deviceList[mData.deviceSelected]->type;
+    if (devtype == DeviceType::CPU)
+        mFrame = std::make_unique<CpuFrame>(mData, mReader, *mWriter);
+    else if (devtype == DeviceType::AVX)
+        mFrame = std::make_unique<AvxFrame>(mData, mReader, *mWriter);
+    else if (devtype == DeviceType::CUDA)
+        mFrame = std::make_unique<CudaFrame>(mData, mReader, *mWriter);
+    else if (devtype == DeviceType::OPEN_CL)
+        mFrame = std::make_unique<OpenClFrame>(mData, mReader, *mWriter);
+
+    //progress handler
+    std::shared_ptr<ProgressBase> progress;
+
+    //set up output
+    if (ui.chkPlayer->isChecked()) {
+        progress = std::make_shared<PlayerProgress>(mData, *mFrame, mPlayerWindow);
+        mPlayerWindow->show();
+
+    } else {
+        progress = std::make_shared<ProgressGui>(mData, *mFrame, mProgressWindow);
+        mProgressWindow->updateInput(mPixmapWorking, "");
+        mProgressWindow->updateOutput(mPixmapWorking, "");
+        mProgressWindow->show();
+    }
+
     //set up worker thread
-    mThread = new StabilizerThread(mData, mReader);
-    connect(mThread, &StabilizerThread::succeeded, this, &cuvistaGui::doneSuccess);
-    connect(mThread, &StabilizerThread::failed, this, &cuvistaGui::doneFail);
-    connect(mThread, &StabilizerThread::cancelled, this, &cuvistaGui::doneCancel);
-    connect(mThread, &StabilizerThread::finished, mThread, &QObject::deleteLater);
-    connect(mThread, &StabilizerThread::progress, mProgressWindow, &ProgressWindow::progress);
-    connect(mThread, &StabilizerThread::updateInput, mProgressWindow, &ProgressWindow::updateInput);
-    connect(mThread, &StabilizerThread::updateOutput, mProgressWindow, &ProgressWindow::updateOutput);
+    auto fcn = [=] {
+        //no secondary writers
+        AuxWriters writers;
+        //run loop
+        mFrame->runLoop(DeshakerPass::COMBINED, *progress, mInputHandler, writers);
+    };
+    mThread = QThread::create(fcn);
+    connect(mThread, &QThread::finished, this, &cuvistaGui::done);
 
     //begin stabilizing
+    mData.timeStart();
     mThread->start();
-    mProgressWindow->updateInput(mPixmapWorking, "");
-    mProgressWindow->updateOutput(mPixmapWorking, "");
-    mProgressWindow->show();
 }
 
 void cuvistaGui::cancelRequest() {
     mThread->requestInterruption();
+}
+
+void cuvistaGui::done() {
+    mProgressWindow->hide();
+    mPlayerWindow->hide();
+
+    //stopwatch
+    double secs = mData.timeElapsedSeconds();
+    double fps = mWriter->frameEncoded / secs;
+
+    //always destruct writer before frame
+    mWriter.reset();
+    mFrame.reset();
+
+    //emit signals to report result back to main thread
+    if (errorLogger.hasError())
+        doneFail(errorLogger.getErrorMessage());
+    else if (mInputHandler.current != UserInputEnum::CONTINUE)
+        doneCancel("Operation was cancelled");
+    else
+        doneSuccess(mData.fileOut, std::format(" written in {:.1f} min at {:.1f} fps", secs / 60.0, fps));
+
+    //delete stabilizer thread
+    mThread->deleteLater();
 }
 
 void cuvistaGui::doneSuccess(const std::string& fileString, const std::string& str) {
@@ -348,8 +424,4 @@ void cuvistaGui::setColorIcon(ClickLabel* btn, QColor& color) {
     QPixmap icon(30, 24);
     icon.fill(color);
     btn->setPixmap(icon);
-}
-
-void cuvistaGui::play() {
-    mPlayerWindow->show();
 }

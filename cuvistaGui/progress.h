@@ -21,6 +21,9 @@
 #include <QtWidgets/QMainWindow>
 #include "ui_progress.h"
 
+#include "ProgressDisplay.hpp"
+#include "MainData.hpp"
+
 class ProgressWindow : public QMainWindow {
 
     Q_OBJECT
@@ -30,6 +33,9 @@ private:
 
 signals:
     void cancel();
+    void sigProgress(bool isFinite, double value);
+    void sigUpdateInput(QPixmap pm, QString time);
+    void sigUpdateOutput(QPixmap pm, QString time);
 
 public slots:
     void progress(bool isFinite, double value);
@@ -37,8 +43,28 @@ public slots:
     void updateOutput(QPixmap pm, QString time);
 
 public:
-    ProgressWindow(QWidget* parent = nullptr);
+    ProgressWindow(QWidget* parent);
+
     void changeEvent(QEvent* ev) override;
     void closeEvent(QCloseEvent* event) override;
     void showEvent(QShowEvent* event) override;
+};
+
+
+class ProgressGui : public ProgressDisplay {
+
+private:
+    ImagePPM ppmInput;
+    ImagePPM ppmOutput;
+    std::chrono::steady_clock::time_point timePoint = std::chrono::steady_clock::now();
+    ProgressWindow* progressWindow;
+
+public:
+    ProgressGui(MainData& data, MovieFrame& frame, ProgressWindow* progressWindow) :
+        ProgressDisplay(frame, 50),
+        ppmInput(data.h, data.w),
+        ppmOutput(data.h, data.w),
+        progressWindow { progressWindow } {}
+
+    void update(bool force = false) override;
 };

@@ -67,6 +67,8 @@
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(SolutionDir)Deshaker;$(SolutionDir)Matrix;$(SolutionDir)CudaClasses;$(SolutionDir)include;$(SolutionDir)include\ffmpeg;$(CUDA_PATH)\include;$(Qt_INCLUDEPATH_)</AdditionalIncludeDirectories>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions512</EnableEnhancedInstructionSet>
+      <Optimization>Disabled</Optimization>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(SolutionDir)lib\$(Platform);$(SolutionDir)bin\$(Platform)\$(Configuration);$(CUDA_PATH)\lib\$(Platform)</AdditionalLibraryDirectories>
@@ -115,8 +117,6 @@
     <ClCompile Include="Eula.cpp" />
     <ClCompile Include="player.cpp" />
     <ClCompile Include="progress.cpp" />
-    <ClCompile Include="ProgressDisplayGui.cpp" />
-    <ClCompile Include="StabilizerThread.cpp" />
     <ClCompile Include="UserInputGui.cpp" />
     <QtRcc Include="cuvistaGui.qrc" />
     <QtUic Include="cuvistaGui.ui" />
@@ -149,8 +149,6 @@
     <QtMoc Include="Eula.h" />
     <QtMoc Include="ClickLabel.h" />
     <QtMoc Include="player.h" />
-    <ClInclude Include="ProgressDisplayGui.hpp" />
-    <QtMoc Include="StabilizerThread.hpp" />
     <ClInclude Include="UserInputGui.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

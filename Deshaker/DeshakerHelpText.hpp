@@ -115,7 +115,7 @@ advanced computation parameters:
 -levels         number of pyramid levels
                 default: 3
 -ir             integration radius
-                default: 3, maximum: 7
+                default: 3, maximum: 3
 
 keyboard input options at runtime:
 key [e]         stop reading input, write pending output, then terminate

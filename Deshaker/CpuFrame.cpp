@@ -30,7 +30,7 @@ CpuFrame::CpuFrame(MainData& data, MovieReader& reader, MovieWriter& writer) :
 	MovieFrame(data, reader, writer)
 {
 	//buffer to hold input frames in yuv format
-	mYUV.assign(data.bufferCount, ImageYuv());
+	for (int i = 0; i < data.bufferCount; i++) mYUV.emplace_back(data.h, data.w, data.cpupitch);
 
 	//init pyramid structures
 	for (int i = 0; i < data.pyramidCount; i++) mPyr.emplace_back(data);
@@ -61,7 +61,7 @@ CpuFrame::CpuPyramid::CpuPyramid(MainData& data) {
 //read input frame and put into buffer
 void CpuFrame::inputData() {
 	size_t idx = mBufferFrame.index % mYUV.size();
-	mYUV[idx] = mBufferFrame;
+	mBufferFrame.copyTo(mYUV[idx], mPool);
 }
 
 void CpuFrame::createPyramid(int64_t frameIndex) {
@@ -276,13 +276,11 @@ void CpuFrame::outputData(const AffineTransform& trf) {
 
 		//write output
 		//define function with respect to row index
-		unsigned char* yuvp = mOutput.plane(z); //one plane for output
 		auto func2 = [&] (size_t r) {
-			unsigned char* yuvrow = yuvp + r * mData.cpupitch;
 			for (size_t c = 0; c < mData.w; c++) {
 				float val = buf.at(r, c) + (buf.at(r, c) - mFilterResult.at(r, c)) * mData.unsharp[z];
 				val = std::clamp(val, 0.0f, 1.0f);
-				yuvrow[c] = (unsigned char) std::rint(val * 255);
+				mOutput.at(z, r, c) = (unsigned char) std::rint(val * 255);
 				//if (r==755 && c==478) std::printf("cpu %.14f %d\n", val * 255, yuvrow[c]);
 			}
 		};
@@ -294,7 +292,11 @@ void CpuFrame::outputData(const AffineTransform& trf) {
 
 void CpuFrame::getOutput(int64_t frameIndex, ImageYuv& image) {
 	assert(frameIndex == mOutput.index && "invalid frame index");
-	image = mOutput;
+	mOutput.copyTo(image, mPool);
+}
+
+void CpuFrame::getOutput(int64_t frameIndex, ImageARGB& argb) {
+	mOutput.toARGB(argb, mPool);
 }
 
 void CpuFrame::getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) {
@@ -305,7 +307,7 @@ void CpuFrame::getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cud
 }
 
 void CpuFrame::getWarped(int64_t frameIndex, ImagePPM& image) {
-	ImageYuvFloat(mBuffer[0], mBuffer[1], mBuffer[2]).toPPM(image, mPool);
+	ImageYuvMat(mData.h, mData.w, mData.cpupitch, mBuffer[0].data(), mBuffer[1].data(), mBuffer[2].data()).toPPM(image, mPool);
 }
 
 Matf CpuFrame::getTransformedOutput() const {

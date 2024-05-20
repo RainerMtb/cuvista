@@ -61,6 +61,10 @@ public:
 		cl::outputDataCpu(frameIndex, mData, image);
 	}
 
+	void getOutput(int64_t frameIndex, ImageARGB& argb) override {
+		cl::outputDataCpu(frameIndex, mData, argb);
+	}
+
 	void getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) override {
 		throw std::exception("not supported");
 	}

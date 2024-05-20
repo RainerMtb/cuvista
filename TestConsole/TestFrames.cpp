@@ -107,10 +107,12 @@ void compareFramesPlatforms() {
 		results[3] = runPyramid<OpenClFrame>(data);
 	}
 	std::cout << std::endl;
-	//results[0].output.saveAsBinary("f:/0.dat");
-	//results[1].output.saveAsBinary("f:/1.dat");
-	//results[0].image.saveAsBMP("f:/0.bmp");
-	//results[1].image.saveAsBMP("f:/1.bmp");
+	//results[0].input.saveAsBMP("f:/0.bmp");
+	//results[2].input.saveAsBMP("f:/2.bmp");
+	//results[0].input.saveAsPPM("f:/in.ppm");
+	//results[2].output.saveAsBinary("f:/2.dat");
+	//results[0].image.saveAsColorBMP("f:/0.bmp");
+	//results[1].image.saveAsColorBMP("f:/1.bmp");
 
 	for (int i = 0; i < results.size(); i++) {
 		if (results[i].error.empty() == false) std::cout << "error " << i << " " << results[i].name << ": " << results[i].error << std::endl;
@@ -126,6 +128,7 @@ void compareFramesPlatforms() {
 		std::cout << (r1.output.equalsExact(r2.output) ? "warped output EQUAL" : "warped output DIFFER <<<<<<") << std::endl;
 		std::cout << (r1.image == r2.image ? "image EQUAL" : "image DIFFER <<<<<<") << std::endl;
 		std::cout << (r1.input == r2.input ? "input EQUAL" : "input DIFFER <<<<<<<") << std::endl;
+		std::cout << std::endl;
 	}
 	return;
 

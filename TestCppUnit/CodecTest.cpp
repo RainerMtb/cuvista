@@ -51,7 +51,7 @@ private:
 		//set up a frame in nv12 format
 		ImageYuv inputFrame(h, w, nvenc.cudaPitch);
 		inputFrame.setValues({ y, u, v });
-		inputFrame.writeText("test", 20, 20, 5, 5, ColorYuv::BLACK, ColorYuv::WHITE);
+		inputFrame.writeText("test", 20, 20, 5, 5, im::ColorYuv::BLACK, im::ColorYuv::WHITE);
 
 		size_t siz = h * nvenc.cudaPitch * 3 / 2;
 		std::vector<unsigned char> inputNV12(siz);

@@ -19,72 +19,74 @@
 #pragma once
 
 #include <array>
-#include <vector>
 
 int alignValue(int numToRound, int base);
 
 double sqr(double d);
 
-void yuv_to_rgb(unsigned char y, unsigned char u, unsigned char v, unsigned char* r, unsigned char* g, unsigned char* b);
+namespace im {
 
-void yuv_to_rgb(float y, float u, float v, unsigned char* r, unsigned char* g, unsigned char* b);
+	void yuv_to_rgb(unsigned char y, unsigned char u, unsigned char v, unsigned char* r, unsigned char* g, unsigned char* b);
 
-void rgb_to_yuv(unsigned char r, unsigned char g, unsigned char b, unsigned char* y, unsigned char* u, unsigned char* v);
+	void yuv_to_rgb(float y, float u, float v, unsigned char* r, unsigned char* g, unsigned char* b);
 
-void rgb_to_yuv(unsigned char r, unsigned char g, unsigned char b, float* y, float* u, float* v);
+	void rgb_to_yuv(unsigned char r, unsigned char g, unsigned char b, unsigned char* y, unsigned char* u, unsigned char* v);
 
-void hsv_to_rgb(double h, double s, double v, unsigned char* out_r, unsigned char* out_g, unsigned char* out_b);
+	void rgb_to_yuv(unsigned char r, unsigned char g, unsigned char b, float* y, float* u, float* v);
 
-template <class T> class ColorBase {
+	void hsv_to_rgb(double h, double s, double v, unsigned char* out_r, unsigned char* out_g, unsigned char* out_b);
 
-public:
-	std::array<T, 3> colors;
-	double alpha = 1.0;
-};
+	template <class T> class ColorBase {
 
-class ColorNorm : public ColorBase<float> {
-public:
-	static ColorNorm WHITE;
-	static ColorNorm BLACK;
-};
+	public:
+		std::array<T, 3> colors;
+		double alpha = 1.0;
+	};
 
-class ImageColor : public ColorBase<unsigned char> {};
+	class ColorNorm : public ColorBase<float> {
+	public:
+		static ColorNorm WHITE;
+		static ColorNorm BLACK;
+	};
 
-class ColorRgb;
+	class ImageColor : public ColorBase<unsigned char> {};
 
-class ColorYuv : public ImageColor {
-public:
-	static ColorYuv WHITE;
-	static ColorYuv BLACK;
-	static ColorYuv GRAY;
+	class ColorRgb;
 
-	ColorRgb toRgb() const;
+	class ColorYuv : public ImageColor {
+	public:
+		static ColorYuv WHITE;
+		static ColorYuv BLACK;
+		static ColorYuv GRAY;
 
-	unsigned char y() const { return colors[0]; }
+		ColorRgb toRgb() const;
 
-	unsigned char u() const { return colors[1]; }
+		unsigned char y() const { return colors[0]; }
 
-	unsigned char v() const { return colors[2]; }
-};
+		unsigned char u() const { return colors[1]; }
 
-class ColorRgb : public ImageColor {
-public:
-	ColorYuv toYuv() const;
+		unsigned char v() const { return colors[2]; }
+	};
 
-	ColorNorm toNormalized() const;
+	class ColorRgb : public ImageColor {
+	public:
+		ColorYuv toYuv() const;
 
-	unsigned char r() const { return colors[0]; }
+		ColorNorm toNormalized() const;
 
-	unsigned char g() const { return colors[1]; }
+		unsigned char r() const { return colors[0]; }
 
-	unsigned char b() const { return colors[2]; }
-};
+		unsigned char g() const { return colors[1]; }
 
-class ColorBgr : public ImageColor {
-public:
-	static ColorBgr RED;
-	static ColorBgr GREEN;
-	static ColorBgr WHITE;
-	static ColorBgr BLACK;
-	static ColorBgr BLUE;
-};
+		unsigned char b() const { return colors[2]; }
+	};
+
+	class ColorBgr : public ImageColor {
+	public:
+		static ColorBgr RED;
+		static ColorBgr GREEN;
+		static ColorBgr WHITE;
+		static ColorBgr BLACK;
+		static ColorBgr BLUE;
+	};
+}

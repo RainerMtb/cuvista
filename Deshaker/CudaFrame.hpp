@@ -66,6 +66,10 @@ public:
 		cudaOutputCpu(frameIndex, image, mData);
 	}
 
+	void getOutput(int64_t frameIndex, ImageARGB& argb) override {
+		cudaOutputCpu(frameIndex, argb, mData);
+	}
+
 	void getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) override {
 		cudaOutputCuda(frameIndex, cudaNv12ptr, cudaPitch, mData);
 	}

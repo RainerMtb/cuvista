@@ -38,6 +38,7 @@ public:
 	void computeTerminate(int64_t frameIndex) override;
 	void outputData(const AffineTransform& trf) override;
 	void getOutput(int64_t frameIndex, ImageYuv& image) override;
+	void getOutput(int64_t frameIndex, ImageARGB& argb) override;
 	void getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) override;
 	Mat<float> getTransformedOutput() const override;
 	Mat<float> getPyramid(size_t idx) const override;

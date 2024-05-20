@@ -102,7 +102,7 @@ void readAndWriteOneFrame() {
 		writer.prepareOutput(frame);
 		std::string fileOut = "f:/test.bmp";
 		std::cout << "writing file " << fileOut << std::endl;
-		writer.getOutputFrame().saveAsBMP(fileOut);
+		writer.getOutputFrame().saveAsColorBMP(fileOut);
 	}
 	std::cout << errorLogger.getErrorMessage() << std::endl;
 }
@@ -118,6 +118,8 @@ void checkVersions() {
 }
 
 void draw() {
+	using namespace im;
+
 	//text in yuv image
 	ImageYuv im(200, 500);
 	std::string file1 = "f:/draw1.bmp";
@@ -164,7 +166,7 @@ void draw() {
 
 	//save to file
 	std::cout << "save to " << file2 << std::endl;
-	bgr.saveAsBMP(file2);
+	bgr.saveAsColorBMP(file2);
 }
 
 class OpticalFlowImageWriter : public OpticalFlowWriter {
@@ -176,7 +178,7 @@ public:
 
 	void writeFlow(const MovieFrame& frame, const std::string& fileName) {
 		OpticalFlowWriter::writeFlow(frame);
-		imageInterpolated.saveAsBMP("f:/flow.bmp");
+		imageInterpolated.saveAsColorBMP("f:/flow.bmp");
 	}
 };
 

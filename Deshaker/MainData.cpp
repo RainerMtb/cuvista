@@ -136,11 +136,11 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 				videoOutputType = OutputType::PIPE;
 
 			} else if (str_toupper(next).ends_with(".BMP")) {
-				videoOutputType = OutputType::BMP;
+				videoOutputType = OutputType::SEQUENCE_BMP;
 				fileOut = next;
 
 			} else if (str_toupper(next).ends_with(".JPG")) {
-				videoOutputType = OutputType::JPG;
+				videoOutputType = OutputType::SEQUENCE_JPG;
 				fileOut = next;
 
 			} else {
@@ -295,8 +295,7 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 		} else if (args.nextArg("stack", next)) {
 			double val = std::stod(next);
 			if (val >= -1.0 && val <= 1.0) {
-				blendInput.enabled = true;
-				blendInput.position = val;
+				stackPosition = val;
 
 			} else {
 				throw AVException("invalid value for combining frames: " + next);
@@ -505,9 +504,9 @@ void MainData::showIntro(const std::string& deviceName, const MovieReader& reade
 	if (videoOutputType == OutputType::VIDEO_FILE && pass != DeshakerPass::FIRST_PASS) *console << "FILE OUT: " << fileOut << std::endl;
 	if (trajectoryFile.empty() == false) *console << "TRAJECTORY FILE: " << trajectoryFile << std::endl;
 	if (resultsFile.empty() == false) *console << "CALCULATION DETAIL OUTPUT: " << resultsFile << std::endl;
-	if (videoOutputType == OutputType::BMP) *console << "IMAGE SEQUENCE: " << ImageWriter::makeFilenameSamples(fileOut) << std::endl;
-	if (videoOutputType == OutputType::JPG) *console << "IMAGE SEQUENCE: " << ImageWriter::makeFilenameSamples(fileOut) << std::endl;
-	if (resultImageFile.empty() == false) *console << "CALCULATION DETAIL IMAGES: " << ImageWriter::makeFilenameSamples(resultImageFile) << std::endl;
+	if (videoOutputType == OutputType::SEQUENCE_BMP) *console << "IMAGE SEQUENCE: " << ImageWriter::makeFilenameSamples(fileOut, "bmp") << std::endl;
+	if (videoOutputType == OutputType::SEQUENCE_JPG) *console << "IMAGE SEQUENCE: " << ImageWriter::makeFilenameSamples(fileOut, "jpg") << std::endl;
+	if (resultImageFile.empty() == false) *console << "CALCULATION DETAIL IMAGES: " << ImageWriter::makeFilenameSamples(resultImageFile, "bmp") << std::endl;
 	if (flowFile.empty() == false) *console << "OPTICAL FLOW VIDEO: " << flowFile << std::endl;
 
 	//device info

@@ -32,6 +32,10 @@ public:
 	}
 
 	virtual void checkState() = 0;
+
+	void reset() {
+		current = UserInputEnum::CONTINUE;
+	}
 };
 
 class UserInputDefault : public UserInput {

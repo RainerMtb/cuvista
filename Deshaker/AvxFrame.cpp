@@ -28,7 +28,7 @@ AvxFrame::AvxFrame(MainData& data, MovieReader& reader, MovieWriter& writer) :
 	MovieFrame(data, reader, writer),
 	pitch { alignValue(data.w, walign) } 
 {
-	mYUV.resize(data.bufferCount);
+	for (int i = 0; i < data.bufferCount; i++) mYUV.emplace_back(data.h, data.w, data.cpupitch);
 	mPyr.assign(data.pyramidCount, AvxMatFloat(data.pyramidRowCount, data.w, 0.0f));
 	mYuvPlane = AvxMatFloat(data.h, pitch, 0.0f);
 
@@ -52,7 +52,7 @@ MovieFrameId AvxFrame::getId() const {
 
 void AvxFrame::inputData() {
 	size_t idx = mBufferFrame.index % mYUV.size();
-	mYUV[idx] = mBufferFrame;
+	mBufferFrame.copyTo(mYUV[idx], mPool);
 }
 
 void AvxFrame::createPyramid(int64_t frameIndex) {
@@ -105,6 +105,10 @@ void AvxFrame::getOutput(int64_t frameIndex, ImageYuv& image) {
 	image.index = frameIndex;
 }
 
+void AvxFrame::getOutput(int64_t frameIndex, ImageARGB& argb) {
+	//TODO
+}
+
 void AvxFrame::getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) {
 	static std::vector<unsigned char> nv12(cudaPitch * mData.h * 3 / 2);
 	write(nv12, cudaPitch);
@@ -120,7 +124,7 @@ void AvxFrame::getWarped(int64_t frameIndex, ImagePPM& image) {
 }
 
 Matf AvxFrame::getPyramid(size_t idx) const {
-	return mPyr[idx].toMatfCopy();
+	return mPyr[idx].copyToMatf();
 }
 
 void AvxFrame::getInput(int64_t frameIndex, ImagePPM& image) {
@@ -394,6 +398,7 @@ void AvxFrame::write(ImageYuv& dest) {
 }
 
 void AvxFrame::write(std::span<unsigned char> nv12, int cudaPitch) {
+	//util::ConsoleTimer ic("avx write nv12");
 	//Y-Plane
 	for (int r = 0; r < mData.h; r++) {
 		unsigned char* dest = nv12.data() + r * cudaPitch;

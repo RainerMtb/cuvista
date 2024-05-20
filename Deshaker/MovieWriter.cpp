@@ -31,11 +31,11 @@ void BaseWriter::prepareOutput(MovieFrame& frame) {
 	frame.getOutput(frame.mWriter.frameIndex, outputFrame);
 }
 
-std::string ImageWriter::makeFilename(const std::string& pattern, int64_t index) {
+std::string ImageWriter::makeFilename(const std::string& pattern, int64_t index, const std::string& extension) {
 	const int siz = 512;
 	char fname[siz];
 	if (pattern.empty() == false && std::filesystem::is_directory(pattern)) {
-		std::string file = pattern + "/im%04d.bmp";
+		std::string file = pattern + "/im%04d." + extension;
 		std::snprintf(fname, siz, file.c_str(), index);
 
 	} else {
@@ -44,13 +44,13 @@ std::string ImageWriter::makeFilename(const std::string& pattern, int64_t index)
 	return std::filesystem::path(fname).make_preferred().string();
 }
 
-std::string ImageWriter::makeFilenameSamples(const std::string& pattern) {
-	std::string str = makeFilename(pattern, 0) + ", " + makeFilename(pattern, 1) + ", " + makeFilename(pattern, 2);
+std::string ImageWriter::makeFilenameSamples(const std::string& pattern, const std::string& extension) {
+	std::string str = makeFilename(pattern, 0, extension) + ", " + makeFilename(pattern, 1, extension) + ", " + makeFilename(pattern, 2, extension);
 	return str.substr(0, 100) + ", ...";
 }
 
-std::string ImageWriter::makeFilename() const {
-	return makeFilename(mData.fileOut, this->frameIndex);
+std::string ImageWriter::makeFilename(const std::string& extension) const {
+	return makeFilename(mData.fileOut, this->frameIndex, extension);
 }
 
 //-----------------------------------------------------------------------------------
@@ -58,9 +58,9 @@ std::string ImageWriter::makeFilename() const {
 //-----------------------------------------------------------------------------------
 
 void BmpImageWriter::write(const MovieFrame& frame) {
-	std::string fname = makeFilename();
-	outputFrame.toBGR(image).saveAsBMP(fname);
-	outputBytesWritten += image.dataSizeInBytes();
+	std::string fname = makeFilename("bmp");
+	outputFrame.toBGR(image).saveAsColorBMP(fname);
+	outputBytesWritten += image.bytes();
 	this->frameIndex++;
 }
 
@@ -107,7 +107,7 @@ void JpegImageWriter::write(const MovieFrame& frame) {
 	if (result < 0)
 		errorLogger.logError(av_make_error(result, "error receiving packet"));
 
-	std::string fname = makeFilename();
+	std::string fname = makeFilename("jpg");
 	std::ofstream file(fname, std::ios::binary);
 	if (file)
 		file.write(reinterpret_cast<char*>(packet->data), packet->size);
@@ -225,7 +225,7 @@ void OpticalFlowWriter::vectorToColor(double dx, double dy, unsigned char* r, un
 	const double f = 20.0;
 	double hue = std::atan2(dy, dx) / std::numbers::pi * 180.0 + 180.0;
 	double val = std::clamp(std::sqrt(sqr(dx) + sqr(dy)) / f, 0.0, 1.0);
-	hsv_to_rgb(hue, 1.0, val, r, g, b);
+	im::hsv_to_rgb(hue, 1.0, val, r, g, b);
 }
 
 void OpticalFlowWriter::open(const std::string& sourceName) {
@@ -270,8 +270,8 @@ void OpticalFlowWriter::open(const std::string& sourceName) {
 			double dx = r - x;
 			double dist = std::sqrt(sqr(dx) + sqr(dy));
 			if (dist < r) {
-				legendMask.setPixel(y, x, { 1 });
-				vectorToColor(dx, -dy, legend.addr(2, y, x), legend.addr(1, y, x), legend.addr(0, y, x));
+				legend.at(0, y, x) = 1;
+				vectorToColor(dx, -dy, legend.addr(1, y, x), legend.addr(2, y, x), legend.addr(3, y, x));
 			}
 		}
 	}
@@ -335,13 +335,12 @@ void OpticalFlowWriter::write(const MovieFrame& frame) {
 	//imageInterpolated.saveAsBMP("f:/im.bmp");
 
 	//stamp color legend onto image
-	imageInterpolated.setArea(0ull + mData.h - 10 - legendSize, 10, legend, legendMask);
+	legend.copyMasked(imageInterpolated, 0ull + mData.h - 10 - legendSize, 10);
 
 	//encode bgr image
-	ImageBGR& fr = imageInterpolated;
-	uint8_t* src[] = { fr.data(), nullptr, nullptr, nullptr};
-	int strides[] = { fr.stride * 3, 0, 0, 0 };
-	int sliceHeight = sws_scale(sws_scaler_ctx, src, strides, 0, fr.h, av_frame->data, av_frame->linesize);
+	uint8_t* src[] = { imageInterpolated.data(), nullptr, nullptr, nullptr};
+	int strides[] = { imageInterpolated.stride, 0, 0, 0 };
+	int sliceHeight = sws_scale(sws_scaler_ctx, src, strides, 0, imageInterpolated.h, av_frame->data, av_frame->linesize);
 
 	av_frame->pts = frameIndex;
 	writeAVFrame(av_frame);
@@ -390,8 +389,10 @@ void ResultDetailsWriter::write(const MovieFrame& frame) {
 //-----------------------------------------------------------------------------------
 
 void ResultImageWriter::write(const AffineTransform& trf, const std::vector<PointResult>& res, int64_t idx, const ImageYuv& yuv, const std::string& fname) {
+	using namespace im;
+
 	//copy and scale Y plane to first color plane of bgr
-	yuv.scaleTo(0, bgr, 0);
+	yuv.scaleByTwo(0, bgr, 0);
 	//copy planes in bgr image making it grayscale bgr
 	for (int z = 1; z < 3; z++) {
 		for (int r = 0; r < bgr.h; r++) {
@@ -446,7 +447,7 @@ void ResultImageWriter::write(const AffineTransform& trf, const std::vector<Poin
 	bgr.writeText(s2, 0, bgr.h - textScale * 10, textScale, textScale, ColorBgr::WHITE, ColorBgr::BLACK);
 
 	//save image to file
-	bool result = bgr.saveAsBMP(fname);
+	bool result = bgr.saveAsColorBMP(fname);
 	if (result == false) {
 		errorLogger.logError("cannot write file '" + fname + "'");
 	}
@@ -455,7 +456,7 @@ void ResultImageWriter::write(const AffineTransform& trf, const std::vector<Poin
 void ResultImageWriter::write(const MovieFrame& frame) {
 	//get input image from buffers
 	frame.getInput(frameIndex, yuv);
-	std::string fname = ImageWriter::makeFilename(mData.resultImageFile, frameIndex);
+	std::string fname = ImageWriter::makeFilename(mData.resultImageFile, frameIndex, "bmp");
 	write(frame.getTransform(), frame.mResultPoints, frameIndex, yuv, fname);
 	this->frameIndex++;
 }

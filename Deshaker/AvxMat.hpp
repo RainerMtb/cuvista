@@ -51,11 +51,11 @@ public:
 		Matf::fromArray(h(), w(), array, false).saveAsBinary(filename); 
 	}
 
-	void saveAsBMP(const std::string& filename) {
-		ImagePlanar<float>(this).saveAsBMP(filename, 255.0f);
+	void saveAsBMP(const std::string& filename) const {
+		im::ImageMatShared<float>(h(), w(), w(), array).saveAsBMP(filename, 255.0f);
 	}
 
-	Matf toMatfCopy() const { 
+	Matf copyToMatf() const { 
 		return Matf::fromRowData(h(), w(), w(), array); 
 	}
 

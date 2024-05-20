@@ -20,7 +20,7 @@
 #include <algorithm>
 #include <cassert>
 
-BmpHeader::BmpHeader(int w, int h, int offset, int bits) {
+im::BmpHeader::BmpHeader(int w, int h, int offset, int bits) {
 	int bytes = bits / 8;
 	int bitmapSize = w * h * bytes;
 	int siz = bitmapSize + offset;
@@ -52,10 +52,10 @@ BmpHeader::BmpHeader(int w, int h, int offset, int bits) {
 	header[37] = bitmapSize >> 24;
 }
 
-BmpColorHeader::BmpColorHeader(int w, int h) :
+im::BmpColorHeader::BmpColorHeader(int w, int h) :
 	BmpHeader(w, h, 54, 24) {}
 
-BmpGrayHeader::BmpGrayHeader(int w, int h) :
+im::BmpGrayHeader::BmpGrayHeader(int w, int h) :
 	BmpHeader(w, h, 1078, 8)
 {
 	for (size_t i = 0; i < 1024; ) {
@@ -67,15 +67,15 @@ BmpGrayHeader::BmpGrayHeader(int w, int h) :
 	}
 }
 
-void BmpHeader::writeHeader(std::ofstream& os) const {
+void im::BmpHeader::writeHeader(std::ofstream& os) const {
 	os.write(header, 54);
 }
 
-void BmpGrayHeader::writeHeader(std::ofstream& os) const {
+void im::BmpGrayHeader::writeHeader(std::ofstream& os) const {
 	os.write(header, 54);
 	os.write(colorMap, 1024);
 }
 
-void PgmHeader::writeHeader(std::ofstream& os) const {
+void im::PgmHeader::writeHeader(std::ofstream& os) const {
 	os << "P5 " << w << " " << h * 3 << " 255 ";
 }

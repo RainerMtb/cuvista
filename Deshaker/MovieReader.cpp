@@ -50,7 +50,7 @@ std::string MovieReader::getTimeForFrame(uint64_t frameIndex) {
 void NullReader::read(ImageYuv& frame) {
     frameIndex++;
     endOfInput = false;
-    frame.setValues(ColorYuv { 0, 0, 0 });
+    frame.setValues(im::ColorYuv { 0, 0, 0 });
 }
 
 

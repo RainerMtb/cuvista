@@ -53,10 +53,8 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;WIN64;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
       <AdditionalIncludeDirectories>$(CUDA_PATH)\include;$(SolutionDir)Matrix;$(SolutionDir)Deshaker</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
@@ -69,7 +67,7 @@
       <CodeGeneration>compute_50,sm_50;compute_60,sm_60;compute_70,sm_70;compute_80,sm_80;compute_90,sm_90</CodeGeneration>
       <Include>
       </Include>
-      <AdditionalOptions>-fmad=false -std=c++17 -Wno-deprecated-gpu-targets</AdditionalOptions>
+      <AdditionalOptions>-fmad=false -std=c++20 -Wno-deprecated-gpu-targets</AdditionalOptions>
       <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
       <AdditionalDeps>
       </AdditionalDeps>

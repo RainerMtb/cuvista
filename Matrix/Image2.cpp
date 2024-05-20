@@ -17,16 +17,15 @@
  */
 
 
-#include <format>
 #include "Image2.hpp"
 
 
-ImagePPM& ImageYuvFloat::toPPM(ImagePPM& dest, ThreadPoolBase& pool) const {
-	yuvToRgb(dest, 0, 1, 2, pool);
+ImagePPM& ImageYuvMat::toPPM(ImagePPM& dest, ThreadPoolBase& pool) const {
+	yuvToRgb(dest, { 0, 1, 2 }, pool);
 	return dest;
 }
 
-ImagePPM ImageYuvFloat::toPPM() const {
+ImagePPM ImageYuvMat::toPPM() const {
 	ImagePPM out(h, w);
 	return toPPM(out);
 }
@@ -37,24 +36,15 @@ ImagePPM ImageYuvFloat::toPPM() const {
 //------------------------
 
 unsigned char* ImageYuv::data() {
-	return array.data();
+	return arrays.at(0).get();
 }
 
 const unsigned char* ImageYuv::data() const {
-	return array.data();
+	return arrays.at(0).get();
 }
 
 bool ImageYuv::saveAsColorBMP(const std::string& filename) const {
-	return toBGR().saveAsBMP(filename);
-}
-
-bool ImageYuv::saveAsPGM(const std::string& filename) const {
-	std::ofstream os(filename, std::ios::binary);
-	PgmHeader(stride, h).writeHeader(os);
-	for (int i = 0; i < 3; i++) {
-		os.write(reinterpret_cast<const char*>(mats[i].data()), mats[i].numel());
-	}
-	return os.good();
+	return toBGR().saveAsColorBMP(filename);
 }
 
 void ImageYuv::readFromPGM(const std::string& filename) {
@@ -71,7 +61,7 @@ void ImageYuv::readFromPGM(const std::string& filename) {
 
 		for (int i = 0; i < 3; i++) {
 			for (size_t row = 0; row < h; row++) {
-				file.read(reinterpret_cast<char*>(mats[i].data() + row * stride), w);
+				file.read(reinterpret_cast<char*>(arrays[i].get() + row * stride), w);
 			}
 		}
 
@@ -87,7 +77,7 @@ ImageYuv& ImageYuv::fromNV12(const std::vector<unsigned char>& nv12, size_t stri
 	//read U and V into temporary image
 	int h2 = h / 2;
 	int w2 = w / 2;
-	ImageYuv uv(h2, w2, w2, 2);
+	ImageBase<unsigned char> uv(h2, w2, w2, 2);
 	for (int z = 0; z < 2; z++) {
 		for (int r = 0; r < h2; r++) {
 			for (int c = 0; c < w2; c++) {
@@ -97,8 +87,8 @@ ImageYuv& ImageYuv::fromNV12(const std::vector<unsigned char>& nv12, size_t stri
 	}
 
 	//upscale temporary uv into U and V planes here
-	uv.scaleTo(0, *this, 1);
-	uv.scaleTo(1, *this, 2);
+	uv.scaleByTwo(0, *this, 1);
+	uv.scaleByTwo(1, *this, 2);
 
 	//copy Y plane over
 	for (int r = 0; r < h; r++) {
@@ -113,7 +103,7 @@ void ImageYuv::toNV12(std::vector<unsigned char>& nv12, size_t strideNV12, Threa
 	//copy Y plane
 	unsigned char* dest = nv12.data();
 	for (int r = 0; r < h; r++) {
-		std::copy(addr(0, r, 0), addr(0, r, w), dest);
+		std::copy(addr(0, r, 0), addr(0, r, 0) + w, dest);
 		dest += strideNV12;
 	}
 
@@ -139,7 +129,7 @@ std::vector<unsigned char> ImageYuv::toNV12(size_t strideNV12) const {
 }
 
 ImageRGB& ImageYuv::toRGB(ImageRGB& dest, ThreadPoolBase& pool) const {
-	yuvToRgb(dest, 0, 1, 2, pool);
+	yuvToRgb(dest, { 0, 1, 2 }, pool);
 	return dest;
 }
 
@@ -149,7 +139,7 @@ ImageRGB ImageYuv::toRGB() const {
 }
 
 ImageBGR& ImageYuv::toBGR(ImageBGR& dest, ThreadPoolBase& pool) const {
-	yuvToRgb(dest, 2, 1, 0, pool);
+	yuvToRgb(dest, { 2, 1, 0 }, pool);
 	return dest;
 }
 
@@ -159,8 +149,8 @@ ImageBGR ImageYuv::toBGR() const {
 }
 
 ImagePPM& ImageYuv::toPPM(ImagePPM& dest, ThreadPoolBase& pool) const {
-	assert(dest.size() == 3ull * h * w && "dimensions mismatch");
-	yuvToRgb(dest, 0, 1, 2, pool);
+	assert(h == dest.h && w == dest.w && "dimensions mismatch");
+	yuvToRgb(dest, { 0, 1, 2 }, pool);
 	return dest;
 }
 
@@ -169,60 +159,9 @@ ImagePPM ImageYuv::toPPM() const {
 	return toPPM(out);
 }
 
-
-//-----------------------------
-// ImageBGR
-//-----------------------------
-
-bool ImageBGR::saveAsBMP(const std::string& filename) const {
-	assert(stride * 3 % 4 == 0 && "one image row must be multiple of 4 bytes");
-	std::ofstream os(filename, std::ios::binary);
-	BmpColorHeader(stride, h).writeHeader(os);
-
-	for (int r = h - 1; r >= 0; r--) {
-		os.write(reinterpret_cast<const char*>(addr(0, r, 0)), stride * 3ull);
-	}
-	return os.good();
+ImageARGB& ImageYuv::toARGB(ImageARGB& dest, ThreadPoolBase& pool) const {
+	dest.setValues(0, 0xFF);
+	yuvToRgb(dest, { 1, 2, 3 }, pool);
+	return dest;
 }
 
-
-//-----------------------------------
-// ImagePPM
-//-----------------------------------
-
-ImagePPM::ImagePPM(int h, int w) : ImagePacked(h, w, w, 3, h * w * 3 + headerSize) {
-	//first 19 bytes are header for ppm format
-	std::format_to_n(array.data(), headerSize, "P6 {:5} {:5} 255 ", w, h);
-}
-
-const unsigned char* ImagePPM::header() const {
-	return array.data();
-}
-
-const unsigned char* ImagePPM::data() const {
-	return array.data() + headerSize;
-}
-
-unsigned char* ImagePPM::data() {
-	return array.data() + headerSize;
-}
-
-size_t ImagePPM::size() const {
-	return array.size() - headerSize;
-}
-
-size_t ImagePPM::sizeTotal() const {
-	return array.size();
-}
-
-bool ImagePPM::saveAsPGM(const std::string& filename) const {
-	std::ofstream os(filename, std::ios::binary);
-	os.write(reinterpret_cast<const char*>(header()), sizeTotal());
-	return os.good();
-}
-
-bool ImagePPM::saveAsBMP(const std::string& filename) const {
-	ImageBGR bgr(h, w);
-	shufflePlanes(bgr, 2, 1, 0);
-	return bgr.saveAsBMP(filename);
-}

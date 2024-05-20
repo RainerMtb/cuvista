@@ -54,6 +54,7 @@ namespace cl {
 	void computeTerminate(int64_t frameIdx, const CoreData& core, std::vector<PointResult>& results);
 	void outputData(int64_t frameIdx, const CoreData& core, std::array<double, 6> trf);
 	void outputDataCpu(int64_t frameIndex, const CoreData& core, ImageYuv& image);
+	void outputDataCpu(int64_t frameIndex, const CoreData& core, ImageARGB& argb);
 
 	void getInput(int64_t idx, ImageYuv& image, const CoreData& core);
 	Matf getTransformedOutput(const CoreData& core);

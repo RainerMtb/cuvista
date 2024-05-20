@@ -27,49 +27,57 @@
 //Bitmap image headers
 //-----------------------------------------
 
-class ImageHeader {
+namespace im {
 
-protected:
-	virtual void writeHeader(std::ofstream& os) const {}
-};
+	template <class T> struct NullDeleter {
 
-class BmpHeader : public ImageHeader {
+		void operator () (T* ptr) const {}
+	};
 
-protected:
-	char header[54] = { 0 };
+	class ImageHeader {
 
-	BmpHeader(int w, int h, int offset, int bits);
+	protected:
+		virtual void writeHeader(std::ofstream& os) const {}
+	};
 
-public:
-	virtual void writeHeader(std::ofstream& os) const override;
-};
+	class BmpHeader : public ImageHeader {
 
-class BmpColorHeader : public BmpHeader {
+	protected:
+		char header[54] = { 0 };
 
-public:
-	BmpColorHeader(int w, int h);
-};
+		BmpHeader(int w, int h, int offset, int bits);
 
-class BmpGrayHeader : public BmpHeader {
+	public:
+		virtual void writeHeader(std::ofstream& os) const override;
+	};
 
-protected:
-	char colorMap[1024] = { 0 };
+	class BmpColorHeader : public BmpHeader {
 
-public:
-	BmpGrayHeader(int w, int h);
+	public:
+		BmpColorHeader(int w, int h);
+	};
 
-	virtual void writeHeader(std::ofstream& os) const override;
-};
+	class BmpGrayHeader : public BmpHeader {
 
-class PgmHeader : public ImageHeader {
+	protected:
+		char colorMap[1024] = { 0 };
 
-protected:
-	int h, w;
+	public:
+		BmpGrayHeader(int w, int h);
 
-public:
-	PgmHeader(int w, int h) : 
-		h { h }, 
-		w { w } {}
+		virtual void writeHeader(std::ofstream& os) const override;
+	};
 
-	void writeHeader(std::ofstream& os) const override;
-};
+	class PgmHeader : public ImageHeader {
+
+	protected:
+		int h, w;
+
+	public:
+		PgmHeader(int w, int h) :
+			h { h },
+			w { w } {}
+
+		void writeHeader(std::ofstream& os) const override;
+	};
+}

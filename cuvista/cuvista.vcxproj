@@ -65,6 +65,7 @@
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions512</EnableEnhancedInstructionSet>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

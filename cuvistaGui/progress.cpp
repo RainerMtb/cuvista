@@ -17,9 +17,10 @@
  */
 
 #include "progress.h"
+#include "MovieFrame.hpp"
 
-ProgressWindow::ProgressWindow(QWidget* parent) : 
-	QMainWindow(parent) 
+ProgressWindow::ProgressWindow(QWidget* parent) :
+	QMainWindow(parent)
 {
 	ui.setupUi(this);
 	resize(minimumSize());
@@ -62,4 +63,31 @@ void ProgressWindow::updateInput(QPixmap pm, QString time) {
 void ProgressWindow::updateOutput(QPixmap pm, QString time) {
 	ui.imageOutput->setImage(pm);
 	ui.lblTimeOutput->setText(time);
+}
+
+void ProgressGui::update(bool force) {
+	if (isDue(force)) {
+		progressWindow->sigProgress(isFinite(), progressPercent());
+	}
+
+	auto timePointNow = std::chrono::steady_clock::now();
+	std::chrono::nanoseconds delta = timePointNow - timePoint;
+	bool imageDue = delta.count() / 1'000'000 > 250;
+
+	if (imageDue && frame.mReader.frameIndex > 0) {
+		timePoint = timePointNow;
+		uint64_t idx = frame.mReader.frameIndex - 1;
+		frame.getInput(idx, ppmInput);
+		QPixmap im(ppmInput.w, ppmInput.h);
+		im.loadFromData(ppmInput.header(), ppmInput.bytes(), "PPM");
+		progressWindow->sigUpdateInput(im, QString::fromStdString(frame.getTimeForFrame(idx)));
+	}
+	if (imageDue && frame.mWriter.frameIndex > 0) {
+		timePoint = timePointNow;
+		uint64_t idx = frame.mWriter.frameIndex - 1;
+		frame.getWarped(idx, ppmOutput);
+		QPixmap im(ppmOutput.w, ppmOutput.h);
+		im.loadFromData(ppmOutput.header(), ppmInput.bytes(), "PPM");
+		progressWindow->sigUpdateOutput(im, QString::fromStdString(frame.getTimeForFrame(idx)));
+	}
 }

@@ -43,8 +43,8 @@ enum class OutputType {
 	PIPE,
 	TCP,
 	VIDEO_FILE,
-	BMP,
-	JPG,
+	SEQUENCE_BMP,
+	SEQUENCE_JPG,
 };
 
 enum class ProgressType {
@@ -69,12 +69,6 @@ public:
 
 	template <class T> NullStream& operator << (const T& value) { return *this; }
 };
-
-struct BlendInput {
-	double position = 0.0;
-	bool enabled = false;
-};
-
 
 class MainData : public CudaData {
 
@@ -152,7 +146,7 @@ public:
 		int radiusMin = 1, radiusMax = 500;
 		int wMin = 100, hMin = 100;
 		int levelsMin = 1, levelsMax = 8;
-		int irMin = 0, irMax = 7;
+		int irMin = 0, irMax = 3;
 	} limits;
 
 	DeviceInfoCpu deviceInfoCpu;
@@ -173,7 +167,7 @@ public:
 	OutputType videoOutputType = OutputType::NONE;
 	DecideYNA overwriteOutput = DecideYNA::ASK;
 	std::optional<uint8_t> crf = std::nullopt;
-	BlendInput blendInput;
+	std::optional<double> stackPosition = std::nullopt;
 
 	bool showHeader = true;
 
@@ -198,7 +192,7 @@ public:
 
 	int64_t maxFrames = std::numeric_limits<int32_t>::max();
 	std::unique_ptr<RNGbase> rng = std::make_unique<RNG<PseudoRandomSource>>();
-	ColorRgb bgcol_rgb { 0, 50, 0 };
+	im::ColorRgb bgcol_rgb { 0, 50, 0 };
 
 	std::chrono::steady_clock::time_point timePoint;
 

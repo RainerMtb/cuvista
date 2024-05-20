@@ -1,5 +1,6 @@
 <RCC>
   <qresource prefix="/cuvistaGui">
+    <file>res/cuvista_black.png</file>
     <file>res/06_pause-solid.png</file>
     <file>res/07_rotate-left-solid.png</file>
     <file>res/01_file-video-solid.png</file>

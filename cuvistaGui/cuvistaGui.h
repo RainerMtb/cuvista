@@ -20,20 +20,16 @@
 
 #include <QtWidgets/QMainWindow>
 #include <QFileDialog>
+#include <QThread>
 
-#include "ui_cuvistaGui.h"
-#include "progress.h"
+#include "MovieFrame.hpp"
 #include "MovieFrame.hpp"
 #include "FrameResult.hpp"
-#include "ProgressDisplayGui.hpp"
-#include "StabilizerThread.hpp"
-#include "ClickLabel.h"
-#include "player.h"
+#include "UserInputGui.hpp"
 
-struct EncoderSetting {
-    QString text;
-    EncodingOption encoder;
-};
+#include "ui_cuvistaGui.h"
+#include "player.h"
+#include "progress.h"
 
 //main window
 class cuvistaGui : public QMainWindow {
@@ -45,8 +41,8 @@ public:
 public slots:
     void seek(double frac);
     void stabilize();
-    void play();
     void cancelRequest();
+    void done();
     void doneSuccess(const std::string& file, const std::string& str);
     void doneFail(const std::string& str);
     void doneCancel(const std::string& str);
@@ -64,9 +60,13 @@ private:
     QFileInfo mFileInput;
     QFileInfo mFileOutput;
 
+    QThread* mThread = QThread::create([] {});
     Player* mPlayerWindow;
     ProgressWindow* mProgressWindow;
-    StabilizerThread* mThread = nullptr;
+    std::unique_ptr<MovieWriter> mWriter;
+    std::unique_ptr<MovieFrame> mFrame;
+
+    UserInputGui mInputHandler;
 
     MainData mData;
     ImageYuv mInputYUV;
@@ -78,8 +78,6 @@ private:
 
     bool mInputReady = false;
     bool mOutputReady = false;
-
-    std::vector<EncoderSetting> mEncoderSettings;
 
     void updateInputImage();
     void setInputFile(const QString& filename);

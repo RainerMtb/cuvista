@@ -65,6 +65,11 @@ template <class T> CoreMat<T>& CoreMat<T>::operator = (const CoreMat<T>& other) 
 	return *this;
 }
 
+//new CoreMat sharing data
+template <class T> CoreMat<T> CoreMat<T>::shareData() {
+	return CoreMat<T>(array, h, w, false);
+}
+
 //move assignment
 template <class T> CoreMat<T>& CoreMat<T>::operator = (CoreMat<T>&& other) noexcept {
 	//std::cout << "!! move assignment" << std::endl;

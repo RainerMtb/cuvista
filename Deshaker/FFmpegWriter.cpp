@@ -153,7 +153,7 @@ int FFmpegWriter::writeFFmpegPacket(AVFrame* av_frame) {
 
 
 void FFmpegWriter::write(int bufferIndex) {
-    assert(frameIndex == imageBuffer[bufferIndex].index && "invalid frame index");
+    assert(bufferIndex < imageBufferSize && frameIndex == imageBuffer[bufferIndex].index && "invalid frame index");
     auto fcn = [this, bufferIndex] {
         ImageYuv& fr = imageBuffer[bufferIndex];
         //fr.writeText(std::to_string(fr.index), 10, 10, 2, 3, ColorYuv::BLACK, ColorYuv::WHITE);

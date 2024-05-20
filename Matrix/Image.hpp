@@ -19,196 +19,198 @@
 #pragma once
 
 #include "ImageUtil.hpp"
-#include "CoreMat.h"
 #include "ThreadPoolBase.h"
+#include <assert.h>
 
-class ImageGray;
+namespace im {
 
-template <class T> class ImageBase {
+	template <class T> class ImageBase {
 
-public:
+	public:
+		int64_t index = -1;
+		int h, w, stride, numPlanes;
 
-	int h, w, stride, numPlanes;
-	int64_t index = -1;
+	protected:
+		std::vector<std::shared_ptr<T[]>> arrays;
+		size_t imageSize;
 
-protected:
+		static inline ThreadPoolBase defaultPool;
 
-	std::vector<T> array;
+		int colorValue(T pixelValue) const;
 
-	static inline ThreadPoolBase defaultPool;
+		void plot(double x, double y, double a, ColorBase<T> color);
 
-	int colorValue(T pixelValue) const;
+		void plot(int x, int y, double a, ColorBase<T> color);
 
-	void plot(double x, double y, double a, ColorBase<T> color);
+		void plot4(double cx, double cy, double dx, double dy, double a, ColorBase<T> color);
 
-	void plot(int x, int y, double a, ColorBase<T> color);
+		void yuvToRgb(ImageBase<unsigned char>& dest, std::vector<int> planes, ThreadPoolBase& pool = defaultPool) const;
 
-	void plot4(double cx, double cy, double dx, double dy, double a, ColorBase<T> color);
+		void copyTo(ImageBase<T>& dest, size_t r0, size_t c0, std::vector<int> srcPlanes, std::vector<int> destPlanes, ThreadPoolBase& pool = defaultPool) const;
 
-	void yuvToRgb(ImageBase<unsigned char>& dest, int z0, int z1, int z2, ThreadPoolBase& pool = defaultPool) const;
+	public:
+		ImageBase(int h, int w, int stride, int numPlanes) :
+			h { h },
+			w { w },
+			stride { stride },
+			numPlanes { numPlanes },
+			arrays { std::make_shared<T[]>(1ull * h * stride * numPlanes) },
+			imageSize { 1ull * h * stride * numPlanes } {}
 
-	void shufflePlanes(ImageBase<T>& dest, int z0, int z1, int z2, ThreadPoolBase& pool = defaultPool) const;
+		ImageBase(int h, int w, int stride, int numPlanes, std::vector<std::shared_ptr<T[]>> arrays, size_t imageSize) :
+			h { h },
+			w { w },
+			stride { stride },
+			numPlanes { numPlanes },
+			arrays { arrays },
+			imageSize { imageSize } 
+		{
+			assert(h >= 0 && w >= 0 && "invalid dimensions");
+			assert(stride >= w && "stride must be equal or greater to width");
+		}
 
-	void copy2D(const std::vector<T>& src, std::vector<T>& dest, int rows, int cols, int srcStride, int destStride) const;
+		ImageBase() :
+			ImageBase(0, 0, 0, 0, {}, 0) {}
 
-public:
+		virtual ~ImageBase() = default;
 
-	ImageBase(int h, int w, int stride, int numPlanes, int arraysize);
+		virtual T* addr(size_t idx, size_t r, size_t c) {
+			assert(r < h && "row index out of range");
+			assert(c < w && "column index out of range");
+			assert(idx < numPlanes && "plane index out of range");
+			return arrays[0].get() + idx * h * stride + r * stride + c;
+		}
 
-	ImageBase(int h, int w, int stride, int numPlanes) :
-		ImageBase(h, w, stride, numPlanes, 1ull * h * stride * numPlanes) {}
+		virtual const T* addr(size_t idx, size_t r, size_t c) const {
+			assert(r < h && "row index out of range");
+			assert(c < w && "column index out of range");
+			assert(idx < numPlanes && "plane index out of range");
+			return arrays[0].get() + idx * h * stride + r * stride + c;
+		}
 
-	ImageBase() : 
-		ImageBase(0, 0, 0, 0) {}
+		virtual size_t size() const {
+			return imageSize;
+		}
 
-	virtual T* addr(size_t idx, size_t r, size_t c) = 0;
+		virtual size_t bytes() const {
+			return size() * sizeof(T);
+		}
 
-	virtual const T* addr(size_t idx, size_t r, size_t c) const = 0;
+		T* plane(size_t idx) {
+			return addr(idx, 0, 0);
+		}
 
-	//size of data array in bytes
-	virtual size_t dataSizeInBytes() const;
+		const T* plane(size_t idx) const {
+			return addr(idx, 0, 0);
+		}
 
-	//access one pixel on plane idx (0..2) and row / col
-	T& at(size_t idx, size_t r, size_t c);
+		//access one pixel on plane idx and row / col
+		T& at(size_t idx, size_t r, size_t c) {
+			return *addr(idx, r, c);
+		}
 
-	//read access one pixel on plane idx (0..2) and row / col
-	const T& at(size_t idx, size_t r, size_t c) const;
+		//read access one pixel on plane idx and row / col
+		const T& at(size_t idx, size_t r, size_t c) const {
+			return *addr(idx, r, c);
+		}
 
-	//set color value for all pixels in one plane
-	void setValues(int plane, T colorValue);
+		//set color value for all pixels in one plane
+		void setValues(int plane, T colorValue);
 
-	//set color values per color plane
-	void setValues(const ColorBase<T>& color);
+		//set color values per color plane
+		void setValues(const ColorBase<T>& color);
 
-	//copy area from source image into this image
-	void setArea(size_t r0, size_t c0, const ImageBase<T>& src, const ImageGray& mask);
+		//set color values for one pixel
+		void setPixel(size_t row, size_t col, std::vector<T> colors);
 
-	//set color values for one pixel
-	void setPixel(size_t row, size_t col, std::vector<T> colors);
+		//equals operator
+		virtual bool operator == (const ImageBase& other) const;
 
-	//equals operator
-	virtual bool operator == (const ImageBase& other) const;
+		//compute median value of differences
+		double compareTo(const ImageBase& other) const;
 
-	//compute median value of differences
-	double compareTo(const ImageBase& other) const;
+		//imprint text
+		void writeText(std::string_view text, int x0, int y0, int scaleX, int scaleY, ColorBase<T> fg, ColorBase<T> bg = { 0, 0, 0, 0.0 });
 
-	//imprint text
-	void writeText(std::string_view text, int x0, int y0, int scaleX, int scaleY, ColorBase<T> fg, ColorBase<T> bg = { 0, 0, 0, 0.0 });
+		void drawLine(double x0, double y0, double x1, double y1, ColorBase<T> color, double alpha = 1.0);
 
-	void drawLine(double x0, double y0, double x1, double y1, ColorBase<T> color, double alpha = 1.0);
+		void drawEllipse(double cx, double cy, double rx, double ry, ColorBase<T> color, bool fill = false);
 
-	void drawEllipse(double cx, double cy, double rx, double ry, ColorBase<T> color, bool fill = false);
+		void drawCircle(double cx, double cy, double r, ColorBase<T> color, bool fill = false);
 
-	void drawCircle(double cx, double cy, double r, ColorBase<T> color, bool fill = false);
+		void drawDot(double cx, double cy, double rx, double ry, ColorBase<T> color);
 
-	void drawDot(double cx, double cy, double rx, double ry, ColorBase<T> color);
+		void copyTo(ImageBase<T>& dest, std::vector<int> srcPlanes, std::vector<int> destPlanes, ThreadPoolBase& pool = defaultPool) const;
 
-	virtual void copyTo(ImageBase<T>& other) const;
+		void copyTo(ImageBase<T>& dest, ThreadPoolBase& pool = defaultPool) const;
 
-	virtual void copyFrom(const ImageBase<T>& other);
+		T sample(size_t plane, double x, double y) const;
 
-private:
+		void scaleByTwo(size_t srcPlane, ImageBase<T>& dest, size_t destPlane) const;
 
-	double fpart(double d);
+		void scaleByTwo(ImageBase<T>& dest) const;
 
-	double rfpart(double d);
-};
+		bool saveAsBMP(const std::string& filename, T scale = 1) const;
 
+		bool saveAsPPM(const std::string& filename, T scale = 1) const;
 
+	private:
+		double fpart(double d);
 
-template <class T> class ImageMat : public CoreMat<T> {
+		double rfpart(double d);
+	};
 
-public:
 
-	ImageMat(T* array, int h, int stride, int planeIdx) :
-		CoreMat<T>(array, h, stride, false) {}
+	template <class T> class ImagePacked : public ImageBase<T> {
 
-	ImageMat(int h, int stride, int planeIdx) :
-		CoreMat<T>(h, stride) {}
+	public:
+		ImagePacked(int h, int w, int stride, int numPlanes, int arraysize) :
+			ImageBase<T>(h, w, stride, numPlanes, { std::make_shared<T[]>(arraysize) }, arraysize) {}
 
-	ImageMat() :
-		ImageMat(0, 0, 0) {}
+		ImagePacked(int h, int w, int stride, int numPlanes, T* data, int arraysize) :
+			ImageBase<T>(h, w, stride, numPlanes, { {data, NullDeleter<T>()} }, arraysize) {}
 
-	ImageMat(CoreMat<T>& mat) :
-		CoreMat<T>(mat.data(), mat.rows(), mat.cols(), false) {}
+		T* addr(size_t idx, size_t r, size_t c) override {
+			assert(r < this->h && c < this->w && idx < this->numPlanes && "invalid pixel address");
+			return this->data() + r * this->stride + c * this->numPlanes + idx;
+		}
 
-	using CoreMat<T>::addr;
-};
+		const T* addr(size_t idx, size_t r, size_t c) const override {
+			assert(r < this->h && c < this->w && idx < this->numPlanes && "invalid pixel address");
+			return this->data() + r * this->stride + c * this->numPlanes + idx;
+		}
 
+		virtual T* data() {
+			return this->arrays.at(0).get();
+		}
 
-template <class T> class ImagePlanar : public ImageBase<T> {
+		virtual const T* data() const {
+			return this->arrays.at(0).get();
+		}
 
-protected:
+		void copyTo(ImageBase<T>& dest) const;
 
-	std::vector<ImageMat<T>> mats;
+		void copyTo(ImageBase<T>& dest, std::vector<int> srcPlanes, std::vector<int> destPlanes) const;
+	};
 
-public:
 
-	ImagePlanar(int h, int w, int stride, int numPlanes);
+	template <class T> class ImageMatShared : public ImageBase<T> {
 
-	ImagePlanar(CoreMat<T>& y, CoreMat<T>& u, CoreMat<T>& v);
+	public:
+		ImageMatShared(int h, int w, int stride, T* mat) :
+			ImageBase<T>(h, w, stride, 1, { { mat, NullDeleter<T>() } }, h * stride) {}
 
-	ImagePlanar(CoreMat<T>& mat);
+		ImageMatShared(int h, int w, int stride, T* y, T* u, T* v) :
+			ImageBase<T>(h, w, stride, 3, { { y, NullDeleter<T>() }, { u, NullDeleter<T>() }, { v, NullDeleter<T>() } }, 3 * h * stride) {}
 
-	ImagePlanar(CoreMat<T>* mat);
+		T* addr(size_t idx, size_t r, size_t c) override {
+			assert(r < this->h && c < this->w && idx < this->numPlanes && "invalid pixel address");
+			return this->arrays[idx].get() + r * this->stride + c;
+		}
 
-	ImagePlanar() : 
-		ImagePlanar(0, 0, 0, 0) {}
-
-	//pointer to start of color plane
-	T* plane(size_t idx);
-
-	//pointer to start of color plane
-	const T* plane(size_t idx) const;
-
-	//access one pixel on plane idx (0..2) and row / col
-	T* addr(size_t idx, size_t r, size_t c) override;
-
-	//read access one pixel on plane idx (0..2) and row / col
-	const T* addr(size_t idx, size_t r, size_t c) const override;
-
-	T sample(size_t plane, double x, double y) const;
-
-	//scale one plane
-	void scaleTo(size_t srcPlane, ImageBase<T>& dest, size_t destPlane) const;
-
-	//scale image
-	void scaleTo(ImagePlanar<T>& dest) const;
-
-	bool saveAsBMP(const std::string& filename, T scale = 1) const;
-};
-
-
-class ImageGray : public ImagePlanar<unsigned char> {
-
-public:
-
-	ImageGray(int h, int w) :
-		ImagePlanar(h, w, w, 1) {}
-
-	ImageGray(CoreMat<unsigned char>& mat) :
-		ImagePlanar(mat) {}
-
-	ImageGray() :
-		ImageGray(0, 0) {}
-};
-
-
-template <class T> class ImagePacked : public ImageBase<T> {
-
-public:
-
-	ImagePacked(int h, int w, int stride, int planes, int arraysize) :
-		ImageBase<T>(h, w, stride, planes, arraysize) {}
-
-	ImagePacked(int h, int w, int stride, int planes) :
-		ImagePacked(h, w, stride, planes, h * stride * planes) {}
-
-	virtual T* data();
-
-	virtual const T* data() const;
-
-	T* addr(size_t idx, size_t r, size_t c) override;
-
-	const T* addr(size_t idx, size_t r, size_t c) const override;
-};
+		const T* addr(size_t idx, size_t r, size_t c) const override {
+			assert(r < this->h && c < this->w && idx < this->numPlanes && "invalid pixel address");
+			return this->arrays[idx].get() + r * this->stride + c;
+		}
+	};
+}
