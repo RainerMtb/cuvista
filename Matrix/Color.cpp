@@ -22,15 +22,6 @@
 #include <cmath>
 
 
-int alignValue(int numToAlign, int alignment) {
-	assert(alignment && "factor must not be 0");
-	return numToAlign >= 0 ? ((numToAlign + alignment - 1) / alignment) * alignment : numToAlign / alignment * alignment;
-}
-
-double sqr(double d) {
-	return d * d;
-}
-
 namespace im {
 
 	ColorNorm ColorNorm::WHITE = { 0.0f, 0.5f, 0.5f };
@@ -45,6 +36,15 @@ namespace im {
 	ColorBgr ColorBgr::WHITE = { 255, 255, 255 };
 	ColorBgr ColorBgr::BLACK = { 0,   0,   0 };
 	ColorBgr ColorBgr::BLUE = { 255,   0,   0 }; 
+
+	int alignValue(int numToAlign, int alignment) {
+		assert(alignment && "factor must not be 0");
+		return numToAlign >= 0 ? ((numToAlign + alignment - 1) / alignment) * alignment : numToAlign / alignment * alignment;
+	}
+
+	double sqr(double d) {
+		return d * d;
+	}
 
 	static void yuv_to_rgb_func(float yf, float uf, float vf, unsigned char* r, unsigned char* g, unsigned char* b) {
 		*r = (unsigned char) std::rint(std::clamp(yf + (1.370705f * (vf - 128.0f)), 0.0f, 255.0f));

@@ -158,7 +158,7 @@ void cl::init(CoreData& core, ImageYuv& inputFrame, const DeviceInfo* device) {
 			clData.queue.enqueueFillImage(im, bg, Size2(), Size2(core.w, core.h));
 		}
 		clData.yuvOut = Buffer(clData.context, CL_MEM_WRITE_ONLY, 3ull * core.cpupitch * core.h);
-		clData.rgbOut = Buffer(clData.context, CL_MEM_WRITE_ONLY, 3ull * core.w * core.h);
+		clData.rgbaOut = Buffer(clData.context, CL_MEM_WRITE_ONLY, 4ull * core.w * core.h);
 
 		//image format gray single channel float
 		ImageFormat fmt32(CL_DEPTH, CL_FLOAT);
@@ -206,8 +206,8 @@ void cl::init(CoreData& core, ImageYuv& inputFrame, const DeviceInfo* device) {
 		clData.kernels.remap_downsize_32f = Kernel(program, "remap_downsize_32f");
 		clData.kernels.warp_back = Kernel(program, "warp_back");
 		clData.kernels.unsharp = Kernel(program, "unsharp");
-		clData.kernels.yuv8u_to_rgb = Kernel(program, "yuv8u_to_rgb");
-		clData.kernels.yuv32f_to_rgb = Kernel(program, "yuv32f_to_rgb");
+		clData.kernels.yuv8u_to_rgba = Kernel(program, "yuv8u_to_rgba");
+		clData.kernels.yuv32f_to_rgba = Kernel(program, "yuv32f_to_rgba");
 		clData.kernels.scrap = Kernel(program, "scrap");
 		clData.kernels.compute = Kernel(program, "compute");
 
@@ -395,7 +395,7 @@ void cl::outputDataCpu(int64_t frameIndex, const CoreData& core, ImageYuv& image
 	}
 }
 
-void cl::outputDataCpu(int64_t frameIndex, const CoreData& core, ImageARGB& argb) {
+void cl::outputDataCpu(int64_t frameIndex, const CoreData& core, ImageRGBA& argb) {
 	//TODO
 }
 
@@ -439,11 +439,11 @@ void cl::getInput(int64_t idx, ImageYuv& image, const CoreData& core) {
 	clData.queue.enqueueReadImage(im, CL_TRUE, Size2(), Size2(image.w, image.h * 3), image.stride, 0, image.data());
 }
 
-void cl::getCurrentInputFrame(ImagePPM& image, int64_t idx) {
+void cl::getCurrentInputFrame(ImageRGBA& image, int64_t idx) {
 	size_t fridx = idx % clData.yuv.size();
-	yuv_to_rgb(clData.kernels.yuv8u_to_rgb, clData.yuv[fridx], image.data(), clData, image.w, image.h);
+	yuv_to_rgba(clData.kernels.yuv8u_to_rgba, clData.yuv[fridx], image.data(), clData, image.w, image.h);
 }
 
-void cl::getTransformedOutput(ImagePPM& image) {
-	yuv_to_rgb(clData.kernels.yuv32f_to_rgb, clData.out[1], image.data(), clData, image.w, image.h);
+void cl::getTransformedOutput(ImageRGBA& image) {
+	yuv_to_rgba(clData.kernels.yuv32f_to_rgba, clData.out[1], image.data(), clData, image.w, image.h);
 }

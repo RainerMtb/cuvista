@@ -82,37 +82,28 @@ void Avx::transpose16x8(std::span<VF16> data) {
 
 
 //convert individual vectors in float for Y U V to one vector holding uchar packed RGB
-__m512i Avx::yuvToRgbPacked(VF16 y, VF16 u, VF16 v) {
-	VF16 r = (y + ((v - 128.0f) * 1.370705f)).clamp(0.0f, 255.0f);
-	VF16 g = (y - ((u - 128.0f) * 0.337633f) - ((v - 128.0f) * 0.698001f)).clamp(0.0f, 255.0f);
-	VF16 b = (y + ((u - 128.0f) * 1.732446f)).clamp(0.0f, 255.0f);
+__m128i Avx::yuvToRgbaPacked(VF4 y, VF4 u, VF4 v) {
+	//distribute y, u, v values to 16 places
+	__m512i index = _mm512_setr_epi32(0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3);
+	VF16 yy = _mm512_permutexvar_ps(index, _mm512_castps128_ps512(y));
+	VF16 uu = _mm512_permutexvar_ps(index, _mm512_castps128_ps512(u));
+	VF16 vv = _mm512_permutexvar_ps(index, _mm512_castps128_ps512(v));
+	
+	//factors for conversion yuv to rgb
+	VF16 fu = { 0.0f, -0.337633f, 1.732446f, 0.0f };
+	VF16 fv = { 1.370705f, -0.698001f, 0.0f, 0.0f };
 
-	//convert floats to uint8 stored in 512 bits
+	//convert
+	VF16 ps255 = 255.0f;
+	VF16 ps128 = 128.0f;
+	VF16 rgba;
+	rgba = yy + (uu - ps128) * fu + (vv - ps128) * fv;
+	rgba = rgba.clamp(0.0f, 255.0f);
+	rgba = _mm512_mask_blend_ps(0b1000'1000'1000'1000, rgba, ps255);
+
+	//convert floats to uint8
 	//default conversion in avx uses rint()
-	__m512i ir = _mm512_zextsi128_si512(_mm512_cvtepi32_epi8(_mm512_cvtps_epi32(r)));
-	__m512i ig = _mm512_zextsi128_si512(_mm512_cvtepi32_epi8(_mm512_cvtps_epi32(g)));
-	__m512i ib = _mm512_zextsi128_si512(_mm512_cvtepi32_epi8(_mm512_cvtps_epi32(b)));
-
-	//pack into the lower 3/4 of one 512 vector
-	__m512i selectorRG = _mm512_setr_epi8(
-		0, 64, 0, 1, 65, 0, 2, 66, 0, 3, 67, 0, 4, 68, 0, 5,
-		69, 0, 6, 70, 0, 7, 71, 0, 8, 72, 0, 9, 73, 0, 10, 74,
-		0, 11, 75, 0, 12, 76, 0, 13, 77, 0, 14, 78, 0, 15, 79, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	);
-	__m512i selectorB = _mm512_setr_epi8(
-		64, 65, 0, 67, 68, 1, 70, 71, 2, 73, 74, 3, 76, 77, 4, 79,
-		80, 5, 82, 83, 6, 85, 86, 7, 88, 89, 8, 91, 92, 9, 94, 95,
-		10, 97, 98, 11, 100, 101, 12, 103, 104, 13, 106, 107, 14, 109, 110, 15,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	);
-
-	__m512i result;
-	//combine red and green
-	result = _mm512_permutex2var_epi8(ir, selectorRG, ig);
-	//combine above with blue
-	result = _mm512_permutex2var_epi8(ib, selectorB, result);
-	return result;
+	return _mm512_cvtepi32_epi8(_mm512_cvtps_epi32(rgba));
 }
 
 

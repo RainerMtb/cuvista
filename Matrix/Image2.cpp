@@ -25,9 +25,10 @@ ImagePPM& ImageYuvMat::toPPM(ImagePPM& dest, ThreadPoolBase& pool) const {
 	return dest;
 }
 
-ImagePPM ImageYuvMat::toPPM() const {
-	ImagePPM out(h, w);
-	return toPPM(out);
+ImageRGBA& ImageYuvMat::toRGBA(ImageRGBA& dest, ThreadPoolBase& pool) const {
+	dest.setValues(3, 0xFF);
+	yuvToRgb(dest, { 0, 1, 2 }, pool);
+	return dest;
 }
 
 
@@ -60,8 +61,8 @@ void ImageYuv::readFromPGM(const std::string& filename) {
 		file.get(); //read delimiter
 
 		for (int i = 0; i < 3; i++) {
-			for (size_t row = 0; row < h; row++) {
-				file.read(reinterpret_cast<char*>(arrays[i].get() + row * stride), w);
+			for (size_t r = 0; r < h; r++) {
+				file.read(reinterpret_cast<char*>(addr(i, r, 0)), w);
 			}
 		}
 
@@ -128,13 +129,13 @@ std::vector<unsigned char> ImageYuv::toNV12(size_t strideNV12) const {
 	return data;
 }
 
-ImageRGB& ImageYuv::toRGB(ImageRGB& dest, ThreadPoolBase& pool) const {
+ImageRGBplanar& ImageYuv::toRGB(ImageRGBplanar& dest, ThreadPoolBase& pool) const {
 	yuvToRgb(dest, { 0, 1, 2 }, pool);
 	return dest;
 }
 
-ImageRGB ImageYuv::toRGB() const {
-	ImageRGB out(h, w);
+ImageRGBplanar ImageYuv::toRGB() const {
+	ImageRGBplanar out(h, w);
 	return toRGB(out);
 }
 
@@ -148,6 +149,19 @@ ImageBGR ImageYuv::toBGR() const {
 	return toBGR(out);
 }
 
+bool ImageBGR::saveAsColorBMP(const std::string& filename) const {
+	std::ofstream os(filename, std::ios::binary);
+	im::BmpColorHeader(w, h).writeHeader(os);
+	std::vector<char> data(im::alignValue(w * 3, 4));
+
+	for (int r = h - 1; r >= 0; r--) {
+		const unsigned char* ptr = addr(0, r, 0);
+		std::copy(ptr, ptr + 3 * w, data.data());
+		os.write(data.data(), data.size());
+	}
+	return os.good();
+}
+
 ImagePPM& ImageYuv::toPPM(ImagePPM& dest, ThreadPoolBase& pool) const {
 	assert(h == dest.h && w == dest.w && "dimensions mismatch");
 	yuvToRgb(dest, { 0, 1, 2 }, pool);
@@ -159,9 +173,44 @@ ImagePPM ImageYuv::toPPM() const {
 	return toPPM(out);
 }
 
-ImageARGB& ImageYuv::toARGB(ImageARGB& dest, ThreadPoolBase& pool) const {
-	dest.setValues(0, 0xFF);
-	yuvToRgb(dest, { 1, 2, 3 }, pool);
+ImageRGBA& ImageYuv::toRGBA(ImageRGBA& dest, ThreadPoolBase& pool) const {
+	dest.setValues(3, 0xFF);
+	yuvToRgb(dest, { 0, 1, 2 }, pool);
 	return dest;
 }
 
+ImageRGBA ImageYuv::toRGBA() const {
+	ImageRGBA out(h, w);
+	return toRGBA(out);
+}
+
+void ImageRGBA::copyTo(ImageRGBA& dest, size_t r0, size_t c0, ThreadPoolBase& pool) const {
+	assert(c0 + w <= dest.w && r0 + h <= dest.h && "dimensions mismatch");
+	for (int c = 0; c < w; c++) {
+		for (int r = 0; r < h; r++) {
+			if (at(3, r, c) > 0) {
+				dest.at(0, r + r0, c + c0) = at(0, r, c);
+				dest.at(1, r + r0, c + c0) = at(1, r, c);
+				dest.at(2, r + r0, c + c0) = at(2, r, c);
+			}
+		}
+	}
+}
+
+bool ImageRGBA::saveAsColorBMP(const std::string& filename) const {
+	std::ofstream os(filename, std::ios::binary);
+	im::BmpColorHeader(w, h).writeHeader(os);
+	int stridedWidth = im::alignValue(w * 3, 4);
+	std::vector<char> imageRow(stridedWidth);
+
+	for (int r = h - 1; r >= 0; r--) {
+		unsigned char* ptr = (unsigned char*) imageRow.data();
+		for (int c = 0; c < w; c++) {
+			*ptr++ = at(2, r, c);
+			*ptr++ = at(1, r, c);
+			*ptr++ = at(0, r, c);
+		}
+		os.write(imageRow.data(), imageRow.size());
+	}
+	return os.good();
+}

@@ -41,13 +41,13 @@ public:
 	void computeTerminate(int64_t frameIndex) override;
 	void outputData(const AffineTransform& trf) override;
 	void getOutput(int64_t frameIndex, ImageYuv& image) override;
-	void getOutput(int64_t frameIndex, ImageARGB& argb) override;
+	void getOutput(int64_t frameIndex, ImageRGBA& image) override;
 	void getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) override;
 	Matf getTransformedOutput() const override;
 	Matf getPyramid(size_t idx) const override;
 	void getInput(int64_t index, ImageYuv& image) const override;
-	void getInput(int64_t frameIndex, ImagePPM& image) override;
-	void getWarped(int64_t frameIndex, ImagePPM& image) override;
+	void getInput(int64_t frameIndex, ImageRGBA& image) override;
+	void getWarped(int64_t frameIndex, ImageRGBA& image) override;
 	MovieFrameId getId() const override;
 
 private:

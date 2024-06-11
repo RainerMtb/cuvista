@@ -66,7 +66,7 @@ public:
 		cudaOutputCpu(frameIndex, image, mData);
 	}
 
-	void getOutput(int64_t frameIndex, ImageARGB& argb) override {
+	void getOutput(int64_t frameIndex, ImageRGBA& argb) override {
 		cudaOutputCpu(frameIndex, argb, mData);
 	}
 
@@ -90,11 +90,11 @@ public:
 		return cudaGetInput(index, image, mData);
 	}
 
-	void getInput(int64_t frameIndex, ImagePPM& image) override {
+	void getInput(int64_t frameIndex, ImageRGBA& image) override {
 		cudaGetCurrentInputFrame(image, mData, frameIndex);
 	}
 
-	void getWarped(int64_t frameIndex, ImagePPM& image) override {
+	void getWarped(int64_t frameIndex, ImageRGBA& image) override {
 		cudaGetTransformedOutput(image, mData);
 	}
 	

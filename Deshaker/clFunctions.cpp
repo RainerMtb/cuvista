@@ -97,9 +97,9 @@ void cl::unsharp(Image src, Image dest, Image gauss, Data& clData, cl_float4 fac
 	runKernel(kernel, src, dest, clData.queue);
 }
 
-void cl::yuv_to_rgb(Kernel& kernel, Image src, unsigned char* imageData, Data& clData, int w, int h) {
+void cl::yuv_to_rgba(Kernel& kernel, Image src, unsigned char* imageData, Data& clData, int w, int h) {
 	kernel.setArg(0, src);
-	kernel.setArg(1, clData.rgbOut);
+	kernel.setArg(1, clData.rgbaOut);
 	clData.queue.enqueueNDRangeKernel(kernel, NullRange, NDRange(w, h));
-	clData.queue.enqueueReadBuffer(clData.rgbOut, CL_TRUE, 0, 3ull * w * h, imageData);
+	clData.queue.enqueueReadBuffer(clData.rgbaOut, CL_TRUE, 0, 4ull * w * h, imageData);
 }

@@ -295,8 +295,8 @@ void CpuFrame::getOutput(int64_t frameIndex, ImageYuv& image) {
 	mOutput.copyTo(image, mPool);
 }
 
-void CpuFrame::getOutput(int64_t frameIndex, ImageARGB& argb) {
-	mOutput.toARGB(argb, mPool);
+void CpuFrame::getOutput(int64_t frameIndex, ImageRGBA& image) {
+	mOutput.toRGBA(image, mPool);
 }
 
 void CpuFrame::getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) {
@@ -306,8 +306,8 @@ void CpuFrame::getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cud
 	encodeNvData(nv12, cudaNv12ptr);
 }
 
-void CpuFrame::getWarped(int64_t frameIndex, ImagePPM& image) {
-	ImageYuvMat(mData.h, mData.w, mData.cpupitch, mBuffer[0].data(), mBuffer[1].data(), mBuffer[2].data()).toPPM(image, mPool);
+void CpuFrame::getWarped(int64_t frameIndex, ImageRGBA& image) {
+	ImageYuvMat(mData.h, mData.w, mData.cpupitch, mBuffer[0].data(), mBuffer[1].data(), mBuffer[2].data()).toRGBA(image, mPool);
 }
 
 Matf CpuFrame::getTransformedOutput() const {
@@ -325,9 +325,9 @@ Matf CpuFrame::getPyramid(size_t idx) const {
 	return out;
 }
 
-void CpuFrame::getInput(int64_t frameIndex, ImagePPM& image) {
+void CpuFrame::getInput(int64_t frameIndex, ImageRGBA& image) {
 	size_t idx = frameIndex % mYUV.size();
-	mYUV[idx].toPPM(image, mPool);
+	mYUV[idx].toRGBA(image, mPool);
 }
 
 void CpuFrame::getInput(int64_t index, ImageYuv& image) const {

@@ -188,7 +188,7 @@ void cuvistaGui::setInputFile(const QString& filePath) {
         ui.texInput->setPlainText(QString::fromStdString(str));
 
     } catch (const AVException& ex) {
-        ui.imageInput->setImage(mPixmapError);
+        ui.imageInput->setImage(mErrorImage);
         ui.statusbar->showMessage(QString(ex.what()));
         ui.texInput->setPlainText({});
         mInputReady = false;
@@ -303,18 +303,15 @@ void cuvistaGui::stabilize() {
     else if (devtype == DeviceType::OPEN_CL)
         mFrame = std::make_unique<OpenClFrame>(mData, mReader, *mWriter);
 
-    //progress handler
-    std::shared_ptr<ProgressBase> progress;
-
     //set up output
     if (ui.chkPlayer->isChecked()) {
-        progress = std::make_shared<PlayerProgress>(mData, *mFrame, mPlayerWindow);
+        mProgress = std::make_shared<PlayerProgress>(mData, *mFrame, mPlayerWindow);
         mPlayerWindow->show();
 
     } else {
-        progress = std::make_shared<ProgressGui>(mData, *mFrame, mProgressWindow);
-        mProgressWindow->updateInput(mPixmapWorking, "");
-        mProgressWindow->updateOutput(mPixmapWorking, "");
+        mProgress = std::make_shared<ProgressGui>(mData, *mFrame, mProgressWindow);
+        mProgressWindow->updateInput(mWorkingImage, "");
+        mProgressWindow->updateOutput(mWorkingImage, "");
         mProgressWindow->show();
     }
 
@@ -323,7 +320,7 @@ void cuvistaGui::stabilize() {
         //no secondary writers
         AuxWriters writers;
         //run loop
-        mFrame->runLoop(DeshakerPass::COMBINED, *progress, mInputHandler, writers);
+        mFrame->runLoop(DeshakerPass::COMBINED, *mProgress, mInputHandler, writers);
     };
     mThread = QThread::create(fcn);
     connect(mThread, &QThread::finished, this, &cuvistaGui::done);
@@ -348,6 +345,7 @@ void cuvistaGui::done() {
     //always destruct writer before frame
     mWriter.reset();
     mFrame.reset();
+    mProgress.reset();
 
     //emit signals to report result back to main thread
     if (errorLogger.hasError())

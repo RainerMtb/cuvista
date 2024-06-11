@@ -21,9 +21,9 @@
 #include "Image.hpp"
 #include <format>
 
-class ImageBGR;
 class ImagePPM;
-class ImageARGB;
+class ImageBGR;
+class ImageRGBA;
 
 
 //image from CoreMat
@@ -35,21 +35,40 @@ public:
 
 	ImagePPM& toPPM(ImagePPM& dest, ThreadPoolBase& pool = defaultPool) const;
 
-	ImagePPM toPPM() const;
+	ImageRGBA& toRGBA(ImageRGBA& dest, ThreadPoolBase& pool = defaultPool) const;
 };
 
 
 //planar image in rgb
-class ImageRGB : public im::ImageBase<unsigned char> {
+class ImageRGBplanar : public im::ImageBase<unsigned char> {
 
 public:
 	//allocate frame given height, width, and stride
-	ImageRGB(int h, int w) :
+	ImageRGBplanar(int h, int w) :
 		ImageBase(h, w, w, 3) {}
 
 	//default constructor produces invalid image
-	ImageRGB() :
-		ImageRGB(0, 0) {}
+	ImageRGBplanar() :
+		ImageRGBplanar(0, 0) {}
+};
+
+
+//packed rgba
+class ImageRGBA : public im::ImagePacked<unsigned char> {
+
+public:
+	ImageRGBA(int h, int w, int stride, unsigned char* data) :
+		ImagePacked(h, w, stride, 4, data, h* stride) {}
+
+	ImageRGBA(int h, int w) :
+		ImagePacked(h, w, 4 * w, 4, 4 * h * w) {}
+
+	ImageRGBA() :
+		ImageRGBA(0, 0) {}
+
+	void copyTo(ImageRGBA& dest, size_t r0, size_t c0, ThreadPoolBase& pool = defaultPool) const;
+
+	bool saveAsColorBMP(const std::string& filename) const;
 };
 
 
@@ -83,9 +102,9 @@ public:
 	ImageYuv& fromNV12(const std::vector<unsigned char>& nv12, size_t strideNV12);
 
 	//convert to planar RGB format
-	ImageRGB& toRGB(ImageRGB& dest, ThreadPoolBase& pool = defaultPool) const;
+	ImageRGBplanar& toRGB(ImageRGBplanar& dest, ThreadPoolBase& pool = defaultPool) const;
 
-	ImageRGB toRGB() const;
+	ImageRGBplanar toRGB() const;
 
 	//convert to BGR format for bmp files
 	ImageBGR& toBGR(ImageBGR& dest, ThreadPoolBase& pool = defaultPool) const;
@@ -96,7 +115,9 @@ public:
 
 	ImagePPM toPPM() const;
 
-	ImageARGB& toARGB(ImageARGB& dest, ThreadPoolBase& pool = defaultPool) const;
+	ImageRGBA& toRGBA(ImageRGBA& dest, ThreadPoolBase& pool = defaultPool) const;
+
+	ImageRGBA toRGBA() const;
 
 	void readFromPGM(const std::string& filename);
 
@@ -115,18 +136,7 @@ public:
 	ImageBGR() :
 		ImageBGR(0, 0) {}
 
-	bool saveAsColorBMP(const std::string& filename) const {
-		std::ofstream os(filename, std::ios::binary);
-		im::BmpColorHeader(w, h).writeHeader(os);
-		std::vector<char> data(alignValue(stride, 4));
-
-		for (int r = h - 1; r >= 0; r--) {
-			const unsigned char* ptr = addr(0, r, 0);
-			std::copy(ptr, ptr + 3 * w, data.data());
-			os.write(data.data(), data.size());
-		}
-		return os.good();
-	}
+	bool saveAsColorBMP(const std::string& filename) const;
 };
 
 
@@ -175,29 +185,5 @@ public:
 		ImageBGR bgr(h, w);
 		copyTo(bgr, { 0, 1, 2 }, { 2, 1, 0 });
 		return bgr.saveAsColorBMP(filename);
-	}
-};
-
-
-class ImageARGB : public im::ImagePacked<unsigned char> {
-
-public:
-	ImageARGB(int h, int w) :
-		ImagePacked(h, w, 4 * w, 4, 4 * h * w) {}
-
-	ImageARGB(int h, int w, int stride, unsigned char* data) :
-		ImagePacked(h, w, stride, 4, data, h * stride) {}
-
-	void copyMasked(ImageBGR& dest, size_t r0, size_t c0, ThreadPoolBase& pool = defaultPool) const {
-		assert(w <= dest.w && h <= dest.h && numPlanes >= dest.numPlanes && "dimensions mismatch");
-		for (int c = 0; c < w; c++) {
-			for (int r = 0; r < h; r++) {
-				if (at(0, r, c) > 0) {
-					dest.at(2, r + r0, c + c0) = at(1, r, c);
-					dest.at(1, r + r0, c + c0) = at(2, r, c);
-					dest.at(0, r + r0, c + c0) = at(3, r, c);
-				}
-			}
-		}
 	}
 };

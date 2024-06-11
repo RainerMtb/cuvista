@@ -46,12 +46,12 @@ public:
 		resizePixmap();
 	}
 
-	void setImage(QPixmap pm) {
+	void setImage(const QPixmap& pm) {
 		this->pm = pm;
 		resizePixmap();
 	}
 
-	void setImage(const QImage& im) {
+	void setImage(QImage im) {
 		setImage(QPixmap::fromImage(im));
 	}
 

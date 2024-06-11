@@ -41,8 +41,8 @@ void PlayerWriter::prepareOutput(MovieFrame& frame) {
     size_t idx = frame.mWriter.frameIndex % mFrameBuffer.size();
     QVideoFrame& qvf = mFrameBuffer[idx];
     qvf.map(QVideoFrame::WriteOnly);
-    ImageARGB argb(qvf.height(), qvf.width(), qvf.bytesPerLine(0), qvf.bits(0));
-    frame.getOutput(idx, argb);
+    //ImageARGB argb(qvf.height(), qvf.width(), qvf.bytesPerLine(0), qvf.bits(0));
+    //frame.getOutput(idx, argb);
     qvf.unmap();
 }
 

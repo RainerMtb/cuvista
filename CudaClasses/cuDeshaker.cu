@@ -25,7 +25,7 @@ unsigned char** d_yuvRows;			     //index into rows of pixels, allocated on devi
 unsigned char*** d_yuvPlanes;		     //index into Y-U-V planes of frames, allocated on device 
 
 unsigned char* d_yuvOut;   //image data for encoding on host
-unsigned char* d_rgb;      //image data for progress update
+unsigned char* d_rgba;     //image data for progress update
 
 struct {
 	float4* data;
@@ -185,11 +185,6 @@ void writeText(const std::string& text, int x0, int y0, int scaleX, int scaleY, 
 	}
 }
 
-int align(size_t base, size_t alignment) {
-	return (int) ((base + alignment - 1) / alignment * alignment);
-}
-
-
 //----------------------------------
 //-------- INIT
 //----------------------------------
@@ -304,7 +299,7 @@ void cudaInit(CudaData& core, int devIdx, const cudaDeviceProp& prop, ImageYuv& 
 
 	//allocate output yuv array
 	allocSafe(&d_yuvOut, frameSize8);
-	allocSafe(&d_rgb, 3ull * w * h);
+	allocSafe(&d_rgba, 4ull * w * h);
 
 	//allocate memory for yuv input data in char format [0..255]
 	allocSafe(&d_yuvData, frameSize8 * core.bufferCount);
@@ -527,7 +522,7 @@ void cudaOutputCpu(int64_t frameIndex, ImageYuv& image, const CudaData& core) {
 	handleStatus(cudaGetLastError(), "error @output #91");
 }
 
-void cudaOutputCpu(int64_t frameIndex, ImageARGB& argb, const CudaData& mData) {
+void cudaOutputCpu(int64_t frameIndex, ImageRGBA& argb, const CudaData& mData) {
 	//TODO
 }
 
@@ -573,16 +568,16 @@ void cudaGetInput(int64_t index, ImageYuv& image, const CudaData& core) {
 	cudaMemcpy2D(image.data(), image.stride, yuvSrc, core.strideChar, image.w, 3ll * image.h, cudaMemcpyDefault);
 }
 
-void cudaGetCurrentInputFrame(ImagePPM& image, const CudaData& core, int64_t idx) {
+void cudaGetCurrentInputFrame(ImageRGBA& image, const CudaData& core, int64_t idx) {
 	int fridx = idx % core.bufferCount;
 	unsigned char* yuvSrc = d_yuvData + fridx * 3ull * core.h * core.strideChar;
-	cu::yuv_to_rgb(yuvSrc, core.strideChar, d_rgb, core.w, core.w, core.h);
-	handleStatus(cudaMemcpy(image.data(), d_rgb, 3ull * core.w * core.h, cudaMemcpyDefault), "error @progress input");
+	cu::yuv_to_rgb(yuvSrc, core.strideChar, d_rgba, core.w, core.w, core.h);
+	handleStatus(cudaMemcpy(image.data(), d_rgba, 4ull * core.w * core.h, cudaMemcpyDefault), "error @progress input");
 }
 
-void cudaGetTransformedOutput(ImagePPM& image, const CudaData& core) {
-	cu::yuv_to_rgb(out.warped, core.strideFloat4N, d_rgb, core.w, core.w, core.h);
-	handleStatus(cudaMemcpy(image.data(), d_rgb, 3ull * core.w * core.h, cudaMemcpyDefault), "error @progress output");
+void cudaGetTransformedOutput(ImageRGBA& image, const CudaData& core) {
+	cu::yuv_to_rgb(out.warped, core.strideFloat4N, d_rgba, core.w, core.w, core.h);
+	handleStatus(cudaMemcpy(image.data(), d_rgba, 4ull * core.w * core.h, cudaMemcpyDefault), "error @progress output");
 }
 
 
@@ -639,7 +634,7 @@ void getDebugData(const CudaData& core, const std::string& imageFile, std::funct
 void cudaShutdown(const CudaData& core) {
 	
 	//delete device memory
-	void* d_arr[] = { d_results, d_yuvOut, d_rgb, d_yuvData, d_yuvRows, d_yuvPlanes, 
+	void* d_arr[] = { d_results, d_yuvOut, d_rgba, d_yuvData, d_yuvRows, d_yuvPlanes, 
 		out.data, d_bufferH, d_bufferV, d_pyrData, d_pyrRows, 
 		debugData.d_data, d_interrupt
 	};

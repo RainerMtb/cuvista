@@ -117,7 +117,7 @@ void cudaOutputCpu(int64_t frameIndex, ImageYuv& image, const CudaData& core);
 /*
 @brief output pixel data in ARGB format to host
 */
-void cudaOutputCpu(int64_t frameIndex, ImageARGB& argb, const CudaData& mData);
+void cudaOutputCpu(int64_t frameIndex, ImageRGBA& image, const CudaData& mData);
 
 /*
 @brief output pixel data to cuda encoding
@@ -163,9 +163,9 @@ void cudaGetInput(int64_t index, ImageYuv& image, const CudaData& core);
 /*
 @brief get current input frame for progress display
 */
-void cudaGetCurrentInputFrame(ImagePPM& image, const CudaData& core, int64_t idx);
+void cudaGetCurrentInputFrame(ImageRGBA& image, const CudaData& core, int64_t idx);
 
 /*
 @brief get current output frame for progress display
 */
-void cudaGetTransformedOutput(ImagePPM& image, const CudaData& core);
+void cudaGetTransformedOutput(ImageRGBA& image, const CudaData& core);

@@ -94,10 +94,11 @@ template <class T> KernelContext prepareTexture(T* src, int srcStep, int texw, i
 
 //--------------- kernels
 
-__device__ void yuv_to_rgb_func(float yf, float uf, float vf, uchar* r, uchar* g, uchar* b) {
+__device__ void yuv_to_rgba_func(float yf, float uf, float vf, uchar* r, uchar* g, uchar* b, uchar* a) {
 	*r = (uchar) rint(cu::clamp(yf + (1.370705f * (vf - 128.0f)), 0.0f, 255.0f));
 	*g = (uchar) rint(cu::clamp(yf - (0.337633f * (uf - 128.0f)) - (0.698001f * (vf - 128.0f)), 0.0f, 255.0f));
 	*b = (uchar) rint(cu::clamp(yf + (1.732446f * (uf - 128.0f)), 0.0f, 255.0f));
+	*a = 0xFF;
 }
 
 __device__ float interp(float f00, float f01, float f10, float f11, float dx, float dy) {
@@ -291,7 +292,7 @@ __global__ void kernel_filter(cudaTextureObject_t texObj, cuMatf dest, size_t ki
 	}
 }
 
-__global__ void kernel_yuv8_to_rgb8(cudaTextureObject_t texObj, uchar* rgb, int w, int h) {
+__global__ void kernel_yuv8_to_rgba8(cudaTextureObject_t texObj, uchar* rgba, int w, int h) {
 	uint x = blockIdx.x * blockDim.x + threadIdx.x;
 	uint y = blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -299,19 +300,19 @@ __global__ void kernel_yuv8_to_rgb8(cudaTextureObject_t texObj, uchar* rgb, int 
 		uchar colY = tex2D<uchar>(texObj, x, y);
 		uchar colU = tex2D<uchar>(texObj, x, y + h);
 		uchar colV = tex2D<uchar>(texObj, x, y + h + h);
-		uchar* dest = rgb + 3ull * (y * w + x);
-		yuv_to_rgb_func(colY, colU, colV, dest, dest + 1, dest + 2);
+		uchar* dest = rgba + 4ull * (y * w + x);
+		yuv_to_rgba_func(colY, colU, colV, dest, dest + 1, dest + 2, dest + 3);
 	}
 }
 
-__global__ void kernel_yuv128_to_rgb8(cudaTextureObject_t texObj, uchar* rgb, int w, int h) {
+__global__ void kernel_yuv128_to_rgba8(cudaTextureObject_t texObj, uchar* rgba, int w, int h) {
 	uint x = blockIdx.x * blockDim.x + threadIdx.x;
 	uint y = blockIdx.y * blockDim.y + threadIdx.y;
 
 	if (x < w && y < h) {
 		float4 yuv = tex2D<float4>(texObj, x, y);
-		uchar* dest = rgb + 3ull * (y * w + x);
-		yuv_to_rgb_func(yuv.x * 255.0f, yuv.y * 255.0f, yuv.z * 255.0f, dest, dest + 1, dest + 2);
+		uchar* dest = rgba + 4ull * (y * w + x);
+		yuv_to_rgba_func(yuv.x * 255.0f, yuv.y * 255.0f, yuv.z * 255.0f, dest, dest + 1, dest + 2, dest + 3);
 	}
 }
 
@@ -417,14 +418,14 @@ cudaError_t cu::remap_downsize_32f(float* src, int srcStep, float* dest, int des
 
 cudaError_t cu::yuv_to_rgb(uchar* src, int srcStep, uchar* dest, int destStep, int w, int h) {
 	KernelContext ki = prepareTexture(src, srcStep, w, 3 * h, w, h);
-	kernel_yuv8_to_rgb8 <<<ki.blocks, ki.threads>>> (ki.texture, dest, w, h);
+	kernel_yuv8_to_rgba8 <<<ki.blocks, ki.threads>>> (ki.texture, dest, w, h);
 	cudaDestroyTextureObject(ki.texture);
 	return cudaGetLastError();
 }
 
 cudaError_t cu::yuv_to_rgb(float4* src, int srcStep, uchar* dest, int destStep, int w, int h) {
 	KernelContext ki = prepareTexture(src, srcStep, w, h);
-	kernel_yuv128_to_rgb8 <<<ki.blocks, ki.threads>>> (ki.texture, dest, w, h);
+	kernel_yuv128_to_rgba8 <<<ki.blocks, ki.threads>>> (ki.texture, dest, w, h);
 	cudaDestroyTextureObject(ki.texture);
 	return cudaGetLastError();
 }

@@ -31,8 +31,8 @@ namespace im {
 		int h, w, stride, numPlanes;
 
 	protected:
-		std::vector<std::shared_ptr<T[]>> arrays;
 		size_t imageSize;
+		std::vector<std::shared_ptr<T[]>> arrays;
 
 		static inline ThreadPoolBase defaultPool;
 
@@ -54,16 +54,20 @@ namespace im {
 			w { w },
 			stride { stride },
 			numPlanes { numPlanes },
-			arrays { std::make_shared<T[]>(1ull * h * stride * numPlanes) },
-			imageSize { 1ull * h * stride * numPlanes } {}
+			imageSize { 1ull * h * stride * numPlanes },
+			arrays { std::make_shared<T[]>(imageSize) } 
+		{
+			assert(h >= 0 && w >= 0 && "invalid dimensions");
+			assert(stride >= w && "stride must be equal or greater to width");
+		}
 
 		ImageBase(int h, int w, int stride, int numPlanes, std::vector<std::shared_ptr<T[]>> arrays, size_t imageSize) :
 			h { h },
 			w { w },
 			stride { stride },
 			numPlanes { numPlanes },
-			arrays { arrays },
-			imageSize { imageSize } 
+			imageSize { imageSize },
+			arrays { arrays }
 		{
 			assert(h >= 0 && w >= 0 && "invalid dimensions");
 			assert(stride >= w && "stride must be equal or greater to width");

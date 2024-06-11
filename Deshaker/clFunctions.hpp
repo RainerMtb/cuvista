@@ -68,7 +68,7 @@ namespace cl {
 		//data storage for output
 		std::array<Image2D, 5> out;
 		Buffer yuvOut;
-		Buffer rgbOut;
+		Buffer rgbaOut;
 
 		//storage for results struct
 		Buffer results;
@@ -86,8 +86,8 @@ namespace cl {
 			Kernel remap_downsize_32f;
 			Kernel warp_back;
 			Kernel unsharp;
-			Kernel yuv8u_to_rgb;
-			Kernel yuv32f_to_rgb;
+			Kernel yuv8u_to_rgba;
+			Kernel yuv32f_to_rgba;
 			Kernel scrap;
 			Kernel compute;
 		} kernels;
@@ -106,5 +106,5 @@ namespace cl {
 	void warp_back(Image src, Image dest, Data& clData, std::array<double, 6> trf);
 	void unsharp(Image src, Image dest, Image gauss, Data& clData, cl_float4 factor);
 
-	void yuv_to_rgb(Kernel& kernel, Image src, unsigned char* imageData, Data& clData, int w, int h);
+	void yuv_to_rgba(Kernel& kernel, Image src, unsigned char* imageData, Data& clData, int w, int h);
 }

@@ -49,8 +49,8 @@ public slots:
     void showInfo();
 
 private:
-    QPixmap mPixmapError = QPixmap(":/cuvistaGui/res/signs-01.png");
-    QPixmap mPixmapWorking = QPixmap(":/cuvistaGui/res/signs-02.png");
+    QImage mErrorImage = QImage(":/cuvistaGui/res/signs-01.png");
+    QImage mWorkingImage = QImage(":/cuvistaGui/res/signs-02.png");
 
     Ui::cuvistaGuiClass ui;
     QString mMovieDir;
@@ -65,6 +65,7 @@ private:
     ProgressWindow* mProgressWindow;
     std::unique_ptr<MovieWriter> mWriter;
     std::unique_ptr<MovieFrame> mFrame;
+    std::shared_ptr<ProgressBase> mProgress;
 
     UserInputGui mInputHandler;
 

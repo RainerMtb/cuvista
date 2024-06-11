@@ -84,14 +84,14 @@ void DummyFrame::getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int c
 	encodeNvData(nv12, cudaNv12ptr);
 }
 
-void DummyFrame::getOutput(int64_t frameIndex, ImageARGB& argb) {
+void DummyFrame::getOutput(int64_t frameIndex, ImageRGBA& image) {
 	size_t idx = frameIndex % mFrames.size();
-	mFrames[idx].toARGB(argb, mPool);
+	mFrames[idx].toRGBA(image, mPool);
 }
 
-void DummyFrame::getWarped(int64_t frameIndex, ImagePPM& image) {
+void DummyFrame::getWarped(int64_t frameIndex, ImageRGBA& image) {
 	size_t idx = frameIndex % mFrames.size();
-	mFrames[idx].toPPM(image, mPool);
+	mFrames[idx].toRGBA(image, mPool);
 }
 
 void DummyFrame::getInput(int64_t frameIndex, ImageYuv& image) const {

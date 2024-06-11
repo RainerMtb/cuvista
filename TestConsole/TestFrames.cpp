@@ -24,7 +24,7 @@ struct Result {
 	std::vector<PointResult> results;
 	std::string name;
 	ImageYuv image;
-	ImagePPM input;
+	ImageRGBA input;
 	std::string error;
 };
 
@@ -47,7 +47,7 @@ template <class T> Result runPyramid(MainData& data) {
 	frame->computeStart(frame->mReader.frameIndex);
 	frame->computeTerminate(frame->mReader.frameIndex);
 
-	ImagePPM im(data.h, data.w);
+	ImageRGBA im(data.h, data.w);
 	frame->getInput(0, im);
 
 	AffineTransform trf;
@@ -107,9 +107,8 @@ void compareFramesPlatforms() {
 		results[3] = runPyramid<OpenClFrame>(data);
 	}
 	std::cout << std::endl;
-	//results[0].input.saveAsBMP("f:/0.bmp");
-	//results[2].input.saveAsBMP("f:/2.bmp");
-	//results[0].input.saveAsPPM("f:/in.ppm");
+	//results[0].input.saveAsColorBMP("f:/0.bmp");
+	//results[1].input.saveAsColorBMP("f:/1.bmp");
 	//results[2].output.saveAsBinary("f:/2.dat");
 	//results[0].image.saveAsColorBMP("f:/0.bmp");
 	//results[1].image.saveAsColorBMP("f:/1.bmp");
@@ -130,7 +129,6 @@ void compareFramesPlatforms() {
 		std::cout << (r1.input == r2.input ? "input EQUAL" : "input DIFFER <<<<<<<") << std::endl;
 		std::cout << std::endl;
 	}
-	return;
 
 	//compare results
 	for (int i = 1; i < results.size(); i++) {

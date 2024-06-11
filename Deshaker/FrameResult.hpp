@@ -48,4 +48,6 @@ private:
 
 	void computeExperimental(std::vector<PointResult>& results, ThreadPool& threadPool, int64_t frameIndex, RNGbase* rng);
 	void compute(std::vector<PointResult>& results, ThreadPool& threadPool, int64_t frameIndex, RNGbase* rng);
+
+	double sqr(double value);
 };

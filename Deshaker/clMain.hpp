@@ -54,13 +54,13 @@ namespace cl {
 	void computeTerminate(int64_t frameIdx, const CoreData& core, std::vector<PointResult>& results);
 	void outputData(int64_t frameIdx, const CoreData& core, std::array<double, 6> trf);
 	void outputDataCpu(int64_t frameIndex, const CoreData& core, ImageYuv& image);
-	void outputDataCpu(int64_t frameIndex, const CoreData& core, ImageARGB& argb);
+	void outputDataCpu(int64_t frameIndex, const CoreData& core, ImageRGBA& argb);
 
 	void getInput(int64_t idx, ImageYuv& image, const CoreData& core);
 	Matf getTransformedOutput(const CoreData& core);
 	void getPyramid(float* pyramid, size_t idx, const CoreData& core);
-	void getCurrentInputFrame(ImagePPM& image, int64_t idx);
-	void getTransformedOutput(ImagePPM& image);
+	void getCurrentInputFrame(ImageRGBA& image, int64_t idx);
+	void getTransformedOutput(ImageRGBA& image);
 
 	void readImage(Image src, size_t destPitch, void* dest, CommandQueue queue);
 	void compute(int64_t frameIdx, const CoreData& core, int rowStart, int rowEnd);

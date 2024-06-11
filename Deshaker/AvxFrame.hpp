@@ -38,13 +38,13 @@ public:
 	void computeTerminate(int64_t frameIndex) override;
 	void outputData(const AffineTransform& trf) override;
 	void getOutput(int64_t frameIndex, ImageYuv& image) override;
-	void getOutput(int64_t frameIndex, ImageARGB& argb) override;
+	void getOutput(int64_t frameIndex, ImageRGBA& image) override;
 	void getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) override;
 	Mat<float> getTransformedOutput() const override;
 	Mat<float> getPyramid(size_t idx) const override;
 	void getInput(int64_t index, ImageYuv& image) const override;
-	void getInput(int64_t frameIndex, ImagePPM& image) override;
-	void getWarped(int64_t frameIndex, ImagePPM& image) override;
+	void getInput(int64_t frameIndex, ImageRGBA& image) override;
+	void getWarped(int64_t frameIndex, ImageRGBA& image) override;
 	MovieFrameId getId() const override;
 
 private:
@@ -76,6 +76,8 @@ private:
 	VF16 interpolate(VF16 f00, VF16 f10, VF16 f01, VF16 f11, VF16 dx, VF16 dy, VF16 dx1, VF16 dy1);
 
 	void yuvToFloat(const ImageYuv& yuv, size_t plane, AvxMatFloat& dest);
-	void yuvToRgb(const unsigned char* y, const unsigned char* u, const unsigned char* v, int h, int w, int stride, ImagePPM& dest);
-	void yuvToRgb(const float* y, const float* u, const float* v, int h, int w, int stride, ImagePPM& dest);
+	void yuvToRgba(const unsigned char* y, const unsigned char* u, const unsigned char* v, int h, int w, int stride, ImageRGBA& dest);
+	void yuvToRgba(const float* y, const float* u, const float* v, int h, int w, int stride, ImageRGBA& dest);
+
+	int align(int base, int alignment);
 };

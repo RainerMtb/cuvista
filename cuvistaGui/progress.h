@@ -34,13 +34,13 @@ private:
 signals:
     void cancel();
     void sigProgress(bool isFinite, double value);
-    void sigUpdateInput(QPixmap pm, QString time);
-    void sigUpdateOutput(QPixmap pm, QString time);
+    void sigUpdateInput(QImage im, QString time);
+    void sigUpdateOutput(QImage im, QString time);
 
 public slots:
     void progress(bool isFinite, double value);
-    void updateInput(QPixmap pm, QString time);
-    void updateOutput(QPixmap pm, QString time);
+    void updateInput(QImage pm, QString time);
+    void updateOutput(QImage pm, QString time);
 
 public:
     ProgressWindow(QWidget* parent);
@@ -54,16 +54,16 @@ public:
 class ProgressGui : public ProgressDisplay {
 
 private:
-    ImagePPM ppmInput;
-    ImagePPM ppmOutput;
+    ImageRGBA input;
+    ImageRGBA output;
     std::chrono::steady_clock::time_point timePoint = std::chrono::steady_clock::now();
     ProgressWindow* progressWindow;
 
 public:
     ProgressGui(MainData& data, MovieFrame& frame, ProgressWindow* progressWindow) :
         ProgressDisplay(frame, 50),
-        ppmInput(data.h, data.w),
-        ppmOutput(data.h, data.w),
+        input(data.h, data.w),
+        output(data.h, data.w),
         progressWindow { progressWindow } {}
 
     void update(bool force = false) override;

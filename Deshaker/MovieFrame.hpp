@@ -62,15 +62,15 @@ public:
 	//prepare data for encoding on cpu
 	virtual void getOutput(int64_t frameIndex, ImageYuv& image) = 0;
 	//prepare data for encoding on cpu
-	virtual void getOutput(int64_t frameIndex, ImageARGB& argb) = 0;
+	virtual void getOutput(int64_t frameIndex, ImageRGBA& argb) = 0;
 	//prepare data for encoding on cuda
 	virtual void getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) = 0;
 	//output rgb data warped but not unsharped
-	virtual void getWarped(int64_t frameIndex, ImagePPM& image) = 0;
+	virtual void getWarped(int64_t frameIndex, ImageRGBA& image) = 0;
 	//get input image as stored in frame buffers
 	virtual void getInput(int64_t frameIndex, ImageYuv& image) const {}
 	//get input image as stored in frame buffers
-	virtual void getInput(int64_t frameIndex, ImagePPM& image) {}
+	virtual void getInput(int64_t frameIndex, ImageRGBA& image) {}
 
 	/*
 	* run the stabilizing loop
@@ -185,9 +185,9 @@ public:
 	void computeTerminate(int64_t frameIndex) override {}
 	void outputData(const AffineTransform& trf) override;
 	void getOutput(int64_t frameIndex, ImageYuv& image) override;
-	void getOutput(int64_t frameIndex, ImageARGB& argb) override;
+	void getOutput(int64_t frameIndex, ImageRGBA& image) override;
 	void getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) override;
-	void getWarped(int64_t frameIndex, ImagePPM& image) override;
+	void getWarped(int64_t frameIndex, ImageRGBA& image) override;
 	void getInput(int64_t frameIndex, ImageYuv& image) const override;
 };
 
@@ -208,6 +208,6 @@ public:
 	void outputData(const AffineTransform& trf) override {};
 	void getOutput(int64_t frameIndex, ImageYuv& image) override {};
 	void getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) override {};
-	void getOutput(int64_t frameIndex, ImageARGB& argb) override {};
-	void getWarped(int64_t frameIndex, ImagePPM& image) override {};
+	void getOutput(int64_t frameIndex, ImageRGBA& image) override {};
+	void getWarped(int64_t frameIndex, ImageRGBA& image) override {};
 };

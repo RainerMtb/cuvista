@@ -26,7 +26,7 @@
 
 AvxFrame::AvxFrame(MainData& data, MovieReader& reader, MovieWriter& writer) :
 	MovieFrame(data, reader, writer),
-	pitch { alignValue(data.w, walign) } 
+	pitch { align(data.w, walign) } 
 {
 	for (int i = 0; i < data.bufferCount; i++) mYUV.emplace_back(data.h, data.w, data.cpupitch);
 	mPyr.assign(data.pyramidCount, AvxMatFloat(data.pyramidRowCount, data.w, 0.0f));
@@ -36,10 +36,14 @@ AvxFrame::AvxFrame(MainData& data, MovieReader& reader, MovieWriter& writer) :
 	mWarped.push_back(AvxMatFloat(data.h, pitch, data.bgcol_yuv.colors[1]));
 	mWarped.push_back(AvxMatFloat(data.h, pitch, data.bgcol_yuv.colors[2]));
 
-	mFilterBuffer = AvxMatFloat(data.w, alignValue(data.h, walign)); //transposed
+	mFilterBuffer = AvxMatFloat(data.w, align(data.h, walign)); //transposed
 	mFilterResult = AvxMatFloat(data.h, pitch);
 
 	mOutput.assign(3, AvxMatFloat(data.h, pitch));
+}
+
+int AvxFrame::align(int base, int alignment) {
+	return (base + alignment - 1) / alignment * alignment;
 }
 
 //---------------------------------
@@ -105,7 +109,7 @@ void AvxFrame::getOutput(int64_t frameIndex, ImageYuv& image) {
 	image.index = frameIndex;
 }
 
-void AvxFrame::getOutput(int64_t frameIndex, ImageARGB& argb) {
+void AvxFrame::getOutput(int64_t frameIndex, ImageRGBA& image) {
 	//TODO
 }
 
@@ -119,18 +123,18 @@ Matf AvxFrame::getTransformedOutput() const {
 	return Matf::concatVert(mWarped[0].toMatf(), mWarped[1].toMatf(), mWarped[2].toMatf());
 }
 
-void AvxFrame::getWarped(int64_t frameIndex, ImagePPM& image) {
-	yuvToRgb(mWarped[0].data(), mWarped[1].data(), mWarped[2].data(), mData.h, mData.w, pitch, image);
+void AvxFrame::getWarped(int64_t frameIndex, ImageRGBA& image) {
+	yuvToRgba(mWarped[0].data(), mWarped[1].data(), mWarped[2].data(), mData.h, mData.w, pitch, image);
 }
 
 Matf AvxFrame::getPyramid(size_t idx) const {
 	return mPyr[idx].copyToMatf();
 }
 
-void AvxFrame::getInput(int64_t frameIndex, ImagePPM& image) {
+void AvxFrame::getInput(int64_t frameIndex, ImageRGBA& image) {
 	size_t idx = frameIndex % mYUV.size();
 	ImageYuv& yuv = mYUV[idx];
-	yuvToRgb(yuv.plane(0), yuv.plane(1), yuv.plane(2), mData.h, mData.w, yuv.stride, image);
+	yuvToRgba(yuv.plane(0), yuv.plane(1), yuv.plane(2), mData.h, mData.w, yuv.stride, image);
 }
 
 void AvxFrame::getInput(int64_t index, ImageYuv& image) const {
@@ -443,36 +447,28 @@ void AvxFrame::write(std::span<unsigned char> nv12, int cudaPitch) {
 }
 
 //from uchar yuv to uchar rgb
-void AvxFrame::yuvToRgb(const unsigned char* y, const unsigned char* u, const unsigned char* v, int h, int w, int stride, ImagePPM& dest) {
+void AvxFrame::yuvToRgba(const unsigned char* y, const unsigned char* u, const unsigned char* v, int h, int w, int stride, ImageRGBA& dest) {
 	for (int r = 0; r < h; r++) {
-		for (int c = 0; c < w; c += 16) {
-			int n = std::min(16, w - c);
-			__mmask16 maskLoad = (1LL << n) - 1;
-			VF16 yy(y + r * stride + c, maskLoad);
-			VF16 uu(u + r * stride + c, maskLoad);
-			VF16 vv(v + r * stride + c, maskLoad);
-			__m512i rgb = Avx::yuvToRgbPacked(yy, uu, vv);
-
-			__mmask64 mask = (1LL << n * 3) - 1;
-			_mm512_mask_storeu_epi8(dest.addr(0, r, c), mask, rgb);
+		for (int c = 0; c < w; c += 4) {
+			VF4 vecy = y + r * stride + c;
+			VF4 vecu = u + r * stride + c;
+			VF4 vecv = v + r * stride + c;
+			__m128i rgba = Avx::yuvToRgbaPacked(vecy, vecu, vecv);
+			_mm_storeu_epi8(dest.addr(0, r, c), rgba);
 		}
 	}
 }
 
 //from float yuv to uchar rgb
-void AvxFrame::yuvToRgb(const float* y, const float* u, const float* v, int h, int w, int stride, ImagePPM& dest) {
-	VF16 ps_255 = 255.0f;
+void AvxFrame::yuvToRgba(const float* y, const float* u, const float* v, int h, int w, int stride, ImageRGBA& dest) {
+	VF4 f = 255.0f;
 	for (int r = 0; r < h; r++) {
-		for (int c = 0; c < w; c += 16) {
-			int n = std::min(16, w - c);
-			__mmask16 maskLoad = (1LL << n) - 1;
-			VF16 ps_y(y + r * stride + c, maskLoad);
-			VF16 ps_u(u + r * stride + c, maskLoad);
-			VF16 ps_v(v + r * stride + c, maskLoad);
-			__m512i rgb = Avx::yuvToRgbPacked(ps_y * ps_255, ps_u * ps_255, ps_v * ps_255);
-
-			__mmask64 mask = (1LL << n * 3) - 1;
-			_mm512_mask_storeu_epi8(dest.addr(0, r, c), mask, rgb);
+		for (int c = 0; c < w; c += 4) {
+			VF4 vecy = y + r * stride + c;
+			VF4 vecu = u + r * stride + c;
+			VF4 vecv = v + r * stride + c;
+			__m128i rgba = Avx::yuvToRgbaPacked(vecy * f, vecu * f, vecv * f);
+			_mm_storeu_epi8(dest.addr(0, r, c), rgba);
 		}
 	}
 }

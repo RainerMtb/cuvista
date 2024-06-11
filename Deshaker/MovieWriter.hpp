@@ -331,12 +331,11 @@ public:
 class OpticalFlowWriter : public FFmpegWriter, public AuxiliaryWriter {
 
 protected:
-	ImageRGB imageResults;
-	ImageBGR imageInterpolated;
-	AVRational timeBase = { 1, 10 };
-
 	int legendSize = 64;
-	ImageARGB legend = ImageARGB(legendSize, legendSize);
+	ImageRGBA legend = ImageRGBA(legendSize, legendSize);
+	ImageRGBA imageInterpolated;
+	ImageRGBplanar imageResults;
+	AVRational timeBase = { 1, 10 };
 
 	void open(const std::string& sourceName);
 	void writeFlow(const MovieFrame& frame);

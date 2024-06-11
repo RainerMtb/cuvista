@@ -33,7 +33,7 @@
       <Filter>Common</Filter>
     </ClInclude>
     <ClInclude Include="DeviceInfoCuda.cuh">
-      <Filter>Util</Filter>
+      <Filter>Common</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -20,11 +20,11 @@
 
 #include <array>
 
-int alignValue(int numToRound, int base);
-
-double sqr(double d);
-
 namespace im {
+
+	int alignValue(int numToRound, int base);
+
+	double sqr(double d);
 
 	void yuv_to_rgb(unsigned char y, unsigned char u, unsigned char v, unsigned char* r, unsigned char* g, unsigned char* b);
 

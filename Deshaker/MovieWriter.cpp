@@ -224,7 +224,7 @@ void OpticalFlowWriter::open() {
 void OpticalFlowWriter::vectorToColor(double dx, double dy, unsigned char* r, unsigned char* g, unsigned char* b) {
 	const double f = 20.0;
 	double hue = std::atan2(dy, dx) / std::numbers::pi * 180.0 + 180.0;
-	double val = std::clamp(std::sqrt(sqr(dx) + sqr(dy)) / f, 0.0, 1.0);
+	double val = std::clamp(std::sqrt(dx * dx + dy * dy) / f, 0.0, 1.0);
 	im::hsv_to_rgb(hue, 1.0, val, r, g, b);
 }
 
@@ -258,7 +258,7 @@ void OpticalFlowWriter::open(const std::string& sourceName) {
 	FFmpegWriter::openEncoder(codec, sourceName);
 
 	//setup scaler to accept RGB
-	sws_scaler_ctx = sws_getContext(mData.w, mData.h, AV_PIX_FMT_BGR24, mData.w, mData.h, pixfmt, SWS_BICUBIC, NULL, NULL, NULL);
+	sws_scaler_ctx = sws_getContext(mData.w, mData.h, AV_PIX_FMT_RGBA, mData.w, mData.h, pixfmt, SWS_BILINEAR, NULL, NULL, NULL);
 	if (!sws_scaler_ctx)
 		throw AVException("Could not get scaler context");
 
@@ -268,10 +268,13 @@ void OpticalFlowWriter::open(const std::string& sourceName) {
 		double dy = r - y;
 		for (int x = 0; x < legendSize; x++) {
 			double dx = r - x;
-			double dist = std::sqrt(sqr(dx) + sqr(dy));
+			double dist = std::sqrt(dx * dx + dy * dy);
 			if (dist < r) {
-				legend.at(0, y, x) = 1;
-				vectorToColor(dx, -dy, legend.addr(1, y, x), legend.addr(2, y, x), legend.addr(3, y, x));
+				legend.at(3, y, x) = 0xFF;
+				vectorToColor(dx, -dy, legend.addr(0, y, x), legend.addr(1, y, x), legend.addr(2, y, x));
+
+			} else {
+				legend.at(3, y, x) = 0;
 			}
 		}
 	}
@@ -284,7 +287,7 @@ void OpticalFlowWriter::writeFlow(const MovieFrame& frame) {
 	std::vector<PointResult> results = frame.mResultPoints;
 	for (const PointResult& pr : results) {
 		if (pr.isValid()) {
-			vectorToColor(-pr.u, pr.v, imageResults.addr(2, pr.iy0, pr.ix0), imageResults.addr(1, pr.iy0, pr.ix0), imageResults.addr(0, pr.iy0, pr.ix0));
+			vectorToColor(-pr.u, pr.v, imageResults.addr(0, pr.iy0, pr.ix0), imageResults.addr(1, pr.iy0, pr.ix0), imageResults.addr(2, pr.iy0, pr.ix0));
 
 		} else {
 			//invalid result is gray pixel
@@ -335,9 +338,9 @@ void OpticalFlowWriter::write(const MovieFrame& frame) {
 	//imageInterpolated.saveAsBMP("f:/im.bmp");
 
 	//stamp color legend onto image
-	legend.copyMasked(imageInterpolated, 0ull + mData.h - 10 - legendSize, 10);
+	legend.copyTo(imageInterpolated, 0ull + mData.h - 10 - legendSize, 10);
 
-	//encode bgr image
+	//encode rgba image
 	uint8_t* src[] = { imageInterpolated.data(), nullptr, nullptr, nullptr};
 	int strides[] = { imageInterpolated.stride, 0, 0, 0 };
 	int sliceHeight = sws_scale(sws_scaler_ctx, src, strides, 0, imageInterpolated.h, av_frame->data, av_frame->linesize);

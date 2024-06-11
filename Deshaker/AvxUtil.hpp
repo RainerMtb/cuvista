@@ -28,7 +28,7 @@ namespace Avx {
 
 	void transpose16x4(std::span<VF16> data);
 
-	__m512i yuvToRgbPacked(VF16 y, VF16 u, VF16 v);
+	__m128i yuvToRgbaPacked(VF4 y, VF4 u, VF4 v);
 
 	void inv(std::span<VD8> v);
 

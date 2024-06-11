@@ -397,7 +397,7 @@ template <class T> bool im::ImageBase<T>::saveAsBMP(const std::string& filename,
 
 	for (int i = numPlanes - 1; i >= 0; i--) {
 		for (int r = h - 1; r >= 0; r--) {
-			//prepare one line of bgr data
+			//prepare one line of data
 			for (int c = 0; c < w; c++) data[c] = (unsigned char) std::round(at(i, r, c) * scale);
 			//write strided line
 			os.write(data.data(), stridedWidth);

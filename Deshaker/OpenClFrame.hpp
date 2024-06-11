@@ -61,7 +61,7 @@ public:
 		cl::outputDataCpu(frameIndex, mData, image);
 	}
 
-	void getOutput(int64_t frameIndex, ImageARGB& argb) override {
+	void getOutput(int64_t frameIndex, ImageRGBA& argb) override {
 		cl::outputDataCpu(frameIndex, mData, argb);
 	}
 
@@ -69,7 +69,7 @@ public:
 		throw std::exception("not supported");
 	}
 
-	void getWarped(int64_t frameIndex, ImagePPM& image) override {
+	void getWarped(int64_t frameIndex, ImageRGBA& image) override {
 		cl::getTransformedOutput(image);
 	}
 
@@ -87,7 +87,7 @@ public:
 		return cl::getInput(idx, image, mData);
 	}
 
-	void getInput(int64_t frameIndex, ImagePPM& image) override {
+	void getInput(int64_t frameIndex, ImageRGBA& image) override {
 		cl::getCurrentInputFrame(image, frameIndex);
 	}
 

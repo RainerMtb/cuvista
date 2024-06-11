@@ -30,13 +30,15 @@ public:
 
 	VF16(float a) : a { _mm512_set1_ps(a) } {}
 
-	VF16(float a, float b) : VF16(a, b, a, b, a, b, a, b, a, b, a, b, a, b, a, b) {}
-
 	VF16(__m512 a) : a { a } {}
 
 	VF16(float v0, float v1, float v2, float v3, float v4, float v5, float v6, float v7,
 		float v8, float v9, float v10, float v11, float v12, float v13, float v14, float v15) :
 		a { _mm512_setr_ps(v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15) } {}
+
+	VF16(float a, float b) : VF16(a, b, a, b, a, b, a, b, a, b, a, b, a, b, a, b) {}
+
+	VF16(float a, float b, float c, float d) : VF16(a, b, c, d, a, b, c, d, a, b, c, d, a, b, c, d) {}
 
 	VF16(const float* data) : a { _mm512_loadu_ps(data) } {}
 
@@ -86,11 +88,11 @@ public:
 		return _mm512_min_ps(_mm512_max_ps(a, lo.a), hi.a);
 	}
 
-	void storeu(float* dest) {
+	void storeu(float* dest) const {
 		_mm512_storeu_ps(dest, a);
 	}
 
-	void storeu(float* dest, __mmask16 mask) {
+	void storeu(float* dest, __mmask16 mask) const {
 		_mm512_mask_storeu_ps(dest, mask, a);
 	}
 
@@ -107,12 +109,12 @@ public:
 
 	VF8(float a) : a { _mm256_set1_ps(a) } {}
 
-	VF8(float a, float b) : VF8(a, b, a, b, a, b, a, b) {}
-
 	VF8(__m256 a) : a { a } {}
 
 	VF8(float v0, float v1, float v2, float v3, float v4, float v5, float v6, float v7) :
 		a { _mm256_setr_ps(v0, v1, v2, v3, v4, v5, v6, v7) } {}
+
+	VF8(float a, float b) : VF8(a, b, a, b, a, b, a, b) {}
 
 	VF8(const float* data) : a { _mm256_loadu_ps(data) } {}
 
@@ -162,15 +164,91 @@ public:
 		return _mm256_min_ps(_mm256_max_ps(a, lo.a), hi.a);
 	}
 
-	void storeu(float* dest) {
+	void storeu(float* dest) const {
 		_mm256_storeu_ps(dest, a);
 	}
 
-	void storeu(float* dest, __mmask8 mask) {
+	void storeu(float* dest, __mmask8 mask) const {
 		_mm256_mask_storeu_ps(dest, mask, a);
 	}
 
 	operator __m256() { return a; }
+};
+
+
+//wrapper for _m128 (128 bits - 4 floats)
+class VF4 {
+	__m128 a;
+
+public:
+	VF4() : a { _mm_setzero_ps() } {}
+
+	VF4(float a) : a { _mm_set_ps1(a) } {}
+
+	VF4(__m128 a) : a { a } {}
+
+	VF4(float v0, float v1, float v2, float v3) :
+		a { _mm_setr_ps(v0, v1, v2, v3) } {}
+
+	VF4(float a, float b) : VF4(a, b, a, b) {}
+
+	VF4(const float* data) : a { _mm_loadu_ps(data) } {}
+
+	VF4(const float* data, __mmask8 mask) : a { _mm_maskz_load_ps(mask, data) } {}
+
+	VF4(const unsigned char* data) : a { _mm_cvtepu32_ps(_mm_cvtepu8_epi32(_mm_maskz_loadu_epi8(0xF, data))) } {}
+
+	VF4(const unsigned char* data, __mmask8 mask) : a { _mm_cvtepu32_ps(_mm_cvtepu8_epi32(_mm_maskz_loadu_epi8(mask, data))) } {}
+
+	VF4 operator + (VF4 other) { return _mm_add_ps(a, other.a); }
+	VF4 operator - (VF4 other) { return _mm_sub_ps(a, other.a); }
+	VF4 operator * (VF4 other) { return _mm_mul_ps(a, other.a); }
+	VF4 operator / (VF4 other) { return _mm_div_ps(a, other.a); }
+	VF4 operator += (VF4 other) { a = _mm_add_ps(a, other.a); return *this; }
+	VF4 operator -= (VF4 other) { a = _mm_sub_ps(a, other.a); return *this; }
+	VF4 operator *= (VF4 other) { a = _mm_mul_ps(a, other.a); return *this; }
+	VF4 operator /= (VF4 other) { a = _mm_div_ps(a, other.a); return *this; }
+	VF4 add(VF4 other) { return _mm_add_ps(a, other.a); }
+	VF4 sub(VF4 other) { return _mm_sub_ps(a, other.a); }
+	VF4 mul(VF4 other) { return _mm_mul_ps(a, other.a); }
+	VF4 div(VF4 other) { return _mm_div_ps(a, other.a); }
+
+	template <int i> VF4 rot() { return _mm_castsi128_ps(_mm_alignr_epi32(_mm_castps_si128(a), _mm_castps_si128(a), i)); }
+
+	float operator [] (size_t i) const { return at(i); }
+	float& operator [] (size_t i) { return at(i); }
+
+	float at(size_t i) const { return a.m128_f32[i]; }
+	float& at(size_t i) { return a.m128_f32[i]; }
+
+	friend std::ostream& operator << (std::ostream& os, const VF4& vec) {
+		for (int i = 0; i < 4; i++) os << vec[i] << " ";
+		return os;
+	}
+
+	float sum(int from, int to) const {
+		float sum = 0.0f;
+		for (int i = from; i < to; i++) sum += at(i);
+		return sum;
+	}
+
+	float sum() const {
+		return at(0) + at(1) + at(2) + at(3);
+	}
+
+	VF4 clamp(VF4 lo, VF4 hi) const {
+		return _mm_min_ps(_mm_max_ps(a, lo.a), hi.a);
+	}
+
+	void storeu(float* dest) const {
+		_mm_storeu_ps(dest, a);
+	}
+
+	void storeu(float* dest, __mmask8 mask) const {
+		_mm_mask_storeu_ps(dest, mask, a);
+	}
+
+	operator __m128() { return a; }
 };
 
 
@@ -238,11 +316,11 @@ public:
 		return _mm512_min_pd(_mm512_max_pd(a, lo.a), hi.a);
 	}
 
-	void storeu(double* dest) {
+	void storeu(double* dest) const {
 		_mm512_storeu_pd(dest, a);
 	}
 
-	void storeu(double* dest, __mmask8 mask) {
+	void storeu(double* dest, __mmask8 mask) const {
 		_mm512_mask_storeu_pd(dest, mask, a);
 	}
 
