@@ -20,8 +20,8 @@
 #include "ProgressDisplay.hpp"
 #include "Util.hpp"
 
-std::string MovieFrame::getTimeForFrame(uint64_t frameIndex) {
-	return mReader.getTimeForFrame(frameIndex);
+std::string MovieFrame::dtsForFrameString(int64_t frameIndex) {
+	return mReader.dtsForFrameString(frameIndex).value_or("");
 }
 
 //shutdown

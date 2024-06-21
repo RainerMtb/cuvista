@@ -58,10 +58,13 @@ class ImageRGBA : public im::ImagePacked<unsigned char> {
 
 public:
 	ImageRGBA(int h, int w, int stride, unsigned char* data) :
-		ImagePacked(h, w, stride, 4, data, h* stride) {}
+		ImagePacked(h, w, stride, 4, data, h * stride) {}
+
+	ImageRGBA(int h, int w, int stride) :
+		ImagePacked(h, w, 4 * stride, 4, 4 * h * stride) {}
 
 	ImageRGBA(int h, int w) :
-		ImagePacked(h, w, 4 * w, 4, 4 * h * w) {}
+		ImageRGBA(h, w, w) {}
 
 	ImageRGBA() :
 		ImageRGBA(0, 0) {}
@@ -155,35 +158,17 @@ public:
 	ImagePPM() :
 		ImagePPM(0, 0) {}
 
-	const unsigned char* data() const override {
-		return arrays.at(0).get() + headerSize;
-	}
+	const unsigned char* data() const override;
 
-	unsigned char* data() override {
-		return arrays.at(0).get() + headerSize;
-	}
+	unsigned char* data() override;
 
-	size_t size() const override {
-		return 3ull * h * w;
-	}
+	size_t size() const override;
 
-	size_t bytes() const override {
-		return imageSize;
-	}
+	size_t bytes() const override;
 
-	const unsigned char* header() const {
-		return arrays.at(0).get();
-	}
+	const unsigned char* header() const;
 
-	bool saveAsPPM(const std::string& filename) const {
-		std::ofstream os(filename, std::ios::binary);
-		os.write(reinterpret_cast<const char*>(arrays.at(0).get()), size());
-		return os.good();
-	}
+	bool saveAsPPM(const std::string& filename) const;
 
-	bool saveAsColorBMP(const std::string& filename) const {
-		ImageBGR bgr(h, w);
-		copyTo(bgr, { 0, 1, 2 }, { 2, 1, 0 });
-		return bgr.saveAsColorBMP(filename);
-	}
+	bool saveAsColorBMP(const std::string& filename) const;
 };

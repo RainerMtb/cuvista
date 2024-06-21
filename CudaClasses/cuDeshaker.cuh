@@ -117,7 +117,7 @@ void cudaOutputCpu(int64_t frameIndex, ImageYuv& image, const CudaData& core);
 /*
 @brief output pixel data in ARGB format to host
 */
-void cudaOutputCpu(int64_t frameIndex, ImageRGBA& image, const CudaData& mData);
+void cudaOutputCpu(int64_t frameIndex, ImageRGBA& image, const CudaData& core);
 
 /*
 @brief output pixel data to cuda encoding
@@ -153,17 +153,17 @@ void cudaGetTransformedOutput(float* warpedData, const CudaData& core);
 /*
 @brief get pyramid image for given index
 */
-void cudaGetPyramid(float* pyramid, size_t idx, const CudaData& core);
+void cudaGetPyramid(float* pyramid, const CudaData& core, int64_t frameIndex);
 
 /*
 @brief get input iomage from buffers
 */
-void cudaGetInput(int64_t index, ImageYuv& image, const CudaData& core);
+void cudaGetInput(ImageYuv& image, const CudaData& core, int64_t frameIndex);
 
 /*
 @brief get current input frame for progress display
 */
-void cudaGetCurrentInputFrame(ImageRGBA& image, const CudaData& core, int64_t idx);
+void cudaGetCurrentInputFrame(ImageRGBA& image, const CudaData& core, int64_t frameIndex);
 
 /*
 @brief get current output frame for progress display

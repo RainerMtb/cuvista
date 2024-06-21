@@ -58,6 +58,9 @@
     <ClCompile Include="player.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="PlayerWidget.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="ImageLabel.h">
@@ -89,6 +92,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="UserInputGui.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PlayerWidget.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

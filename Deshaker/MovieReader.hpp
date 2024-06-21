@@ -21,6 +21,7 @@
 #include "AVException.hpp"
 #include "Stats.hpp"
 #include "Image2.hpp"
+#include <optional>
 
 class MovieReader : public ReaderStats {
 
@@ -37,7 +38,9 @@ public:
 	virtual void close() {}
 	virtual void rewind() {}
 	virtual void seek(double fraction) {}
-	virtual std::string getTimeForFrame(uint64_t frameIndex);
+
+	std::optional<std::string> dtsForFrameString(int64_t frameIndex);
+	std::optional<int64_t> dtsForFrameMillis(int64_t frameIndex);
 };
 
 //main class to decode input

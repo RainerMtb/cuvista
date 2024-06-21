@@ -395,8 +395,14 @@ void cl::outputDataCpu(int64_t frameIndex, const CoreData& core, ImageYuv& image
 	}
 }
 
-void cl::outputDataCpu(int64_t frameIndex, const CoreData& core, ImageRGBA& argb) {
-	//TODO
+void cl::outputDataCpu(int64_t frameIndex, const CoreData& core, ImageRGBA& image) {
+	try {
+		//TODO
+		image.index = frameIndex;
+
+	} catch (const Error& err) {
+		errorLogger.logError("OpenCL output error: ", err.what());
+	}
 }
 
 //utility function to read from image
@@ -406,8 +412,8 @@ void cl::readImage(Image src, size_t destPitch, void* dest, CommandQueue queue) 
 	queue.enqueueReadImage(src, CL_TRUE, Size2(), Size2(w, h), destPitch, 0, dest);
 }
 
-void cl::getPyramid(float* pyramid, size_t idx, const CoreData& core) {
-	size_t pyrIdx = idx % core.pyramidCount;
+void cl::getPyramid(float* pyramid, int64_t index, const CoreData& core) {
+	size_t pyrIdx = index % core.pyramidCount;
 	size_t wbytes = core.w * sizeof(float);
 
 	try {

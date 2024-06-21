@@ -18,10 +18,8 @@
 
 #pragma once
 
-#include <iostream>
 #include <chrono>
 #include <string>
-#include <vector>
 
 //misc stuff
 namespace util {
@@ -30,13 +28,13 @@ namespace util {
     class ConsoleTimer {
 
     private:
-        std::chrono::time_point<std::chrono::high_resolution_clock> mStart, mInterval;
+        std::chrono::time_point<std::chrono::steady_clock> mStart, mInterval;
         std::string mName;
 
     public:
         ConsoleTimer(std::string&& name) : 
             mName { name }, 
-            mStart { std::chrono::high_resolution_clock::now() }, 
+            mStart { std::chrono::steady_clock::now() },
             mInterval { mStart } {}
 
         void interval(const std::string& name);
@@ -49,4 +47,10 @@ namespace util {
 
     //convert a number of bytes into more readable magnitude kb, Mb
     std::string byteSizeToString(int64_t bytes);
+
+    //set timer start time
+    void tickStart();
+
+    //print elapsed time since start to console
+    void tick(const std::string& message);
 }

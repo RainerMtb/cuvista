@@ -31,15 +31,17 @@ std::future<void> MovieReader::readAsync(ImageYuv& inputFrame) {
     return std::async(std::launch::async, [&] { read(inputFrame); });
 }
 
-std::string MovieReader::getTimeForFrame(uint64_t frameIndex) {
-    std::string t;
+std::optional<int64_t> MovieReader::dtsForFrameMillis(int64_t frameIndex) {
     auto fcn = [&] (const VideoPacketContext& vpc) { return vpc.readIndex == frameIndex; };
     auto result = std::find_if(packetList.cbegin(), packetList.cend(), fcn);
-    if (result != packetList.end()) {
-        int64_t millis = result->bestTimestamp * 1000 * videoStream->time_base.num / videoStream->time_base.den;
-        t = timeString(millis);
-    }
-    return t;
+    if (result != packetList.end()) return result->bestTimestamp * 1000 * videoStream->time_base.num / videoStream->time_base.den;
+    else return std::nullopt;
+}
+
+std::optional<std::string> MovieReader::dtsForFrameString(int64_t frameIndex) {
+    auto millis = dtsForFrameMillis(frameIndex);
+    if (millis.has_value()) return timeString(millis.value());
+    else return std::nullopt;
 }
 
 

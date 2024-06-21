@@ -16,50 +16,74 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
+#include <iostream>
 #include "Util.hpp"
 
-void util::ConsoleTimer::interval(const std::string& name) {
-    auto interval = std::chrono::high_resolution_clock::now();
-    auto delta = std::chrono::duration_cast<std::chrono::microseconds>(interval - mInterval);
-    mInterval = interval;
-    std::cout << mName << ":" << name << "=" << delta.count() / 1000.0 << " ms" << std::endl;
-}
+namespace util {
 
-util::ConsoleTimer::~ConsoleTimer() {
-    auto stop = std::chrono::high_resolution_clock::now();
-    auto delta = std::chrono::duration_cast<std::chrono::microseconds>(stop - mStart);
-    std::cout << mName << "=" << delta.count() / 1000.0 << " ms" << std::endl;
-}
-
-std::string util::concatStrings(std::vector<std::string> strings, std::string_view delimiter, std::string_view prefix, std::string_view suffix) {
-	std::string out = "";
-	auto it = strings.begin();
-
-	if (strings.size() > 0) {
-		out += prefix;
-		out += *it;
-		it++;
+	void ConsoleTimer::interval(const std::string& name) {
+		auto interval = std::chrono::steady_clock::now();
+		auto delta = std::chrono::duration_cast<std::chrono::microseconds>(interval - mInterval);
+		mInterval = interval;
+		std::cout << mName << ":" << name << "=" << delta.count() / 1000.0 << " ms" << std::endl;
 	}
 
-	while (it != strings.end()) {
-		out += delimiter;
-		out += *it;
-		it++;
+	ConsoleTimer::~ConsoleTimer() {
+		auto stop = std::chrono::steady_clock::now();
+		auto delta = std::chrono::duration_cast<std::chrono::microseconds>(stop - mStart);
+		std::cout << mName << "=" << delta.count() / 1000.0 << " ms" << std::endl;
 	}
 
-	if (strings.size() > 0) {
-		out += suffix;
-	}
-	return out;
-}
+	std::string concatStrings(std::vector<std::string> strings, std::string_view delimiter, std::string_view prefix, std::string_view suffix) {
+		std::string out = "";
+		auto it = strings.begin();
 
-std::string util::byteSizeToString(int64_t bytes) {
-	if (bytes < 0)
-		return "N/A";
-	else if (bytes < 1024ull)
-		return std::format("{} bytes", bytes);
-	else if (bytes < 1024ull * 1024ull) 
-		return std::format("{:.1f} kb", bytes / 1024.0);
-	else 
-		return std::format("{:.1f} Mb", bytes / 1048576.0);
+		if (strings.size() > 0) {
+			out += prefix;
+			out += *it;
+			it++;
+		}
+
+		while (it != strings.end()) {
+			out += delimiter;
+			out += *it;
+			it++;
+		}
+
+		if (strings.size() > 0) {
+			out += suffix;
+		}
+		return out;
+	}
+
+	std::string byteSizeToString(int64_t bytes) {
+		if (bytes < 0)
+			return "N/A";
+		else if (bytes < 1024ull)
+			return std::format("{} bytes", bytes);
+		else if (bytes < 1024ull * 1024ull)
+			return std::format("{:.1f} kb", bytes / 1024.0);
+		else
+			return std::format("{:.1f} Mb", bytes / 1048576.0);
+	}
+
+
+	std::chrono::time_point tp = std::chrono::steady_clock::now();
+
+	void tickStart() {
+		tp = std::chrono::steady_clock::now();
+	}
+
+	void tick(const std::string& message) {
+		auto time = std::chrono::steady_clock::now();
+		uint64_t ns = (time - tp).count();
+
+		std::string str = "";
+		if (ns > 1e9) str = std::format("{:.1f} s: {}", ns / 1e9, message);
+		else if (ns > 1e6) str = std::format("{:.1f} ms: {}", ns / 1e6, message);
+		else if (ns > 1e3) str = std::format("{:.1f} us: {}", ns / 1e3, message);
+		else str = std::format("{} ns: {}", ns, message);
+
+		std::cout << str << std::endl;
+	}
 }

@@ -41,7 +41,7 @@ public:
 	void getOutput(int64_t frameIndex, ImageRGBA& image) override;
 	void getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) override;
 	Mat<float> getTransformedOutput() const override;
-	Mat<float> getPyramid(size_t idx) const override;
+	Mat<float> getPyramid(int64_t index) const override;
 	void getInput(int64_t index, ImageYuv& image) const override;
 	void getInput(int64_t frameIndex, ImageRGBA& image) override;
 	void getWarped(int64_t frameIndex, ImageRGBA& image) override;

@@ -123,8 +123,9 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     connect(mProgressWindow, &ProgressWindow::sigUpdateInput, mProgressWindow, &ProgressWindow::updateInput);
     connect(mProgressWindow, &ProgressWindow::sigUpdateOutput, mProgressWindow, &ProgressWindow::updateOutput);
 
-    connect(mPlayerWindow, &Player::signalProgress, mPlayerWindow, &Player::progress);
-    connect(mPlayerWindow, &Player::signalPlay, mPlayerWindow, &Player::play);
+    //player window
+    connect(mPlayerWindow, &Player::sigProgress, mPlayerWindow, &Player::progress);
+    connect(mPlayerWindow, &Player::sigUpload, mPlayerWindow, &Player::upload);
 
     //set window to minimal size
     resize(minimumSize());
@@ -306,7 +307,6 @@ void cuvistaGui::stabilize() {
     //set up output
     if (ui.chkPlayer->isChecked()) {
         mProgress = std::make_shared<PlayerProgress>(mData, *mFrame, mPlayerWindow);
-        mPlayerWindow->show();
 
     } else {
         mProgress = std::make_shared<ProgressGui>(mData, *mFrame, mProgressWindow);

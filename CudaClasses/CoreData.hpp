@@ -54,7 +54,7 @@ struct CoreData {
 	int zCount = 3;			    //number of pyramid levels to use for stabilization
 	int pyramidLevels = -1;     //number of pyramid levels to create
 	int pyramidRowCount = -1;	//number of rows for one pyramid, all the rows of Y data for all levels
-	size_t pyramidCount = 2;	//number of pyramids to allocate in memory
+	int pyramidCount = 2;	    //number of pyramids to allocate in memory
 	int resultCount = 0;		//number of points to compute in a frame
 
 	int cpupitch = 0;

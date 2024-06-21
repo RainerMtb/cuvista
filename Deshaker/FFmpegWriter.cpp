@@ -107,7 +107,7 @@ void FFmpegWriter::open(EncodingOption videoCodec, int h, int w, int stride, con
 
     openEncoder(codec, sourceName);
 
-    sws_scaler_ctx = sws_getContext(w, h, AV_PIX_FMT_YUV444P, w, h, pixfmt, SWS_BICUBIC, NULL, NULL, NULL);
+    sws_scaler_ctx = sws_getContext(w, h, AV_PIX_FMT_YUV444P, w, h, pixfmt, SWS_BILINEAR, NULL, NULL, NULL);
     if (!sws_scaler_ctx) 
         throw AVException("Could not get scaler context");
 

@@ -62,7 +62,7 @@ public:
 	//prepare data for encoding on cpu
 	virtual void getOutput(int64_t frameIndex, ImageYuv& image) = 0;
 	//prepare data for encoding on cpu
-	virtual void getOutput(int64_t frameIndex, ImageRGBA& argb) = 0;
+	virtual void getOutput(int64_t frameIndex, ImageRGBA& image) = 0;
 	//prepare data for encoding on cuda
 	virtual void getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) = 0;
 	//output rgb data warped but not unsharped
@@ -102,7 +102,7 @@ public:
 	* get image pyramid as single Mat<float> where images are stacked vertically from large to small
 	* useful for debugging
 	*/
-	virtual Mat<float> getPyramid(size_t idx) const { return {}; }
+	virtual Mat<float> getPyramid(int64_t frameIndex) const { return {}; }
 
 	/*
 	* identify instance
@@ -112,7 +112,7 @@ public:
 	/*
 	* play time for given frame
 	*/
-	std::string getTimeForFrame(uint64_t frameIndex);
+	std::string dtsForFrameString(int64_t frameIndex);
 
 
 	ThreadPool mPool;

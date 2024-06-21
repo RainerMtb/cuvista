@@ -103,7 +103,7 @@
       <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
       <Include>
       </Include>
-      <AdditionalOptions>-fmad=false -std=c++17 -Wno-deprecated-gpu-targets</AdditionalOptions>
+      <AdditionalOptions>-fmad=false -std=c++20 -Wno-deprecated-gpu-targets</AdditionalOptions>
       <AdditionalDeps>
       </AdditionalDeps>
       <CompileOut>$(SolutionDir)bin_inter\$(ProjectName)\$(Platform)\$(Configuration)\%(Filename)%(Extension).obj</CompileOut>

@@ -66,8 +66,8 @@ public:
 		cudaOutputCpu(frameIndex, image, mData);
 	}
 
-	void getOutput(int64_t frameIndex, ImageRGBA& argb) override {
-		cudaOutputCpu(frameIndex, argb, mData);
+	void getOutput(int64_t frameIndex, ImageRGBA& image) override {
+		cudaOutputCpu(frameIndex, image, mData);
 	}
 
 	void getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) override {
@@ -80,14 +80,14 @@ public:
 		return warped;
 	}
 
-	Mat<float> getPyramid(size_t idx) const override {
+	Mat<float> getPyramid(int64_t index) const override {
 		Mat<float> out = Mat<float>::allocate(mData.pyramidRowCount, mData.w);
-		cudaGetPyramid(out.data(), idx, mData);
+		cudaGetPyramid(out.data(), mData, index);
 		return out;
 	}
 
 	void getInput(int64_t index, ImageYuv& image) const override {
-		return cudaGetInput(index, image, mData);
+		return cudaGetInput(image, mData, index);
 	}
 
 	void getInput(int64_t frameIndex, ImageRGBA& image) override {

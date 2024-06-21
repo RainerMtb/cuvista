@@ -416,14 +416,14 @@ cudaError_t cu::remap_downsize_32f(float* src, int srcStep, float* dest, int des
 	return cudaGetLastError();
 }
 
-cudaError_t cu::yuv_to_rgb(uchar* src, int srcStep, uchar* dest, int destStep, int w, int h) {
+cudaError_t cu::yuv_to_rgba(uchar* src, int srcStep, uchar* dest, int destStep, int w, int h, cudaStream_t cs) {
 	KernelContext ki = prepareTexture(src, srcStep, w, 3 * h, w, h);
 	kernel_yuv8_to_rgba8 <<<ki.blocks, ki.threads>>> (ki.texture, dest, w, h);
 	cudaDestroyTextureObject(ki.texture);
 	return cudaGetLastError();
 }
 
-cudaError_t cu::yuv_to_rgb(float4* src, int srcStep, uchar* dest, int destStep, int w, int h) {
+cudaError_t cu::yuv_to_rgba(float4* src, int srcStep, uchar* dest, int destStep, int w, int h, cudaStream_t cs) {
 	KernelContext ki = prepareTexture(src, srcStep, w, h);
 	kernel_yuv128_to_rgba8 <<<ki.blocks, ki.threads>>> (ki.texture, dest, w, h);
 	cudaDestroyTextureObject(ki.texture);

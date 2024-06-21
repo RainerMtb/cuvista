@@ -110,7 +110,8 @@ void AvxFrame::getOutput(int64_t frameIndex, ImageYuv& image) {
 }
 
 void AvxFrame::getOutput(int64_t frameIndex, ImageRGBA& image) {
-	//TODO
+	yuvToRgba(mOutput[0].data(), mOutput[1].data(), mOutput[2].data(), mData.h, mData.w, pitch, image);
+	image.index = frameIndex;
 }
 
 void AvxFrame::getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) {
@@ -127,8 +128,8 @@ void AvxFrame::getWarped(int64_t frameIndex, ImageRGBA& image) {
 	yuvToRgba(mWarped[0].data(), mWarped[1].data(), mWarped[2].data(), mData.h, mData.w, pitch, image);
 }
 
-Matf AvxFrame::getPyramid(size_t idx) const {
-	return mPyr[idx].copyToMatf();
+Matf AvxFrame::getPyramid(int64_t index) const {
+	return mPyr[index].copyToMatf();
 }
 
 void AvxFrame::getInput(int64_t frameIndex, ImageRGBA& image) {
@@ -382,7 +383,7 @@ void AvxFrame::unsharp(const AvxMatFloat& warped, AvxMatFloat& gauss, float unsh
 		for (int c = 0; c < mData.w; c += 16) {
 			VF16 ps_warped = warped.addr(r, c);
 			VF16 ps_gauss = gauss.addr(r, c);
-			VF16 ps_unsharped = (ps_warped + (ps_warped - ps_gauss) * unsharp).clamp(0.0f, 1.0f) * 255.0f;
+			VF16 ps_unsharped = (ps_warped + (ps_warped - ps_gauss) * unsharp).clamp(0.0f, 1.0f);
 			ps_unsharped.storeu(out.addr(r, c));
 		}
 	}
@@ -393,7 +394,7 @@ void AvxFrame::write(ImageYuv& dest) {
 		for (int r = 0; r < mData.h; r++) {
 			for (int c = 0; c < mData.w; c += 16) {
 				VF16 out = mOutput[z].addr(r, c);
-				__m512i chars32 = _mm512_cvt_roundps_epi32(out, _MM_FROUND_TO_NEAREST_INT);
+				__m512i chars32 = _mm512_cvt_roundps_epi32(out * 255.0f, _MM_FROUND_TO_NEAREST_INT);
 				__m128i chars8 = _mm512_cvtepi32_epi8(chars32);
 				_mm_storeu_epi8(dest.addr(z, r, c), chars8);
 			}
@@ -408,7 +409,7 @@ void AvxFrame::write(std::span<unsigned char> nv12, int cudaPitch) {
 		unsigned char* dest = nv12.data() + r * cudaPitch;
 		for (int c = 0; c < mData.w; c += 16) {
 			VF16 out = mOutput[0].addr(r, c);
-			__m512i chars32 = _mm512_cvt_roundps_epi32(out, _MM_FROUND_TO_NEAREST_INT);
+			__m512i chars32 = _mm512_cvt_roundps_epi32(out * 255.0f, _MM_FROUND_TO_NEAREST_INT);
 			__m128i chars8 = _mm512_cvtepi32_epi8(chars32);
 			_mm_storeu_epi8(dest + c, chars8);
 		}

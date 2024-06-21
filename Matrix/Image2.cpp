@@ -149,19 +149,6 @@ ImageBGR ImageYuv::toBGR() const {
 	return toBGR(out);
 }
 
-bool ImageBGR::saveAsColorBMP(const std::string& filename) const {
-	std::ofstream os(filename, std::ios::binary);
-	im::BmpColorHeader(w, h).writeHeader(os);
-	std::vector<char> data(im::alignValue(w * 3, 4));
-
-	for (int r = h - 1; r >= 0; r--) {
-		const unsigned char* ptr = addr(0, r, 0);
-		std::copy(ptr, ptr + 3 * w, data.data());
-		os.write(data.data(), data.size());
-	}
-	return os.good();
-}
-
 ImagePPM& ImageYuv::toPPM(ImagePPM& dest, ThreadPoolBase& pool) const {
 	assert(h == dest.h && w == dest.w && "dimensions mismatch");
 	yuvToRgb(dest, { 0, 1, 2 }, pool);
@@ -182,6 +169,24 @@ ImageRGBA& ImageYuv::toRGBA(ImageRGBA& dest, ThreadPoolBase& pool) const {
 ImageRGBA ImageYuv::toRGBA() const {
 	ImageRGBA out(h, w);
 	return toRGBA(out);
+}
+
+
+//------------------------
+// BGR image stuff
+//------------------------
+
+bool ImageBGR::saveAsColorBMP(const std::string& filename) const {
+	std::ofstream os(filename, std::ios::binary);
+	im::BmpColorHeader(w, h).writeHeader(os);
+	std::vector<char> data(im::alignValue(w * 3, 4));
+
+	for (int r = h - 1; r >= 0; r--) {
+		const unsigned char* ptr = addr(0, r, 0);
+		std::copy(ptr, ptr + 3 * w, data.data());
+		os.write(data.data(), data.size());
+	}
+	return os.good();
 }
 
 void ImageRGBA::copyTo(ImageRGBA& dest, size_t r0, size_t c0, ThreadPoolBase& pool) const {
@@ -213,4 +218,41 @@ bool ImageRGBA::saveAsColorBMP(const std::string& filename) const {
 		os.write(imageRow.data(), imageRow.size());
 	}
 	return os.good();
+}
+
+
+//------------------------
+// PPM image stuff
+//------------------------
+
+const unsigned char* ImagePPM::data() const {
+	return arrays.at(0).get() + headerSize;
+}
+
+unsigned char* ImagePPM::data() {
+	return arrays.at(0).get() + headerSize;
+}
+
+size_t ImagePPM::size() const {
+	return 3ull * h * w;
+}
+
+size_t ImagePPM::bytes() const {
+	return imageSize;
+}
+
+const unsigned char* ImagePPM::header() const {
+	return arrays.at(0).get();
+}
+
+bool ImagePPM::saveAsPPM(const std::string& filename) const {
+	std::ofstream os(filename, std::ios::binary);
+	os.write(reinterpret_cast<const char*>(arrays.at(0).get()), size());
+	return os.good();
+}
+
+bool ImagePPM::saveAsColorBMP(const std::string& filename) const {
+	ImageBGR bgr(h, w);
+	copyTo(bgr, { 0, 1, 2 }, { 2, 1, 0 });
+	return bgr.saveAsColorBMP(filename);
 }

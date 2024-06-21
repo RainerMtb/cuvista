@@ -314,11 +314,10 @@ Matf CpuFrame::getTransformedOutput() const {
 	return Matf::concatVert(mBuffer[0], mBuffer[1], mBuffer[2]);
 }
 
-Matf CpuFrame::getPyramid(size_t idx) const {
-	assert(idx < mPyr.size() && "invalid pyramid index");
+Matf CpuFrame::getPyramid(int64_t index) const {
 	Matf out = Matf::zeros(mData.pyramidRowCount, mData.w);
 	size_t row = 0;
-	for (const Matf& mat : mPyr[idx].mY) {
+	for (const Matf& mat : mPyr[index].mY) {
 		out.setArea(row, 0, mat);
 		row += mat.rows();
 	}

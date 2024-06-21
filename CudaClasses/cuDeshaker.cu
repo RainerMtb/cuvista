@@ -522,8 +522,12 @@ void cudaOutputCpu(int64_t frameIndex, ImageYuv& image, const CudaData& core) {
 	handleStatus(cudaGetLastError(), "error @output #91");
 }
 
-void cudaOutputCpu(int64_t frameIndex, ImageRGBA& argb, const CudaData& mData) {
-	//TODO
+void cudaOutputCpu(int64_t frameIndex, ImageRGBA& image, const CudaData& core) {
+	cu::yuv_to_rgba(out.final, core.strideFloat4N, d_rgba, 4 * core.w, core.w, core.h, cs[1]);
+	handleStatus(cudaMemcpyAsync(image.data(), d_rgba, 4ull * core.w * core.h, cudaMemcpyDefault, cs[1]), "error @output #94");
+	image.index = frameIndex;
+	handleStatus(cudaStreamSynchronize(cs[1]), "error @output #92");
+	handleStatus(cudaGetLastError(), "error @output #93");
 }
 
 void cudaOutputCuda(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch, const CudaData& core) {
@@ -544,7 +548,7 @@ void getNvData(std::vector<unsigned char>& nv12, unsigned char* cudaNv12ptr) {
 void cudaGetTransformedOutput(float* warpedData, const CudaData& core) {
 	std::vector<float4> data(1ull * core.w * core.h);
 	size_t wbytes = core.w * sizeof(float4);
-	cudaMemcpy2D(data.data(), wbytes, out.warped, core.strideFloat4, wbytes, core.h, cudaMemcpyDefault);
+	handleStatus(cudaMemcpy2D(data.data(), wbytes, out.warped, core.strideFloat4, wbytes, core.h, cudaMemcpyDefault), "error @transformedOutput");
 
 	for (int i = 0; i < core.w * core.h; i++) {
 		warpedData[i] = data[i].x;
@@ -553,30 +557,30 @@ void cudaGetTransformedOutput(float* warpedData, const CudaData& core) {
 	}
 }
 
-void cudaGetPyramid(float* pyramid, size_t idx, const CudaData& core) {
-	size_t pyrIdx = idx % core.pyramidCount;
+void cudaGetPyramid(float* pyramid, const CudaData& core, int64_t frameIndex) {
+	int pyrIdx = frameIndex % core.pyramidCount;
 	float* devptr = d_pyrData + pyrIdx * core.pyramidRowCount * core.strideFloatN;
 	size_t wbytes = core.w * sizeof(float);
-	cudaMemcpy2D(pyramid, wbytes, devptr, core.strideFloat, wbytes, core.pyramidRowCount, cudaMemcpyDefault);
+	handleStatus(cudaMemcpy2D(pyramid, wbytes, devptr, core.strideFloat, wbytes, core.pyramidRowCount, cudaMemcpyDefault), "error @getPyramid");
 }
 
-void cudaGetInput(int64_t index, ImageYuv& image, const CudaData& core) {
-	int64_t fr = index % core.bufferCount;
+void cudaGetInput(ImageYuv& image, const CudaData& core, int64_t frameIndex) {
+	int fr = frameIndex % core.bufferCount;
 	//start of input yuv data
 	unsigned char* yuvSrc = d_yuvData + fr * 3 * core.h * core.strideChar;
 	//copy 2D data without stride
-	cudaMemcpy2D(image.data(), image.stride, yuvSrc, core.strideChar, image.w, 3ll * image.h, cudaMemcpyDefault);
+	handleStatus(cudaMemcpy2D(image.data(), image.stride, yuvSrc, core.strideChar, image.w, 3ll * image.h, cudaMemcpyDefault), "error @getInput");
 }
 
-void cudaGetCurrentInputFrame(ImageRGBA& image, const CudaData& core, int64_t idx) {
-	int fridx = idx % core.bufferCount;
+void cudaGetCurrentInputFrame(ImageRGBA& image, const CudaData& core, int64_t frameIndex) {
+	int fridx = frameIndex % core.bufferCount;
 	unsigned char* yuvSrc = d_yuvData + fridx * 3ull * core.h * core.strideChar;
-	cu::yuv_to_rgb(yuvSrc, core.strideChar, d_rgba, core.w, core.w, core.h);
+	cu::yuv_to_rgba(yuvSrc, core.strideChar, d_rgba, core.w, 4 * core.w, core.h);
 	handleStatus(cudaMemcpy(image.data(), d_rgba, 4ull * core.w * core.h, cudaMemcpyDefault), "error @progress input");
 }
 
 void cudaGetTransformedOutput(ImageRGBA& image, const CudaData& core) {
-	cu::yuv_to_rgb(out.warped, core.strideFloat4N, d_rgba, core.w, core.w, core.h);
+	cu::yuv_to_rgba(out.warped, core.strideFloat4N, d_rgba, 4 * core.w, core.w, core.h);
 	handleStatus(cudaMemcpy(image.data(), d_rgba, 4ull * core.w * core.h, cudaMemcpyDefault), "error @progress output");
 }
 

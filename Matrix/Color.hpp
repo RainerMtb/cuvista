@@ -36,10 +36,10 @@ namespace im {
 
 	void hsv_to_rgb(double h, double s, double v, unsigned char* out_r, unsigned char* out_g, unsigned char* out_b);
 
-	template <class T> class ColorBase {
+	template <class T, int SIZ = 3> class ColorBase {
 
 	public:
-		std::array<T, 3> colors;
+		std::array<T, SIZ> colors;
 		double alpha = 1.0;
 	};
 
@@ -88,5 +88,10 @@ namespace im {
 		static ColorBgr WHITE;
 		static ColorBgr BLACK;
 		static ColorBgr BLUE;
+	};
+
+	class ColorRGBA : public ColorBase<unsigned char, 4> {
+	public:
+		static ColorRGBA BLACK;
 	};
 }

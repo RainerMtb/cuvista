@@ -61,8 +61,8 @@ public:
 		cl::outputDataCpu(frameIndex, mData, image);
 	}
 
-	void getOutput(int64_t frameIndex, ImageRGBA& argb) override {
-		cl::outputDataCpu(frameIndex, mData, argb);
+	void getOutput(int64_t frameIndex, ImageRGBA& image) override {
+		cl::outputDataCpu(frameIndex, mData, image);
 	}
 
 	void getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) override {
@@ -73,9 +73,9 @@ public:
 		cl::getTransformedOutput(image);
 	}
 
-	Mat<float> getPyramid(size_t idx) const override {
+	Mat<float> getPyramid(int64_t index) const override {
 		Mat<float> out = Mat<float>::zeros(mData.pyramidRowCount, mData.w);
-		cl::getPyramid(out.data(), idx, mData);
+		cl::getPyramid(out.data(), index, mData);
 		return out;
 	}
 
