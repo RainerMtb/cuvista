@@ -78,6 +78,12 @@
     <QtMoc Include="player.h">
       <Filter>Header Files</Filter>
     </QtMoc>
+    <QtMoc Include="UserInputGui.hpp">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="PlayerWidget.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
   </ItemGroup>
   <ItemGroup>
     <QtUic Include="progress.ui">
@@ -89,13 +95,5 @@
     <QtUic Include="player.ui">
       <Filter>Form Files</Filter>
     </QtUic>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="UserInputGui.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="PlayerWidget.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
 </Project>

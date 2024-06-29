@@ -523,7 +523,7 @@ void cudaOutputCpu(int64_t frameIndex, ImageYuv& image, const CudaData& core) {
 }
 
 void cudaOutputCpu(int64_t frameIndex, ImageRGBA& image, const CudaData& core) {
-	cu::yuv_to_rgba(out.final, core.strideFloat4N, d_rgba, 4 * core.w, core.w, core.h, cs[1]);
+	cu::yuv_to_rgba(out.final, core.strideFloat4N, d_rgba, -1, core.w, core.h, cs[1]);
 	handleStatus(cudaMemcpyAsync(image.data(), d_rgba, 4ull * core.w * core.h, cudaMemcpyDefault, cs[1]), "error @output #94");
 	image.index = frameIndex;
 	handleStatus(cudaStreamSynchronize(cs[1]), "error @output #92");
@@ -574,13 +574,14 @@ void cudaGetInput(ImageYuv& image, const CudaData& core, int64_t frameIndex) {
 
 void cudaGetCurrentInputFrame(ImageRGBA& image, const CudaData& core, int64_t frameIndex) {
 	int fridx = frameIndex % core.bufferCount;
+	assert(frameIndizes[fridx] == frameIndex && "invalid frame in buffer");
 	unsigned char* yuvSrc = d_yuvData + fridx * 3ull * core.h * core.strideChar;
-	cu::yuv_to_rgba(yuvSrc, core.strideChar, d_rgba, core.w, 4 * core.w, core.h);
+	cu::yuv_to_rgba(yuvSrc, core.strideChar, d_rgba, -1, core.w, core.h);
 	handleStatus(cudaMemcpy(image.data(), d_rgba, 4ull * core.w * core.h, cudaMemcpyDefault), "error @progress input");
 }
 
 void cudaGetTransformedOutput(ImageRGBA& image, const CudaData& core) {
-	cu::yuv_to_rgba(out.warped, core.strideFloat4N, d_rgba, 4 * core.w, core.w, core.h);
+	cu::yuv_to_rgba(out.warped, core.strideFloat4N, d_rgba, -1, core.w, core.h);
 	handleStatus(cudaMemcpy(image.data(), d_rgba, 4ull * core.w * core.h, cudaMemcpyDefault), "error @progress output");
 }
 

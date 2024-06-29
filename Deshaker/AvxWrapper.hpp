@@ -100,6 +100,8 @@ public:
 };
 
 
+class VD8;
+
 //wrapper for _mm256
 class VF8 {
 	__m256 a;
@@ -110,6 +112,8 @@ public:
 	VF8(float a) : a { _mm256_set1_ps(a) } {}
 
 	VF8(__m256 a) : a { a } {}
+
+	VF8(__m512d a) : a { _mm512_cvt_roundpd_ps(a, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC)} {}
 
 	VF8(float v0, float v1, float v2, float v3, float v4, float v5, float v6, float v7) :
 		a { _mm256_setr_ps(v0, v1, v2, v3, v4, v5, v6, v7) } {}
@@ -264,6 +268,10 @@ public:
 	VD8(double a, double b) : VD8(a, b, a, b, a, b, a, b) {}
 
 	VD8(__m512d a) : a { a } {}
+
+	VD8(__m256 a) : a { _mm512_cvtps_pd(a) } {}
+
+	VD8(VF8 a) : a { _mm512_cvtps_pd(a) } {}
 
 	VD8(double v0, double v1, double v2, double v3, double v4, double v5, double v6, double v7) :
 		a { _mm512_setr_pd(v0, v1, v2, v3, v4, v5, v6, v7) } {}

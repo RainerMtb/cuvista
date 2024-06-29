@@ -31,22 +31,27 @@ class Player : public QMainWindow {
     Q_OBJECT
 
 public:
+    QAtomicInt isPaused;
+
     Player(QWidget* parent);
-    void open(int h, int w, int stride);
+    void open(int h, int w, int stride, QImage imageWorking);
     void playNextFrame(int64_t idx);
 
-    QAtomicInt isPaused;
+    void closeEvent(QCloseEvent* event) override;
 
 private:
     Ui::playerWindow ui;
 
-public slots:
-    void progress(QString str);
-    void upload(int64_t frameIndex, int h, int w, int stride, unsigned char* pixels);
-
 signals:
-    void sigProgress(QString str);
-    void sigUpload(int64_t frameIndex, int h, int w, int stride, unsigned char* pixels);
+    void cancel();
+    void sigProgress(QString str, QString status);
+    void sigUpload(int64_t frameIndex, ImageRGBA image);
+
+public slots:
+    void progress(QString str, QString status);
+    void upload(int64_t frameIndex, ImageRGBA image);
+    void pause();
+    void play();
 };
 
 //writer
@@ -56,9 +61,10 @@ private:
     Player* mPlayer;
     ImageRGBA mOutput;
     std::chrono::time_point<std::chrono::steady_clock> mNextDts;
+    QImage mImageWorking;
 
 public:
-    PlayerWriter(MainData& data, MovieReader& reader, Player* player);
+    PlayerWriter(MainData& data, MovieReader& reader, Player* player, QImage imageWorking);
 
     void open(EncodingOption videoCodec) override;
     void prepareOutput(MovieFrame& frame) override;

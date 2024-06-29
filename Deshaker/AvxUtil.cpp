@@ -19,6 +19,7 @@
 #include <numeric>
 #include <vector>
 #include "AvxUtil.hpp"
+#include "AvxMat.hpp"
 
 
  //transpose 4 vectors of 16 floats
@@ -186,4 +187,22 @@ double Avx::norm1(std::span<VD8> v) {
 	}
 	__mmask8 mask = (1 << m) - 1;
 	return _mm512_mask_reduce_max_pd(mask, sum);
+}
+
+
+//print matrix of avx vectors to console
+void Avx::toConsole(std::span<VD8> v) {
+	int siz = int(v.size());
+	AvxMatd mat(siz, 8);
+	for (int i = 0; i < siz; i++) v[i].storeu(mat.row(i));
+	mat.toConsole();
+}
+
+
+//print matrix of avx vectors to console
+void Avx::toConsole(std::span<VF16> v) {
+	int siz = int(v.size());
+	AvxMatf mat(siz, 16);
+	for (int i = 0; i < siz; i++) v[i].storeu(mat.row(i));
+	mat.toConsole();
 }

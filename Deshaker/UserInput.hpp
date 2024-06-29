@@ -25,16 +25,16 @@ enum class UserInputEnum {
 class UserInput {
 
 public:
-	UserInputEnum current = UserInputEnum::CONTINUE;
+	UserInputEnum mCurrentInput = UserInputEnum::CONTINUE;
 
-	bool doContinue() {
-		return current == UserInputEnum::CONTINUE;
+	bool doContinue() const {
+		return mCurrentInput == UserInputEnum::CONTINUE;
 	}
 
 	virtual void checkState() = 0;
 
-	void reset() {
-		current = UserInputEnum::CONTINUE;
+	virtual void reset() {
+		mCurrentInput = UserInputEnum::CONTINUE;
 	}
 };
 

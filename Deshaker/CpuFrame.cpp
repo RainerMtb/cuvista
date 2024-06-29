@@ -154,7 +154,7 @@ void CpuFrame::computeTerminate(int64_t frameIndex) {
 							sd.at(5, idx) = dy * (c - ir);
 						}
 					}
-					//if (frameIndex == 1 && ix0 == 63 && iy0 == 1) sd.toConsole(); //----------------
+					//if (frameIndex == 1 && ix0 == 63 && iy0 == 1 && z == mData.zMax) sd.toConsole(); //----------------
 
 					Mat s = sd.timesTransposed();
 					//if (frameIndex == 1 && ix0 == 63 && iy0 == 1) s.toConsole(); //----------------

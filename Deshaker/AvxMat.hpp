@@ -19,47 +19,55 @@
 #pragma once
 
 #include "Mat.h"
+#include "Image.hpp"
 
 
 //specialization of mat for use with avx
-class AvxMatFloat : protected CoreMat<float> {
+template <class T> class AvxMat : protected CoreMat<T> {
 public:
 	int64_t frameIndex = -1;
 
-	AvxMatFloat() : CoreMat<float>() {}
-	AvxMatFloat(int h, int w) : CoreMat<float>(h, w) {}
-	AvxMatFloat(int h, int w, float value) : CoreMat<float>(h, w, value) {}
+	AvxMat() : CoreMat<T>() {}
+	AvxMat(int h, int w) : CoreMat<T>(h, w) {}
+	AvxMat(int h, int w, T value) : CoreMat<T>(h, w, value) {}
 
-	int w() const { return int(CoreMat::w); }
-	int h() const { return int(CoreMat::h); }
+	int w() const { return int(CoreMat<T>::w); }
+	int h() const { return int(CoreMat<T>::h); }
 
-	float& at(int row, int col) { return CoreMat::at(row, col); }
-	const float& at(int row, int col) const { return CoreMat::at(row, col); }
-	float* addr(int row, int col) { return CoreMat::addr(row, col); }
-	const float* addr(int row, int col) const { return CoreMat::addr(row, col); }
-	float* data() { return CoreMat::data(); }
-	const float* data() const { return CoreMat::data(); }
+	T& at(int row, int col) { return CoreMat<T>::at(row, col); }
+	const T& at(int row, int col) const { return CoreMat<T>::at(row, col); }
+	T* addr(int row, int col) { return CoreMat<T>::addr(row, col); }
+	const T* addr(int row, int col) const { return CoreMat<T>::addr(row, col); }
+	T* data() { return CoreMat<T>::data(); }
+	const T* data() const { return CoreMat<T>::data(); }
 
-	float* row(int r) { return addr(r, 0); }
-	const float* row(int r) const { return addr(r, 0); }
+	T* row(int r) { return addr(r, 0); }
+	const T* row(int r) const { return addr(r, 0); }
 
-	void fill(float value) { 
-		std::fill(array, array + numel(), value); 
+	void fill(T value) { 
+		std::fill(this->array, this->array + this->numel(), value); 
 	}
 
 	void saveAsBinary(const std::string& filename) const { 
-		Matf::fromArray(h(), w(), array, false).saveAsBinary(filename); 
+		Mat<T>::fromArray(h(), w(), this->array, false).saveAsBinary(filename); 
 	}
 
 	void saveAsBMP(const std::string& filename) const {
-		im::ImageMatShared<float>(h(), w(), w(), array).saveAsBMP(filename, 255.0f);
+		im::ImageMatShared<T>(h(), w(), w(), this->array).saveAsBMP(filename, 255);
 	}
 
-	Matf copyToMatf() const { 
-		return Matf::fromRowData(h(), w(), w(), array); 
+	Mat<T> copyToMat() const { 
+		return Mat<T>::fromRowData(h(), w(), w(), this->array); 
 	}
 
-	Matf toMatf() const { 
-		return Matf::fromArray(h(), w(), array, false); 
+	Mat<T> toMat() const { 
+		return Mat<T>::fromArray(h(), w(), this->array, false); 
+	}
+
+	void toConsole() const {
+		toMat().toConsole();
 	}
 };
+
+using AvxMatf = AvxMat<float>;
+using AvxMatd = AvxMat<double>;

@@ -17,7 +17,7 @@
  */
 
 #include <QDebug>
-
+#include <cassert>
 #include "PlayerWidget.h"
 
 /*
@@ -52,13 +52,11 @@ void PlayerWidget::initializeGL() {
 }
 
 //prepare texture size for this video
-void PlayerWidget::open(int h, int w, int stride) {
-	//qDebug() << "-- open";
-
+void PlayerWidget::open(int h, int w, int stride, QImage imageWorking) {
 	makeCurrent();
 	for (int i = 0; i < 2; i++) {
 		glBindTexture(GL_TEXTURE_2D, textures[i]);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_BGRA, GL_UNSIGNED_BYTE, imageWorking.bits());
 	}
 
 	//store video size
@@ -67,11 +65,12 @@ void PlayerWidget::open(int h, int w, int stride) {
 }
 
 //upload texture for upcoming video frame
-void PlayerWidget::upload(int64_t frameIndex, unsigned char* pixels) {
+void PlayerWidget::upload(int64_t frameIndex, ImageRGBA image) {
+	assert(image.w == texWidth && image.h == texHeight && "invalid image dimensions");
 	makeCurrent();
 	int idx = frameIndex % 2;
 	glBindTexture(GL_TEXTURE_2D, textures[idx]);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, texWidth, texHeight, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, texWidth, texHeight, GL_RGBA, GL_UNSIGNED_BYTE, image.data());
 }
 
 //show the next video frame on the widget

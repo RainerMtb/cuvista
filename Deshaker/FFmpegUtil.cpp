@@ -75,3 +75,9 @@ std::string timeString(int64_t millis) {
     else timeString = std::format("{:02}:{:02}.{:03}", min * sign, sec, millis);
     return timeString;
 }
+
+StreamContext::~StreamContext() {
+    for (AVPacket* packet : packets) {
+        av_packet_free(&packet);
+    }
+}

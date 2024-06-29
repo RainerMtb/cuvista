@@ -58,7 +58,7 @@
        <number>8</number>
       </property>
       <item>
-       <widget class="QLabel" name="label_1">
+       <widget class="QLabel" name="lblStatus">
         <property name="text">
          <string>Status</string>
         </property>

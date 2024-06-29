@@ -39,8 +39,8 @@ public:
 	virtual void rewind() {}
 	virtual void seek(double fraction) {}
 
-	std::optional<std::string> dtsForFrameString(int64_t frameIndex);
-	std::optional<int64_t> dtsForFrameMillis(int64_t frameIndex);
+	std::optional<std::string> ptsForFrameString(int64_t frameIndex);
+	std::optional<int64_t> ptsForFrameMillis(int64_t frameIndex);
 };
 
 //main class to decode input

@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include <QtWidgets/QMainWindow>
+#include <QMainWindow>
 #include <QFileDialog>
 #include <QThread>
 
@@ -41,7 +41,6 @@ public:
 public slots:
     void seek(double frac);
     void stabilize();
-    void cancelRequest();
     void done();
     void doneSuccess(const std::string& file, const std::string& str);
     void doneFail(const std::string& str);

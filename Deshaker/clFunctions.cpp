@@ -19,24 +19,24 @@
 #include "clFunctions.hpp"
 #include <cassert>
 
-void runKernel(cl::Kernel& kernel, cl::Image src, cl::Image dest, cl::CommandQueue queue, size_t w, size_t h) {
+static void runKernel(cl::Kernel& kernel, cl::Image src, cl::Image dest, cl::CommandQueue queue, size_t w, size_t h) {
 	kernel.setArg(0, src);
 	kernel.setArg(1, dest);
 	queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(w, h));
 }
 
-void runKernel(cl::Kernel& kernel, cl::Image src, cl::Image dest, cl::CommandQueue queue) {
+static void runKernel(cl::Kernel& kernel, cl::Image src, cl::Image dest, cl::CommandQueue queue) {
 	runKernel(kernel, src, dest, queue, dest.getImageInfo<CL_IMAGE_WIDTH>(), dest.getImageInfo<CL_IMAGE_HEIGHT>());
 }
 
-void filter_32f_func(cl::Kernel& kernel, cl::Image src, cl::Image dest, int filterIndex, int dx, int dy, cl::Data& clData, size_t w, size_t h) {
+static void filter_32f_func(cl::Kernel& kernel, cl::Image src, cl::Image dest, int filterIndex, int dx, int dy, cl::Data& clData, size_t w, size_t h) {
 	kernel.setArg(2, filterIndex);
 	kernel.setArg(3, dx);
 	kernel.setArg(4, dy);
 	runKernel(kernel, src, dest, clData.queue, w, h);
 }
 
-void filter_32f_func(cl::Kernel& kernel, cl::Image src, cl::Image dest, int filterIndex, int dx, int dy, cl::Data& clData) {
+static void filter_32f_func(cl::Kernel& kernel, cl::Image src, cl::Image dest, int filterIndex, int dx, int dy, cl::Data& clData) {
 	filter_32f_func(kernel, src, dest, filterIndex, dx, dy, clData, dest.getImageInfo<CL_IMAGE_WIDTH>(), dest.getImageInfo<CL_IMAGE_HEIGHT>());
 }
 

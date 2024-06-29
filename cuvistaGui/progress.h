@@ -25,7 +25,6 @@
 #include "MainData.hpp"
 
 class ProgressWindow : public QMainWindow {
-
     Q_OBJECT
 
 private:

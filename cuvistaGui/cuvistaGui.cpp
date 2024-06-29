@@ -118,7 +118,7 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     connect(ui.btnInfo, &QPushButton::clicked, this, &cuvistaGui::showInfo);
 
     //progress handler
-    connect(mProgressWindow, &ProgressWindow::cancel, this, &cuvistaGui::cancelRequest);
+    connect(mProgressWindow, &ProgressWindow::cancel, &mInputHandler, &UserInputGui::cancel);
     connect(mProgressWindow, &ProgressWindow::sigProgress, mProgressWindow, &ProgressWindow::progress);
     connect(mProgressWindow, &ProgressWindow::sigUpdateInput, mProgressWindow, &ProgressWindow::updateInput);
     connect(mProgressWindow, &ProgressWindow::sigUpdateOutput, mProgressWindow, &ProgressWindow::updateOutput);
@@ -126,6 +126,7 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     //player window
     connect(mPlayerWindow, &Player::sigProgress, mPlayerWindow, &Player::progress);
     connect(mPlayerWindow, &Player::sigUpload, mPlayerWindow, &Player::upload);
+    connect(mPlayerWindow, &Player::cancel, &mInputHandler, &UserInputGui::cancel);
 
     //set window to minimal size
     resize(minimumSize());
@@ -282,7 +283,7 @@ void cuvistaGui::stabilize() {
     else if (ui.chkSequence->isChecked() && ui.comboImageType->currentData().value<OutputType>() == OutputType::SEQUENCE_JPG)
         mWriter = std::make_unique<JpegImageWriter>(mData, mReader);
     else if (ui.chkPlayer->isChecked())
-        mWriter = std::make_unique<PlayerWriter>(mData, mReader, mPlayerWindow);
+        mWriter = std::make_unique<PlayerWriter>(mData, mReader, mPlayerWindow, mWorkingImage);
     else if (ui.chkEncode->isChecked() && mData.requestedEncoding.device == EncodingDevice::NVENC)
         mWriter = std::make_unique<CudaFFmpegWriter>(mData, mReader);
     else if (ui.chkEncode->isChecked())
@@ -330,10 +331,6 @@ void cuvistaGui::stabilize() {
     mThread->start();
 }
 
-void cuvistaGui::cancelRequest() {
-    mThread->requestInterruption();
-}
-
 void cuvistaGui::done() {
     mProgressWindow->hide();
     mPlayerWindow->hide();
@@ -350,7 +347,7 @@ void cuvistaGui::done() {
     //emit signals to report result back to main thread
     if (errorLogger.hasError())
         doneFail(errorLogger.getErrorMessage());
-    else if (mInputHandler.current != UserInputEnum::CONTINUE)
+    else if (mInputHandler.mCurrentInput != UserInputEnum::CONTINUE)
         doneCancel("Operation was cancelled");
     else
         doneSuccess(mData.fileOut, std::format(" written in {:.1f} min at {:.1f} fps", secs / 60.0, fps));

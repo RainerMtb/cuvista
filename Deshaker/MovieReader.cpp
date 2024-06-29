@@ -31,15 +31,15 @@ std::future<void> MovieReader::readAsync(ImageYuv& inputFrame) {
     return std::async(std::launch::async, [&] { read(inputFrame); });
 }
 
-std::optional<int64_t> MovieReader::dtsForFrameMillis(int64_t frameIndex) {
+std::optional<int64_t> MovieReader::ptsForFrameMillis(int64_t frameIndex) {
     auto fcn = [&] (const VideoPacketContext& vpc) { return vpc.readIndex == frameIndex; };
     auto result = std::find_if(packetList.cbegin(), packetList.cend(), fcn);
     if (result != packetList.end()) return result->bestTimestamp * 1000 * videoStream->time_base.num / videoStream->time_base.den;
     else return std::nullopt;
 }
 
-std::optional<std::string> MovieReader::dtsForFrameString(int64_t frameIndex) {
-    auto millis = dtsForFrameMillis(frameIndex);
+std::optional<std::string> MovieReader::ptsForFrameString(int64_t frameIndex) {
+    auto millis = ptsForFrameMillis(frameIndex);
     if (millis.has_value()) return timeString(millis.value());
     else return std::nullopt;
 }
@@ -246,13 +246,7 @@ void FFmpegReader::rewind() {
     frameIndex = -1;
     endOfInput = true;
     packetList.clear();
-
-    for (auto& s : inputStreams) {
-        for (AVPacket* packet : s.packets) {
-            av_packet_free(&packet);
-        }
-        s.packets.clear();
-    }
+    inputStreams.clear();
 }
 
 void FFmpegReader::close() {
@@ -265,6 +259,9 @@ void FFmpegReader::close() {
 
     videoStream = nullptr;
     sws_scaler_ctx = nullptr;
+
+    packetList.clear();
+    inputStreams.clear();
 }
 
 FFmpegReader::~FFmpegReader() {

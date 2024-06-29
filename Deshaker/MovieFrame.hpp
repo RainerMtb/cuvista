@@ -112,7 +112,7 @@ public:
 	/*
 	* play time for given frame
 	*/
-	std::string dtsForFrameString(int64_t frameIndex);
+	std::string ptsForFrameString(int64_t frameIndex);
 
 
 	ThreadPool mPool;

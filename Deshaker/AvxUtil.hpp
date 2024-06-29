@@ -33,4 +33,8 @@ namespace Avx {
 	void inv(std::span<VD8> v);
 
 	double norm1(std::span<VD8> v);
+
+	void toConsole(std::span<VD8> v);
+
+	void toConsole(std::span<VF16> v);
 }

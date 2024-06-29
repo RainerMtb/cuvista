@@ -20,9 +20,11 @@
 
 #include <QOpenGLWidget>
 #include <QOpenGLFunctions_4_5_Core>
+#include "Image2.hpp"
 
 //player widget
 class PlayerWidget : public QOpenGLWidget, protected QOpenGLFunctions_4_5_Core {
+    Q_OBJECT
 
 public:
     PlayerWidget(QWidget* parent);
@@ -33,8 +35,8 @@ public:
     void resizeGL(int w, int h) override;
 
 public slots:
-    void open(int h, int w, int stride);
-    void upload(int64_t frameIndex, unsigned char* pixels);
+    void open(int h, int w, int stride, QImage imageWorking);
+    void upload(int64_t frameIndex, ImageRGBA image);
     void playNextFrame(int64_t frameIndex);
 
 private:

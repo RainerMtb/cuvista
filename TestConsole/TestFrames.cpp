@@ -117,32 +117,27 @@ void compareFramesPlatforms() {
 		if (results[i].error.empty() == false) std::cout << "error " << i << " " << results[i].name << ": " << results[i].error << std::endl;
 	}
 
-	//compare image data
 	Result& r1 = results[0];
 	for (int i = 1; i < results.size(); i++) {
 		Result& r2 = results[i];
 
-		std::cout << "comparing:" << std::endl << r1.name << " vs " << r2.name << std::endl;
+		//compare image data
+		std::cout << "comparing: " << r1.name << " vs " << r2.name << std::endl;
 		std::cout << (r1.pyramid.equalsExact(r2.pyramid) ? "pyramids EQUAL" : "pyramids DIFFER <<<<<<") << std::endl;
 		std::cout << (r1.output.equalsExact(r2.output) ? "warped output EQUAL" : "warped output DIFFER <<<<<<") << std::endl;
 		std::cout << (r1.image == r2.image ? "image EQUAL" : "image DIFFER <<<<<<") << std::endl;
 		std::cout << (r1.input == r2.input ? "input EQUAL" : "input DIFFER <<<<<<<") << std::endl;
-		std::cout << std::endl;
-	}
 
-	//compare results
-	for (int i = 1; i < results.size(); i++) {
-		Result& r2 = results[i];
-		bool isEqual = true;
+		//compare results
+		int deltaCount = 0;
 		for (size_t i = 0; i < r1.results.size() && i < r2.results.size(); i++) {
 			if (r1.results[i] != r2.results[i]) {
-				isEqual = false;
-				std::cout << "result DIFFER: ix0=" << r1.results[i].ix0 << ", iy0=" << r2.results[i].iy0 << std::endl;
+				if (deltaCount == 0) std::cout << "results DIFFER: ix0=" << r1.results[i].ix0 << ", iy0=" << r2.results[i].iy0 << std::endl;
+				deltaCount++;
 			}
 		}
-		if (isEqual) {
-			std::cout << "results equal" << std::endl;
-		}
+		if (deltaCount == 0) std::cout << "results EQUAL" << std::endl;
+		else std::cout << "results difference count " << deltaCount << std::endl;
 		std::cout << std::endl;
 	}
 

@@ -18,10 +18,13 @@
 
 #pragma once
 
+#include <QObject>
+
 #include "UserInput.hpp"
 
-class UserInputGui : public UserInput {
+class UserInputGui : public QObject, public UserInputDefault {
+    Q_OBJECT
 
-public:
-    void checkState() override;
+public slots:
+    void cancel();
 };

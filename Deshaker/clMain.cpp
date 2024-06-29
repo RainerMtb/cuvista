@@ -377,9 +377,6 @@ void cl::outputData(int64_t frameIdx, const CoreData& core, std::array<double, 6
 		cl_float4 factor = { core.unsharp.y, core.unsharp.u, core.unsharp.v };
 		unsharp(outWarped, outFinal, outFilterV, clData, factor);
 
-		//convert to YUV444 for output
-		scale_32f8u_3(outFinal, clData.yuvOut, core.cpupitch, clData);
-
 	} catch (const Error& err) {
 		errorLogger.logError("OpenCL output error: ", err.what());
 	}
@@ -387,6 +384,9 @@ void cl::outputData(int64_t frameIdx, const CoreData& core, std::array<double, 6
 
 void cl::outputDataCpu(int64_t frameIndex, const CoreData& core, ImageYuv& image) {
 	try {
+		//convert to YUV444 for output
+		scale_32f8u_3(clData.out[4], clData.yuvOut, core.cpupitch, clData);
+		//copy to cpu memory
 		clData.queue.enqueueReadBuffer(clData.yuvOut, CL_TRUE, 0, 3ull * core.cpupitch * core.h, image.data());
 		image.index = frameIndex;
 
@@ -397,7 +397,7 @@ void cl::outputDataCpu(int64_t frameIndex, const CoreData& core, ImageYuv& image
 
 void cl::outputDataCpu(int64_t frameIndex, const CoreData& core, ImageRGBA& image) {
 	try {
-		//TODO
+		yuv_to_rgba(clData.kernels.yuv32f_to_rgba, clData.out[4], image.data(), clData, image.w, image.h);
 		image.index = frameIndex;
 
 	} catch (const Error& err) {

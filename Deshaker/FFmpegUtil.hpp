@@ -65,6 +65,8 @@ struct StreamContext {
 	int64_t pts = 0;
 	SwrContext* resampleCtx = nullptr;
 	AVAudioFifo* fifo = nullptr;
+
+	~StreamContext();
 };
 
 //timing values for input packets

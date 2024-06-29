@@ -88,13 +88,14 @@ __global__ void kernelCompute(ComputeTextures tex, CudaPointResult* results, Com
 	//pyramid level to start at
 	int z = d_core.zMax;
 	//offset in rows to current pyramid level as texture spans one full pyramid
-	int rowOffset = d_core.pyramidRowCount - (d_core.h >> z);
+	int rowOffset = d_core.pyramidRowCount;
 
 	double err = 0.0;
 	for (; z >= d_core.zMin && result >= PointResultType::RUNNING; z--) {
 		//dimensions for current pyramid level
 		int wz = d_core.w >> z;
 		int hz = d_core.h >> z;
+		rowOffset -= (d_core.h >> z);
 
 		//build sd matrix [6 x iw*iw]
 		if (r < iw) {
@@ -226,10 +227,6 @@ __global__ void kernelCompute(ComputeTextures tex, CudaPointResult* results, Com
 		//center of integration window on next level
 		xm *= 2;
 		ym *= 2;
-
-		//new texture row offset
-		int delta = d_core.h >> (z - 1);
-		rowOffset -= delta;
 
 		//if (param.frameIdx == 1 && ix0 == 63 && iy0 == 1 && cu::firstThread()) cu::storeDebugData(param.debugData, param.debugDataSize, 6, 1, eta);
 		//if (param.frameIdx == 1 && ix0 == 97 && iy0 == 4 && cu::firstThread()) printf("cuda %d %.14f\n", z, wp[5]);

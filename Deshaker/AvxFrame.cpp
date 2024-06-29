@@ -29,17 +29,17 @@ AvxFrame::AvxFrame(MainData& data, MovieReader& reader, MovieWriter& writer) :
 	pitch { align(data.w, walign) } 
 {
 	for (int i = 0; i < data.bufferCount; i++) mYUV.emplace_back(data.h, data.w, data.cpupitch);
-	mPyr.assign(data.pyramidCount, AvxMatFloat(data.pyramidRowCount, data.w, 0.0f));
-	mYuvPlane = AvxMatFloat(data.h, pitch, 0.0f);
+	mPyr.assign(data.pyramidCount, AvxMatf(data.pyramidRowCount, data.w, 0.0f));
+	mYuvPlane = AvxMatf(data.h, pitch, 0.0f);
 
-	mWarped.push_back(AvxMatFloat(data.h, pitch, data.bgcol_yuv.colors[0]));
-	mWarped.push_back(AvxMatFloat(data.h, pitch, data.bgcol_yuv.colors[1]));
-	mWarped.push_back(AvxMatFloat(data.h, pitch, data.bgcol_yuv.colors[2]));
+	mWarped.push_back(AvxMatf(data.h, pitch, data.bgcol_yuv.colors[0]));
+	mWarped.push_back(AvxMatf(data.h, pitch, data.bgcol_yuv.colors[1]));
+	mWarped.push_back(AvxMatf(data.h, pitch, data.bgcol_yuv.colors[2]));
 
-	mFilterBuffer = AvxMatFloat(data.w, align(data.h, walign)); //transposed
-	mFilterResult = AvxMatFloat(data.h, pitch);
+	mFilterBuffer = AvxMatf(data.w, align(data.h, walign)); //transposed
+	mFilterResult = AvxMatf(data.h, pitch);
 
-	mOutput.assign(3, AvxMatFloat(data.h, pitch));
+	mOutput.assign(3, AvxMatf(data.h, pitch));
 }
 
 int AvxFrame::align(int base, int alignment) {
@@ -62,7 +62,7 @@ void AvxFrame::inputData() {
 void AvxFrame::createPyramid(int64_t frameIndex) {
 	//util::ConsoleTimer ic("avx pyramid");
 	size_t pyrIdx = frameIndex % mPyr.size();
-	AvxMatFloat& Y = mPyr[pyrIdx];
+	AvxMatf& Y = mPyr[pyrIdx];
 	Y.frameIndex = frameIndex;
 
 	//fill topmost level of pyramid
@@ -121,7 +121,7 @@ void AvxFrame::getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cud
 }
 
 Matf AvxFrame::getTransformedOutput() const {
-	return Matf::concatVert(mWarped[0].toMatf(), mWarped[1].toMatf(), mWarped[2].toMatf());
+	return Matf::concatVert(mWarped[0].toMat(), mWarped[1].toMat(), mWarped[2].toMat());
 }
 
 void AvxFrame::getWarped(int64_t frameIndex, ImageRGBA& image) {
@@ -129,7 +129,7 @@ void AvxFrame::getWarped(int64_t frameIndex, ImageRGBA& image) {
 }
 
 Matf AvxFrame::getPyramid(int64_t index) const {
-	return mPyr[index].copyToMatf();
+	return mPyr[index].copyToMat();
 }
 
 void AvxFrame::getInput(int64_t frameIndex, ImageRGBA& image) {
@@ -170,7 +170,7 @@ void AvxFrame::getInput(int64_t index, ImageYuv& image) const {
 //	}
 //}
 
-void AvxFrame::filter(std::span<VF16> v, std::span<float> k, AvxMatFloat& dest, int r0, int c0) {
+void AvxFrame::filter(std::span<VF16> v, std::span<float> k, AvxMatf& dest, int r0, int c0) {
 	v[0] = v[0] * k[0] + v[0].rot<1>() * k[1] + v[0].rot<2>() * k[2] + v[0].rot<3>() * k[3] + v[0].rot<4>() * k[4];
 	v[1] = v[1] * k[0] + v[1].rot<1>() * k[1] + v[1].rot<2>() * k[2] + v[1].rot<3>() * k[3] + v[1].rot<4>() * k[4];
 	v[2] = v[2] * k[0] + v[2].rot<1>() * k[1] + v[2].rot<2>() * k[2] + v[2].rot<3>() * k[3] + v[2].rot<4>() * k[4];
@@ -192,7 +192,7 @@ void AvxFrame::filter(std::span<VF16> v, std::span<float> k, AvxMatFloat& dest, 
 	_mm_storeu_ps(dest.addr(r0 + 11, c0), _mm512_extractf32x4_ps(v[3], 2));
 }
 
-void AvxFrame::filter(const AvxMatFloat& src, int r0, int h, int w, AvxMatFloat& dest, std::span<float> k) {
+void AvxFrame::filter(const AvxMatf& src, int r0, int h, int w, AvxMatf& dest, std::span<float> k) {
 	//util::ConsoleTimer ic("avx filter " + std::to_string(w) + "x" + std::to_string(h));
 	assert(h >= 16 && w >= 16 && "invalid dimensions");
 
@@ -251,7 +251,7 @@ void AvxFrame::downsample(const float* srcptr, int h, int w, int stride, float* 
 	}
 }
 
-void AvxFrame::yuvToFloat(const ImageYuv& yuv, size_t plane, AvxMatFloat& dest) {
+void AvxFrame::yuvToFloat(const ImageYuv& yuv, size_t plane, AvxMatf& dest) {
 	//util::ConsoleTimer ic("avx yuv to float");
 	constexpr float f = 1.0f / 255.0f;
 	for (int r = 0; r < mData.h; r++) {
@@ -272,7 +272,93 @@ void AvxFrame::yuvToFloat(const ImageYuv& yuv, size_t plane, AvxMatFloat& dest) 
 void AvxFrame::computeStart(int64_t frameIndex) {}
 
 void AvxFrame::computeTerminate(int64_t frameIndex) {
-	//TODO
+	size_t pyrIdx = frameIndex % mPyr.size();
+	size_t pyrIdxPrev = (frameIndex - 1) % mPyr.size();
+	AvxMatf& frame = mPyr[pyrIdx];
+	AvxMatf& Y = mPyr[pyrIdxPrev];
+	assert(frame.frameIndex > 0 && frame.frameIndex == Y.frameIndex + 1 && "wrong frames to compute");
+
+	for (int threadIdx = 0; threadIdx < mData.cpuThreads; threadIdx++) {
+		int ir = mData.ir;
+		int iw = mData.iw;
+		int iww = iw * iw;
+		AvxMatd sd(6, iw * iw);
+		__mmask8 mask = (1 << iw) - 1;
+		__m512i vindexScatter = _mm512_setr_epi64(0, iw, 2ll * iw, 3ll * iw, 4ll * iw, 5ll * iw, 6ll * iw, 7ll * iw);
+		__m512i vidxGather = _mm512_setr_epi64(0, iww, 2ll * iww, 3ll * iww, 4ll * iww, 5ll * iww, 0, 0);
+
+		for (int iy0 = threadIdx; iy0 < mData.iyCount; iy0 += mData.cpuThreads) {
+			for (int ix0 = 0; ix0 < mData.ixCount; ix0++) {
+				// center of previous integration window
+				// one pixel padding around outside for delta
+				// changes per z level
+				int ym = iy0 + ir + 1;
+				int xm = ix0 + ir + 1;
+				PointResultType result = PointResultType::RUNNING;
+				int z = mData.zMax;
+				double err = 0.0;
+				int rowOffset = mData.pyramidRowCount;
+
+				for (; z >= mData.zMin && result >= PointResultType::RUNNING; z--) {
+					rowOffset -= (mData.h >> z);
+
+					for (int c = 0; c < iw; c++) {
+						int iy = ym - ir + c + rowOffset;
+						int ix = xm - ir;
+						VD8 dx = VF8(Y.addr(iy, ix + 1)) / 2 - VF8(Y.addr(iy, ix - 1)) / 2;
+						VD8 dy = VF8(Y.addr(iy + 1, ix)) / 2 - VF8(Y.addr(iy - 1, ix)) / 2;
+						_mm512_mask_i64scatter_pd(sd.addr(0, c), mask, vindexScatter, dx, 8);
+						_mm512_mask_i64scatter_pd(sd.addr(1, c), mask, vindexScatter, dy, 8);
+
+						const VD8 f23 = VD8(-ir, 1 - ir, 2 - ir, 3 - ir, 4 - ir, 5 - ir, 6 - ir, 7 - ir);
+						_mm512_mask_i64scatter_pd(sd.addr(2, c), mask, vindexScatter, dx * f23, 8);
+						_mm512_mask_i64scatter_pd(sd.addr(3, c), mask, vindexScatter, dy * f23, 8);
+
+						const VD8 f45 = VD8(c - ir);
+						_mm512_mask_i64scatter_pd(sd.addr(4, c), mask, vindexScatter, dx * f45, 8);
+						_mm512_mask_i64scatter_pd(sd.addr(5, c), mask, vindexScatter, dy * f45, 8);
+					}
+					//if (frameIndex == 1 && ix0 == 63 && iy0 == 1 && z == mData.zMax) sd.toConsole(); //----------------
+
+					//s = sd * sd'
+					std::vector<VD8> s(6);
+					for (int i = 0; i < iww; i++) {
+						VD8 a = _mm512_i64gather_pd(vidxGather, sd.addr(0, i), 8);
+						for (int k = 0; k < 6; k++) {
+							s[k] += a * sd.at(k, i);
+						}
+					}
+					//if (frameIndex == 1 && ix0 == 63 && iy0 == 1) Avx::toConsole(s); //----------------
+
+					double ns = Avx::norm1(s);
+					std::span<VD8> g = s;
+					Avx::inv(g);
+					double gs = Avx::norm1(g);
+					double rcond = 1 / (ns * gs);
+					result = (std::isnan(rcond) || rcond < mData.deps) ? PointResultType::FAIL_SINGULAR : PointResultType::RUNNING;
+
+					//if (frameIndex == 1 && ix0 == 75 && iy0 == 10) Avx::toConsole(g); //----------------
+
+					int iter = 0;
+					double bestErr = std::numeric_limits<double>::max();
+					while (result == PointResultType::RUNNING) {
+
+						err = 0.0;
+						if (std::isnan(err)) result = PointResultType::FAIL_ETA_NAN;
+						if (err < mData.COMP_MAX_TOL) result = PointResultType::SUCCESS_ABSOLUTE_ERR;
+						if (std::abs(err - bestErr) / bestErr < mData.COMP_MAX_TOL * mData.COMP_MAX_TOL) result = PointResultType::SUCCESS_STABLE_ITER;
+						if (err < bestErr) bestErr = err;
+						iter++;
+						if (iter == mData.COMP_MAX_ITER && result == PointResultType::RUNNING) result = PointResultType::FAIL_ITERATIONS;
+					}
+
+					//center of integration window on next level
+					ym *= 2;
+					xm *= 2;
+				}
+			}
+		}
+	}
 }
 
 //compute bilinear interpolation
@@ -297,7 +383,7 @@ std::pair<VD8, VD8> AvxFrame::transform(VD8 x, VD8 y, VD8 m00, VD8 m01, VD8 m02,
 	return { xx, yy };
 }
 
-void AvxFrame::warpBack(const AffineTransform& trf, const AvxMatFloat& input, AvxMatFloat& dest) {
+void AvxFrame::warpBack(const AffineTransform& trf, const AvxMatf& input, AvxMatf& dest) {
 	//util::ConsoleTimer ic("avx warp");
 	//transform parameters
 	VD8 m00 = trf.arrayValue(0);
@@ -377,7 +463,7 @@ void AvxFrame::warpBack(const AffineTransform& trf, const AvxMatFloat& input, Av
 	}
 }
 
-void AvxFrame::unsharp(const AvxMatFloat& warped, AvxMatFloat& gauss, float unsharp, AvxMatFloat& out) {
+void AvxFrame::unsharp(const AvxMatf& warped, AvxMatf& gauss, float unsharp, AvxMatf& out) {
 	//util::ConsoleTimer ic("avx unsharp");
 	for (int r = 0; r < mData.h; r++) {
 		for (int c = 0; c < mData.w; c += 16) {

@@ -33,6 +33,8 @@ double fabs(double);
 float __saturatef(float);
 double __fma_rn(double, double, double);
 bool isnan(double);
+double min(double, double);
+double max(double, double);
 
 namespace cu {
 	const int THREAD_COUNT = 16;	//number of threads used in kernels to access textures

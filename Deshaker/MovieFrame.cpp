@@ -20,8 +20,8 @@
 #include "ProgressDisplay.hpp"
 #include "Util.hpp"
 
-std::string MovieFrame::dtsForFrameString(int64_t frameIndex) {
-	return mReader.dtsForFrameString(frameIndex).value_or("");
+std::string MovieFrame::ptsForFrameString(int64_t frameIndex) {
+	return mReader.ptsForFrameString(frameIndex).value_or("");
 }
 
 //shutdown
@@ -134,7 +134,7 @@ void MovieFrame::loopInit(ProgressBase& progress, const std::string& message) {
 void MovieFrame::loopTerminate(ProgressBase& progress, UserInput& input, AuxWriters& auxWriters) {
 	//flush writer buffer
 	bool hasFrame = mWriter.startFlushing();
-	while (errorLogger.hasNoError() && input.current < UserInputEnum::HALT && hasFrame) {
+	while (errorLogger.hasNoError() && input.mCurrentInput < UserInputEnum::HALT && hasFrame) {
 		hasFrame = mWriter.flush();
 		progress.update();
 	}
@@ -203,7 +203,7 @@ void MovieFrame::runLoopCombined(ProgressBase& progress, UserInput& input, AuxWr
 	}
 
 	//process last frame in buffer
-	if (errorLogger.hasNoError() && input.current <= UserInputEnum::END) {
+	if (errorLogger.hasNoError() && input.mCurrentInput <= UserInputEnum::END) {
 		computeTransform(mReader.frameIndex);
 		mTrajectory.addTrajectoryTransform(mFrameResult.getTransform());
 		const AffineTransform& finalTransform = mTrajectory.computeSmoothTransform(mData, mWriter.frameIndex);
@@ -215,7 +215,7 @@ void MovieFrame::runLoopCombined(ProgressBase& progress, UserInput& input, AuxWr
 	}
 
 	//write remaining frames
-	while (errorLogger.hasNoError() && mWriter.frameIndex < mReader.frameIndex && input.current <= UserInputEnum::END) {
+	while (errorLogger.hasNoError() && mWriter.frameIndex < mReader.frameIndex && input.mCurrentInput <= UserInputEnum::END) {
 		const AffineTransform& tf = mTrajectory.computeSmoothTransform(mData, mWriter.frameIndex);
 		outputData(tf);
 		mWriter.prepareOutput(*this);

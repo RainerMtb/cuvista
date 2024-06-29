@@ -37,15 +37,15 @@ public:
 		if (key) {
 			switch (*key) {
 			case 'e':
-				this->current = UserInputEnum::END;
+				this->mCurrentInput = UserInputEnum::END;
 				console << std::endl << "[e] command received. Stop reading input." << std::endl;
 				break;
 			case 'q':
-				this->current = UserInputEnum::QUIT;
+				this->mCurrentInput = UserInputEnum::QUIT;
 				console << std::endl << "[q] command received. Stop writing output." << std::endl;
 				break;
 			case 'x':
-				this->current = UserInputEnum::HALT;
+				this->mCurrentInput = UserInputEnum::HALT;
 				console << std::endl << "[x] command received. Terminating." << std::endl;
 				break;
 			}
