@@ -64,8 +64,8 @@ public:
 		return Mat<T>::fromArray(h(), w(), this->array, false); 
 	}
 
-	void toConsole() const {
-		toMat().toConsole();
+	void toConsole(int digits = 5) const {
+		toMat().toConsole("avx", digits);
 	}
 };
 

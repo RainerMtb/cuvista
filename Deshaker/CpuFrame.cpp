@@ -136,7 +136,7 @@ void CpuFrame::computeTerminate(int64_t frameIndex) {
 
 				for (; z >= mData.zMin && result >= PointResultType::RUNNING; z--) {
 					Matf& Y = previous.mY[z];
-					SubMat<float> im = SubMat<float>::from(Y, ym - ir, xm - ir, iw, iw);
+					SubMat<float> im = SubMat<float>::from(Y, 0ll + ym - ir, 0ll + xm - ir, iw, iw);
 
 					//affine transform
 					for (int r = 0; r < iw; r++) {
@@ -184,6 +184,7 @@ void CpuFrame::computeTerminate(int64_t frameIndex) {
 						delta.setValues([&] (size_t r, size_t c) {
 							return im.at(r, c) - jm.at(r, c); }
 						);
+						//if (frameIndex == 1 && ix0 == 48 && iy0 == 0 && iter == 1) delta.toConsole("cpu", 18); //----------------
 
 						//eta = g.times(sd.times(delta.flatToCol())) //[6 x 1]
 						etaMat.setValuesByRow({ 0, 0, 1, 0, 0, 1 });
@@ -199,10 +200,12 @@ void CpuFrame::computeTerminate(int64_t frameIndex) {
 								etaMat[i][0] += g[i][r] * b;
 							}
 						}
+						//if (frameIndex == 1 && ix0 == 48 && iy0 == 0 && iter == 1) etaMat.toConsole("cpu", 18); //------------------------
+
 						double* eta = etaMat.data(); //[6 x 1]
 						dwp.setValuesByRow(0, 0, 2, 3, { eta[2], eta[3], eta[0], eta[4], eta[5], eta[1] }); //set first 6 values
 						wp = wp.times(dwp);
-						//if (frameIndex == 1 && ix0 == 27 && iy0 == 1) wp.toConsole("cpu"); //------------------------
+						//if (frameIndex == 1 && ix0 == 48 && iy0 == 0 && iter == 1) wp.toConsole("cpu", 18); //------------------------
 
 						err = eta[0] * eta[0] + eta[1] * eta[1];
 						if (std::isnan(err)) result = PointResultType::FAIL_ETA_NAN;

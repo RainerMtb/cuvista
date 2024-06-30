@@ -34,7 +34,7 @@ namespace Avx {
 
 	double norm1(std::span<VD8> v);
 
-	void toConsole(std::span<VD8> v);
+	void toConsole(std::span<VD8> v, int digits = 5);
 
-	void toConsole(std::span<VF16> v);
+	void toConsole(VD8 v, int digits = 5);
 }

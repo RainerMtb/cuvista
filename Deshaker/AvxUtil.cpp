@@ -191,18 +191,15 @@ double Avx::norm1(std::span<VD8> v) {
 
 
 //print matrix of avx vectors to console
-void Avx::toConsole(std::span<VD8> v) {
+void Avx::toConsole(std::span<VD8> v, int digits) {
 	int siz = int(v.size());
 	AvxMatd mat(siz, 8);
 	for (int i = 0; i < siz; i++) v[i].storeu(mat.row(i));
-	mat.toConsole();
+	mat.toConsole(digits);
 }
 
 
-//print matrix of avx vectors to console
-void Avx::toConsole(std::span<VF16> v) {
-	int siz = int(v.size());
-	AvxMatf mat(siz, 16);
-	for (int i = 0; i < siz; i++) v[i].storeu(mat.row(i));
-	mat.toConsole();
+void Avx::toConsole(VD8 v, int digits) {
+	std::vector<VD8> vec = { v };
+	toConsole(vec, digits);
 }

@@ -94,19 +94,20 @@ void PlayerWriter::prepareOutput(MovieFrame& frame) {
 
 //wait until presentation time has arrived and show video frame
 void PlayerWriter::write(const MovieFrame& frame) {
-    //check time and player state
-    auto tnow = std::chrono::steady_clock::now();
-    while (tnow < mNextDts || mPlayer->isPaused) {
-        std::this_thread::sleep_for(std::chrono::microseconds(500));
-        tnow = std::chrono::steady_clock::now();
-    }
-    mPlayer->playNextFrame(frameIndex);
-
     //presentation time for next frame
     auto t1 = mReader.ptsForFrameMillis(frameIndex);
     auto t2 = mReader.ptsForFrameMillis(frameIndex + 1);
     int64_t delta = t1.has_value() && t2.has_value() ? (*t2 - *t1) : 0;
-    mNextDts = std::chrono::steady_clock::now() + std::chrono::milliseconds(delta);
+
+    //check time and player state
+    auto tnow = std::chrono::steady_clock::now();
+    while (tnow < mNextDts || mPlayer->isPaused) {
+        tnow = std::chrono::steady_clock::now();
+    }
+    mPlayer->playNextFrame(frameIndex);
+
+    //set next presentation time
+    mNextDts = tnow + std::chrono::milliseconds(delta);
     frameIndex++;
     frameEncoded++;
 }
@@ -138,8 +139,9 @@ void PlayerProgress::update(bool force) {
 
     //player state
     QString status = "Playing...";
-    if (idx < 0) status = "Buffering...";
     if (mPlayer->isPaused) status = "Pausing...";
+    else if (idx < 0) status = "Buffering...";
+    else if (frame.mWriter.frameIndex == frame.mReader.frameIndex) status = "Ending...";
 
     mPlayer->sigProgress(str, status);
 }

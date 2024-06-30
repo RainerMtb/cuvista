@@ -31,7 +31,7 @@ class Player : public QMainWindow {
     Q_OBJECT
 
 public:
-    QAtomicInt isPaused;
+    volatile bool isPaused = false;
 
     Player(QWidget* parent);
     void open(int h, int w, int stride, QImage imageWorking);

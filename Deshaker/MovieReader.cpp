@@ -246,7 +246,6 @@ void FFmpegReader::rewind() {
     frameIndex = -1;
     endOfInput = true;
     packetList.clear();
-    inputStreams.clear();
 }
 
 void FFmpegReader::close() {
@@ -259,7 +258,6 @@ void FFmpegReader::close() {
 
     videoStream = nullptr;
     sws_scaler_ctx = nullptr;
-
     packetList.clear();
     inputStreams.clear();
 }
