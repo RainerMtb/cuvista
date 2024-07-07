@@ -21,6 +21,7 @@
 #include "MovieFrame.hpp"
 #include "AvxMat.hpp"
 #include "AvxWrapper.hpp"
+#include <span>
 
 
  //---------------------------------------------------------------------

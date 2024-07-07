@@ -21,7 +21,6 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
-#include <algorithm>
 #include <cassert>
 #include <iostream>
 
@@ -32,7 +31,6 @@ long long int clock64();
 double fabs(double);
 float __saturatef(float);
 double __fma_rn(double, double, double);
-bool isnan(double);
 double min(double, double);
 double max(double, double);
 

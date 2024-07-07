@@ -17,6 +17,7 @@
  */
 
 #include <iostream>
+#include <format>
 #include "Util.hpp"
 
 namespace util {
@@ -34,7 +35,7 @@ namespace util {
 		std::cout << mName << "=" << delta.count() / 1000.0 << " ms" << std::endl;
 	}
 
-	std::string concatStrings(std::vector<std::string> strings, std::string_view delimiter, std::string_view prefix, std::string_view suffix) {
+	std::string concatStrings(std::vector<std::string>& strings, std::string_view delimiter, std::string_view prefix, std::string_view suffix) {
 		std::string out = "";
 		auto it = strings.begin();
 

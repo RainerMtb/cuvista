@@ -1,0 +1,10 @@
+#project(cuvistaCli)
+
+add_executable(cuvista Main.cpp)
+target_include_directories(cuvista PUBLIC "${PROJECT_SOURCE_DIR}/include/ffmpeg")
+target_include_directories(cuvista PUBLIC "${PROJECT_SOURCE_DIR}/Matrix")
+target_link_libraries(cuvista PUBLIC Matrix)
+target_include_directories(cuvista PUBLIC "${PROJECT_SOURCE_DIR}/CudaClasses")
+target_link_libraries(cuvista PUBLIC CudaClasses)
+target_include_directories(cuvista PUBLIC "${PROJECT_SOURCE_DIR}/Deshaker")
+target_link_libraries(cuvista PUBLIC Deshaker)

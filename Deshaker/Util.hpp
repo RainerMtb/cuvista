@@ -20,6 +20,7 @@
 
 #include <chrono>
 #include <string>
+#include <vector>
 
 //misc stuff
 namespace util {
@@ -43,7 +44,7 @@ namespace util {
     };
 
     //concat givens strings by using delimiters
-    std::string concatStrings(std::vector<std::string> strings, std::string_view delimiter, std::string_view prefix, std::string_view suffix);
+    std::string concatStrings(std::vector<std::string>& strings, std::string_view delimiter, std::string_view prefix, std::string_view suffix);
 
     //convert a number of bytes into more readable magnitude kb, Mb
     std::string byteSizeToString(int64_t bytes);

@@ -141,7 +141,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)Matrix;$(SolutionDir)CudaClasses;$(SolutionDir)Deshaker;$(SolutionDir)include;$(SolutionDir)include\ffmpeg;$(CUDA_PATH)\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Matrix;$(SolutionDir)CudaClasses;$(SolutionDir)Deshaker;$(SolutionDir)include;$(SolutionDir)include\ffmpeg;$(SolutionDir)include\CL;$(CUDA_PATH)\include</AdditionalIncludeDirectories>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions512</EnableEnhancedInstructionSet>
     </ClCompile>
     <Link>
@@ -161,7 +161,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)Matrix;$(SolutionDir)CudaClasses;$(SolutionDir)Deshaker;$(SolutionDir)include;$(SolutionDir)include\ffmpeg;$(CUDA_PATH)\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Matrix;$(SolutionDir)CudaClasses;$(SolutionDir)Deshaker;$(SolutionDir)include;$(SolutionDir)include\ffmpeg;$(SolutionDir)include\CL;$(CUDA_PATH)\include</AdditionalIncludeDirectories>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions512</EnableEnhancedInstructionSet>
     </ClCompile>
     <Link>

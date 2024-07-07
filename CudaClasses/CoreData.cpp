@@ -16,6 +16,7 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
+#include <cmath>
 #include "CoreData.hpp"
 
 bool PointResult::isValid() const {
@@ -27,7 +28,7 @@ int PointResult::resultValue() const {
 }
 
 bool PointResult::equal(double a, double b, double tol) const {
-	return (isnan(a) && isnan(b)) || std::fabs(a - b) <= tol;
+	return (std::isnan(a) && std::isnan(b)) || std::fabs(a - b) <= tol;
 }
 
 bool PointResult::equals(const PointResult& other, double tol) const {

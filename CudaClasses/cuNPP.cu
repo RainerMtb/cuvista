@@ -17,7 +17,6 @@
  */
 
 #include "cuNPP.cuh"
-#include "Util.hpp"
 #include "CudaData.cuh"
 
 #include <chrono>

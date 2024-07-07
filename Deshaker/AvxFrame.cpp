@@ -598,7 +598,7 @@ void AvxFrame::write(ImageYuv& dest) {
 		for (int r = 0; r < mData.h; r++) {
 			for (int c = 0; c < mData.w; c += 16) {
 				VF16 out = mOutput[z].addr(r, c);
-				__m512i chars32 = _mm512_cvt_roundps_epi32(out * 255.0f, _MM_FROUND_TO_NEAREST_INT);
+				__m512i chars32 = _mm512_cvt_roundps_epi32(out * 255.0f, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
 				__m128i chars8 = _mm512_cvtepi32_epi8(chars32);
 				_mm_storeu_epi8(dest.addr(z, r, c), chars8);
 			}
@@ -613,7 +613,7 @@ void AvxFrame::write(std::span<unsigned char> nv12, int cudaPitch) {
 		unsigned char* dest = nv12.data() + r * cudaPitch;
 		for (int c = 0; c < mData.w; c += 16) {
 			VF16 out = mOutput[0].addr(r, c);
-			__m512i chars32 = _mm512_cvt_roundps_epi32(out * 255.0f, _MM_FROUND_TO_NEAREST_INT);
+			__m512i chars32 = _mm512_cvt_roundps_epi32(out * 255.0f, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
 			__m128i chars8 = _mm512_cvtepi32_epi8(chars32);
 			_mm_storeu_epi8(dest + c, chars8);
 		}
@@ -626,12 +626,12 @@ void AvxFrame::write(std::span<unsigned char> nv12, int cudaPitch) {
 		__m512i a, b, x, sumU, sumV, sum;
 
 		for (int c = 0; c < mData.w; c += 16) {
-			a = _mm512_cvt_roundps_epi32(_mm512_loadu_ps(mOutput[1].addr(r, c)), _MM_FROUND_TO_NEAREST_INT);
-			b = _mm512_cvt_roundps_epi32(_mm512_loadu_ps(mOutput[1].addr(r + 1, c)), _MM_FROUND_TO_NEAREST_INT);
+			a = _mm512_cvt_roundps_epi32(_mm512_loadu_ps(mOutput[1].addr(r, c)), _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
+			b = _mm512_cvt_roundps_epi32(_mm512_loadu_ps(mOutput[1].addr(r + 1, c)), _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
 			sumU = _mm512_add_epi32(a, b);
 
-			a = _mm512_cvt_roundps_epi32(_mm512_loadu_ps(mOutput[2].addr(r, c)), _MM_FROUND_TO_NEAREST_INT);
-			b = _mm512_cvt_roundps_epi32(_mm512_loadu_ps(mOutput[2].addr(r + 1, c)), _MM_FROUND_TO_NEAREST_INT);
+			a = _mm512_cvt_roundps_epi32(_mm512_loadu_ps(mOutput[2].addr(r, c)), _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
+			b = _mm512_cvt_roundps_epi32(_mm512_loadu_ps(mOutput[2].addr(r + 1, c)), _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
 			sumV = _mm512_add_epi32(a, b);
 
 			//cross over and combine

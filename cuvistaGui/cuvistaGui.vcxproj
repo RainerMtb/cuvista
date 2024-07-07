@@ -65,7 +65,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)Deshaker;$(SolutionDir)Matrix;$(SolutionDir)CudaClasses;$(SolutionDir)include;$(SolutionDir)include\ffmpeg;$(CUDA_PATH)\include;$(Qt_INCLUDEPATH_)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Deshaker;$(SolutionDir)Matrix;$(SolutionDir)CudaClasses;$(SolutionDir)include;$(SolutionDir)include\ffmpeg;$(SolutionDir)include\CL;$(CUDA_PATH)\include;$(Qt_INCLUDEPATH_)</AdditionalIncludeDirectories>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions512</EnableEnhancedInstructionSet>
       <Optimization>Disabled</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -80,7 +80,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)Deshaker;$(SolutionDir)Matrix;$(SolutionDir)CudaClasses;$(SolutionDir)include;$(SolutionDir)include\ffmpeg;$(CUDA_PATH)\include;$(Qt_INCLUDEPATH_)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Deshaker;$(SolutionDir)Matrix;$(SolutionDir)CudaClasses;$(SolutionDir)include;$(SolutionDir)include\ffmpeg;$(SolutionDir)include\CL;$(CUDA_PATH)\include;$(Qt_INCLUDEPATH_)</AdditionalIncludeDirectories>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions512</EnableEnhancedInstructionSet>
     </ClCompile>
     <Link>

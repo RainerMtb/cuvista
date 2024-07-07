@@ -129,9 +129,9 @@ void Avx::inv(std::span<VD8> v) {
 
 		//find pivot and exchange if necessary
 		size_t p = j;
-		tmp = _mm512_maskz_abs_pd(mask, v[p]);
+		tmp = _mm512_mask_abs_pd(tmp, mask, v[p]);
 		for (size_t i = j + 1; i < m; i++) {
-			VD8 a = _mm512_maskz_abs_pd(mask, v[i]);
+			VD8 a = _mm512_mask_abs_pd(tmp, mask, v[i]);
 			if (_mm512_cmp_pd_mask(a, tmp, _CMP_GT_OS)) {
 				tmp = a;
 				p = i;
