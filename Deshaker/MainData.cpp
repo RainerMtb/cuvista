@@ -483,7 +483,7 @@ void MainData::showIntro(const std::string& deviceName, const MovieReader& reade
 		{StreamHandling::STREAM_TRANSCODE, "transcode"},
 	};
 	for (size_t i = 0; i < reader.inputStreams.size(); i++) {
-		StreamContext sc = reader.inputStreams[i];
+		const StreamContext& sc = reader.inputStreams[i];
 		StreamInfo info = reader.streamInfo(sc.inputStream);
 		*console << "  Stream " << i
 			<< ": type: " << info.streamType

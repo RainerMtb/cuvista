@@ -17,7 +17,7 @@
  */
 
 #include "Image.hpp"
-#include <cassert>
+#include <cmath>
 #include <algorithm>
 
 

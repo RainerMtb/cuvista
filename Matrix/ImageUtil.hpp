@@ -20,6 +20,9 @@
 
 #include <fstream>
 #include <string>
+#include <cstddef>
+#include <cassert>
+#include <memory>
 #include "CharMap.hpp"
 #include "Color.hpp"
 

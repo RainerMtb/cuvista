@@ -20,11 +20,14 @@
 
 #include "Decompositor.h"
 
+//need a forward declaration before we can declare friedship
+template <class T> class QRDecompositorUD;
+
 template <class T> class QRDecompositor : public Decompositor<T> {
 
 	using Decompositor<T>::dirty;
 
-	template <class T> friend class QRDecompositorUD;
+	friend class QRDecompositorUD<T>;
 
 protected:
 	Mat<T>& A;

@@ -53,7 +53,7 @@ private:
 	std::ostream& print(std::ostream& out) const;
 
 public:
-	MatRow<T>(T* rowptr, size_t cols) : 
+	MatRow(T* rowptr, size_t cols) : 
 		rowptr { rowptr }, 
 		cols { cols } 
 	{}
@@ -105,11 +105,11 @@ protected:
 	inline static ThreadPoolBase defaultPool;
 
 	//create mat using existing data array, sharing memory
-	Mat<T>(T* array, size_t rows, size_t cols, bool ownData) : 
+	Mat(T* array, size_t rows, size_t cols, bool ownData) : 
 		CoreMat<T>(array, rows, cols, ownData) {}
 
 	//create new mat, allocate data array
-	Mat<T>(size_t rows, size_t cols) : 
+	Mat(size_t rows, size_t cols) : 
 		Mat<T>(new T[rows * cols], rows, cols, true) {}
 
 	//apply unary op
@@ -229,19 +229,19 @@ private:
 
 public:
 	//default constructor produces invalid mat
-	Mat<T>() : 
+	Mat() : 
 		Mat<T>(nullptr, 0, 0, true) {}
 
 	//implicit constructor for scalar Matrix
-	Mat<T>(T val) : 
+	Mat(T val) : 
 		Mat<T>(new T[1] {val}, 1, 1, true) {}
 
 	//copy constructor from CoreMat
-	Mat<T>(const CoreMat<T>& other) :
+	Mat(const CoreMat<T>& other) :
 		CoreMat<T>(other) {}
 
 	//move constructor from CoreMat
-	Mat<T>(CoreMat<T>&& other) noexcept :
+	Mat(CoreMat<T>&& other) noexcept :
 		CoreMat<T>(other) {}
 
 	//print precision

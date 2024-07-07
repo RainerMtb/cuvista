@@ -222,7 +222,7 @@ FFmpegFormatWriter::~FFmpegFormatWriter() {
 
 //write packet to output
 int FFmpegFormatWriter::writePacket(AVPacket* packet) {
-    StreamContext sc = mReader.inputStreams[packet->stream_index];
+    StreamContext& sc = mReader.inputStreams[packet->stream_index];
     //std::printf("stream %d pts [sec] %.5f\n", packet->stream_index, 1.0 * packet->pts * sc.outputStream->time_base.num / sc.outputStream->time_base.den);
     
     int result = av_interleaved_write_frame(fmt_ctx, packet); //write_frame also does unref packet

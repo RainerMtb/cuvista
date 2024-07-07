@@ -54,10 +54,10 @@ void ImageYuv::readFromPGM(const std::string& filename) {
 		std::string p5;
 		int inw, inh, maxVal;
 		file >> p5 >> inw >> inh >> maxVal;
-		if (p5 != "P5") throw std::exception("file does not start with 'P5'");
-		if (maxVal != 255) throw std::exception("max value must be 255");
-		if (inw > stride) throw std::exception("invalid width");
-		if (inh != h * 3) throw std::exception("invalid height");
+		if (p5 != "P5") throw std::runtime_error("file does not start with 'P5'");
+		if (maxVal != 255) throw std::runtime_error("max value must be 255");
+		if (inw > stride) throw std::runtime_error("invalid width");
+		if (inh != h * 3) throw std::runtime_error("invalid height");
 		file.get(); //read delimiter
 
 		for (int i = 0; i < 3; i++) {

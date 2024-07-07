@@ -20,7 +20,6 @@
 
 #include "ImageUtil.hpp"
 #include "ThreadPoolBase.h"
-#include <assert.h>
 
 namespace im {
 

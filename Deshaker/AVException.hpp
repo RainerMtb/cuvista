@@ -19,16 +19,17 @@
 #pragma once
 
 #include <string>
+#include <stdexcept>
 
-class AVException : public std::exception {
+class AVException : public std::runtime_error {
 
 public:
 
-    AVException() : std::exception() {}
+    AVException() : std::runtime_error("") {}
 
-    AVException(const std::string& msg) : std::exception(msg.c_str()) {}
+    AVException(const std::string& msg) : std::runtime_error(msg.c_str()) {}
 
-    AVException(const char* msg) : std::exception(msg) {}
+    AVException(const char* msg) : std::runtime_error(msg) {}
 };
 
 

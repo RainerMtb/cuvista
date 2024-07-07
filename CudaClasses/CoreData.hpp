@@ -28,7 +28,7 @@ struct Triplet {
 		if (idx == 0) return y;
 		if (idx == 1) return u;
 		if (idx == 2) return v;
-		throw std::exception("invalid index");
+		throw std::runtime_error("invalid index");
 	}
 };
 

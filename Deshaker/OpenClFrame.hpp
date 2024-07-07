@@ -66,7 +66,7 @@ public:
 	}
 
 	void getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) override {
-		throw std::exception("not supported");
+		throw std::runtime_error("not supported");
 	}
 
 	void getWarped(int64_t frameIndex, ImageRGBA& image) override {

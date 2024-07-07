@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include <cstddef>
 #include <cassert>
 #include <algorithm>
 #include <optional>
@@ -38,18 +39,18 @@ protected:
 	bool ownData;	//object owns and therefore destructs data array
 
 	//create new mat, allocate data array
-	CoreMat<T>(size_t rows, size_t cols) : 
+	CoreMat(size_t rows, size_t cols) : 
 		CoreMat<T>(new T[rows * cols], rows, cols, true) {}
 
 	//create new mat filled with given value
-	CoreMat<T>(size_t rows, size_t cols, T value) :
+	CoreMat(size_t rows, size_t cols, T value) :
 		CoreMat<T>(rows, cols)
 	{
 		std::fill(array, array + rows * cols, value);
 	}
 
 	//create mat using existing data array, sharing memory
-	CoreMat<T>(T* array, size_t rows, size_t cols, bool ownData) : 
+	CoreMat(T* array, size_t rows, size_t cols, bool ownData) : 
 		array { array },
 		h { rows },
 		w { cols },
@@ -66,16 +67,16 @@ protected:
 
 public:
 	//default constructor produces invalid mat
-	CoreMat<T>();
+	CoreMat();
 
 	//copy constructor
-	CoreMat<T>(const CoreMat<T>& other);
+	CoreMat(const CoreMat<T>& other);
 
 	//move constructor
-	CoreMat<T>(CoreMat<T>&& other) noexcept;
+	CoreMat(CoreMat<T>&& other) noexcept;
 
 	//virtual destructor
-	virtual ~CoreMat<T>();
+	virtual ~CoreMat();
 
 	//copy assignment
 	CoreMat<T>& operator = (const CoreMat<T>& other);

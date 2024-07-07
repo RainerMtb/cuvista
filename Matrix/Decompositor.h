@@ -31,5 +31,5 @@ protected:
 public:
 	virtual Decompositor<T>& compute() { return *this; };
 	virtual std::optional<Mat<T>> solve(const Mat<T>& b) { return std::nullopt; };
-	virtual ~Decompositor<T>() = default;
+	virtual ~Decompositor() = default;
 };

@@ -26,11 +26,11 @@ To work on the code yourself and build the application, get the source code and 
 ## Resources and Dependencies
 - Windows 11 64bit
 - Visual Studio 2022
-- Nvidia Cuda 12.5
-- Nvidia Video Codec SDK 12.2.72
+- Nvidia Cuda 12.5 https://developer.nvidia.com/cuda-downloads
+- Nvidia Video Codec SDK 12.2.72 https://developer.nvidia.com/nvidia-video-codec-sdk/download
 - Nvidia NvApi https://github.com/NVIDIA/nvapi.git
 - Google Cpu Features https://github.com/google/cpu_features.git
-- FFmpeg 6.1.1
+- FFmpeg 7.0
 
 For the GUI
-- Qt 6.7.1
+- Qt 6.7.2

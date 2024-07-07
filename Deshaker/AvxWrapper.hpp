@@ -66,8 +66,13 @@ public:
 	float operator [] (size_t i) const { return at(i); }
 	float& operator [] (size_t i) { return at(i); }
 
+#ifdef _MSC_VER
 	float at(size_t i) const { return a.m512_f32[i]; }
 	float& at(size_t i) { return a.m512_f32[i]; }
+#else
+	float at(size_t i) const { return a[i]; }
+	float& at(size_t i) { return a[i]; }
+#endif
 
 	friend std::ostream& operator << (std::ostream& os, const VF16& vec) {
 		for (int i = 0; i < 16; i++) os << vec[i] << " ";
@@ -144,8 +149,13 @@ public:
 	float operator [] (size_t i) const { return at(i); }
 	float& operator [] (size_t i) { return at(i); }
 
+#ifdef _MSC_VER
 	float at(size_t i) const { return a.m256_f32[i]; }
 	float& at(size_t i) { return a.m256_f32[i]; }
+#else
+	float at(size_t i) const { return a[i]; }
+	float& at(size_t i) { return a[i]; }
+#endif
 
 	friend std::ostream& operator << (std::ostream& os, const VF8& vec) {
 		for (int i = 0; i < 8; i++) os << vec[i] << " ";
@@ -220,8 +230,13 @@ public:
 	float operator [] (size_t i) const { return at(i); }
 	float& operator [] (size_t i) { return at(i); }
 
+#ifdef _MSC_VER
 	float at(size_t i) const { return a.m128_f32[i]; }
 	float& at(size_t i) { return a.m128_f32[i]; }
+#else
+	float at(size_t i) const { return a[i]; }
+	float& at(size_t i) { return a[i]; }
+#endif
 
 	friend std::ostream& operator << (std::ostream& os, const VF4& vec) {
 		for (int i = 0; i < 4; i++) os << vec[i] << " ";
@@ -300,8 +315,13 @@ public:
 	double operator [] (size_t i) const { return at(i); }
 	double& operator [] (size_t i) { return at(i); }
 
+#ifdef _MSC_VER
 	double at(size_t i) const { return a.m512d_f64[i]; }
 	double& at(size_t i) { return a.m512d_f64[i]; }
+#else
+	double at(size_t i) const { return a[i]; }
+	double& at(size_t i) { return a[i]; }
+#endif
 
 	friend std::ostream& operator << (std::ostream& os, const VD8& vec) {
 		for (int i = 0; i < 8; i++) os << vec[i] << " ";
