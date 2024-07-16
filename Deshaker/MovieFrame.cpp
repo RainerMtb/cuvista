@@ -31,7 +31,7 @@ MovieFrame::~MovieFrame() {
 
 //compute affine transform parameters given the indiviual point results
 void MovieFrame::computeTransform(int64_t frameIndex) {
-	mFrameResult.computeTransform(mResultPoints, mPool, frameIndex, rng.get());
+	mFrameResult.computeTransform(mResultPoints, mPool, frameIndex, rng);
 }
 
 //read transform parameters from file, usually for second run

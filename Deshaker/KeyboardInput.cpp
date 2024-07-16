@@ -16,7 +16,12 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
+
+//handle keyboard input on console
 #include "KeyboardInput.hpp"
+
+#if defined(_WIN64)
+//windows code
 #include <Windows.h>
 
 #undef max
@@ -28,12 +33,47 @@ std::optional<char> getKeyboardInput() {
     DWORD cc;
     BOOL retval = false;
 
+    std::optional<char> out = std::nullopt;
     while (GetNumberOfConsoleInputEvents(stdIn, &cc), cc > 0) {
         retval = ReadConsoleInput(stdIn, &irec, 1, &cc);
         if (irec.EventType == KEY_EVENT && irec.Event.KeyEvent.bKeyDown) {
             wchar_t wchr = irec.Event.KeyEvent.uChar.UnicodeChar;
-            return (char) wchr;
+            out = (char) wchr;
         }
     }
+    return out;
+}
+
+#elif defined(__linux__)
+
+//linux code
+#include <stdio.h>
+#include <sys/poll.h>
+#include <termios.h>
+
+std::optional<char> getKeyboardInput() {
+	pollfd pfd = { 0, POLLIN };
+	termios save;
+	tcgetattr(0, &save);
+	termios tc = save;
+	tc.c_lflag &= ~(ICANON | ECHO);
+	tc.c_cc[VMIN] = 0;
+	tc.c_cc[VTIME] = 0;
+	tcsetattr(0, TCSANOW, &tc);
+
+    std::optional<char> out = std::nullopt;
+    while (poll(&pfd, 1, 0) > 0) {
+        int key = getchar();
+        out = char(key);
+    }
+	tcsetattr(0, TCSAFLUSH, &save);
+    return out;
+}
+
+#else
+//no keyboard handling
+std::optional<char> getKeyboardInput() {
     return std::nullopt;
 }
+
+#endif

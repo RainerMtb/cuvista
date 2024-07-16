@@ -18,15 +18,34 @@
 
 #include "MovieWriter.hpp"
 #include "MovieFrame.hpp"
-#include <io.h>
 #include <fcntl.h>
+
+#if defined(_WIN64)
+
+//in windows we need to set pipe mode
+#include <io.h>
 
 void PipeWriter::open(EncodingOption videoCodec) {
 	//set stdout to binary mode
 	int result = _setmode(_fileno(stdout), _O_BINARY);
 	if (result < 0)
-		throw AVException("Pipe: error setting stdout to binary");
+		throw AVException("Pipe: error setting stdout to binary mode");
 }
+
+PipeWriter::~PipeWriter() {
+	int result = _setmode(_fileno(stdout), _O_TEXT);
+	if (result < 0) {
+		errorLogger.logError("Pipe: error setting stdout to text mode");
+	}
+}
+
+#else
+
+void PipeWriter::open(EncodingOption videoCodec) {}
+
+PipeWriter::~PipeWriter() {}
+
+#endif
 
 void PipeWriter::write(const MovieFrame& frame) {
 	packYuv();
@@ -39,11 +58,4 @@ void PipeWriter::write(const MovieFrame& frame) {
 
 	//static std::ofstream out("f:/test.yuv", std::ios::binary);
 	//out.write(yuvPacked.data(), yuvPacked.size());
-}
-
-PipeWriter::~PipeWriter() {
-	int result = _setmode(_fileno(stdout), _O_TEXT);
-	if (result < 0) {
-		errorLogger.logError("Pipe: error setting stdout back to text");
-	}
 }

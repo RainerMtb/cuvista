@@ -19,7 +19,6 @@
 #pragma once
 
 #include "Image.hpp"
-#include <format>
 
 class ImagePPM;
 class ImageBGR;
@@ -148,12 +147,7 @@ class ImagePPM : public im::ImagePacked<unsigned char> {
 public:
 	static inline int headerSize = 19;
 
-	ImagePPM(int h, int w) :
-		ImagePacked(h, w, 3 * w, 3, 3 * h * w + headerSize) 
-	{
-		//first 19 bytes are header for ppm format
-		std::format_to_n(arrays.at(0).get(), headerSize, "P6 {:5} {:5} 255 ", w, h);
-	}
+	ImagePPM(int h, int w);
 
 	ImagePPM() :
 		ImagePPM(0, 0) {}

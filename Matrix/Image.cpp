@@ -20,12 +20,53 @@
 #include <cmath>
 #include <algorithm>
 
+template <class T> im::ImageBase<T>::ImageBase(int h, int w, int stride, int numPlanes) :
+	h { h },
+	w { w },
+	stride { stride },
+	numPlanes { numPlanes },
+	imageSize { 1ull * h * stride * numPlanes },
+	arrays { std::make_shared<T[]>(imageSize) } 
+{
+	assert(h >= 0 && w >= 0 && "invalid dimensions");
+	assert(stride >= w && "stride must be equal or greater to width");
+}
+
+template <class T> im::ImageBase<T>::ImageBase(int h, int w, int stride, int numPlanes, std::vector<std::shared_ptr<T[]>> arrays, size_t imageSize) :
+	h { h },
+	w { w },
+	stride { stride },
+	numPlanes { numPlanes },
+	imageSize { imageSize },
+	arrays { arrays }
+{
+	assert(h >= 0 && w >= 0 && "invalid dimensions");
+	assert(stride >= w && "stride must be equal or greater to width");
+}
 
 template <class T> void im::ImageBase<T>::setPixel(size_t row, size_t col, std::vector<T> colors) {
 	assert(numPlanes == colors.size() && "image plane count does not match number of color values");
 	for (int i = 0; i < numPlanes; i++) {
 		at(i, row, col) = colors[i];
 	}
+}
+
+template <class T> T* im::ImageBase<T>::plane(size_t idx) {
+	return addr(idx, 0, 0);
+}
+
+template <class T> const T* im::ImageBase<T>::plane(size_t idx) const {
+	return addr(idx, 0, 0);
+}
+
+//access one pixel on plane idx and row / col
+template <class T> T& im::ImageBase<T>::at(size_t idx, size_t r, size_t c) {
+	return *addr(idx, r, c);
+}
+
+//read access one pixel on plane idx and row / col
+template <class T> const T& im::ImageBase<T>::at(size_t idx, size_t r, size_t c) const {
+	return *addr(idx, r, c);
 }
 
 template <class T> int im::ImageBase<T>::colorValue(T pixelValue) const {
@@ -425,6 +466,22 @@ template <class T> bool im::ImageBase<T>::saveAsPPM(const std::string& filename,
 //------------------------
 // packed image
 //------------------------
+
+template <class T> im::ImagePacked<T>::ImagePacked(int h, int w, int stride, int numPlanes, int arraysize) :
+	ImageBase<T>(h, w, stride, numPlanes, { std::make_shared<T[]>(arraysize) }, arraysize) {}
+
+template <class T> im::ImagePacked<T>::ImagePacked(int h, int w, int stride, int numPlanes, T* data, int arraysize) :
+	ImageBase<T>(h, w, stride, numPlanes, { {data, NullDeleter<T>()} }, arraysize) {}
+
+template <class T> T* im::ImagePacked<T>::addr(size_t idx, size_t r, size_t c) {
+	assert(r < this->h && c < this->w && idx < this->numPlanes && "invalid pixel address");
+	return this->data() + r * this->stride + c * this->numPlanes + idx;
+}
+
+template <class T> const T* im::ImagePacked<T>::addr(size_t idx, size_t r, size_t c) const {
+	assert(r < this->h && c < this->w && idx < this->numPlanes && "invalid pixel address");
+	return this->data() + r * this->stride + c * this->numPlanes + idx;
+}
 
 template <class T> void im::ImagePacked<T>::copyTo(ImageBase<T>& dest) const {
 	assert(this->w == dest.w && this->h == dest.h && this->stride <= dest.stride && "invalid dimensions");

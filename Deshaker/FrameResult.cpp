@@ -31,11 +31,11 @@ FrameResult::FrameResult(MainData& data, ThreadPool& threadPool) :
 	}
 }
 
-void FrameResult::computeTransform(std::vector<PointResult>& results, ThreadPool& threadPool, int64_t frameIndex, RNGbase* rng) {
+void FrameResult::computeTransform(std::vector<PointResult>& results, ThreadPool& threadPool, int64_t frameIndex, RNG rng) {
 	computeExperimental(results, threadPool, frameIndex, rng);
 }
 
-void FrameResult::computeExperimental(std::vector<PointResult>& results, ThreadPool& threadPool, int64_t frameIndex, RNGbase* rng) {
+void FrameResult::computeExperimental(std::vector<PointResult>& results, ThreadPool& threadPool, int64_t frameIndex, RNG rng) {
 	const ptrdiff_t cMinConsensPoints = 8;	     //min numbers of points for consensus set
 	const double cRetryPercentage = 8.0;         //run loop as long as percentage of valid points is not reached
 	const int cConsLoopCount = 8;			     //max number of loops when searching for consensus set
@@ -120,7 +120,7 @@ void FrameResult::computeExperimental(std::vector<PointResult>& results, ThreadP
 			//test multiple samples and build map of candidates
 			for (int k = 0; k < cLoopCount; k++) {
 				//get random points and compute affine transform based on those points
-				std::sample(mConsList.begin(), mConsList.end(), samples.begin(), samples.size(), *rng);
+				std::sample(mConsList.begin(), mConsList.end(), samples.begin(), samples.size(), rng);
 				PointResult s1 = *samples[0].ptr;
 				PointResult s2 = *samples[1].ptr;
 				const AffineTransform& trf = mAffineSolver->computeSimilarDirect(s1, s2);
@@ -186,7 +186,7 @@ void FrameResult::reset() {
 }
 
 //old style stabilization
-void FrameResult::compute(std::vector<PointResult>& results, ThreadPool& threadPool, int64_t frameIndex, RNGbase* rng) {
+void FrameResult::compute(std::vector<PointResult>& results, ThreadPool& threadPool, int64_t frameIndex, RNG rng) {
 	const size_t cMinConsensPoints = 8;	     //min numbers of points for consensus set
 	const int cConsLoopCount = 8;			     //max number of loops when searching for consensus set
 	const int cConsLoopPercent = 95;		     //percentage of points for next loop 0..100

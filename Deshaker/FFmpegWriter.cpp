@@ -90,6 +90,7 @@ void FFmpegWriter::open(EncodingOption videoCodec, int h, int w, int stride, con
     //open container format
     FFmpegFormatWriter::open(videoCodec, sourceName, imageBufferSize);
 
+    codec_ctx->codec_type = AVMEDIA_TYPE_VIDEO;
     codec_ctx->width = w;
     codec_ctx->height = h;
     codec_ctx->pix_fmt = pixfmt;

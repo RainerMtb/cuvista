@@ -119,7 +119,8 @@ public:
 	FrameResult mFrameResult;
 	ImageYuv mBufferFrame;
 	std::vector<PointResult> mResultPoints;
-	std::unique_ptr<RNGbase> rng = std::make_unique<RNG<PseudoRandomSource>>();
+
+	RNG rng;
 
 	MovieFrame(const MovieFrame& other) = delete;
 	MovieFrame(MovieFrame&& other) = delete;

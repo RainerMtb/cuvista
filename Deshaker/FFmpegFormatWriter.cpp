@@ -30,6 +30,7 @@ AVStream* FFmpegFormatWriter::newStream(AVFormatContext* fmt_ctx, AVStream* inSt
 
 //setup output format
 void FFmpegFormatWriter::open(EncodingOption videoCodec, const std::string& sourceName, int queueSize) {
+
     //av_log_set_level(AV_LOG_ERROR);
     //custom callback to log ffmpeg errors
     av_log_set_callback(ffmpeg_log);

@@ -25,9 +25,9 @@ double ReaderStats::fps() const {
 
 StreamInfo ReaderStats::streamInfo(AVStream* stream) const {
     std::string tstr;
-    if (stream->duration != AVERROR(AV_NOPTS_VALUE))
+    if (stream->duration != AV_NOPTS_VALUE)
         tstr = timeString(stream->duration * stream->time_base.num * 1000 / stream->time_base.den);
-    else if (avformatDuration != AVERROR(AV_NOPTS_VALUE))
+    else if (avformatDuration != AV_NOPTS_VALUE)
         tstr = timeString(avformatDuration * stream->time_base.num / stream->time_base.den);
     else
         tstr = "unknown";

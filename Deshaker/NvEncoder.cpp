@@ -19,6 +19,23 @@
 #include "NvEncoder.hpp"
 #include "Util.hpp"
 
+static std::strong_ordering compareGuid(const GUID& g1, const GUID& g2) {
+	auto t1 = std::tie(g1.Data1, g1.Data2, g1.Data3, g1.Data4[0], g1.Data4[1], g1.Data4[2], g1.Data4[3]);
+	auto t2 = std::tie(g2.Data1, g2.Data2, g2.Data3, g2.Data4[0], g2.Data4[1], g2.Data4[2], g2.Data4[3]);
+	return t1 <=> t2;
+}
+
+#ifndef _WIN64
+bool operator == (const GUID& g1, const GUID& g2) {
+	return compareGuid(g1, g2) == std::strong_ordering::equal;
+}
+#endif
+
+bool operator < (const GUID& g1, const GUID& g2) {
+	return compareGuid(g1, g2) == std::strong_ordering::less;
+}
+
+
 void handleResult(bool isError, std::string&& msg) {
 	if (isError) 
 		throw AVException(msg);

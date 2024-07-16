@@ -18,6 +18,7 @@
 
 
 #include "Image2.hpp"
+#include <format>
 
 
 ImagePPM& ImageYuvMat::toPPM(ImagePPM& dest, ThreadPoolBase& pool) const {
@@ -224,6 +225,13 @@ bool ImageRGBA::saveAsColorBMP(const std::string& filename) const {
 //------------------------
 // PPM image stuff
 //------------------------
+
+ImagePPM::ImagePPM(int h, int w) :
+	ImagePacked(h, w, 3 * w, 3, 3 * h * w + headerSize) 
+{
+	//first 19 bytes are header for ppm format
+	std::format_to_n(arrays.at(0).get(), headerSize, "P6 {:5} {:5} 255 ", w, h);
+}
 
 const unsigned char* ImagePPM::data() const {
 	return arrays.at(0).get() + headerSize;

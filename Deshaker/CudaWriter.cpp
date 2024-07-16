@@ -4,23 +4,21 @@
 #include "ThreadPool.hpp"
 #include "MovieFrame.hpp"
 
-class FunctorLess {
-public:
-    bool operator () (const GUID& g1, const GUID& g2) const {
-        return std::tie(g1.Data1, g1.Data2, g1.Data3, *g1.Data4) < std::tie(g2.Data1, g2.Data2, g2.Data3, *g2.Data4);
-    }
-};
-
-std::map<GUID, AVCodecID, FunctorLess> guidToCodecMap = {
+std::map<GUID, AVCodecID> guidToCodecMap = {
     { NV_ENC_CODEC_H264_GUID, AV_CODEC_ID_H264 },
     { NV_ENC_CODEC_HEVC_GUID, AV_CODEC_ID_HEVC },
 };
 
-std::list<NvPacket> nvPackets; //encoded packets
+std::map<Codec, GUID> guidMap = {
+    { Codec::H264, NV_ENC_CODEC_H264_GUID },
+    { Codec::H265, NV_ENC_CODEC_HEVC_GUID },
+};
+
 
 CudaFFmpegWriter::CudaFFmpegWriter(MainData& data, MovieReader& reader) :
     FFmpegFormatWriter(data, reader),
-    nvenc { std::make_unique<NvEncoder>(data.w, data.h) } {}
+    nvenc { std::make_unique<NvEncoder>(data.w, data.h) },
+    nvPackets { std::make_unique<std::list<NvPacket>>() } {}
 
 //cuda encoding contructor
 void CudaFFmpegWriter::open(EncodingOption videoCodec) {
@@ -104,7 +102,7 @@ void CudaFFmpegWriter::writePacketsToFile(std::list<NvPacket> nvpkts, bool termi
 
 void CudaFFmpegWriter::encodePackets() {
     try {
-        nvenc->encodeFrame(nvPackets);
+        nvenc->encodeFrame(*nvPackets);
 
     } catch (const AVException& e) {
         errorLogger.logError("error writing: ", e.what());
@@ -114,7 +112,7 @@ void CudaFFmpegWriter::encodePackets() {
 
 void CudaFFmpegWriter::write(const MovieFrame& frame) {
     encodePackets();
-    encodingQueue.push_back(encoderPool.add([=] { writePacketsToFile(nvPackets, false); }));
+    encodingQueue.push_back(encoderPool.add([this, pkts = *nvPackets] { writePacketsToFile(pkts, false); }));
     encodingQueue.front().wait();
     encodingQueue.pop_front();
     this->frameIndex++;
@@ -137,5 +135,4 @@ bool CudaFFmpegWriter::flush() {
 
 CudaFFmpegWriter::~CudaFFmpegWriter() {
     nvenc->destroyEncoder();
-    nvPackets.clear();
 }

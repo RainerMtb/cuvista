@@ -18,49 +18,19 @@
 
 #pragma once
 
-#include <random>
+#include <cstdint>
 
-//superclass for random generators
-class RNGbase {
-
-public:
-    virtual ~RNGbase() = default;
-    typedef uint32_t result_type;             //type has to be hardcoded in superclass?
-    virtual result_type operator() () = 0;    //will be overridden in subclass
-    inline static result_type (*min) ();      //function pointer will be set in subclass constructor
-    inline static result_type (*max) ();      //function pointer will be set in subclass constructor
-};
-
-//wrapper for random generators
-template <class R> class RNG : public RNGbase {
-
-public:
-    using result_type = typename R::result_type;
-
-    R r;
-
-    RNG() {
-        RNGbase::min = R::min;
-        RNGbase::max = R::max;
-    }
-
-    result_type operator() () override {
-        return r();
-    }
-};
-
-
-//simple random number generator
+//simple not-random-at-all number generator
 class PseudoRandomSource {
 
 public:
-	typedef uint32_t result_type;
+	using result_type = uint32_t;
 
-	static result_type min() {
+	inline static constexpr result_type min() {
 		return 0;
 	}
 
-	static result_type max() {
+	inline static constexpr result_type max() {
 		return 65'535;
 	}
 
@@ -108,3 +78,5 @@ private:
     };
 
 };
+
+using RNG = PseudoRandomSource;

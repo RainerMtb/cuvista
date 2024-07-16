@@ -27,6 +27,7 @@ class CudaFFmpegWriter : public FFmpegFormatWriter {
 
 private:
 	std::unique_ptr<NvEncoder> nvenc;
+	std::unique_ptr<std::list<NvPacket>> nvPackets; //encoded packets
 
 	void writePacketToFile(const NvPacket& nvpkt, bool terminate);
 	void writePacketsToFile(std::list<NvPacket> nvpkts, bool terminate);

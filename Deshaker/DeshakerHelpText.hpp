@@ -26,8 +26,6 @@ input/output options:
                 forward to other software, for example ffmpeg through
                 -f rawvideo -framerate n -pix_fmt yuv444p -video_size w:h
                 note: does not work on windows PowerShell, use cmd shell
--o tcp://aa:p   output to tcp address in raw YUV444P format
-                example: -o tcp://100.101.102.103:1234
 -o null         do not write any output
 -o fmt.jpg      output a sequence of images in jpeg format
                 format see below for bmp images

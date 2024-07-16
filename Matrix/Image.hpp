@@ -48,29 +48,9 @@ namespace im {
 		void copyTo(ImageBase<T>& dest, size_t r0, size_t c0, std::vector<int> srcPlanes, std::vector<int> destPlanes, ThreadPoolBase& pool = defaultPool) const;
 
 	public:
-		ImageBase(int h, int w, int stride, int numPlanes) :
-			h { h },
-			w { w },
-			stride { stride },
-			numPlanes { numPlanes },
-			imageSize { 1ull * h * stride * numPlanes },
-			arrays { std::make_shared<T[]>(imageSize) } 
-		{
-			assert(h >= 0 && w >= 0 && "invalid dimensions");
-			assert(stride >= w && "stride must be equal or greater to width");
-		}
+		ImageBase(int h, int w, int stride, int numPlanes);
 
-		ImageBase(int h, int w, int stride, int numPlanes, std::vector<std::shared_ptr<T[]>> arrays, size_t imageSize) :
-			h { h },
-			w { w },
-			stride { stride },
-			numPlanes { numPlanes },
-			imageSize { imageSize },
-			arrays { arrays }
-		{
-			assert(h >= 0 && w >= 0 && "invalid dimensions");
-			assert(stride >= w && "stride must be equal or greater to width");
-		}
+		ImageBase(int h, int w, int stride, int numPlanes, std::vector<std::shared_ptr<T[]>> arrays, size_t imageSize);
 
 		ImageBase() :
 			ImageBase(0, 0, 0, 0, {}, 0) {}
@@ -99,23 +79,15 @@ namespace im {
 			return size() * sizeof(T);
 		}
 
-		T* plane(size_t idx) {
-			return addr(idx, 0, 0);
-		}
+		T* plane(size_t idx);
 
-		const T* plane(size_t idx) const {
-			return addr(idx, 0, 0);
-		}
+		const T* plane(size_t idx) const;
 
 		//access one pixel on plane idx and row / col
-		T& at(size_t idx, size_t r, size_t c) {
-			return *addr(idx, r, c);
-		}
+		T& at(size_t idx, size_t r, size_t c);
 
 		//read access one pixel on plane idx and row / col
-		const T& at(size_t idx, size_t r, size_t c) const {
-			return *addr(idx, r, c);
-		}
+		const T& at(size_t idx, size_t r, size_t c) const;
 
 		//set color value for all pixels in one plane
 		void setValues(int plane, T colorValue);
@@ -167,21 +139,13 @@ namespace im {
 	template <class T> class ImagePacked : public ImageBase<T> {
 
 	public:
-		ImagePacked(int h, int w, int stride, int numPlanes, int arraysize) :
-			ImageBase<T>(h, w, stride, numPlanes, { std::make_shared<T[]>(arraysize) }, arraysize) {}
+		ImagePacked(int h, int w, int stride, int numPlanes, int arraysize);
 
-		ImagePacked(int h, int w, int stride, int numPlanes, T* data, int arraysize) :
-			ImageBase<T>(h, w, stride, numPlanes, { {data, NullDeleter<T>()} }, arraysize) {}
+		ImagePacked(int h, int w, int stride, int numPlanes, T* data, int arraysize);
 
-		T* addr(size_t idx, size_t r, size_t c) override {
-			assert(r < this->h && c < this->w && idx < this->numPlanes && "invalid pixel address");
-			return this->data() + r * this->stride + c * this->numPlanes + idx;
-		}
+		T* addr(size_t idx, size_t r, size_t c) override;
 
-		const T* addr(size_t idx, size_t r, size_t c) const override {
-			assert(r < this->h && c < this->w && idx < this->numPlanes && "invalid pixel address");
-			return this->data() + r * this->stride + c * this->numPlanes + idx;
-		}
+		const T* addr(size_t idx, size_t r, size_t c) const override;
 
 		virtual T* data() {
 			return this->arrays.at(0).get();

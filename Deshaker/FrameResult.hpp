@@ -30,7 +30,7 @@ public:
 	FrameResult(MainData& data, ThreadPool& threadPool);
 
 	//compute resulting transformation for this frame
-	void computeTransform(std::vector<PointResult>& results, ThreadPool& threadPool, int64_t frameIndex, RNGbase* rng);
+	void computeTransform(std::vector<PointResult>& results, ThreadPool& threadPool, int64_t frameIndex, RNG rng);
 
 	//get the last computed treansform
 	const AffineTransform& getTransform() const;
@@ -46,8 +46,8 @@ private:
 
 	void computePointContext(std::span<PointContext> points, const AffineTransform& trf, double radius);
 
-	void computeExperimental(std::vector<PointResult>& results, ThreadPool& threadPool, int64_t frameIndex, RNGbase* rng);
-	void compute(std::vector<PointResult>& results, ThreadPool& threadPool, int64_t frameIndex, RNGbase* rng);
+	void computeExperimental(std::vector<PointResult>& results, ThreadPool& threadPool, int64_t frameIndex, RNG rng);
+	void compute(std::vector<PointResult>& results, ThreadPool& threadPool, int64_t frameIndex, RNG rng);
 
 	double sqr(double value);
 };

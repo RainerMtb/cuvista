@@ -186,7 +186,6 @@
     <ClCompile Include="ProgressDisplay.cpp" />
     <ClCompile Include="MovieWriter.cpp" />
     <ClCompile Include="Stats.cpp" />
-    <ClCompile Include="TCPWriter.cpp" />
     <ClCompile Include="ThreadPool.cpp" />
     <ClCompile Include="Trajectory.cpp" />
     <ClCompile Include="Util.cpp" />

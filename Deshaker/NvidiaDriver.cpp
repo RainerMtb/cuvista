@@ -20,8 +20,11 @@
 #include "AVException.hpp"
 #include "NvidiaDriver.hpp"
 
+//nvapi only works on windows
+#if defined(_WIN64)
+
 extern "C" {
-#include "nvapi\nvapi.h"
+#include "nvapi/nvapi.h"
 }
 
 //get nvidia driver version
@@ -53,3 +56,10 @@ int probeNvidiaDriver() {
 	}
 	return retval;
 }
+
+#else
+int probeNvidiaDriver() {
+	return 0;
+}
+
+#endif

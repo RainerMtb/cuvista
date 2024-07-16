@@ -41,7 +41,7 @@ protected:
 	}
 
 private:
-	SubMat<T>(T* array, size_t r0, size_t c0, size_t hs, size_t ws, size_t h, size_t w) : 
+	SubMat(T* array, size_t r0, size_t c0, size_t hs, size_t ws, size_t h, size_t w) : 
 		Mat<T>(array, h, w, false), 
 		subArray { array + r0 * w + c0 }, 
 		r0 { r0 }, 
@@ -66,7 +66,7 @@ private:
 	}
 
 public:
-	SubMat<T>() : 
+	SubMat() : 
 		Mat<T>() {}
 
 	//create sub mat by sharing data array

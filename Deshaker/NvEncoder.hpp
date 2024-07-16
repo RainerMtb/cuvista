@@ -30,10 +30,8 @@
 #include <map>
 #include <optional>
 
-inline std::map<Codec, GUID> guidMap = {
-	{ Codec::H264, NV_ENC_CODEC_H264_GUID },
-	{ Codec::H265, NV_ENC_CODEC_HEVC_GUID },
-};
+bool operator < (const GUID& g1, const GUID& g2);
+bool operator == (const GUID& g1, const GUID& g2);
 
 struct NvPacket {
 	std::vector<uint8_t> packet;

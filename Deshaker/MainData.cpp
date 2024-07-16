@@ -77,15 +77,15 @@ bool MainData::checkFileForWriting(const std::string& file, DecideYNA permission
 		throw CancelException("output file exists, aborting...");
 	}
 	if (permission == DecideYNA::ASK && static_cast<bool>(std::ifstream(file))) {
-		std::cout << "file '" << file << "' exists, overwrite [y/n] ";
+		*console << "file '" << file << "' exists, overwrite [y/n] " << std::flush;
 		while (true) {
 			std::optional<char> och = getKeyboardInput();
 			if (och && *och == 'y') {
-				std::cout << "y" << std::endl;
+				*console << "y" << std::endl;
 				break;
 			}
 			if (och && *och == 'n') {
-				std::cout << "n" << std::endl;
+				*console << "n" << std::endl;
 				throw CancelException("cancelled writing to file, aborting...");
 			}
 		}
@@ -95,12 +95,12 @@ bool MainData::checkFileForWriting(const std::string& file, DecideYNA permission
 
 //start overall timing
 void MainData::timeStart() {
-	timePoint = std::chrono::high_resolution_clock::now();
+	timePoint = std::chrono::steady_clock::now();
 }
 
 //elapsed time in seconds
 double MainData::timeElapsedSeconds() const {
-	auto timeNow = std::chrono::high_resolution_clock::now();
+	auto timeNow = std::chrono::steady_clock::now();
 	std::chrono::duration<double> secs = timeNow - timePoint;
 	return secs.count();
 }
@@ -115,17 +115,8 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 			fileIn = next;
 
 		} else if (args.nextArg("o", next)) {
-			const char* regexstr = R"(tcp:\/\/(\d+\.\d+\.\d+\.\d+):(\d+))";
-			std::regex pattern(regexstr); //group 1 = address, group 2 = port
-			std::smatch matcher;
 			console = &std::cout;
-			if (std::regex_match(next, matcher, pattern)) {
-				//check for TCP
-				videoOutputType = OutputType::TCP;
-				tcp_address = matcher[1].str();
-				tcp_port = std::stoi(matcher[2].str());
-
-			} else if (str_toupper(next) == "NULL") {
+			if (str_toupper(next) == "NULL") {
 				//do not do any output
 				videoOutputType = OutputType::NONE;
 
@@ -286,11 +277,11 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 		} else if (args.nextArg("copyframes")) {
 			dummyFrame = true;
 
-		} else if (args.nextArg("rand", next)) {
-			if (std::stoi(next) == 1) rng = std::make_unique<RNG<PseudoRandomSource>>();
-			else if (std::stoi(next) == 2) rng = std::make_unique<RNG<std::random_device>>();
-			else if (std::stoi(next) == 3) rng = std::make_unique<RNG<std::default_random_engine>>();
-			else throw AVException("invalid random generator selection: " + next);
+		// } else if (args.nextArg("rand", next)) {
+		// 	if (std::stoi(next) == 1) rng = std::make_unique<RNG<PseudoRandomSource>>();
+		// 	else if (std::stoi(next) == 2) rng = std::make_unique<RNG<std::random_device>>();
+		// 	else if (std::stoi(next) == 3) rng = std::make_unique<RNG<std::default_random_engine>>();
+		// 	else throw AVException("invalid random generator selection: " + next);
 
 		} else if (args.nextArg("stack", next)) {
 			double val = std::stod(next);

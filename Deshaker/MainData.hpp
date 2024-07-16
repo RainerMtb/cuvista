@@ -41,7 +41,6 @@ enum class DeshakerPass {
 enum class OutputType {
 	NONE,
 	PIPE,
-	TCP,
 	VIDEO_FILE,
 	SEQUENCE_BMP,
 	SEQUENCE_JPG,
@@ -191,7 +190,6 @@ public:
 	int cpuThreads = std::max(1u, std::thread::hardware_concurrency() * 3 / 4);
 
 	int64_t maxFrames = std::numeric_limits<int32_t>::max();
-	std::unique_ptr<RNGbase> rng = std::make_unique<RNG<PseudoRandomSource>>();
 	im::ColorRgb bgcol_rgb { 0, 50, 0 };
 
 	std::chrono::steady_clock::time_point timePoint;

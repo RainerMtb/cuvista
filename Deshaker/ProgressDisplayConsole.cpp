@@ -32,7 +32,7 @@ ProgressDisplayConsole::ProgressDisplayConsole(MovieFrame& frame, std::ostream* 
 }
 
 void ProgressDisplayConsole::writeMessage(const std::string& str) {
-	*outstream << str;
+	*outstream << str << std::flush;
 }
 
 std::stringstream& ProgressDisplayConsole::buildMessage() {
@@ -73,7 +73,7 @@ void ProgressDisplayRewriteLine::update(bool force) {
 
 		//new line
 		output = "\r" + buildMessage().str();
-		*outstream << output;
+		*outstream << output << std::flush;
 	}
 }
 

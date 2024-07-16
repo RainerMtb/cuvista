@@ -59,8 +59,6 @@ int deshake(int argsCount, char** args) {
 			writer = std::make_unique<StackedWriter>(data, *reader, *data.stackPosition);
 		else if (data.videoOutputType == OutputType::PIPE)
 			writer = std::make_unique<PipeWriter>(data, *reader);
-		else if (data.videoOutputType == OutputType::TCP)
-			writer = std::make_unique<TCPWriter>(data, *reader);
 		else if (data.videoOutputType == OutputType::SEQUENCE_BMP)
 			writer = std::make_unique<BmpImageWriter>(data, *reader);
 		else if (data.videoOutputType == OutputType::SEQUENCE_JPG)
