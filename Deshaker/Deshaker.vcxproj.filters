@@ -74,9 +74,6 @@
     <ClCompile Include="FFmpegFormatWriter.cpp">
       <Filter>Writer</Filter>
     </ClCompile>
-    <ClCompile Include="TCPWriter.cpp">
-      <Filter>Windows</Filter>
-    </ClCompile>
     <ClCompile Include="KeyboardInput.cpp">
       <Filter>Windows</Filter>
     </ClCompile>

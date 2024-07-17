@@ -10,14 +10,9 @@ set(CMAKE_CUDA_STANDARD_REQUIRED True)
 set(CMAKE_CUDA_ARCHITECTURES all)
 enable_language(CUDA)
 
+set(CMAKE_BUILD_TYPE Release)
+
 add_subdirectory(Matrix)
 add_subdirectory(CudaClasses)
 add_subdirectory(Deshaker)
 add_subdirectory(cuvistaCli)
-
-
-#sudo apt install -y ffmpeg
-#sudo apt install -y libavcodec-dev libavdevice-dev libavfilter-dev libavformat-dev libavutil-dev libswresample-dev libswscale-dev
-#sudo apt install -y cmake
-#cuda
-#cuda path set

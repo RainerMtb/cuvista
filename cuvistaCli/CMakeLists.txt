@@ -1,7 +1,6 @@
 #project(cuvistaCli)
 
 add_executable(cuvista Main.cpp)
-target_include_directories(cuvista PRIVATE "${PROJECT_SOURCE_DIR}/include/ffmpeg")
 target_include_directories(cuvista PRIVATE "${PROJECT_SOURCE_DIR}/Matrix")
 target_include_directories(cuvista PRIVATE "${PROJECT_SOURCE_DIR}/CudaClasses")
 target_include_directories(cuvista PRIVATE "${PROJECT_SOURCE_DIR}/Deshaker")

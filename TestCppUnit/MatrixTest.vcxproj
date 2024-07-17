@@ -109,7 +109,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)Matrix;$(SolutionDir)CudaClasses;$(SolutionDir)Deshaker;$(SolutionDir)TestCuda;$(SolutionDir)include;$(SolutionDir)include\ffmpeg;$(SolutionDir)include\CL;$(CUDA_PATH)\include;$(VCInstallDir)UnitTest\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Matrix;$(SolutionDir)CudaClasses;$(SolutionDir)Deshaker;$(SolutionDir)TestCuda;$(SolutionDir)include\ffmpeg;$(SolutionDir)include\CL;$(SolutionDir)include\nvenc;$(CUDA_PATH)\include;$(VCInstallDir)UnitTest\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <UseFullPaths>true</UseFullPaths>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -152,7 +152,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>false</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)Matrix;$(SolutionDir)CudaClasses;$(SolutionDir)Deshaker;$(SolutionDir)TestCuda;$(SolutionDir)include;$(SolutionDir)include\ffmpeg;$(SolutionDir)include\CL;$(CUDA_PATH)\include;$(VCInstallDir)UnitTest\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Matrix;$(SolutionDir)CudaClasses;$(SolutionDir)Deshaker;$(SolutionDir)TestCuda;$(SolutionDir)include\ffmpeg;$(SolutionDir)include\CL;$(SolutionDir)include\nvenc;$(CUDA_PATH)\include;$(VCInstallDir)UnitTest\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <UseFullPaths>true</UseFullPaths>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>

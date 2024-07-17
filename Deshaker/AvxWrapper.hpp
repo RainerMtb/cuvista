@@ -42,7 +42,7 @@ public:
 
 	VF16(const float* data) : a { _mm512_loadu_ps(data) } {}
 
-	VF16(const float* data, __mmask16 mask) : a { _mm512_maskz_load_ps(mask, data) } {}
+	VF16(const float* data, __mmask16 mask) : a { _mm512_maskz_loadu_ps(mask, data) } {}
 
 	VF16(const unsigned char* data) : a { _mm512_cvtepu32_ps(_mm512_cvtepu8_epi32(_mm_loadu_epi8(data))) } {}
 
@@ -125,7 +125,7 @@ public:
 
 	VF8(const float* data) : a { _mm256_loadu_ps(data) } {}
 
-	VF8(const float* data, __mmask8 mask) : a { _mm256_maskz_load_ps(mask, data) } {}
+	VF8(const float* data, __mmask8 mask) : a { _mm256_maskz_loadu_ps(mask, data) } {}
 
 	VF8(const unsigned char* data) : a { _mm256_cvtepu32_ps(_mm256_cvtepu8_epi32(_mm_maskz_loadu_epi8(0xFF, data))) } {}
 
@@ -206,7 +206,7 @@ public:
 
 	VF4(const float* data) : a { _mm_loadu_ps(data) } {}
 
-	VF4(const float* data, __mmask8 mask) : a { _mm_maskz_load_ps(mask, data) } {}
+	VF4(const float* data, __mmask8 mask) : a { _mm_maskz_loadu_ps(mask, data) } {}
 
 	VF4(const unsigned char* data) : a { _mm_cvtepu32_ps(_mm_cvtepu8_epi32(_mm_maskz_loadu_epi8(0xF, data))) } {}
 
@@ -291,7 +291,7 @@ public:
 
 	VD8(const double* data) : a { _mm512_loadu_pd(data) } {}
 
-	VD8(const double* data, __mmask8 mask) : a { _mm512_maskz_load_pd(mask, data) } {}
+	VD8(const double* data, __mmask8 mask) : a { _mm512_maskz_loadu_pd(mask, data) } {}
 
 	VD8(const unsigned char* data) : a { _mm512_cvtepu64_pd(_mm512_cvtepu8_epi64(_mm_maskz_loadu_epi8(0xFF, data))) } {}
 

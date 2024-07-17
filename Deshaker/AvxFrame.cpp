@@ -635,8 +635,8 @@ void AvxFrame::write(std::span<unsigned char> nv12, int cudaPitch) {
 			sumV = _mm512_add_epi32(a, b);
 
 			//cross over and combine
-			x = _mm512_shuffle_epi32(sumU, 0b11110101);
-			x = _mm512_mask_shuffle_epi32(x, 0b10101010'10101010, sumV, 0b10100000);
+			x = _mm512_shuffle_epi32(sumU, _MM_PERM_DDBB);
+			x = _mm512_mask_shuffle_epi32(x, 0b10101010'10101010, sumV, _MM_PERM_CCAA);
 			//combine without crossing
 			sum = _mm512_mask_blend_epi32(0b10101010'10101010, sumU, sumV);
 			//add the blocks
