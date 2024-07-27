@@ -23,6 +23,7 @@
 #include "NvEncoder.hpp"
 #include "MovieReader.hpp"
 #include "MovieWriter.hpp"
+#include "SelfTest.hpp"
 
 #include <algorithm>
 #include <regex>
@@ -228,6 +229,12 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 
 		} else if (args.nextArg("info")) {
 			showDeviceInfo();
+
+		} else if (args.nextArg("version")) {
+			showVersionInfo();
+
+		} else if (args.nextArg("selftest")) {
+			runSelfTest();
 
 		} else if (args.nextArg("h") || args.nextArg("help") || args.nextArg("?")) {
 			*console << helpString;
@@ -563,9 +570,12 @@ std::ostream& MainData::showDeviceInfo(std::ostream& os) const {
 void MainData::showDeviceInfo() {
 	collectDeviceInfo();
 	showDeviceInfo(*console);
+	throw SilentQuitException();
+}
 
-	//force termination
-	throw CancelException();
+void MainData::showVersionInfo() {
+	*console << "cuvista " << CUVISTA_VERSION << std::endl;
+	throw SilentQuitException();
 }
 
 std::string MainData::str_toupper(const std::string& s) const {
@@ -642,4 +652,9 @@ std::string MainData::getCpuName() const {
 
 bool MainData::hasAvx512() const {
 	return deviceInfoAvx.hasAvx512();
+}
+
+void MainData::runSelfTest() const {
+	//TODO
+	throw SilentQuitException();
 }

@@ -43,6 +43,15 @@ public:
 	std::optional<int64_t> ptsForFrameMillis(int64_t frameIndex);
 };
 
+
+class NullReader : public MovieReader {
+
+public:
+	void open(std::string_view source) override {};
+	void read(ImageYuv& frame) override;
+};
+
+
 //main class to decode input
 class FFmpegReader : public MovieReader {
 
@@ -61,12 +70,4 @@ public:
 	void close() override;
 	void rewind() override;
 	void seek(double fraction);
-};
-
-
-class NullReader : public MovieReader {
-
-public:
-	void open(std::string_view source) override {};
-	void read(ImageYuv& frame) override;
 };

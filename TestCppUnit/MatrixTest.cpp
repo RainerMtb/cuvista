@@ -20,7 +20,7 @@
 #include "CppUnitTest.h"
 #include "Utils.hpp"
 #include "AffineTransform.hpp"
-#include "SubMat.h"
+#include "SubMat.hpp"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 

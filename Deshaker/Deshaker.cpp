@@ -31,8 +31,8 @@
 
 int deshake(int argsCount, char** args) {
 	//command line arguments for debugging
-	//std::vector<std::string> argsInput = { "-device", "0", "-frames", "10", "-i", "d:/VideoTest/02.mp4", "-y", "-o", "f:/im%04d.jpg"};
 	std::vector<std::string> argsInput(args, args + argsCount);
+	//std::vector<std::string> argsInput = { "-device", "3", "-frames", "10", "-i", "d:/VideoTest/02.mp4", "-y", "-o", "c:/temp/im%04d.bmp"}; //debugging
 
 	//main program start
 	MainData data;
@@ -67,7 +67,7 @@ int deshake(int argsCount, char** args) {
 			writer = std::make_unique<FFmpegWriter>(data, *reader);
 		else if (data.videoOutputType == OutputType::VIDEO_FILE && data.selectedEncoding.device == EncodingDevice::NVENC)
 			writer = std::make_unique<CudaFFmpegWriter>(data, *reader);
-		else 
+		else
 			writer = std::make_unique<BaseWriter>(data, *reader);
 
 		writer->open(data.requestedEncoding);
@@ -114,6 +114,9 @@ int deshake(int argsCount, char** args) {
 			aw->open();
 		}
 
+	} catch (const SilentQuitException&) {
+		return -10;
+
 	} catch (const CancelException& e) {
 		*data.console << e.what() << std::endl;
 		return -1;
@@ -155,7 +158,7 @@ int deshake(int argsCount, char** args) {
 
 	//close input and output, destruct frame object
 	//copy statistics before destructing
-	int framesEncoded = writer->frameEncoded;
+	int64_t framesWritten = writer->frameIndex;
 
 	//final console messages
 	if (errorLogger.hasError()) {
@@ -178,10 +181,10 @@ int deshake(int argsCount, char** args) {
 
 	//stopwatch
 	double secs = data.timeElapsedSeconds();
-	double fps = framesEncoded / secs;
-	if (framesEncoded > 0 && data.showHeader) {
+	double fps = framesWritten / secs;
+	if (framesWritten > 0 && data.showHeader) {
 		std::string time = secs < 60.0 ? std::format("{:.1f} sec", secs) : std::format("{:.1f} min", secs / 60.0);
-		std::string str = std::format("{} frames written in {} at {:.1f} fps", framesEncoded, time, fps);
+		std::string str = std::format("{} frames written in {} at {:.1f} fps", framesWritten, time, fps);
 		*data.console << str << std::endl;
 	}
 

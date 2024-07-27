@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include "Mat.h"
+#include "Mat.hpp"
 #include <utility>
 #include <array>
 

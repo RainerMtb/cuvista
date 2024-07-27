@@ -18,9 +18,9 @@
 
 #include "pch.h"
 #include "CppUnitTest.h"
-#include "Mat.h"
-#include "QRDecompositorUD.h"
-#include "CholeskyDecompositor.h"
+#include "Mat.hpp"
+#include "QRDecompositorUD.hpp"
+#include "CholeskyDecompositor.hpp"
 #include "Utils.hpp"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;

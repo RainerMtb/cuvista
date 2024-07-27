@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include "Decompositor.h"
+#include "Decompositor.hpp"
 
 // compute Cholesky Decomposition for square mat such that L * L' * x = b
 template <class T> class CholeskyDecompositor : public Decompositor<T> {

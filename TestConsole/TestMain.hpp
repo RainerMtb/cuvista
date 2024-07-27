@@ -20,7 +20,7 @@
 
 #include <numbers>
 
-#include "Mat.h"
+#include "Mat.hpp"
 #include "MovieFrame.hpp"
 #include "CpuFrame.hpp"
 #include "CudaFrame.hpp"

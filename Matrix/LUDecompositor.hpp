@@ -18,8 +18,8 @@
 
 #pragma once
 
-#include "Decompositor.h"
-#include "MatInverter.h"
+#include "Decompositor.hpp"
+#include "MatInverter.hpp"
 
 template <class T> class LUDecompositor : public Decompositor<T>, public MatInverter<T> {
 

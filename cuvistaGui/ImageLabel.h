@@ -64,7 +64,7 @@ public:
 	}
 
 	void mousePressEvent(QMouseEvent* event) override {
-		double frac = 1.0 * event->localPos().x() / width();
+		double frac = 1.0 * event->position().x() / width();
 		mouseClicked(frac);
 	}
 };

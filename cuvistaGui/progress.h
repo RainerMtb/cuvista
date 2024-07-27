@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include <QtWidgets/QMainWindow>
+#include <QMainWindow>
 #include "ui_progress.h"
 
 #include "ProgressDisplay.hpp"

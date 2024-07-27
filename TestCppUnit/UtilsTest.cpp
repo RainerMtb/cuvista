@@ -20,6 +20,7 @@
 #include "CppUnitTest.h"
 #include "Image.hpp"
 #include "Utils.hpp"
+#include "Util.hpp"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
@@ -42,6 +43,13 @@ public:
 		dest.fromNV12(nv12, w);
 
 		Assert::AreEqual(yuv, dest);
+	}
+
+	TEST_METHOD(base64_test1) {
+		std::vector<unsigned char> data = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+		std::string str = util::base64_encode(data);
+		std::vector<unsigned char> dataCheck = util::base64_decode(str);
+		Assert::IsTrue(data == dataCheck);
 	}
 
 	};

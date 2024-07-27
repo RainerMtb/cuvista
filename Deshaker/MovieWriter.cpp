@@ -31,6 +31,10 @@ void BaseWriter::prepareOutput(MovieFrame& frame) {
 	frame.getOutput(frame.mWriter.frameIndex, outputFrame);
 }
 
+void BaseWriter::write(const MovieFrame& frame) {
+	this->frameIndex++;
+}
+
 std::string ImageWriter::makeFilename(const std::string& pattern, int64_t index, const std::string& extension) {
 	const int siz = 512;
 	char fname[siz];
@@ -57,11 +61,20 @@ std::string ImageWriter::makeFilename(const std::string& extension) const {
 // BMP Images
 //-----------------------------------------------------------------------------------
 
+void BmpImageWriter::prepareOutput(MovieFrame& frame) {
+	worker.join();
+	frame.getOutput(frame.mWriter.frameIndex, image);
+}
+
 void BmpImageWriter::write(const MovieFrame& frame) {
 	std::string fname = makeFilename("bmp");
-	outputFrame.toBGR(image).saveAsColorBMP(fname);
+	worker = std::jthread([&, fname] { image.saveAsColorBMP(fname); });
 	outputBytesWritten += image.bytes();
 	this->frameIndex++;
+}
+
+BmpImageWriter::~BmpImageWriter() {
+	worker.join();
 }
 
 //-----------------------------------------------------------------------------------

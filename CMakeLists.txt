@@ -12,7 +12,20 @@ enable_language(CUDA)
 
 set(CMAKE_BUILD_TYPE Release)
 
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(ffmpeg REQUIRED IMPORTED_TARGET
+    libavcodec
+    libavdevice
+    libavfilter
+    libavformat
+    libavutil
+    libswresample
+    libswscale
+)
+
+add_subdirectory(Common)
 add_subdirectory(Matrix)
-add_subdirectory(CudaClasses)
+add_subdirectory(CudaStuff)
 add_subdirectory(Deshaker)
 add_subdirectory(cuvistaCli)
+add_subdirectory(cuvistaGui)

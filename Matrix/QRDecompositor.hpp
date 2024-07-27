@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include "Decompositor.h"
+#include "Decompositor.hpp"
 
 //need a forward declaration before we can declare friedship
 template <class T> class QRDecompositorUD;

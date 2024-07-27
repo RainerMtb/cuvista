@@ -74,6 +74,7 @@ public:
 
 	const ImageYuv& getOutputFrame() { return outputFrame; }
 	void prepareOutput(MovieFrame& frame) override;
+	void write(const MovieFrame& frame) override;
 };
 
 
@@ -95,13 +96,17 @@ public:
 class BmpImageWriter : public ImageWriter {
 
 private:
-	ImageBGR image;
+	ImageRGBA image;
+	std::jthread worker;
 
 public:
 	BmpImageWriter(MainData& data, MovieReader& reader) :
 		ImageWriter(data, reader),
+		worker { [] {} },
 		image(data.h, data.w) {}
 
+	~BmpImageWriter() override;
+	void prepareOutput(MovieFrame& frame) override;
 	void write(const MovieFrame& frame) override;
 };
 

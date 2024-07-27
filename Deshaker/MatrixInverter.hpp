@@ -18,8 +18,8 @@
 
 #pragma once
 
-#include "MatInverter.h"
-#include "Mat.h"
+#include "MatInverter.hpp"
+#include "Mat.hpp"
 
 class IterativePseudoInverse1 : public MatInverter<double> {
 

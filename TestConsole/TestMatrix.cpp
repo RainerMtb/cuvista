@@ -17,7 +17,7 @@
  */
 
 #include "TestMain.hpp"
-#include "SubMat.h"
+#include "SubMat.hpp"
 #include "MatrixInverter.hpp"
 
 void pinvTest() {

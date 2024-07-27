@@ -14,7 +14,7 @@
     <ProjectGuid>{53E712BE-AD32-46AE-9D39-1BFE368697E5}</ProjectGuid>
     <RootNamespace>CudaMatrix</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
-    <ProjectName>CudaClasses</ProjectName>
+    <ProjectName>CudaStuff</ProjectName>
     <CudaToolkitCustomDir>
     </CudaToolkitCustomDir>
   </PropertyGroup>
@@ -65,8 +65,7 @@
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
       <CodeGeneration>compute_50,sm_50;compute_60,sm_60;compute_70,sm_70;compute_80,sm_80;compute_90,sm_90</CodeGeneration>
-      <Include>
-      </Include>
+      <Include>$(SolutionDir)Common</Include>
       <AdditionalOptions>-fmad=false -std=c++20 -Wno-deprecated-gpu-targets</AdditionalOptions>
       <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
       <AdditionalDeps>
@@ -101,8 +100,7 @@
       <HostDebugInfo>true</HostDebugInfo>
       <Optimization>O2</Optimization>
       <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
-      <Include>
-      </Include>
+      <Include>$(SolutionDir)Common</Include>
       <AdditionalOptions>-fmad=false -std=c++20 -Wno-deprecated-gpu-targets</AdditionalOptions>
       <AdditionalDeps>
       </AdditionalDeps>
@@ -114,14 +112,11 @@
     </CudaLink>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="CoreData.hpp" />
     <ClInclude Include="CudaData.cuh" />
     <ClInclude Include="cuNPP.cuh" />
     <ClInclude Include="cuTest.cuh" />
     <ClInclude Include="cuUtil.cuh" />
-    <ClInclude Include="DeviceInfo.hpp" />
     <ClInclude Include="DeviceInfoCuda.cuh" />
-    <ClInclude Include="ErrorLogger.hpp" />
     <CudaCompile Include="cuNPP.cu" />
     <CudaCompile Include="cuTest.cu" />
     <CudaCompile Include="cuUtil.cu" />
@@ -135,9 +130,6 @@
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CudaClasses.rc" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="CoreData.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

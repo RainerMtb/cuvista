@@ -71,7 +71,7 @@ std::optional<char> getKeyboardInput() {
 }
 
 #else
-//no keyboard handling
+//no keyboard handling on unknown systems
 std::optional<char> getKeyboardInput() {
     return std::nullopt;
 }

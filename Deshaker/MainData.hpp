@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include "Mat.h"
+#include "Mat.hpp"
 #include "AVException.hpp"
 #include "FFmpegUtil.hpp"
 #include "MovieReader.hpp"
@@ -28,7 +28,7 @@
 #include "DeviceInfoCuda.cuh"
 #include "DeviceInfoCpu.hpp"
 
-inline static std::string CUVISTA_VERSION = "0.9.11";
+inline std::string CUVISTA_VERSION = "0.9.11";
 
 enum class DeshakerPass {
 	NONE,
@@ -211,6 +211,10 @@ public:
 	void showBasicInfo() const;
 
 	void showDeviceInfo();
+
+	void showVersionInfo();
+
+	void runSelfTest() const;
 
 	void showIntro(const std::string& deviceName, const MovieReader& reader) const;
 

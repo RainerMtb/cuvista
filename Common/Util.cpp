@@ -87,4 +87,51 @@ namespace util {
 
 		std::cout << str << std::endl;
 	}
+
+	const char* baseString = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+	std::string base64_encode(std::span<unsigned char> data) {
+		std::string out;
+		out.reserve(4 * data.size() / 3);
+
+		int val = 0, valb = -6;
+		for (unsigned char c : data) {
+			val = (val << 8) + c;
+			valb += 8;
+			while (valb >= 0) {
+				int idx = (val >> valb) & 0x3F;
+				out.push_back(baseString[idx]);
+				valb -= 6;
+			}
+		}
+		if (valb > -6) {
+			int idx = ((val << 8) >> (valb + 8)) & 0x3F;
+			out.push_back(baseString[idx]);
+		}
+		while (out.size() % 4) {
+			out.push_back('=');
+		}
+		return out;
+	}
+
+	std::vector<unsigned char> base64_decode(const std::string& base64string) {
+		std::vector<unsigned char> out;
+		out.reserve(3 * base64string.size() / 4);
+
+		std::vector<int> v(256, -1);
+		for (int i = 0; i < 64; i++) v[baseString[i]] = i;
+
+		int val = 0, valb = -8;
+		for (unsigned char c : base64string) {
+			if (v[c] == -1) break;
+			val = (val << 6) + v[c];
+			valb += 6;
+			if (valb >= 0) {
+				int ch = (val >> valb) & 0xFF;
+				out.push_back((unsigned char)(ch));
+				valb -= 8;
+			}
+		}
+		return out;
+	}
 }

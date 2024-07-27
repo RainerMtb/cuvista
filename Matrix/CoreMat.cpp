@@ -16,7 +16,7 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
-#include "CoreMat.h"
+#include "CoreMat.hpp"
 #include <cmath>
 #include <iostream>
 

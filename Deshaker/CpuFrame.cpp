@@ -17,7 +17,7 @@
  */
 
 #include "CpuFrame.hpp"
-#include "SubMat.h"
+#include "SubMat.hpp"
 #include "MatrixInverter.hpp"
 #include "Util.hpp"
 

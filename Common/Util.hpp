@@ -21,6 +21,7 @@
 #include <chrono>
 #include <string>
 #include <vector>
+#include <span>
 
 //misc stuff
 namespace util {
@@ -54,4 +55,10 @@ namespace util {
 
     //print elapsed time since start to console
     void tick(const std::string& message);
+
+    //encode bytes to base64 string
+    std::string base64_encode(std::span<unsigned char> data);
+
+    //decode base64 string to bytes
+    std::vector<unsigned char> base64_decode(const std::string& base64string);
 }

@@ -114,6 +114,8 @@ advanced computation parameters:
                 default: 3
 -ir             integration radius
                 default: 3, maximum: 3
+-version        display version identifier
+-selftest       run a test suite on all available devices
 
 keyboard input options at runtime:
 key [e]         stop reading input, write pending output, then terminate

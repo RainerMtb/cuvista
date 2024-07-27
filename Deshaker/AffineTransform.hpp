@@ -19,7 +19,7 @@
 #pragma once
 
 #include <span>
-#include "Affine2D.h"
+#include "Affine2D.hpp"
 #include "CoreData.hpp"
 #include "ThreadPool.hpp"
 

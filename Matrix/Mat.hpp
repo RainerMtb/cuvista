@@ -30,15 +30,15 @@
 #include <optional>
 #include <span>
 
-#include "LUDecompositor.h"
-#include "QRDecompositor.h"
-#include "QRDecompositorUD.h"
-#include "SVDecompositor.h"
+#include "LUDecompositor.hpp"
+#include "QRDecompositor.hpp"
+#include "QRDecompositorUD.hpp"
+#include "SVDecompositor.hpp"
 
-#include "CoreMat.h"
+#include "CoreMat.hpp"
 #include "ThreadPoolBase.h"
-#include "MatIterator.h"
-#include "OutputLine.h"
+#include "MatIterator.hpp"
+#include "OutputLine.hpp"
 
 //---------------------------------------------------------
 //------------------------ CLASS MATROW FOR [][] INDEXING

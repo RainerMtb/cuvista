@@ -41,3 +41,13 @@ public:
 
     CancelException(const std::string& msg) : AVException(msg) {}
 };
+
+
+class SilentQuitException : public AVException {
+
+public:
+
+    SilentQuitException() : AVException("") {}
+
+    SilentQuitException(const std::string & msg) : AVException(msg) {}
+};

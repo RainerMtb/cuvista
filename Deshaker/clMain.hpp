@@ -21,7 +21,7 @@
 #include "clHeaders.hpp"
 #include "CoreData.hpp"
 #include "DeviceInfo.hpp"
-#include "Mat.h"
+#include "Mat.hpp"
 
 
 class DeviceInfoCl : public DeviceInfo {

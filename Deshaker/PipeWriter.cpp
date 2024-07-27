@@ -41,8 +41,10 @@ PipeWriter::~PipeWriter() {
 
 #else
 
+//do nothing in linux
 void PipeWriter::open(EncodingOption videoCodec) {}
 
+//do nothing in linux
 PipeWriter::~PipeWriter() {}
 
 #endif

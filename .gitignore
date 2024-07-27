@@ -361,3 +361,4 @@ MigrationBackup/
 FodyWeavers.xsd
 build/
 buildDebug/
+.vs/

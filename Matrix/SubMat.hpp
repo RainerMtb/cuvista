@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include "Mat.h"
+#include "Mat.hpp"
 
 template <class T> class SubMat : public Mat<T> {
 

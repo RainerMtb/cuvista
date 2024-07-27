@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include "QRDecompositor.h"
+#include "QRDecompositor.hpp"
 
 template <class T> class QRDecompositorUD : public Decompositor<T> {
 

@@ -4,10 +4,9 @@
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**",
-                "/usr/local/cuda/include/**"
+                "/usr/local/cuda/include"
             ],
             "defines": [],
-            "intelliSenseMode": "${default}",
             "cStandard": "c17",
             "cppStandard": "c++20"
         }

@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="CoreData.cpp" />
+    <ClCompile Include="Util.cpp" />
+    <ClCompile Include="Color.cpp" />
+    <ClCompile Include="Image.cpp" />
+    <ClCompile Include="Image2.cpp" />
+    <ClCompile Include="ImageUtil.cpp" />
+    <ClCompile Include="ThreadPoolBase.cpp" />
+    <ClCompile Include="ErrorLogger.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="CoreData.hpp" />
+    <ClInclude Include="DeviceInfo.hpp" />
+    <ClInclude Include="ErrorLogger.hpp" />
+    <ClInclude Include="Util.hpp" />
+    <ClInclude Include="CharMap.hpp" />
+    <ClInclude Include="Color.hpp" />
+    <ClInclude Include="Image.hpp" />
+    <ClInclude Include="Image2.hpp" />
+    <ClInclude Include="ImageUtil.hpp" />
+    <ClInclude Include="ThreadPoolBase.h" />
+  </ItemGroup>
+</Project>

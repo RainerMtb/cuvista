@@ -65,14 +65,15 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)Deshaker;$(SolutionDir)Matrix;$(SolutionDir)CudaClasses;$(SolutionDir)include\ffmpeg;$(SolutionDir)include\CL;$(SolutionDir)include\nvenc;$(CUDA_PATH)\include;$(Qt_INCLUDEPATH_)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Common;$(SolutionDir)Deshaker;$(SolutionDir)Matrix;$(SolutionDir)CudaStuff;$(SolutionDir)include\ffmpeg;$(SolutionDir)include\CL;$(SolutionDir)include\nvenc;$(CUDA_PATH)\include;$(Qt_INCLUDEPATH_)</AdditionalIncludeDirectories>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions512</EnableEnhancedInstructionSet>
       <Optimization>Disabled</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(SolutionDir)lib\$(Platform);$(SolutionDir)bin\$(Platform)\$(Configuration);$(CUDA_PATH)\lib\$(Platform)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>cpu_features.lib;OpenCL.lib;Matrix.lib;Deshaker.lib;CudaClasses.lib;cudart_static.lib;cuda.lib;nvencodeapi.lib;avcodec.lib;avformat.lib;avutil.lib;swscale.lib;swresample.lib;ws2_32.lib;nvapi64.lib;DelayImp.lib;$(Qt_LIBS_)</AdditionalDependencies>
+      <AdditionalDependencies>Common.lib;cpu_features.lib;OpenCL.lib;Matrix.lib;Deshaker.lib;CudaStuff.lib;cudart_static.lib;cuda.lib;nvencodeapi.lib;avcodec.lib;avformat.lib;avutil.lib;swscale.lib;swresample.lib;ws2_32.lib;nvapi64.lib;DelayImp.lib;$(Qt_LIBS_)</AdditionalDependencies>
       <DelayLoadDLLs>nvcuda.dll;nvEncodeAPI64.dll;OpenCL.dll</DelayLoadDLLs>
       <IgnoreSpecificDefaultLibraries>libcmt.lib; msvcrt.lib; libcmtd.lib</IgnoreSpecificDefaultLibraries>
     </Link>
@@ -80,12 +81,13 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)Deshaker;$(SolutionDir)Matrix;$(SolutionDir)CudaClasses;$(SolutionDir)include\ffmpeg;$(SolutionDir)include\CL;$(SolutionDir)include\nvenc;$(CUDA_PATH)\include;$(Qt_INCLUDEPATH_)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Common;$(SolutionDir)Deshaker;$(SolutionDir)Matrix;$(SolutionDir)CudaStuff;$(SolutionDir)include\ffmpeg;$(SolutionDir)include\CL;$(SolutionDir)include\nvenc;$(CUDA_PATH)\include;$(Qt_INCLUDEPATH_)</AdditionalIncludeDirectories>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions512</EnableEnhancedInstructionSet>
+      <SDLCheck>true</SDLCheck>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(SolutionDir)lib\$(Platform);$(SolutionDir)bin\$(Platform)\$(Configuration);$(CUDA_PATH)\lib\$(Platform)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>cpu_features.lib;OpenCL.lib;Matrix.lib;Deshaker.lib;CudaClasses.lib;cudart_static.lib;cuda.lib;nvencodeapi.lib;avcodec.lib;avformat.lib;avutil.lib;swscale.lib;swresample.lib;ws2_32.lib;nvapi64.lib;DelayImp.lib;$(Qt_LIBS_)</AdditionalDependencies>
+      <AdditionalDependencies>Common.lib;cpu_features.lib;OpenCL.lib;Matrix.lib;Deshaker.lib;CudaStuff.lib;cudart_static.lib;cuda.lib;nvencodeapi.lib;avcodec.lib;avformat.lib;avutil.lib;swscale.lib;swresample.lib;ws2_32.lib;nvapi64.lib;DelayImp.lib;$(Qt_LIBS_)</AdditionalDependencies>
       <DelayLoadDLLs>nvcuda.dll;nvEncodeAPI64.dll;OpenCL.dll</DelayLoadDLLs>
       <IgnoreSpecificDefaultLibraries>libcmt.lib;</IgnoreSpecificDefaultLibraries>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>

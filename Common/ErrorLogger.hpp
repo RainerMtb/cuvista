@@ -32,43 +32,21 @@ class ErrorLogger {
 	std::vector<ErrorEntry> errorList;
 
 public:
-	bool hasNoError() {
-		std::lock_guard<std::mutex> lock(mMutex);
-		return errorList.empty();
-	}
+	bool hasNoError();
 
-	bool hasError() {
-		std::lock_guard<std::mutex> lock(mMutex);
-		return errorList.size() > 0;
-	}
+	bool hasError();
 
-	void logError(const std::string& msg) {
-		std::lock_guard<std::mutex> lock(mMutex);
-		errorList.push_back({ std::chrono::system_clock::now(), msg });
-	}
+	void logError(const std::string& msg);
 
-	void logError(const char* title, const char* msg) {
-		logError(std::string(title) + std::string(msg));
-	}
+	void logError(const char* title, const char* msg);
 
-	void logError(const std::string& title, const std::string& msg) {
-		logError(title + msg);
-	}
+	void logError(const std::string& title, const std::string& msg);
 
-	std::vector<ErrorEntry> getErrors() {
-		std::lock_guard<std::mutex> lock(mMutex);
-		return errorList;
-	}
+	std::vector<ErrorEntry> getErrors();
 
-	std::string getErrorMessage() {
-		std::lock_guard<std::mutex> lock(mMutex);
-		return errorList.empty() ? "no error" : errorList[0].msg;
-	}
+	std::string getErrorMessage();
 
-	void clearErrors() {
-		std::lock_guard<std::mutex> lock(mMutex);
-		errorList.clear();
-	}
+	void clearErrors();
 };
 
 inline ErrorLogger errorLogger = {};
