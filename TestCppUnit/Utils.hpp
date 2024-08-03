@@ -21,6 +21,7 @@
 #include "AffineTransform.hpp"
 #include "CudaData.cuh"
 #include "MovieWriter.hpp"
+#include "MovieReader.hpp"
 
 //make up frame data in memory for testing
 class TestReader : public MovieReader {

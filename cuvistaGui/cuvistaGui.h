@@ -23,7 +23,7 @@
 #include <QThread>
 
 #include "MovieFrame.hpp"
-#include "MovieFrame.hpp"
+#include "MovieReader.hpp"
 #include "FrameResult.hpp"
 #include "UserInputGui.hpp"
 
@@ -63,7 +63,7 @@ private:
     Player* mPlayerWindow;
     ProgressWindow* mProgressWindow;
     std::unique_ptr<MovieWriter> mWriter;
-    std::unique_ptr<MovieFrame> mFrame;
+    std::shared_ptr<MovieFrame> mFrame;
     std::shared_ptr<ProgressBase> mProgress;
 
     UserInputGui mInputHandler;

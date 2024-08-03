@@ -16,6 +16,7 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
+#include "MovieReader.hpp"
 #include "MovieWriter.hpp"
 #include "MovieFrame.hpp"
 #include "Util.hpp"

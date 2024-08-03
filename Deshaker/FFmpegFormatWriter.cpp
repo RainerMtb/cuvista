@@ -17,6 +17,7 @@
  */
 
 #include "MovieWriter.hpp"
+#include "MovieReader.hpp"
 #include <filesystem>
 
 AVStream* FFmpegFormatWriter::newStream(AVFormatContext* fmt_ctx, AVStream* inStream) {

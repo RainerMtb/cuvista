@@ -20,85 +20,43 @@
 
 #include "MovieFrame.hpp"
 
+template <class T> class DeviceInfo;
 
 class CudaFrame : public MovieFrame {
 
 private:
-	DeviceInfoCuda* device;
+	DeviceInfo<CudaFrame>* device;
 
 public:
-	CudaFrame(MainData& data, MovieReader& reader, MovieWriter& writer) : 
-		MovieFrame(data, reader, writer) 
-	{
-		DeviceInfo* dev = data.deviceList[data.deviceSelected];
-		assert(dev->type == DeviceType::CUDA && "device type must be CUDA here");
-		device = static_cast<DeviceInfoCuda*>(dev);
-		cudaInit(data, device->cudaIndex, device->props, mBufferFrame);
-	}
+	CudaFrame(MainData& data, MovieReader& reader, MovieWriter& writer);
 
-	~CudaFrame() {
-		auto fcn = [] (size_t h, size_t w, double* ptr) { Matd::fromArray(h, w, ptr, false).toConsole("", 16); };
-		//getDebugData(mData, "f:/kernel.bmp", fcn);
-		cudaShutdown(mData);
-	}
+	~CudaFrame();
 
-	void inputData() override {
-		cudaReadFrame(mBufferFrame.index, mData, mBufferFrame);
-	}
+	void inputData() override;
 
-	void createPyramid(int64_t frameIndex) override {
-		cudaCreatePyramid(frameIndex, mData);
-	}
+	void createPyramid(int64_t frameIndex) override;
 
-	void computeStart(int64_t frameIndex) override {
-		cudaCompute(frameIndex, mData, device->props);
-	}
+	void computeStart(int64_t frameIndex) override;
 
-	void computeTerminate(int64_t frameIndex) override {
-		cudaComputeTerminate(frameIndex, mData, mResultPoints);
-	}
+	void computeTerminate(int64_t frameIndex) override;
 
-	void outputData(const AffineTransform& trf) override {
-		cudaOutput(trf.frameIndex, mData, trf.toArray());
-	}
+	void outputData(const AffineTransform& trf) override;
 
-	void getOutput(int64_t frameIndex, ImageYuv& image) override {
-		cudaOutputCpu(frameIndex, image, mData);
-	}
+	void getOutput(int64_t frameIndex, ImageYuv& image) override;
 
-	void getOutput(int64_t frameIndex, ImageRGBA& image) override {
-		cudaOutputCpu(frameIndex, image, mData);
-	}
+	void getOutput(int64_t frameIndex, ImageRGBA& image) override;
 
-	void getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) override {
-		cudaOutputCuda(frameIndex, cudaNv12ptr, cudaPitch, mData);
-	}
+	void getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) override;
 
-	Mat<float> getTransformedOutput() const override {
-		Mat<float> warped = Mat<float>::allocate(3LL * mData.h, mData.w);
-		cudaGetTransformedOutput(warped.data(), mData);
-		return warped;
-	}
+	Mat<float> getTransformedOutput() const override;
 
-	Mat<float> getPyramid(int64_t index) const override {
-		Mat<float> out = Mat<float>::allocate(mData.pyramidRowCount, mData.w);
-		cudaGetPyramid(out.data(), mData, index);
-		return out;
-	}
+	Mat<float> getPyramid(int64_t index) const override;
 
-	void getInput(int64_t index, ImageYuv& image) const override {
-		return cudaGetInput(image, mData, index);
-	}
+	void getInput(int64_t index, ImageYuv& image) const override;
 
-	void getInput(int64_t frameIndex, ImageRGBA& image) override {
-		cudaGetCurrentInputFrame(image, mData, frameIndex);
-	}
+	void getInput(int64_t frameIndex, ImageRGBA& image) override;
 
-	void getWarped(int64_t frameIndex, ImageRGBA& image) override {
-		cudaGetTransformedOutput(image, mData);
-	}
+	void getWarped(int64_t frameIndex, ImageRGBA& image) override;
 	
-	MovieFrameId getId() const override {
-		return { "Cuda", device->getName() };
-	}
+	MovieFrameId getId() const override;
 };

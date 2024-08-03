@@ -20,32 +20,14 @@
 
 #include "clHeaders.hpp"
 #include "CoreData.hpp"
-#include "DeviceInfo.hpp"
+#include "DeviceInfoBase.hpp"
 #include "Mat.hpp"
 
-
-class DeviceInfoCl : public DeviceInfo {
-public:
-	cl::Device device;
-	int versionDevice = 0;
-	int versionC = 0;
-	int pitch = 0;
-	std::vector<std::string> extensions;
-
-	DeviceInfoCl(DeviceType type, int64_t maxPixel)
-		: DeviceInfo(type, maxPixel) {}
-
-	std::string getName() const override;
-};
-
-struct OpenClInfo {
-	std::vector<DeviceInfoCl> devices;
-	std::string version;
-};
+struct OpenClInfo;
 
 namespace cl {
-	OpenClInfo probeRuntime(); //called on startup
-	void init(CoreData& core, ImageYuv& inputFrame, const DeviceInfo* device); //called from constructor of MovieFrame
+	void probeRuntime(OpenClInfo& clinfo); //called on startup
+	void init(CoreData& core, ImageYuv& inputFrame, const DeviceInfoBase* device); //called from constructor of MovieFrame
 	void shutdown(const CoreData& core); //called from destructor of MovieFrame
 
 	void inputData(int64_t frameIdx, const CoreData& core, const ImageYuv& inputFrame);

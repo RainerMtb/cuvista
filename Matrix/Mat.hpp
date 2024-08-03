@@ -39,6 +39,8 @@
 #include "ThreadPoolBase.h"
 #include "MatIterator.hpp"
 #include "OutputLine.hpp"
+#include "Util.hpp"
+#include "Image.hpp"
 
 //---------------------------------------------------------
 //------------------------ CLASS MATROW FOR [][] INDEXING
@@ -503,8 +505,18 @@ public:
 		return Mat<double>::generate(s, 1, [&] (size_t r, size_t c) { return at(r, r); });
 	}
 
+	uint64_t crc() const {
+		util::CRC64 crc64;
+		for (size_t r = 0; r < rows(); r++) {
+			for (size_t c = 0; c < cols(); c++) {
+				crc64.add(at(r, c));
+			}
+		}
+		return crc64.result();
+	}
+
 	//---------------------------------------------------------
-	//------------------------ OPERATIONS ON MAT
+	//------------------------ OUTPUT
 	//---------------------------------------------------------
 
 	virtual Mat<T>& toConsole(const std::string& title = "", int digits = -1) {
@@ -557,6 +569,16 @@ public:
 		}
 	}
 
+	void saveAsBMP(const std::string& filename, T scale = 1) const {
+		int h = int(this->h);
+		int w = int(this->w);
+		im::ImageMatShared(h, w, w, this->array).saveAsBMP(filename, scale);
+	}
+
+	//---------------------------------------------------------
+	//------------------------ OPERATIONS ON MAT
+	//---------------------------------------------------------
+ 
 	//set values to part of mat from source mat
 	Mat<T>& setArea(size_t r0, size_t c0, const Mat<T>& input) {
 		return setArea(r0, c0, input.rows(), input.cols(), [&] (size_t r, size_t c) { return input.at(r, c); });

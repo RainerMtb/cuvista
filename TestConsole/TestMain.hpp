@@ -22,6 +22,8 @@
 
 #include "Mat.hpp"
 #include "MovieFrame.hpp"
+#include "MovieReader.hpp"
+#include "MovieWriter.hpp"
 #include "CpuFrame.hpp"
 #include "CudaFrame.hpp"
 #include "OpenClFrame.hpp"

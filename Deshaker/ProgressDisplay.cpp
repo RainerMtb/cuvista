@@ -20,6 +20,7 @@
 #include "ProgressDisplay.hpp"
 #include "Util.hpp"
 #include "MovieFrame.hpp"
+#include "MovieReader.hpp"
 
 double ProgressDisplay::progressPercent() {
 	//progress is NaN when no frame count is available

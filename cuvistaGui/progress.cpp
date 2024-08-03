@@ -18,6 +18,7 @@
 
 #include "progress.h"
 #include "MovieFrame.hpp"
+#include "MovieReader.hpp"
 
 ProgressWindow::ProgressWindow(QWidget* parent) :
 	QMainWindow(parent)

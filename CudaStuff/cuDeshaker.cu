@@ -190,20 +190,20 @@ void writeText(const std::string& text, int x0, int y0, int scaleX, int scaleY, 
 //----------------------------------
 
 //check for cuda runtime installation, this only needs link to cudart_static.lib
-std::vector<cudaDeviceProp> cudaProbeRuntime(CudaInfo& cudaInfo) {
+CudaProbeResult cudaProbeRuntime() {
+	CudaProbeResult out;
 	//absence of cuda will report error "CUDA driver is insufficient for CUDA runtime version"
-	cudaRuntimeGetVersion(&cudaInfo.cudaRuntimeVersion);
-	cudaDriverGetVersion(&cudaInfo.cudaDriverVersion);
+	cudaRuntimeGetVersion(&out.runtimeVersion);
+	cudaDriverGetVersion(&out.driverVersion);
 
 	//if we found a proper cuda installation, ask for list of devices
 	int deviceCount = 0;
-	std::vector<cudaDeviceProp> props;
-	if (cudaInfo.cudaDriverVersion > 0) {
+	if (out.driverVersion > 0) {
 		handleStatus(cudaGetDeviceCount(&deviceCount), "error probing cuda devices");
 		for (int i = 0; i < deviceCount; i++) {
 			cudaDeviceProp devProp;
 			handleStatus(cudaGetDeviceProperties(&devProp, i), "error getting device properties");
-			props.push_back(devProp);
+			out.props.push_back(devProp);
 		}
 
 		//query npp version numbers, this loads nvcuda.dll
@@ -212,7 +212,7 @@ std::vector<cudaDeviceProp> cudaProbeRuntime(CudaInfo& cudaInfo) {
 		//cudaInfo.nppMinor = libVer->minor;
 		//cudaInfo.nppBuild = libVer->build;
 	}
-	return props;
+	return out;
 }
 
 void cudaInit(CudaData& core, int devIdx, const cudaDeviceProp& prop, ImageYuv& yuvFrame) {

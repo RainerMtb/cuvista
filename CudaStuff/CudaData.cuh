@@ -18,10 +18,18 @@
 
 #pragma once
 
+#include <cuda.h>
+#include <cuda_runtime.h>
+#include <device_launch_parameters.h>
+
 #include "cuUtil.cuh"
-#include "DeviceInfoCuda.cuh"
 #include "CoreData.hpp"
 
+struct CudaProbeResult {
+	int runtimeVersion;
+	int driverVersion;
+	std::vector<cudaDeviceProp> props;
+};
 
 struct DebugData {
 	std::vector<double> debugData;

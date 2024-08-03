@@ -17,6 +17,7 @@
  */
 
 #include "MainData.hpp"
+#include "DeviceInfo.hpp"
 #include "DeshakerHelpText.hpp"
 #include "KeyboardInput.hpp"
 #include "NvidiaDriver.hpp"
@@ -31,43 +32,6 @@
 #include <map>
 #include <filesystem>
 
-
- //CUDA Info
-std::ostream& operator << (std::ostream& os, const DeviceInfoCuda& info) {
-	os << "Device Name:          " << info.props.name << std::endl;
-	os << "Compute Version:      " << info.props.major << "." << info.props.minor << std::endl;
-	os << "Clock Rate:           " << info.props.clockRate / 1000 << " Mhz" << std::endl;
-	os << "Total Global Memory:  " << info.props.totalGlobalMem / 1024 / 1024 << " Mb" << std::endl;
-	os << "Multiprocessor count: " << info.props.multiProcessorCount << std::endl;
-	os << "Max Texture Size:     " << info.props.maxTexture2D[0] << " x " << info.props.maxTexture2D[1] << std::endl;
-	os << "Shared Mem per Block: " << info.props.sharedMemPerBlock / 1024 << " kb" << std::endl;
-	return os;
-}
-
-std::string DeviceInfoCuda::getName() const {
-	return std::format("Cuda, {}, Compute {}.{}", props.name, props.major, props.minor);
-}
-
-//OPENCL Info
-std::string DeviceInfoCl::getName() const {
-	std::string name = device.getInfo<CL_DEVICE_NAME>();
-	std::string vendor = device.getInfo<CL_DEVICE_VENDOR>();
-	return std::format("OpenCL, {}, {}", name, vendor);
-}
-
-std::ostream& operator << (std::ostream& os, const DeviceInfoCl& info) {
-	auto w = info.device.getInfo<CL_DEVICE_IMAGE2D_MAX_WIDTH>();
-	auto h = info.device.getInfo<CL_DEVICE_IMAGE2D_MAX_HEIGHT>();
-	os << "Device Vendor:        " << info.device.getInfo<CL_DEVICE_VENDOR>() << std::endl;
-	os << "Device Name:          " << info.device.getInfo<CL_DEVICE_NAME>() << std::endl;
-	os << "Total Global Memory:  " << info.device.getInfo<CL_DEVICE_GLOBAL_MEM_SIZE>() / 1024 / 1024 << " Mb" << std::endl;
-	os << "Driver Version        " << info.device.getInfo<CL_DRIVER_VERSION>() << std::endl;
-	os << "OpenCL Version:       " << info.versionDevice / 1000 << "." << info.versionDevice % 1000 << std::endl;
-	os << "OpenCL C Version:     " << info.versionC / 1000 << "." << info.versionC % 1000 << std::endl;
-	os << "Compute Units:        " << info.device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>() << std::endl;
-	os << "Max Image Size:       " << w << " x " << h << std::endl;
-	return os;
-}
 
 //test or ask for file writing
 bool MainData::checkFileForWriting(const std::string& file, DecideYNA permission) const {
@@ -124,7 +88,7 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 			} else if (str_toupper(next) == "PIPE:0") {
 				//activate pipe output
 				console = &nullStream;
-				showHeader = false;
+				printHeader = false;
 				videoOutputType = OutputType::PIPE;
 
 			} else if (str_toupper(next).ends_with(".BMP")) {
@@ -228,13 +192,16 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 			overwriteOutput = DecideYNA::NO; //never overwrite
 
 		} else if (args.nextArg("info")) {
+			showHeader();
 			showDeviceInfo();
 
 		} else if (args.nextArg("version")) {
 			showVersionInfo();
 
 		} else if (args.nextArg("selftest")) {
-			runSelfTest();
+			showHeader();
+			MessagePrinterConsole mpc(console);
+			runSelfTest(mpc, deviceList);
 
 		} else if (args.nextArg("h") || args.nextArg("help") || args.nextArg("?")) {
 			*console << helpString;
@@ -250,10 +217,10 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 			else throw AVException("invalid progress type: " + next);
 
 		} else if (args.nextArg("noheader")) {
-			showHeader = false;
+			printHeader = false;
 
 		} else if (args.nextArg("quiet")) {
-			showHeader = false;
+			printHeader = false;
 			progressType = ProgressType::NONE;
 
 		} else if (args.nextArg("levels", next)) {
@@ -305,9 +272,8 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 	}
 
 	//show title
-	if (showHeader) {
-		*console << "CUVISTA - Cuda Video Stabilizer, Version " << CUVISTA_VERSION << std::endl;
-		*console << "Copyright (c) 2024 Rainer Bitschi, Email: cuvista@a1.net" << std::endl;
+	if (printHeader) {
+		showHeader();
 	}
 
 	if (args.empty()) {
@@ -338,10 +304,10 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 
 void MainData::collectDeviceInfo() {
 	//sort cuda devices by compute
-	auto less = [] (const DeviceInfoCuda& a, const DeviceInfoCuda& b) {
+	auto less = [] (const DeviceInfo<CudaFrame>& a, const DeviceInfo<CudaFrame>& b) {
 		return a.props.major == b.props.major ? a.props.minor < b.props.minor : a.props.major < b.props.major;
 	};
-	std::sort(cudaInfo.devices.begin(), cudaInfo.devices.end(), less);
+	std::sort(cudaInfo->devices.begin(), cudaInfo->devices.end(), less);
 
 	//cpu encoders
 	std::vector<EncodingOption> cpuEncoders = {
@@ -351,44 +317,31 @@ void MainData::collectDeviceInfo() {
 	};
 
 	//CPU device
-	deviceInfoCpu.encodingOptions = cpuEncoders;
-	if (cudaInfo.devices.size() > 0) {
-		DeviceInfoCuda& dic = cudaInfo.devices.front();
-		std::copy(dic.encodingOptions.begin(), dic.encodingOptions.end(), std::back_inserter(deviceInfoCpu.encodingOptions));
+	deviceInfoCpu = std::make_shared<DeviceInfo<CpuFrame>>();
+	deviceInfoCpu->encodingOptions = cpuEncoders;
+	if (cudaInfo->devices.size() > 0) {
+		DeviceInfo<CudaFrame>& dic = cudaInfo->devices.front();
+		std::copy(dic.encodingOptions.begin(), dic.encodingOptions.end(), std::back_inserter(deviceInfoCpu->encodingOptions));
 	}
-	deviceList.push_back(&deviceInfoCpu);
+	deviceList.push_back(deviceInfoCpu.get());
 
 	//check for Avx512
-	if (deviceInfoAvx.hasAvx512()) {
-		deviceInfoAvx.encodingOptions = deviceInfoCpu.encodingOptions;
-		deviceList.push_back(&deviceInfoAvx);
+	deviceInfoAvx = std::make_shared<DeviceInfo<AvxFrame>>();
+	if (deviceInfoAvx->hasAvx512()) {
+		deviceInfoAvx->encodingOptions = deviceInfoCpu->encodingOptions;
+		deviceList.push_back(deviceInfoAvx.get());
 	}
 
-	//OpenCL devices
-	for (size_t i = 0; i < clinfo.devices.size(); i++) {
-		DeviceInfoCl& dic = clinfo.devices[i];
+	///OpenCL devices
+	for (DeviceInfo<OpenClFrame>& dic : clinfo->devices) {
 		std::copy(cpuEncoders.begin(), cpuEncoders.end(), std::back_inserter(dic.encodingOptions));
 		deviceList.push_back(&dic);
 	}
 
-	//cuda devices
-	for (DeviceInfoCuda& cu : cudaInfo.devices) {
+	//Cuda devices
+	for (DeviceInfo<CudaFrame>& cu : cudaInfo->devices) {
 		std::copy(cpuEncoders.begin(), cpuEncoders.end(), std::back_inserter(cu.encodingOptions));
 		deviceList.push_back(&cu);
-	}
-
-	//choose device
-	if (deviceSelected >= deviceList.size()) {
-		throw AVException("invalid device number: " + std::to_string(deviceRequested));
-	}
-	if (deviceRequested == false) {
-		deviceSelected = deviceList.size() - 1;
-	}
-	if (requestedEncoding.device == EncodingDevice::AUTO) {
-		if (deviceList[deviceSelected]->type == DeviceType::CUDA) selectedEncoding.device = EncodingDevice::NVENC;
-		else selectedEncoding.device = EncodingDevice::CPU;
-	} else {
-		selectedEncoding.device = requestedEncoding.device;
 	}
 }
 
@@ -399,10 +352,6 @@ void MainData::validate(const MovieReader& reader) {
 
 	//no output to console if frame output through pipe
 	if (videoOutputType == OutputType::PIPE) progressType = ProgressType::NONE;
-
-	//number of frames to buffer
-	this->radius = (int) std::round(radsec * reader.fpsNum / reader.fpsDen);
-	this->bufferCount = radius + 2;
 
 	//pyramid levels to compute
 	this->zMax = this->zCount - 1;
@@ -441,16 +390,33 @@ void MainData::validate(const MovieReader& reader) {
 	int pitchBase = 256;
 	cpupitch = (w + pitchBase - 1) / pitchBase * pitchBase;
 
-	//set required buffers
+	//number of frames to buffer
+	this->radius = (int) std::round(radsec * reader.fpsNum / reader.fpsDen);
+	this->bufferCount = radius + 2;
+
 	if (pass == DeshakerPass::FIRST_PASS) {
-		bufferCount = 2;
+		this->bufferCount = 2;
 	}
 	if (pass == DeshakerPass::SECOND_PASS) {
-		pyramidCount = 0; //no need for pyramid on pass 2
-		bufferCount = 2;
+		this->pyramidCount = 0; //no need for pyramid on pass 2
+		this->bufferCount = 2;
 	}
 	if (pass == DeshakerPass::CONSECUTIVE) {
-		bufferCount = 2;
+		this->bufferCount = 2;
+	}
+
+	//choose device and encoding
+	if (deviceSelected >= deviceList.size()) {
+		throw AVException("invalid device number: " + std::to_string(deviceRequested));
+	}
+	if (deviceRequested == false) {
+		deviceSelected = deviceList.size() - 1;
+	}
+	if (requestedEncoding.device == EncodingDevice::AUTO) {
+		if (deviceList[deviceSelected]->type == DeviceType::CUDA) selectedEncoding.device = EncodingDevice::NVENC;
+		else selectedEncoding.device = EncodingDevice::CPU;
+	} else {
+		selectedEncoding.device = requestedEncoding.device;
 	}
 
 	//check certain values ranges for sanity
@@ -458,7 +424,6 @@ void MainData::validate(const MovieReader& reader) {
 	if (radius < limits.radiusMin || radius > limits.radiusMax) throw AVException("invalid image radius: " + std::to_string(radius));
 	if (w < limits.wMin) throw AVException("invalid input video width: " + std::to_string(w));
 	if (h < limits.hMin) throw AVException("invalid input video height: " + std::to_string(h));
-	if (deviceSelected >= deviceList.size()) throw AVException("invalid device selected: " + std::to_string(deviceSelected));
 	size_t mp = deviceList[deviceSelected]->maxPixel;
 	if (w > mp) throw AVException("frame width exceeds maximum of " + std::to_string(mp) + " px");
 	if (h > mp) throw AVException("frame height exceeds maximum of " + std::to_string(mp) + " px");
@@ -517,6 +482,12 @@ void MainData::showBasicInfo() const {
 	*console << "use -h to get full help" << std::endl;
 }
 
+//show info about system
+void MainData::showDeviceInfo() const {
+	showDeviceInfo(*console);
+	throw SilentQuitException();
+}
+
 //output info about system to stream
 std::ostream& MainData::showDeviceInfo(std::ostream& os) const {
 	//display all devices
@@ -533,8 +504,8 @@ std::ostream& MainData::showDeviceInfo(std::ostream& os) const {
 	//display nvidia info
 	os << std::endl;
 	os << "Nvidia/Cuda System Details:" << std::endl;
-	if (cudaInfo.nvidiaDriverVersion > 0) {
-		os << "Nvidia Driver: " << cudaInfo.nvidiaDriverToString();
+	if (cudaInfo->nvidiaDriverVersion > 0) {
+		os << "Nvidia Driver: " << cudaInfo->nvidiaDriverToString();
 	} else {
 		os << "Nvidia driver not found";
 	}
@@ -542,40 +513,38 @@ std::ostream& MainData::showDeviceInfo(std::ostream& os) const {
 	//display cuda info
 	os << std::endl;
 	if (deviceCountCuda() > 0) {
-		os << "Cuda Runtime:  " << cudaInfo.runtimeToString() << std::endl;
-		os << "Cuda Driver:   " << cudaInfo.driverToString() << std::endl;
-		os << "Nvenc Api:     " << cudaInfo.nvencApiToString() << std::endl;
-		os << "Nvenc Driver:  " << cudaInfo.nvencDriverToString() << std::endl;
+		os << "Cuda Runtime:  " << cudaInfo->runtimeToString() << std::endl;
+		os << "Cuda Driver:   " << cudaInfo->driverToString() << std::endl;
+		os << "Nvenc Api:     " << cudaInfo->nvencApiToString() << std::endl;
+		os << "Nvenc Driver:  " << cudaInfo->nvencDriverToString() << std::endl;
 	}
 	os << std::endl;
 
-	for (auto& info : cudaInfo.devices) {
+	for (auto& info : cudaInfo->devices) {
 		os << "Cuda Device:" << std::endl;
 		os << info << std::endl;
 	}
 
 	//display OpenCL info
-	if (clinfo.devices.size() == 0) {
+	if (clinfo->devices.size() == 0) {
 		os << "OpenCL devices not found" << std::endl;
 	}
 
-	for (auto& info : clinfo.devices) {
+	for (auto& info : clinfo->devices) {
 		os << "OpenCL Device:" << std::endl;
 		os << info << std::endl;
 	}
 	return os;
 }
 
-//show info about system
-void MainData::showDeviceInfo() {
-	collectDeviceInfo();
-	showDeviceInfo(*console);
+void MainData::showVersionInfo() const {
+	*console << "cuvista " << CUVISTA_VERSION << std::endl;
 	throw SilentQuitException();
 }
 
-void MainData::showVersionInfo() {
-	*console << "cuvista " << CUVISTA_VERSION << std::endl;
-	throw SilentQuitException();
+void MainData::showHeader() const {
+	*console << "CUVISTA - Cuda Video Stabilizer, Version " << CUVISTA_VERSION << std::endl;
+	*console << "Copyright (c) 2024 Rainer Bitschi, Email: cuvista@a1.net" << std::endl;
 }
 
 std::string MainData::str_toupper(const std::string& s) const {
@@ -583,6 +552,10 @@ std::string MainData::str_toupper(const std::string& s) const {
 	std::transform(out.begin(), out.end(), out.begin(), [] (unsigned char c) { return std::toupper(c); });
 	return out;
 }
+
+//-------------------------------
+//   INPUT PARAMETERS
+//-------------------------------
 
 std::string& MainData::Parameters::str() {
 	return *(data() + index);
@@ -610,51 +583,50 @@ bool MainData::Parameters::nextArg(std::string&& param, std::string& nextParam) 
 }
 
 void MainData::probeCuda() {
+	cudaInfo = std::make_shared<CudaInfo>();
 	//check Nvidia Driver
-	cudaInfo.nvidiaDriverVersion = probeNvidiaDriver();
+	cudaInfo->nvidiaDriverVersion = probeNvidiaDriver();
 	//check present cuda devices
-	std::vector<cudaDeviceProp> props = cudaProbeRuntime(cudaInfo);
-	if (props.size() > 0) {
+	CudaProbeResult res = cudaProbeRuntime();
+	cudaInfo->cudaDriverVersion = res.driverVersion;
+	cudaInfo->cudaRuntimeVersion = res.runtimeVersion;
+	if (res.props.size() > 0) {
 		//check if nvenc available
-		NvEncoder::probeEncoding(cudaInfo);
+		NvEncoder::probeEncoding(*cudaInfo);
 
-		for (int i = 0; i < props.size(); i++) {
-			cudaDeviceProp& prop = props[i];
+		for (int i = 0; i < res.props.size(); i++) {
+			cudaDeviceProp& prop = res.props[i];
 
 			//create device info struct
-			DeviceInfoCuda cuda(DeviceType::CUDA, prop.sharedMemPerBlock / sizeof(float));
+			DeviceInfo<CudaFrame> cuda(DeviceType::CUDA, prop.sharedMemPerBlock / sizeof(float));
 			cuda.props = prop;
 			cuda.cudaIndex = i;
-			if (cudaInfo.nvencVersionDriver >= cudaInfo.nvencVersionApi) {
+			if (cudaInfo->nvencVersionDriver >= cudaInfo->nvencVersionApi) {
 				//check supported codecs
 				NvEncoder::probeSupportedCodecs(cuda);
 			}
-			cudaInfo.devices.push_back(cuda);
+			cudaInfo->devices.push_back(cuda);
 		}
 	}
 }
 
 size_t MainData::deviceCountCuda() const {
-	return cudaInfo.devices.size();
+	return cudaInfo->devices.size();
 }
 
 void MainData::probeOpenCl() {
-	this->clinfo = cl::probeRuntime();
+	clinfo = std::make_shared<OpenClInfo>();
+	cl::probeRuntime(*clinfo);
 }
 
 size_t MainData::deviceCountOpenCl() const {
-	return clinfo.devices.size();
+	return clinfo->devices.size();
 }
 
 std::string MainData::getCpuName() const {
-	return deviceInfoCpu.getCpuName();
+	return deviceInfoCpu->getCpuName();
 }
 
 bool MainData::hasAvx512() const {
-	return deviceInfoAvx.hasAvx512();
-}
-
-void MainData::runSelfTest() const {
-	//TODO
-	throw SilentQuitException();
+	return deviceInfoAvx->hasAvx512();
 }

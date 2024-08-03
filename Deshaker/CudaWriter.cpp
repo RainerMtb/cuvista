@@ -1,8 +1,28 @@
-#include "CudaWriter.hpp"
-#include "Util.hpp"
-#include "NvEncoder.hpp"
-#include "ThreadPool.hpp"
+/*
+ * This file is part of CUVISTA - Cuda Video Stabilizer
+ * Copyright (c) 2023 Rainer Bitschi cuvista@a1.net
+ *
+ * This program is free software : you can redistribute it and /or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.If not, see < http://www.gnu.org/licenses/>.
+ */
+
 #include "MovieFrame.hpp"
+#include "MovieReader.hpp"
+#include "CudaWriter.hpp"
+#include "NvEncoder.hpp"
+#include "Util.hpp"
+#include "ThreadPool.hpp"
+#include "DeviceInfo.hpp"
 
 std::map<GUID, AVCodecID> guidToCodecMap = {
     { NV_ENC_CODEC_H264_GUID, AV_CODEC_ID_H264 },
@@ -25,9 +45,10 @@ void CudaFFmpegWriter::open(EncodingOption videoCodec) {
     int result;
 
     //select codec
-    const DeviceInfoCuda* dic = &mData.cudaInfo.devices[0];
-    if (mData.deviceList[mData.deviceSelected]->type == DeviceType::CUDA) {
-        dic = static_cast<DeviceInfoCuda*>(mData.deviceList[mData.deviceSelected]);
+    const DeviceInfo<CudaFrame>* dic = &mData.cudaInfo->devices[0];
+    DeviceInfoBase* dev = mData.deviceList[mData.deviceSelected];
+    if (dev->type == DeviceType::CUDA) {
+        dic = static_cast<DeviceInfo<CudaFrame>*>(dev);
     }
     if (videoCodec.codec == Codec::AUTO) videoCodec.codec = dic->encodingOptions[0].codec;
     GUID guid = guidMap[videoCodec.codec];

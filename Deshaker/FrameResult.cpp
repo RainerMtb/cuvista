@@ -24,7 +24,7 @@ double FrameResult::sqr(double value) { return value * value; }
 FrameResult::FrameResult(MainData& data, ThreadPool& threadPool) :
 	mData { data } 
 {
-	if (data.deviceInfoAvx.hasAvx512()) {
+	if (data.hasAvx512()) {
 		mAffineSolver = std::make_unique<AffineSolverAvx>(data.resultCount);
 	} else {
 		mAffineSolver = std::make_unique<AffineSolverFast>(threadPool, data.resultCount);

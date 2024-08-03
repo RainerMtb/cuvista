@@ -13,7 +13,6 @@
     <ClInclude Include="cuDeshaker.cuh" />
     <ClInclude Include="cuNPP.cuh" />
     <ClInclude Include="CudaData.cuh" />
-    <ClInclude Include="DeviceInfoCuda.cuh" />
     <ClInclude Include="cuTest.cuh" />
     <ClInclude Include="cuUtil.cuh" />
   </ItemGroup>

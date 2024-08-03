@@ -23,7 +23,7 @@
 class OpenClFrame : public MovieFrame {
 
 private:
-	DeviceInfo* device;
+	DeviceInfoBase* device;
 
 public:
 	OpenClFrame(MainData& data, MovieReader& reader, MovieWriter& writer) : 

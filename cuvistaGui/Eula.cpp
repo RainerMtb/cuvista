@@ -20,6 +20,7 @@
 #include <QVBoxLayout>
 #include <QApplication>
 #include <QSettings>
+#include <QFile>
 
 #include "Eula.h"
 #include "MainData.hpp"
@@ -43,6 +44,13 @@ Eula::Eula() :
         showMainWindow();
     };
     connect(ui.btnAccept, &QPushButton::clicked, this, fcn);
+
+    //load markdown text data
+    QFile file(":cuvistaGui/res/License.md");
+    file.open(QIODeviceBase::ReadOnly);
+    QString md = QString::fromLocal8Bit(file.readAll());
+    ui.textEdit->setMarkdown(md);
+    file.close();
 }
 
 bool Eula::needToShowEula() {

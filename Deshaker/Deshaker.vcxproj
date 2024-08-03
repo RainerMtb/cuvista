@@ -100,14 +100,16 @@
     <ClCompile Include="clFunctions.cpp" />
     <ClCompile Include="clMain.cpp" />
     <ClCompile Include="clTest.cpp" />
+    <ClCompile Include="CudaFrame.cpp" />
     <ClCompile Include="FrameResult.cpp" />
     <ClCompile Include="MainData.cpp" />
     <ClCompile Include="MatrixInverter.cpp" />
+    <ClCompile Include="SelfTest.cpp" />
     <ClCompile Include="StackedWriter.cpp" />
     <ClCompile Include="CpuFrame.cpp" />
     <ClCompile Include="CudaWriter.cpp" />
     <ClCompile Include="Deshaker.cpp" />
-    <ClCompile Include="DeviceInfoCpu.cpp" />
+    <ClCompile Include="DeviceInfo.cpp" />
     <ClCompile Include="FFmpegFormatWriter.cpp" />
     <ClCompile Include="FFmpegUtil.cpp" />
     <ClCompile Include="KeyboardInput.cpp" />
@@ -142,7 +144,7 @@
     <ClInclude Include="CudaFrame.hpp" />
     <ClInclude Include="CudaWriter.hpp" />
     <ClInclude Include="Deshaker.hpp" />
-    <ClInclude Include="DeviceInfoCpu.hpp" />
+    <ClInclude Include="DeviceInfo.hpp" />
     <ClInclude Include="FFmpegUtil.hpp" />
     <ClInclude Include="FrameResult.hpp" />
     <ClInclude Include="KeyboardInput.hpp" />
@@ -157,6 +159,7 @@
     <ClInclude Include="ProgressDisplay.hpp" />
     <ClInclude Include="ProgressDisplayConsole.hpp" />
     <ClInclude Include="SelfTest.hpp" />
+    <ClInclude Include="SelfTestData.hpp" />
     <ClInclude Include="Stats.hpp" />
     <ClInclude Include="RandomSource.hpp" />
     <ClInclude Include="MovieReader.hpp" />
@@ -165,6 +168,7 @@
     <ClInclude Include="Trajectory.hpp" />
     <ClInclude Include="UserInput.hpp" />
     <ClInclude Include="UserInputConsole.hpp" />
+    <ClInclude Include="Version.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

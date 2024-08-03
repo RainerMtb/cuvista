@@ -1,7 +1,5 @@
 #project(Deshaker)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx512f -mavx512vl -mavx512bw")
-
 file(GLOB_RECURSE sources CONFIGURE_DEPENDS "*.cpp")
 add_library(Deshaker STATIC ${sources})
 target_include_directories(Deshaker PUBLIC "${PROJECT_SOURCE_DIR}/Common")

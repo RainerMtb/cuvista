@@ -21,6 +21,7 @@
 #include "clKernels.hpp"
 #include "clKernelCompute.hpp"
 #include "Util.hpp"
+#include "DeviceInfo.hpp"
 
 #include <format>
 #include <algorithm>
@@ -35,8 +36,7 @@ bool operator == (const cl::ImageFormat& a, const cl::ImageFormat& b) {
 }
 
 //check available devices
-OpenClInfo cl::probeRuntime() {
-	OpenClInfo info;
+void cl::probeRuntime(OpenClInfo& info) {
 	std::vector<Platform> platforms;
 	Platform::get(&platforms);
 
@@ -111,7 +111,7 @@ OpenClInfo cl::probeRuntime() {
 			//std::vector<cl_name_version> extensions = dev.getInfo<CL_DEVICE_EXTENSIONS_WITH_VERSION>(); //Missing before version 3.0.
 
 			//we have a valid device
-			DeviceInfoCl devInfo(DeviceType::OPEN_CL, maxPixel);
+			DeviceInfo<OpenClFrame> devInfo(DeviceType::OPEN_CL, maxPixel);
 			devInfo.device = dev;
 			devInfo.versionDevice = versionDevice;
 			devInfo.versionC = versionC;
@@ -120,13 +120,12 @@ OpenClInfo cl::probeRuntime() {
 			info.devices.push_back(devInfo);
 		}
 	}
-	return info;
 }
 
 //set up device to use
-void cl::init(CoreData& core, ImageYuv& inputFrame, const DeviceInfo* device) {
+void cl::init(CoreData& core, ImageYuv& inputFrame, const DeviceInfoBase* device) {
 	assert(device->type == DeviceType::OPEN_CL && "device type must be OpenCL here");
-	const DeviceInfoCl* devInfo = static_cast<const DeviceInfoCl*>(device);
+	const DeviceInfo<OpenClFrame>* devInfo = static_cast<const DeviceInfo<OpenClFrame>*>(device);
 
 	try {
 		clData.context = Context(devInfo->device);

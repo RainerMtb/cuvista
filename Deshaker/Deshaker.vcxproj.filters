@@ -92,7 +92,7 @@
     <ClCompile Include="CpuFrame.cpp">
       <Filter>Frame</Filter>
     </ClCompile>
-    <ClCompile Include="DeviceInfoCpu.cpp">
+    <ClCompile Include="DeviceInfo.cpp">
       <Filter>Util</Filter>
     </ClCompile>
     <ClCompile Include="StackedWriter.cpp">
@@ -120,6 +120,12 @@
       <Filter>Avx</Filter>
     </ClCompile>
     <ClCompile Include="AvxFrame.cpp">
+      <Filter>Frame</Filter>
+    </ClCompile>
+    <ClCompile Include="SelfTest.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
+    <ClCompile Include="CudaFrame.cpp">
       <Filter>Frame</Filter>
     </ClCompile>
   </ItemGroup>
@@ -193,14 +199,8 @@
     <ClInclude Include="CpuFrame.hpp">
       <Filter>Frame</Filter>
     </ClInclude>
-    <ClInclude Include="DeviceInfoCpu.hpp">
-      <Filter>Util</Filter>
-    </ClInclude>
     <ClInclude Include="CudaWriter.hpp">
       <Filter>Writer</Filter>
-    </ClInclude>
-    <ClInclude Include="MainData.hpp">
-      <Filter>Main</Filter>
     </ClInclude>
     <ClInclude Include="FrameResult.hpp">
       <Filter>Transformation</Filter>
@@ -239,6 +239,18 @@
       <Filter>Util</Filter>
     </ClInclude>
     <ClInclude Include="SelfTest.hpp">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="Version.hpp">
+      <Filter>Main</Filter>
+    </ClInclude>
+    <ClInclude Include="SelfTestData.hpp">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="MainData.hpp">
+      <Filter>Main</Filter>
+    </ClInclude>
+    <ClInclude Include="DeviceInfo.hpp">
       <Filter>Util</Filter>
     </ClInclude>
   </ItemGroup>

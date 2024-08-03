@@ -20,10 +20,6 @@
 #include "CudaWriter.hpp"
 #include "MovieReader.hpp"
 #include "MovieFrame.hpp"
-#include "CpuFrame.hpp"
-#include "CudaFrame.hpp"
-#include "OpenClFrame.hpp"
-#include "AvxFrame.hpp"
 
 #include "FrameResult.hpp"
 #include "ProgressDisplayConsole.hpp"
@@ -38,14 +34,14 @@ int deshake(int argsCount, char** args) {
 	MainData data;
 	std::unique_ptr<MovieReader> reader = std::make_unique<NullReader>();
 	std::unique_ptr<MovieWriter> writer = std::make_unique<NullWriter>(data, *reader);
-	std::unique_ptr<MovieFrame> frame;
+	std::shared_ptr<MovieFrame> frame;
 	AuxWriters auxWriters;
 	
 	try {
 		data.probeOpenCl();
 		data.probeCuda();
-		data.probeInput(argsInput);
 		data.collectDeviceInfo();
+		data.probeInput(argsInput);
 
 		//create MovieReader
 		reader = std::make_unique<FFmpegReader>();
@@ -77,24 +73,8 @@ int deshake(int argsCount, char** args) {
 			//skip stabilizing stuff to test decoding and encoding
 			frame = std::make_unique<DummyFrame>(data, *reader, *writer);
 
-		} else if (data.deviceList[data.deviceSelected]->type == DeviceType::CPU) {
-			//only on CPU
-			frame = std::make_unique<CpuFrame>(data, *reader, *writer);
-
-		} else if (data.deviceList[data.deviceSelected]->type == DeviceType::AVX) {
-			//run Avx512
-			frame = std::make_unique<AvxFrame>(data, *reader, *writer);
-
-		} else if (data.deviceList[data.deviceSelected]->type == DeviceType::CUDA) {
-			//use CUDA GPU
-			frame = std::make_unique<CudaFrame>(data, *reader, *writer);
-
-		} else if (data.deviceList[data.deviceSelected]->type == DeviceType::OPEN_CL) {
-			//use OpenCL
-			frame = std::make_unique<OpenClFrame>(data, *reader, *writer);
-
 		} else {
-			frame = std::make_unique<DefaultFrame>(data, *reader, *writer);
+			frame = data.deviceList[data.deviceSelected]->createClass(data, *reader, *writer);
 		}
 
 		//----------- create secondary Writers
@@ -130,7 +110,7 @@ int deshake(int argsCount, char** args) {
 		return -3;
 
 	} catch (...) {
-		*data.console << "error setting up the system" << std::endl;
+		*data.console << "unknown error in cuvista" << std::endl;
 		return -4;
 	}
 
@@ -182,7 +162,7 @@ int deshake(int argsCount, char** args) {
 	//stopwatch
 	double secs = data.timeElapsedSeconds();
 	double fps = framesWritten / secs;
-	if (framesWritten > 0 && data.showHeader) {
+	if (framesWritten > 0 && data.printHeader) {
 		std::string time = secs < 60.0 ? std::format("{:.1f} sec", secs) : std::format("{:.1f} min", secs / 60.0);
 		std::string str = std::format("{} frames written in {} at {:.1f} fps", framesWritten, time, fps);
 		*data.console << str << std::endl;

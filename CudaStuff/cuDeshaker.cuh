@@ -72,7 +72,7 @@ void kernelComputeCall(ComputeKernelParam param, ComputeTextures& tex, CudaPoint
 /*
 brief probe present cuda devices and capabilities
 */
-std::vector<cudaDeviceProp> cudaProbeRuntime(CudaInfo& cudaInfo);
+CudaProbeResult cudaProbeRuntime();
 
 /*
 @brief initialize cuda device

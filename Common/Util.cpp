@@ -18,6 +18,8 @@
 
 #include <iostream>
 #include <format>
+#include <fstream>
+
 #include "Util.hpp"
 
 namespace util {
@@ -114,6 +116,24 @@ namespace util {
 		return out;
 	}
 
+	void base64_encode(std::span<unsigned char> data, const std::string& filename) {
+		std::string encoded = base64_encode(data);
+		std::ofstream file(filename);
+		size_t pos = 0;
+
+		file.put('"');
+		while (pos < encoded.size()) {
+			file.put(encoded[pos]);
+			pos++;
+			if (pos % 76 == 0) {
+				file.put('"');
+				file.put('\n');
+				file.put('"');
+			}
+		}
+		file.put('"');
+	}
+
 	std::vector<unsigned char> base64_decode(const std::string& base64string) {
 		std::vector<unsigned char> out;
 		out.reserve(3 * base64string.size() / 4);
@@ -128,10 +148,43 @@ namespace util {
 			valb += 6;
 			if (valb >= 0) {
 				int ch = (val >> valb) & 0xFF;
-				out.push_back((unsigned char)(ch));
+				out.push_back((unsigned char) ch);
 				valb -= 8;
 			}
 		}
 		return out;
+	}
+
+	CRC64::CRC64() {
+		reset();
+		for (int i = 0; i < 256; i++) {
+			uint64_t part = i;
+			for (int j = 0; j < 8; j++) {
+				if (part & 1) part = (part >> 1) ^ poly;
+				else part >>= 1;
+			}
+			table[i] = part;
+		}
+	}
+
+	CRC64& CRC64::reset() {
+		crc = 0xFFFFFFFFFFFFFFFFull;
+		return *this;
+	}
+
+	CRC64& CRC64::addBytes(const unsigned char* data, size_t size) {
+		return addBytes(std::span(data, size));
+	}
+
+	CRC64& CRC64::addBytes(std::span<const unsigned char> data) {
+		for (size_t i = 0; i < data.size(); i++) {
+			int idx = (crc ^ data[i]) & 0xFF;
+			crc = table[idx] ^ (crc >> 8);
+		}
+		return *this;
+	}
+
+	uint64_t CRC64::result() const {
+		return crc;
 	}
 }

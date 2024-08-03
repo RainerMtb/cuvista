@@ -4,7 +4,8 @@
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**",
-                "/usr/local/cuda/include"
+                "/usr/local/cuda/include",
+                "/home/rainer/Qt/6.7.2/gcc_64/include/**"
             ],
             "defines": [],
             "cStandard": "c17",

@@ -21,15 +21,12 @@
 #include <QDebug>
 #include <QStandardPaths>
 #include <QMessageBox>
+#include <QDialog>
 #include <QColorDialog>
 #include <QDesktopServices>
 
 #include "UserInputGui.hpp"
 #include "MovieFrame.hpp"
-#include "CpuFrame.hpp"
-#include "OpenClFrame.hpp"
-#include "CudaFrame.hpp"
-#include "AvxFrame.hpp"
 #include "progress.h"
 
 cuvistaGui::cuvistaGui(QWidget *parent) : 
@@ -295,15 +292,7 @@ void cuvistaGui::stabilize() {
     mWriter->open(mData.requestedEncoding);
 
     //select frame handler class
-    DeviceType devtype = mData.deviceList[mData.deviceSelected]->type;
-    if (devtype == DeviceType::CPU)
-        mFrame = std::make_unique<CpuFrame>(mData, mReader, *mWriter);
-    else if (devtype == DeviceType::AVX)
-        mFrame = std::make_unique<AvxFrame>(mData, mReader, *mWriter);
-    else if (devtype == DeviceType::CUDA)
-        mFrame = std::make_unique<CudaFrame>(mData, mReader, *mWriter);
-    else if (devtype == DeviceType::OPEN_CL)
-        mFrame = std::make_unique<OpenClFrame>(mData, mReader, *mWriter);
+    mFrame = mData.deviceList[mData.deviceSelected]->createClass(mData, mReader, *mWriter);
 
     //set up output
     if (ui.chkPlayer->isChecked()) {
@@ -317,11 +306,11 @@ void cuvistaGui::stabilize() {
     }
 
     //set up worker thread
-    auto fcn = [=] {
+    auto fcn = [this, progress = mProgress] {
         //no secondary writers
         AuxWriters writers;
         //run loop
-        mFrame->runLoop(DeshakerPass::COMBINED, *mProgress, mInputHandler, writers);
+        mFrame->runLoop(DeshakerPass::COMBINED, *progress, mInputHandler, writers);
     };
     mThread = QThread::create(fcn);
     connect(mThread, &QThread::finished, this, &cuvistaGui::done);
@@ -359,10 +348,10 @@ void cuvistaGui::done() {
 void cuvistaGui::doneSuccess(const std::string& fileString, const std::string& str) {
     mProgressWindow->hide();
     QString file = QString::fromStdString(fileString);
-    QString url = QString("file:///") + file;
+    QUrl url = QUrl::fromLocalFile(file);
     QFontMetrics metrics(mStatusLinkLabel->font());
     QString fileElided = metrics.elidedText(file, Qt::ElideMiddle, 300);
-    QString labelText = QString("<a href='%1'>%2</a> %3").arg(url).arg(fileElided).arg(QString::fromStdString(str));
+    QString labelText = QString("<a href='%1'>%2</a> %3").arg(url.toString()).arg(fileElided).arg(QString::fromStdString(str));
     statusBar()->clearMessage(); //will show the label which was added in the constructor
     mStatusLinkLabel->setText(labelText);
     mStatusLinkLabel->show();
@@ -386,21 +375,21 @@ void cuvistaGui::showMessage(const QString& msg) {
 
 void cuvistaGui::showInfo() {
     int boxHeight = 250;
-    int boxWidth = 500;
+    int boxWidth = 400;
 
-    QMessageBox msgBox(this);
+    QDialog msgBox(this);
     msgBox.setWindowTitle(QString("Cuvista Info"));
-    msgBox.setIcon(QMessageBox::Information);
     QString author = "Copyright (c) 2024 Rainer Bitschi <a href='mailto:cuvista@a1.net'>Email: cuvista@a1.net</a>";
     QString license = "License GNU GPLv3+: GNU GPL version 3 or later";
     QString version = QString::fromStdString(CUVISTA_VERSION);
-    msgBox.setText(QString("CUVISTA - Cuda Video Stabilizer, Version %1<br>%2<br>%3").arg(version).arg(author).arg(license));
-    msgBox.setTextFormat(Qt::RichText);
+    QLabel* header = new QLabel(&msgBox);
+    header->setText(QString("CUVISTA - Cuda Video Stabilizer, Version %1<br>%2<br>%3").arg(version).arg(author).arg(license));
+    header->setTextFormat(Qt::RichText);
 
     std::stringstream ss;
     mData.showDeviceInfo(ss);
 
-    QPlainTextEdit* textBox = new QPlainTextEdit(this);
+    QPlainTextEdit* textBox = new QPlainTextEdit(&msgBox);
     QString qstr = QString::fromStdString(ss.str());
     textBox->setPlainText(qstr);
     textBox->setMinimumHeight(boxHeight);
@@ -408,10 +397,30 @@ void cuvistaGui::showInfo() {
     textBox->setFont(QFont("Consolas"));
     textBox->setLineWrapMode(QPlainTextEdit::LineWrapMode::NoWrap);
 
-    QSpacerItem* spacer = new QSpacerItem(boxWidth, 0, QSizePolicy::Minimum, QSizePolicy::Minimum);
-    QGridLayout* layout = (QGridLayout*) msgBox.layout();
-    layout->addWidget(textBox, 1, 0, 1, layout->columnCount());
-    layout->addItem(spacer, layout->rowCount(), 0, 1, layout->columnCount());
+    QPushButton* btnTest = new QPushButton("Run Test", &msgBox);
+    btnTest->setFixedWidth(100);
+    btnTest->setFixedHeight(28);
+    QPushButton* btnClose = new QPushButton("Close", &msgBox);
+    btnClose->setFixedWidth(70);
+    btnClose->setFixedHeight(28);
+
+    //create widgets
+    QGridLayout* layout = new QGridLayout(&msgBox);
+    layout->addWidget(header, 0, 0, 1, 3);
+    layout->addWidget(textBox, 1, 0, 1, 3);
+    layout->addWidget(btnTest, 2, 1, 1, 1);
+    layout->addWidget(btnClose, 2, 2, 1, 1);
+
+    //calculate text width
+    QFontMetrics fm = textBox->fontMetrics();
+    for (auto& s : qstr.split('\n')) {
+        int w = fm.horizontalAdvance(s);
+        if (w > boxWidth) boxWidth = w;
+    }
+    textBox->setMinimumWidth(boxWidth + 40);
+
+    connect(btnClose, &QPushButton::clicked, &msgBox, &QDialog::close);
+    
     msgBox.exec();
 }
 

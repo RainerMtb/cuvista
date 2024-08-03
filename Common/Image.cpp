@@ -17,6 +17,8 @@
  */
 
 #include "Image.hpp"
+#include "Util.hpp"
+
 #include <cmath>
 #include <algorithm>
 
@@ -49,6 +51,50 @@ template <class T> void im::ImageBase<T>::setPixel(size_t row, size_t col, std::
 	for (int i = 0; i < numPlanes; i++) {
 		at(i, row, col) = colors[i];
 	}
+}
+
+template <class T> T* im::ImageBase<T>::addr(size_t idx, size_t r, size_t c) {
+	assert(r < h && "row index out of range");
+	assert(c < w && "column index out of range");
+	assert(idx < numPlanes && "plane index out of range");
+	return arrays[0].get() + idx * h * stride + r * stride + c;
+}
+
+template <class T> const T* im::ImageBase<T>::addr(size_t idx, size_t r, size_t c) const {
+	assert(r < h && "row index out of range");
+	assert(c < w && "column index out of range");
+	assert(idx < numPlanes && "plane index out of range");
+	return arrays[0].get() + idx * h * stride + r * stride + c;
+}
+
+template <class T> size_t im::ImageBase<T>::size() const {
+	return imageSize;
+}
+
+template <class T> size_t im::ImageBase<T>::bytes() const {
+	return size() * sizeof(T);
+}
+
+template <class T> uint64_t im::ImageBase<T>::crc() const {
+	util::CRC64 crc64;
+	for (size_t z = 0; z < numPlanes; z++) {
+		for (size_t r = 0; r < h; r++) {
+			for (size_t c = 0; c < w; c++) {
+				crc64.add(at(z, r, c));
+			}
+		}
+	}
+	return crc64.result();
+}
+
+template <> uint64_t im::ImageBase<unsigned char>::crc() const {
+	util::CRC64 crc64;
+	for (size_t z = 0; z < numPlanes; z++) {
+		for (size_t r = 0; r < h; r++) {
+			crc64.addBytes(addr(z, r, 0), w);
+		}
+	}
+	return crc64.result();
 }
 
 template <class T> T* im::ImageBase<T>::plane(size_t idx) {
@@ -483,6 +529,34 @@ template <class T> const T* im::ImagePacked<T>::addr(size_t idx, size_t r, size_
 	return this->data() + r * this->stride + c * this->numPlanes + idx;
 }
 
+template <class T> T* im::ImagePacked<T>::data() {
+	return this->arrays.at(0).get();
+}
+
+template <class T> const T* im::ImagePacked<T>::data() const {
+	return this->arrays.at(0).get();
+}
+
+template <class T> uint64_t im::ImagePacked<T>::crc() const {
+	util::CRC64 crc64;
+	for (size_t r = 0; r < this->h; r++) {
+		for (size_t c = 0; c < this->w; c++) {
+			for (size_t z = 0; z < this->numPlanes; z++) {
+				crc64.add(this->at(z, r, c));
+			}
+		}
+	}
+	return crc64.result();
+}
+
+template <> uint64_t im::ImagePacked<unsigned char>::crc() const {
+	util::CRC64 crc64;
+	for (size_t r = 0; r < this->h; r++) {
+		crc64.addBytes(addr(0, r, 0), 1ull * this->w * this->numPlanes);
+	}
+	return crc64.result();
+}
+
 template <class T> void im::ImagePacked<T>::copyTo(ImageBase<T>& dest) const {
 	assert(this->w == dest.w && this->h == dest.h && this->stride <= dest.stride && "invalid dimensions");
 	size_t linesize = this->w * this->numPlanes;
@@ -505,6 +579,22 @@ template <class T> void im::ImagePacked<T>::copyTo(ImageBase<T>& dest, std::vect
 }
 
 
+//------------------------
+// Image from shared Mat
+//------------------------
+
+
+template <class T> T* im::ImageMatShared<T>::addr(size_t idx, size_t r, size_t c) {
+	assert(r < this->h && c < this->w && idx < this->numPlanes && "invalid pixel address");
+	return this->arrays[idx].get() + r * this->stride + c;
+}
+
+template <class T> const T* im::ImageMatShared<T>::addr(size_t idx, size_t r, size_t c) const {
+	assert(r < this->h && c < this->w && idx < this->numPlanes && "invalid pixel address");
+	return this->arrays[idx].get() + r * this->stride + c;
+}
+
+
 //------------------------------------------------
 //explicitly instantiate Image specializations
 //------------------------------------------------
@@ -513,3 +603,5 @@ template class im::ImageBase<float>;
 template class im::ImageBase<unsigned char>;
 template class im::ImagePacked<float>;
 template class im::ImagePacked<unsigned char>;
+template class im::ImageMatShared<float>;
+template class im::ImageMatShared<unsigned char>;

@@ -11,6 +11,7 @@ set(CMAKE_CUDA_ARCHITECTURES all)
 enable_language(CUDA)
 
 set(CMAKE_BUILD_TYPE Release)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx512f -mavx512vl -mavx512bw")
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(ffmpeg REQUIRED IMPORTED_TARGET

@@ -57,27 +57,15 @@ namespace im {
 
 		virtual ~ImageBase() = default;
 
-		virtual T* addr(size_t idx, size_t r, size_t c) {
-			assert(r < h && "row index out of range");
-			assert(c < w && "column index out of range");
-			assert(idx < numPlanes && "plane index out of range");
-			return arrays[0].get() + idx * h * stride + r * stride + c;
-		}
+		virtual T* addr(size_t idx, size_t r, size_t c);
 
-		virtual const T* addr(size_t idx, size_t r, size_t c) const {
-			assert(r < h && "row index out of range");
-			assert(c < w && "column index out of range");
-			assert(idx < numPlanes && "plane index out of range");
-			return arrays[0].get() + idx * h * stride + r * stride + c;
-		}
+		virtual const T* addr(size_t idx, size_t r, size_t c) const;
 
-		virtual size_t size() const {
-			return imageSize;
-		}
+		virtual size_t size() const;
 
-		virtual size_t bytes() const {
-			return size() * sizeof(T);
-		}
+		virtual size_t bytes() const;
+
+		virtual uint64_t crc() const;
 
 		T* plane(size_t idx);
 
@@ -147,13 +135,11 @@ namespace im {
 
 		const T* addr(size_t idx, size_t r, size_t c) const override;
 
-		virtual T* data() {
-			return this->arrays.at(0).get();
-		}
+		virtual T* data();
 
-		virtual const T* data() const {
-			return this->arrays.at(0).get();
-		}
+		virtual const T* data() const;
+
+		uint64_t crc() const override;
 
 		void copyTo(ImageBase<T>& dest) const;
 
@@ -170,14 +156,8 @@ namespace im {
 		ImageMatShared(int h, int w, int stride, T* y, T* u, T* v) :
 			ImageBase<T>(h, w, stride, 3, { { y, NullDeleter<T>() }, { u, NullDeleter<T>() }, { v, NullDeleter<T>() } }, 3 * h * stride) {}
 
-		T* addr(size_t idx, size_t r, size_t c) override {
-			assert(r < this->h && c < this->w && idx < this->numPlanes && "invalid pixel address");
-			return this->arrays[idx].get() + r * this->stride + c;
-		}
+		T* addr(size_t idx, size_t r, size_t c) override;
 
-		const T* addr(size_t idx, size_t r, size_t c) const override {
-			assert(r < this->h && c < this->w && idx < this->numPlanes && "invalid pixel address");
-			return this->arrays[idx].get() + r * this->stride + c;
-		}
+		const T* addr(size_t idx, size_t r, size_t c) const;
 	};
 }

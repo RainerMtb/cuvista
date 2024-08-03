@@ -32,39 +32,19 @@ private:
 	QPixmap pm;
 
 public:
-	ImageLabel(QWidget* parent) : QLabel(parent) {
-		pm = QPixmap(100, 100);
-		pm.fill(Qt::transparent);
-	}
+	ImageLabel(QWidget* parent = nullptr);
 
-	void resizePixmap() {
-		QLabel::setPixmap(pm.scaled(width(), height(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
-	}
+	void resizePixmap();
 
-	void setImage(const ImagePPM& ppm) {
-		pm.loadFromData(ppm.data(), ppm.size(), "PPM");
-		resizePixmap();
-	}
+	void setImage(const ImagePPM& ppm);
 
-	void setImage(const QPixmap& pm) {
-		this->pm = pm;
-		resizePixmap();
-	}
+	void setImage(const QPixmap& pm);
 
-	void setImage(QImage im) {
-		setImage(QPixmap::fromImage(im));
-	}
+	void setImage(QImage im);
 
-	void setImage(const ImageYuv& im) {
-		setImage(QImage(im.toBGR().data(), im.w, im.h, im.w * 3ull, QImage::Format_BGR888));
-	}
+	void setImage(const ImageYuv& im);
 
-	void resizeEvent(QResizeEvent* event) override {
-		resizePixmap();
-	}
+	void resizeEvent(QResizeEvent* event) override;
 
-	void mousePressEvent(QMouseEvent* event) override {
-		double frac = 1.0 * event->position().x() / width();
-		mouseClicked(frac);
-	}
+	void mousePressEvent(QMouseEvent* event) override;
 };

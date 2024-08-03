@@ -21,6 +21,7 @@
 
 #include "player.h"
 #include "MovieFrame.hpp"
+#include "MovieReader.hpp"
 #include "Image2.hpp"
 
  //------------- Player Window ----------------------

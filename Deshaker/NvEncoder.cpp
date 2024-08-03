@@ -18,6 +18,7 @@
 
 #include "NvEncoder.hpp"
 #include "Util.hpp"
+#include "DeviceInfo.hpp"
 
 static std::strong_ordering compareGuid(const GUID& g1, const GUID& g2) {
 	auto t1 = std::tie(g1.Data1, g1.Data2, g1.Data3, g1.Data4[0], g1.Data4[1], g1.Data4[2], g1.Data4[3]);
@@ -66,7 +67,7 @@ void NvEncoder::probeEncoding(CudaInfo& cudaInfo) {
 }
 
 
-void NvEncoder::probeSupportedCodecs(DeviceInfoCuda& deviceInfoCuda) {
+void NvEncoder::probeSupportedCodecs(DeviceInfo<CudaFrame>& deviceInfoCuda) {
 	//create instance
 	NV_ENCODE_API_FUNCTION_LIST encFuncList = { NV_ENCODE_API_FUNCTION_LIST_VER };
 	handleResult(NvEncodeAPICreateInstance(&encFuncList), "cannot create api instance");
@@ -95,6 +96,8 @@ void NvEncoder::probeSupportedCodecs(DeviceInfoCuda& deviceInfoCuda) {
 	handleResult(encFuncList.nvEncGetEncodeGUIDs(encoder, guids.data(), guidCount, &guidSupportCount), "cannot get guids");
 
 	//order best codec first
+	if (std::find(guids.cbegin(), guids.cend(), NV_ENC_CODEC_AV1_GUID) != guids.cend())
+		deviceInfoCuda.encodingOptions.emplace_back(EncodingDevice::NVENC, Codec::AV1);
 	if (std::find(guids.cbegin(), guids.cend(), NV_ENC_CODEC_HEVC_GUID) != guids.cend())
 		deviceInfoCuda.encodingOptions.emplace_back(EncodingDevice::NVENC, Codec::H265);
 	if (std::find(guids.cbegin(), guids.cend(), NV_ENC_CODEC_H264_GUID) != guids.cend())

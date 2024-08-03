@@ -21,7 +21,10 @@
 #include "AVException.hpp"
 #include "Stats.hpp"
 #include "Image2.hpp"
+
+#include <span>
 #include <optional>
+
 
 class MovieReader : public ReaderStats {
 
@@ -52,22 +55,53 @@ public:
 };
 
 
-//main class to decode input
-class FFmpegReader : public MovieReader {
+class FFmpegFormatReader : public MovieReader {
 
-private:
+protected:
 	AVFormatContext* av_format_ctx = nullptr;
 	AVCodecContext* av_codec_ctx = nullptr;
 	AVFrame* av_frame = nullptr;
 	AVPacket* av_packet = nullptr;
+
+	void openInput(AVFormatContext* fmt, const char* source);
+};
+
+
+//main class to decode input
+class FFmpegReader : public FFmpegFormatReader {
+
+private:
+	AVFormatContext* av_fmt = nullptr;
 	SwsContext* sws_scaler_ctx = nullptr;
 
 public:
 	~FFmpegReader() override;
-	void open(std::string_view source) override;
 
+	void open(std::string_view source) override;
 	void read(ImageYuv& frame) override;
 	void close() override;
 	void rewind() override;
 	void seek(double fraction);
+};
+
+
+//provide data to ffmpeg from memory
+class MemoryFFmpegReader : public FFmpegReader {
+
+private:
+	AVFormatContext* av_fmt = nullptr;
+	AVIOContext* av_avio = nullptr;
+	unsigned char* mBuffer = nullptr;
+
+	std::span<unsigned char> mData;
+	int64_t mDataPos = 0;
+
+	static int readBuffer(void* opaque, unsigned char* buf, int bufsiz);
+	static int64_t seekBuffer(void* opaque, int64_t offset, int whence);
+	
+public:
+	MemoryFFmpegReader(std::span<unsigned char> movieData);
+	~MemoryFFmpegReader() override;
+
+	void open(std::string_view source) override;
 };

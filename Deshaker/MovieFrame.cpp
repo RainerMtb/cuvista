@@ -17,6 +17,7 @@
  */
 
 #include "MovieFrame.hpp"
+#include "MovieReader.hpp"
 #include "ProgressDisplay.hpp"
 #include "Util.hpp"
 
@@ -116,7 +117,7 @@ void MovieFrame::loopInit(ProgressBase& progress, const std::string& message) {
 	//read first frame from input into buffer
 	if (errorLogger.hasNoError()) read();
 	//show program header on console
-	if (errorLogger.hasNoError() && mData.showHeader) mData.showIntro(getId().nameLong, mReader);
+	if (errorLogger.hasNoError() && mData.printHeader) mData.showIntro(getId().nameLong, mReader);
 	//init progress display
 	progress.init();
 	progress.writeMessage(message);
@@ -262,7 +263,7 @@ void MovieFrame::runLoopSecond(ProgressBase& progress, UserInput& input, AuxWrit
 
 	//init
 	if (errorLogger.hasNoError()) read();
-	if (errorLogger.hasNoError() && mData.showHeader) mData.showIntro(getId().nameShort, mReader);
+	if (errorLogger.hasNoError() && mData.printHeader) mData.showIntro(getId().nameShort, mReader);
 	progress.init();
 	progress.update();
 

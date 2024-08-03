@@ -22,6 +22,7 @@
 #include <string>
 #include <vector>
 #include <span>
+#include <ostream>
 
 //misc stuff
 namespace util {
@@ -44,6 +45,43 @@ namespace util {
         ~ConsoleTimer();
     };
 
+
+    class NullOutstream : public std::ostream {
+
+    public:
+        NullOutstream() :
+            std::ostream(nullptr) {}
+
+        template <class T> NullOutstream& operator << (const T& value) { return *this; }
+    };
+
+
+    class MessagePrinter {
+
+    public:
+        virtual void print(const std::string& str) = 0;
+
+        virtual void printNewLine() = 0;
+    };
+
+
+    class CRC64 {
+
+    private:
+        uint64_t poly = 0x95AC9329AC4BC9B5ull;
+        uint64_t crc;
+        uint64_t table[256];
+
+    public:
+        CRC64();
+        template <class T> CRC64& add(T data) { return addBytes(reinterpret_cast<unsigned char*>(&data), sizeof(T)); }
+        CRC64& reset();
+        CRC64& addBytes(std::span<const unsigned char> data);
+        CRC64& addBytes(const unsigned char* data, size_t size);
+        uint64_t result() const;
+    };
+
+
     //concat givens strings by using delimiters
     std::string concatStrings(std::vector<std::string>& strings, std::string_view delimiter, std::string_view prefix, std::string_view suffix);
 
@@ -58,6 +96,9 @@ namespace util {
 
     //encode bytes to base64 string
     std::string base64_encode(std::span<unsigned char> data);
+
+    //encode bytes to file in 76 coolumn wide text
+    void base64_encode(std::span<unsigned char> data, const std::string& filename);
 
     //decode base64 string to bytes
     std::vector<unsigned char> base64_decode(const std::string& base64string);

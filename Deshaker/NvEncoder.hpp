@@ -19,8 +19,8 @@
 #pragma once
 
 #include "AVException.hpp"
-#include "DeviceInfoCuda.cuh"
 #include "nvEncodeAPI.h"
+#include <cuda.h>
 
 #undef min
 #undef max
@@ -32,6 +32,10 @@
 
 bool operator < (const GUID& g1, const GUID& g2);
 bool operator == (const GUID& g1, const GUID& g2);
+
+struct CudaInfo;
+class CudaFrame;
+template <class T> class DeviceInfo;
 
 struct NvPacket {
 	std::vector<uint8_t> packet;
@@ -72,7 +76,7 @@ public:
 		NvEncoder(0, 0) {}
 
 	static void probeEncoding(CudaInfo& cudaInfo);
-	static void probeSupportedCodecs(DeviceInfoCuda& deviceInfoCuda);
+	static void probeSupportedCodecs(DeviceInfo<CudaFrame>& deviceInfoCuda);
 	void createEncoder(int fpsNum, int fpsDen, uint32_t gopLen, std::optional<uint8_t> crf, GUID guid, int deviceNum);
 	void createEncoder(int fpsNum, int fpsDen, uint32_t gopLen, std::optional<uint8_t> crf, GUID guid, CUcontext cuctx);
 	void destroyEncoder();

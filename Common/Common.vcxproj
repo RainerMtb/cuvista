@@ -95,7 +95,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CoreData.hpp" />
-    <ClInclude Include="DeviceInfo.hpp" />
+    <ClInclude Include="DeviceInfoBase.hpp" />
     <ClInclude Include="ErrorLogger.hpp" />
     <ClInclude Include="Util.hpp" />
     <ClInclude Include="CharMap.hpp" />

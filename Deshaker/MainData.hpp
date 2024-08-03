@@ -21,14 +21,18 @@
 #include "Mat.hpp"
 #include "AVException.hpp"
 #include "FFmpegUtil.hpp"
-#include "MovieReader.hpp"
 #include "RandomSource.hpp"
 #include "cuDeshaker.cuh"
 #include "clMain.hpp"
-#include "DeviceInfoCuda.cuh"
-#include "DeviceInfoCpu.hpp"
+#include "SelfTest.hpp"
+#include "Util.hpp"
+#include "Version.hpp"
 
-inline std::string CUVISTA_VERSION = "0.9.11";
+template <class T> class DeviceInfo;
+class CpuFrame;
+class AvxFrame;
+struct OpenClInfo;
+struct CudaInfo;
 
 enum class DeshakerPass {
 	NONE,
@@ -58,15 +62,6 @@ enum class DecideYNA {
 	YES,
 	NO,
 	ASK,
-};
-
-class NullStream : public std::ostream {
-
-public:
-	NullStream() : 
-		std::ostream(nullptr) {}
-
-	template <class T> NullStream& operator << (const T& value) { return *this; }
 };
 
 class MainData : public CudaData {
@@ -148,18 +143,18 @@ public:
 		int irMin = 0, irMax = 3;
 	} limits;
 
-	DeviceInfoCpu deviceInfoCpu;
-	DeviceInfoAvx deviceInfoAvx;
-	std::vector<DeviceInfo*> deviceList;
-	CudaInfo cudaInfo;
-	OpenClInfo clinfo;
+	std::vector<DeviceInfoBase*> deviceList;
+	std::shared_ptr<DeviceInfo<CpuFrame>> deviceInfoCpu;
+	std::shared_ptr<DeviceInfo<AvxFrame>> deviceInfoAvx;
+	std::shared_ptr<CudaInfo> cudaInfo;
+	std::shared_ptr<OpenClInfo> clinfo;
 	bool deviceRequested = false;
 	size_t deviceSelected = 0;
 
 	DeshakerPass pass = DeshakerPass::COMBINED;
 
 	//output related
-	NullStream nullStream;
+	util::NullOutstream nullStream;
 	EncodingOption requestedEncoding = { EncodingDevice::AUTO, Codec::AUTO };
 	EncodingOption selectedEncoding = { EncodingDevice::AUTO, Codec::AUTO };
 	std::ostream* console = &std::cout;
@@ -168,7 +163,7 @@ public:
 	std::optional<uint8_t> crf = std::nullopt;
 	std::optional<double> stackPosition = std::nullopt;
 
-	bool showHeader = true;
+	bool printHeader = true;
 
 	std::string fileIn;					//input file path
 	std::string fileOut;				//output file path
@@ -207,14 +202,14 @@ public:
 	void collectDeviceInfo();
 
 	void validate(const MovieReader& reader);
-	
+
 	void showBasicInfo() const;
 
-	void showDeviceInfo();
+	void showDeviceInfo() const;
 
-	void showVersionInfo();
+	void showVersionInfo() const;
 
-	void runSelfTest() const;
+	void showHeader() const;
 
 	void showIntro(const std::string& deviceName, const MovieReader& reader) const;
 

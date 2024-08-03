@@ -25,14 +25,11 @@ class ClickLabel : public QLabel {
     Q_OBJECT
 
 public:
-    ClickLabel(QWidget* parent = nullptr) :
-        QLabel(parent) {}
+    ClickLabel(QWidget* parent = nullptr);
 
 signals:
     void clicked();
 
 protected:
-    void mousePressEvent(QMouseEvent* event) {
-        clicked();
-    }
+    void mousePressEvent(QMouseEvent* event);
 };

@@ -61,18 +61,25 @@ void NullReader::read(ImageYuv& frame) {
 //----------------------------------
 
 
-//constructor opens ffmpeg file
 void FFmpegReader::open(std::string_view source) {
     //av_log_set_level(AV_LOG_ERROR);
     av_log_set_callback(ffmpeg_log);
 
     // Allocate format context
-    av_format_ctx = avformat_alloc_context();
-    if (av_format_ctx == nullptr) 
+    av_fmt = avformat_alloc_context();
+    if (av_fmt == nullptr)
         throw AVException("could not create AVFormatContext");
-        
+
+    openInput(av_fmt, source.data());
+}
+
+
+//open ffmpeg file
+void FFmpegFormatReader::openInput(AVFormatContext* fmt, const char* source) {
+    av_format_ctx = fmt;
+
     // Open the file using libavformat
-    int err = avformat_open_input(&av_format_ctx, source.data(), NULL, NULL);
+    int err = avformat_open_input(&av_format_ctx, source, NULL, NULL);
     if (err < 0) 
         throw AVException(av_make_error(err, "could not open input video file"));
 
@@ -253,8 +260,8 @@ void FFmpegReader::close() {
     avcodec_free_context(&av_codec_ctx);
     av_packet_free(&av_packet);
     av_frame_free(&av_frame);
-    avformat_close_input(&av_format_ctx);
-    avformat_free_context(av_format_ctx);
+    avformat_close_input(&av_fmt);
+    avformat_free_context(av_fmt);
 
     videoStream = nullptr;
     sws_scaler_ctx = nullptr;
@@ -264,4 +271,68 @@ void FFmpegReader::close() {
 
 FFmpegReader::~FFmpegReader() {
     close();
+}
+
+
+//----------------------------------
+//-------- Memory FFmpeg Reader
+//----------------------------------
+
+
+MemoryFFmpegReader::MemoryFFmpegReader(std::span<unsigned char> movieData) :
+    mData { movieData } {}
+
+void MemoryFFmpegReader::open(std::string_view source) {
+    int bufsiz = 4 * 1024;
+    mBuffer = (unsigned char*) av_malloc(bufsiz);
+    av_avio = avio_alloc_context(mBuffer, bufsiz, 0, this, &MemoryFFmpegReader::readBuffer, nullptr, &MemoryFFmpegReader::seekBuffer);
+    av_fmt = avformat_alloc_context();
+    av_fmt->pb = av_avio;
+
+    openInput(av_fmt, "");
+}
+
+int MemoryFFmpegReader::readBuffer(void* opaque, unsigned char* buf, int bufsiz) {
+    //std::cout << "read" << std::endl;
+    MemoryFFmpegReader* ptr = static_cast<MemoryFFmpegReader*>(opaque);
+    int i = 0;
+    int64_t siz = ptr->mData.size();
+    while (ptr->mDataPos < siz && i < bufsiz) {
+        buf[i] = ptr->mData[ptr->mDataPos];
+        ptr->mDataPos++;
+        i++;
+    }
+    return i;
+}
+
+int64_t MemoryFFmpegReader::seekBuffer(void* opaque, int64_t offset, int whence) {
+    //std::cout << "seek" << std::endl;
+    MemoryFFmpegReader* ptr = static_cast<MemoryFFmpegReader*>(opaque);
+    int64_t out = 0;
+    switch (whence) {
+    case AVSEEK_SIZE:
+        out = ptr->mData.size();
+        break;
+
+    case SEEK_CUR:
+        ptr->mDataPos += offset;
+        out = ptr->mDataPos;
+        break;
+
+    case SEEK_END:
+        ptr->mDataPos = ptr->mData.size() + offset;
+        out = ptr->mDataPos;
+        break;
+
+    case SEEK_SET:
+        ptr->mDataPos = offset;
+        out = ptr->mDataPos;
+    }
+    return out;
+}
+
+MemoryFFmpegReader::~MemoryFFmpegReader() {
+    avformat_close_input(&av_fmt);
+    avformat_free_context(av_fmt);
+    avio_context_free(&av_avio); //seems to also free the buffer
 }

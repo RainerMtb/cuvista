@@ -116,7 +116,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="ClickLabel.cpp" />
     <ClCompile Include="Eula.cpp" />
+    <ClCompile Include="ImageLabel.cpp" />
     <ClCompile Include="player.cpp" />
     <ClCompile Include="PlayerWidget.cpp" />
     <ClCompile Include="progress.cpp" />

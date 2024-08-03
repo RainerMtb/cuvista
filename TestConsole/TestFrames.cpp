@@ -18,6 +18,12 @@
 
 #include "TestMain.hpp"
 #include "clTest.hpp"
+#include "Util.hpp"
+#include "SelfTestData.hpp"
+
+#include <fstream>
+#include <iterator>
+
 struct Result {
 	Matf pyramid;
 	Matf output;
@@ -29,8 +35,9 @@ struct Result {
 };
 
 template <class T> Result runPyramid(MainData& data) {
-	FFmpegReader reader;
-	reader.open(data.fileIn);
+	std::vector<unsigned char> bytes = util::base64_decode(movieTestData);
+	MemoryFFmpegReader reader(bytes);
+	reader.open("");
 	data.collectDeviceInfo();
 	data.validate(reader);
 	BaseWriter writer(data, reader);
@@ -71,19 +78,16 @@ template <class T> Result runPyramid(MainData& data) {
 void compareFramesPlatforms() {
 	std::cout << "comparing platforms..." << std::endl;
 	std::vector<Result> results(4);
-	std::string fileName = "d:/VideoTest/02.mp4";
 
 	{
 		//CPU
 		MainData data;
-		data.fileIn = fileName;
 		results[0] = runPyramid<CpuFrame>(data);
 	}
 
 	{
 		//AVX
 		MainData data;
-		data.fileIn = fileName;
 		results[1] = runPyramid<AvxFrame>(data);
 	}
 
@@ -93,7 +97,6 @@ void compareFramesPlatforms() {
 		data.deviceRequested = true;
 		data.deviceSelected = 2;
 		data.probeCuda();
-		data.fileIn = fileName;
 		results[2] = runPyramid<CudaFrame>(data);
 	}
 
@@ -103,7 +106,6 @@ void compareFramesPlatforms() {
 		data.deviceRequested = true;
 		data.deviceSelected = 2;
 		data.probeOpenCl();
-		data.fileIn = fileName;
 		results[3] = runPyramid<OpenClFrame>(data);
 	}
 	std::cout << std::endl;
