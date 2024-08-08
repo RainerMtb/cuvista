@@ -16,22 +16,22 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
-#include <string>
-#include "AVException.hpp"
 #include "NvidiaDriver.hpp"
-
-//nvapi only works on windows
-#if defined(_WIN64)
-
-extern "C" {
-#include "nvapi/nvapi.h"
-}
+#include "AVException.hpp"
+#include <iostream>
 
 //get nvidia driver version
-int probeNvidiaDriver() {
+#if defined(_WIN64)
+
+//nvapi only works on windows
+extern "C" {
+#include "nvapi.h"
+}
+
+std::string probeNvidiaDriver() {
 	NvAPI_Status status = NVAPI_OK;
 	NvAPI_ShortString str;
-	int retval = 0;
+	std::string retval = "";
 
 	status = NvAPI_Initialize();
 	if (status == NVAPI_LIBRARY_NOT_FOUND) {
@@ -51,16 +51,32 @@ int probeNvidiaDriver() {
 
 		} else {
 			//we have valid nvidia driver
-			retval = version;
+			retval = std::to_string(version / 100) + "." + std::to_string(version % 100);
 		}
 	}
 	return retval;
 }
 
 #else
-int probeNvidiaDriver() {
+
+//on linux use nvml.h, NVIDIA Management Library
+extern "C" {
+#include "nvml.h"
+}
+
+std::string probeNvidiaDriver() {
 	//nvidia-smi --query-gpu=driver_version --format=csv,noheader
-	return 0;
+	nvmlReturn_t status;
+	status = nvmlInit_v2();
+	if (status != NVML_SUCCESS) throw AVException("error loading nvml");
+
+	const int siz = NVML_SYSTEM_DRIVER_VERSION_BUFFER_SIZE;
+	char version[siz];
+	status = nvmlSystemGetDriverVersion(version, siz);
+	if (status != NVML_SUCCESS) throw AVException("error getting nvidia driver version");
+
+	nvmlShutdown();
+	return version;
 }
 
 #endif

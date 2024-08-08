@@ -202,10 +202,11 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 			showHeader();
 			MessagePrinterConsole mpc(console);
 			runSelfTest(mpc, deviceList);
+			throw SilentQuitException();
 
 		} else if (args.nextArg("h") || args.nextArg("help") || args.nextArg("?")) {
 			*console << helpString;
-			throw CancelException();
+			throw SilentQuitException();
 
 		} else if (args.nextArg("progress", next)) {
 			int i = std::stoi(next);
@@ -504,8 +505,8 @@ std::ostream& MainData::showDeviceInfo(std::ostream& os) const {
 	//display nvidia info
 	os << std::endl;
 	os << "Nvidia/Cuda System Details:" << std::endl;
-	if (cudaInfo->nvidiaDriverVersion > 0) {
-		os << "Nvidia Driver: " << cudaInfo->nvidiaDriverToString();
+	if (cudaInfo->nvidiaDriverVersion.size() > 0) {
+		os << "Nvidia Driver: " << cudaInfo->nvidiaDriverVersion;
 	} else {
 		os << "Nvidia driver not found";
 	}
@@ -583,7 +584,6 @@ bool MainData::Parameters::nextArg(std::string&& param, std::string& nextParam) 
 }
 
 void MainData::probeCuda() {
-	cudaInfo = std::make_shared<CudaInfo>();
 	//check Nvidia Driver
 	cudaInfo->nvidiaDriverVersion = probeNvidiaDriver();
 	//check present cuda devices
@@ -615,7 +615,6 @@ size_t MainData::deviceCountCuda() const {
 }
 
 void MainData::probeOpenCl() {
-	clinfo = std::make_shared<OpenClInfo>();
 	cl::probeRuntime(*clinfo);
 }
 
@@ -629,4 +628,9 @@ std::string MainData::getCpuName() const {
 
 bool MainData::hasAvx512() const {
 	return deviceInfoAvx->hasAvx512();
+}
+
+MainData::MainData() {
+	cudaInfo = std::make_shared<CudaInfo>();
+	clinfo = std::make_shared<OpenClInfo>();
 }

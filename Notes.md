@@ -1,10 +1,10 @@
-# General program flow
+# Theory of Operation
 
 1. Create MainData structure
 1. Optional: probe cuda and/or opencl devices
 1. Collect device info
 1. Create subclass of MovieReader and open input
-1. Validate MainData variables
+1. Validate MainData variables with input
 1. Create subclass of MovieWriter and open output
 1. Create subclass of MovieFrame handler class
 1. Set up progress information handler class
@@ -22,16 +22,19 @@ used to get name and vector features of Cpu
 build commands in repo readme do not work
 
 test executable
-> cmake -S. -Bbuild -DBUILD_TESTING=OFF -DCMAKE_BUILD_TYPE=Release
-> cmake --build build --config Release -j --target ALL_BUILD
-> .\build\Release\list_cpu_features
+```
+cmake -S. -Bbuild -DBUILD_TESTING=OFF -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release -j --target ALL_BUILD
+.\build\Release\list_cpu_features
+```
 
-This will show CPU features of current device
-
+This will show CPU features of current device:
 To build library
-> cmake -B build -D BUILD_TESTING=OFF --install-prefix=f:\repos\cpu_features\install
-> cmake --build build --config Release
-> cmake --install build
+```
+cmake -B build -D BUILD_TESTING=OFF --install-prefix=f:\repos\cpu_features\install
+cmake --build build --config Release
+cmake --install build
+```
 
 ## Nvidia NvApi
 https://github.com/NVIDIA/nvapi.git
@@ -48,3 +51,13 @@ but M-AB-S rarely ever succeeds, always some problem with some package
 # Misc Notes
 Cuda 11.8 is the highest version to support Compute 3.5
 Video Codec 11.0.10 is the highest encoder version to go along with it
+
+# Building
+On Windows:
+```
+mkdir buildWin
+cd buildWin
+cmake .. -DCMAKE_PREFIX_PATH=c:\daten\Qt\6.7.2\msvc2019_64
+cmake --build . --config Release
+cmake --install .
+```

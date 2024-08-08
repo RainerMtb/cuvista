@@ -2,6 +2,7 @@
 
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets OpenGL OpenGLWidgets)
 
+#qt_standard_project_setup()
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
@@ -21,25 +22,34 @@ qt_add_executable(cuvistaGui
     UserInputGui.cpp
     ImageLabel.cpp
     ClickLabel.cpp
+    MessagePrinterGui.cpp
 )
 
 target_include_directories(cuvistaGui PRIVATE "${PROJECT_SOURCE_DIR}/Deshaker")
 target_include_directories(cuvistaGui PRIVATE "${PROJECT_SOURCE_DIR}/cuvistaGui")
+set_target_properties(cuvistaGui PROPERTIES WIN32_EXECUTABLE ON)
 
 target_link_libraries(cuvistaGui PRIVATE
     Common
     Matrix 
     CudaStuff 
     Deshaker 
-    OpenCL 
-    PkgConfig::ffmpeg
-    cuda
-    cpu_features
-    nvcuvid
-    nvidia-encode
+    "${CORE_LIBS}"
     Qt6::Core
     Qt6::Gui
     Qt6::Widgets
     Qt6::OpenGL
     Qt6::OpenGLWidgets
 )
+
+# install -----------------
+install(TARGETS cuvistaGui
+    BUNDLE DESTINATION .
+    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+)
+qt_generate_deploy_app_script(
+    TARGET cuvistaGui
+    OUTPUT_SCRIPT deploy_script
+    NO_UNSUPPORTED_PLATFORM_ERROR
+    )
+install(SCRIPT "${deploy_script}")

@@ -104,7 +104,7 @@ public:
 struct CudaInfo {
 	std::vector<DeviceInfo<CudaFrame>> devices;
 
-	int nvidiaDriverVersion = 0;
+	std::string nvidiaDriverVersion = "";
 	int cudaRuntimeVersion = 0;
 	int cudaDriverVersion = 0;
 
@@ -115,7 +115,6 @@ struct CudaInfo {
 	uint32_t nvencVersionApi;
 	uint32_t nvencVersionDriver;
 
-	std::string nvidiaDriverToString() const;
 	std::string runtimeToString() const;
 	std::string driverToString() const;
 	std::string nvencApiToString() const;

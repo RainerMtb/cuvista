@@ -8,10 +8,5 @@ target_link_libraries(cuvista PRIVATE
     Matrix 
     CudaStuff 
     Deshaker 
-    OpenCL 
-    PkgConfig::ffmpeg
-    cuda
-    cpu_features
-    nvcuvid
-    nvidia-encode
+    "${CORE_LIBS}"
 )

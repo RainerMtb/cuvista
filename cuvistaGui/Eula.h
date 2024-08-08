@@ -19,7 +19,7 @@
 #pragma once
 
 #include "ui_eula.h"
-#include <QtWidgets/QMainWindow>
+#include <QMainWindow>
 
 class Eula : public QMainWindow {
     Q_OBJECT

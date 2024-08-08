@@ -29,10 +29,10 @@
 #include "Version.hpp"
 
 template <class T> class DeviceInfo;
+struct CudaInfo;
+struct OpenClInfo;
 class CpuFrame;
 class AvxFrame;
-struct OpenClInfo;
-struct CudaInfo;
 
 enum class DeshakerPass {
 	NONE,
@@ -67,7 +67,6 @@ enum class DecideYNA {
 class MainData : public CudaData {
 
 private:
-
 	std::map<std::string, std::vector<unsigned char>> colorMap = {
 		{"red",     {255,   0,   0}},
 		{"green",   {  0, 255,   0}},
@@ -110,6 +109,7 @@ private:
 	bool checkFileForWriting(const std::string& file, DecideYNA permission) const;
 
 public:
+	MainData();
 
 	std::map<std::string, Codec> mapStringToCodec = {
 		{"AUTO", Codec::AUTO},

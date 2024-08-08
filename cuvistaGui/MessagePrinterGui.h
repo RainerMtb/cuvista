@@ -18,6 +18,30 @@
 
 #pragma once
 
-#include <string>
+#include <QPlainTextEdit>
+#include <QDebug>
+#include "Util.hpp"
 
-std::string probeNvidiaDriver();
+class MessagePrinterGui : public QObject, public util::MessagePrinter {
+    Q_OBJECT
+
+signals:
+    void appendText(const QString& str);
+
+public:
+    void print(const std::string& str) override;
+
+    void printNewLine() override;
+};
+
+
+class ScrollingTextEdit : public QPlainTextEdit {
+    Q_OBJECT
+
+public slots:
+    void appendText(const QString& str);
+
+public:
+    ScrollingTextEdit(QWidget* parent) : 
+        QPlainTextEdit(parent) {}
+};

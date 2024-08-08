@@ -24,7 +24,10 @@
 #include <QDialog>
 #include <QColorDialog>
 #include <QDesktopServices>
+#include <QScrollBar>
 
+#include "MessagePrinterGui.h"
+#include "SelfTest.hpp"
 #include "UserInputGui.hpp"
 #include "MovieFrame.hpp"
 #include "progress.h"
@@ -144,7 +147,7 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     }
 
     //label to show file link in status bar upon success
-    mStatusLinkLabel = new QLabel();
+    mStatusLinkLabel = new QLabel(this);
     mStatusLinkLabel->setTextFormat(Qt::RichText);
     mStatusLinkLabel->setIndent(5);
     auto fileOpener = [] (const QString& file) {
@@ -226,7 +229,8 @@ void cuvistaGui::stabilize() {
     QString outFile;
     if (ui.chkEncode->isChecked() || ui.chkStack->isChecked()) {
         QFileDialog::Options op = ui.chkOverwrite->isChecked() ? QFileDialog::Option::DontConfirmOverwrite : QFileDialog::Options();
-        QString fileFilter("Video Files (*.mp4; *.mkv);;All Files (*.*)");
+        //file filter: different file endings separate by space, different filter entries separate by two semicolons
+        QString fileFilter("Video Files (*.mp4 *.mkv);;All Files (*.*)");
         outFile = QFileDialog::getSaveFileName(this, QString("Select Video file to save"), mOutputDir, fileFilter, &mOutputFilterSelected, op);
         if (outFile.isEmpty()) {
             statusBar()->showMessage(mDefaultMessage);
@@ -302,6 +306,8 @@ void cuvistaGui::stabilize() {
         mProgress = std::make_shared<ProgressGui>(mData, *mFrame, mProgressWindow);
         mProgressWindow->updateInput(mWorkingImage, "");
         mProgressWindow->updateOutput(mWorkingImage, "");
+        QPoint p = pos();
+        mProgressWindow->move(p.x() + 40, p.y() + 40); //on linux automatic positioning is bad
         mProgressWindow->show();
     }
 
@@ -351,7 +357,7 @@ void cuvistaGui::doneSuccess(const std::string& fileString, const std::string& s
     QUrl url = QUrl::fromLocalFile(file);
     QFontMetrics metrics(mStatusLinkLabel->font());
     QString fileElided = metrics.elidedText(file, Qt::ElideMiddle, 300);
-    QString labelText = QString("<a href='%1'>%2</a> %3").arg(url.toString()).arg(fileElided).arg(QString::fromStdString(str));
+    QString labelText = QString("<a href='%1'>%2</a> %3").arg(file).arg(fileElided).arg(QString::fromStdString(str));
     statusBar()->clearMessage(); //will show the label which was added in the constructor
     mStatusLinkLabel->setText(labelText);
     mStatusLinkLabel->show();
@@ -377,7 +383,7 @@ void cuvistaGui::showInfo() {
     int boxHeight = 250;
     int boxWidth = 400;
 
-    QDialog msgBox(this);
+    InfoDialog msgBox(this);
     msgBox.setWindowTitle(QString("Cuvista Info"));
     QString author = "Copyright (c) 2024 Rainer Bitschi <a href='mailto:cuvista@a1.net'>Email: cuvista@a1.net</a>";
     QString license = "License GNU GPLv3+: GNU GPL version 3 or later";
@@ -389,7 +395,7 @@ void cuvistaGui::showInfo() {
     std::stringstream ss;
     mData.showDeviceInfo(ss);
 
-    QPlainTextEdit* textBox = new QPlainTextEdit(&msgBox);
+    ScrollingTextEdit* textBox = new ScrollingTextEdit(&msgBox);
     QString qstr = QString::fromStdString(ss.str());
     textBox->setPlainText(qstr);
     textBox->setMinimumHeight(boxHeight);
@@ -419,13 +425,31 @@ void cuvistaGui::showInfo() {
     }
     textBox->setMinimumWidth(boxWidth + 40);
 
+    msgBox.worker = QThread::create([&] {
+        MessagePrinterGui printer;
+        connect(&printer, &MessagePrinterGui::appendText, textBox, &ScrollingTextEdit::appendText);
+        runSelfTest(printer, mData.deviceList);
+    });
+    auto fcn = [&] {
+        btnTest->setEnabled(false);
+        msgBox.worker->start();
+    };
+    connect(btnTest, &QPushButton::clicked, this, fcn);
     connect(btnClose, &QPushButton::clicked, &msgBox, &QDialog::close);
     
     msgBox.exec();
 }
 
+//show selected color
 void cuvistaGui::setColorIcon(ClickLabel* btn, QColor& color) {
     QPixmap icon(30, 24);
     icon.fill(color);
     btn->setPixmap(icon);
+}
+
+//terminate test thread when closing info dialog
+void InfoDialog::closeEvent(QCloseEvent* event) {
+    worker->wait();
+    worker->deleteLater();
+    event->accept();
 }

@@ -84,3 +84,15 @@ private:
     void showMessage(const QString& msg);
     void setColorIcon(ClickLabel* btn, QColor& color);
 };
+
+class InfoDialog : public QDialog {
+    Q_OBJECT
+
+public:
+    QThread* worker = nullptr;
+
+    InfoDialog(QWidget* parent) :
+        QDialog(parent) {}
+
+    void closeEvent(QCloseEvent* event) override;
+ };

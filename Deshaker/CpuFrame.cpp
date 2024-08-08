@@ -310,7 +310,7 @@ void CpuFrame::getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cud
 }
 
 void CpuFrame::getWarped(int64_t frameIndex, ImageRGBA& image) {
-	ImageYuvMat(mData.h, mData.w, mData.cpupitch, mBuffer[0].data(), mBuffer[1].data(), mBuffer[2].data()).toRGBA(image, mPool);
+	ImageYuvMat(mData.h, mData.w, mData.w, mBuffer[0].data(), mBuffer[1].data(), mBuffer[2].data()).toRGBA(image, mPool);
 }
 
 Matf CpuFrame::getTransformedOutput() const {

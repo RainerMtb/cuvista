@@ -16,8 +16,19 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
-#pragma once
+#include "MessagePrinterGui.h"
 
-#include <string>
+void MessagePrinterGui::print(const std::string& str) {
+    appendText(QString::fromStdString(str));
+}
 
-std::string probeNvidiaDriver();
+void MessagePrinterGui::printNewLine() {
+    appendText("\n");
+}
+
+void ScrollingTextEdit::appendText(const QString& str) {
+    //qDebug() << str;
+    QString qstr = toPlainText() + str;
+    setPlainText(qstr);
+    moveCursor(QTextCursor::End);
+}

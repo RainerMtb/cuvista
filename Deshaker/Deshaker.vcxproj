@@ -58,7 +58,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)Common;$(SolutionDir)Matrix;$(SolutionDir)CudaStuff;$(CUDA_PATH)\include;$(SolutionDir)include\ffmpeg;$(SolutionDir)include\CL;$(SolutionDir)include\nvenc;$(SolutionDir)include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Common;$(SolutionDir)Matrix;$(SolutionDir)CudaStuff;$(CUDA_PATH)\include;$(SolutionDir)include\ffmpeg;$(SolutionDir)include\CL;$(SolutionDir)include\nvenc;$(SolutionDir)include;$(SolutionDir)nvapi</AdditionalIncludeDirectories>
       <WarningLevel>Level3</WarningLevel>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions512</EnableEnhancedInstructionSet>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -80,7 +80,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)Common;$(SolutionDir)Matrix;$(SolutionDir)CudaStuff;$(CUDA_PATH)\include;$(SolutionDir)include\ffmpeg;$(SolutionDir)include\CL;$(SolutionDir)include\nvenc;$(SolutionDir)include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Common;$(SolutionDir)Matrix;$(SolutionDir)CudaStuff;$(CUDA_PATH)\include;$(SolutionDir)include\ffmpeg;$(SolutionDir)include\CL;$(SolutionDir)include\nvenc;$(SolutionDir)include;$(SolutionDir)nvapi</AdditionalIncludeDirectories>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions512</EnableEnhancedInstructionSet>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -169,6 +169,9 @@
     <ClInclude Include="UserInput.hpp" />
     <ClInclude Include="UserInputConsole.hpp" />
     <ClInclude Include="Version.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="CMakeLists.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

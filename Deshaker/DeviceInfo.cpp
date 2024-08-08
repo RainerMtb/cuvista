@@ -118,10 +118,6 @@ std::shared_ptr<MovieFrame> DeviceInfo<CudaFrame>::createClass(MainData& data, M
 	return std::make_shared<CudaFrame>(data, reader, writer);
 }
 
-std::string CudaInfo::nvidiaDriverToString() const {
-	return std::to_string(nvidiaDriverVersion / 100) + "." + std::to_string(nvidiaDriverVersion % 100);
-}
-
 std::string CudaInfo::runtimeToString() const {
 	return std::to_string(cudaRuntimeVersion / 1000) + "." + std::to_string(cudaRuntimeVersion % 1000 / 10);
 }
