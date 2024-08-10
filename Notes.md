@@ -51,13 +51,3 @@ but M-AB-S rarely ever succeeds, always some problem with some package
 # Misc Notes
 Cuda 11.8 is the highest version to support Compute 3.5
 Video Codec 11.0.10 is the highest encoder version to go along with it
-
-# Building
-On Windows:
-```
-mkdir buildWin
-cd buildWin
-cmake .. -DCMAKE_PREFIX_PATH=c:\daten\Qt\6.7.2\msvc2019_64
-cmake --build . --config Release
-cmake --install .
-```

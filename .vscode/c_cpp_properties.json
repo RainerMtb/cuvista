@@ -14,7 +14,9 @@
         {
             "name": "Windows",
             "includePath": [
-                "${workspaceFolder}/**"
+                "${workspaceFolder}/**",
+                "${FFMPEG_PATH}/include/",
+                "${CUDA_PATH}/include"
             ],
             "defines": [],
             "cStandard": "c17",

@@ -10,3 +10,11 @@ target_link_libraries(cuvista PRIVATE
     Deshaker 
     "${CORE_LIBS}"
 )
+
+install(TARGETS
+    cuvista
+)
+install(DIRECTORY "${FFMPEG_DIR}/bin"
+    DESTINATION "${CMAKE_INSTALL_PREFIX}"
+    FILES_MATCHING PATTERN "*.dll"
+)

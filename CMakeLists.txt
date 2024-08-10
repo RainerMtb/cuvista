@@ -18,14 +18,15 @@ set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/install")
 if (CMAKE_SYSTEM_NAME MATCHES Linux)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(ffmpeg REQUIRED IMPORTED_TARGET
-libavcodec
-libavdevice
-libavfilter
-libavformat
-libavutil
-libswresample
-libswscale
+    libavcodec
+    libavdevice
+    libavfilter
+    libavformat
+    libavutil
+    libswresample
+    libswscale
 )
+
 set(CORE_LIBS 
     OpenCL 
     cuda
@@ -39,22 +40,34 @@ endif()
 
 #settings specific to Windows ------------------------------
 if (CMAKE_SYSTEM_NAME MATCHES Windows)
+message("Looking for ffmpeg components in folder ${FFMPEG_PATH}")
+#check one exemplary shared ffmpeg file
+find_library(ffmpegLIB avcodec.lib REQUIRED HINTS "${FFMPEG_PATH}/lib")
+find_path(ffmpegH avcodec.h REQUIRED HINTS "${FFMPEG_PATH}/include/libavcodec")
+find_program(ffmpegDLL avcodec-61.dll REQUIRED HINTS "${FFMPEG_PATH}/bin")
+
 link_directories("${PROJECT_SOURCE_DIR}/nvapi/amd64")
 link_directories("${PROJECT_SOURCE_DIR}/lib/x64")
+link_directories("${FFMPEG_PATH}/lib")
+
+include_directories("${PROJECT_SOURCE_DIR}/include")
+include_directories("${PROJECT_SOURCE_DIR}/nvapi")
+include_directories("${FFMPEG_PATH}/include")
+
 set(CORE_LIBS
-OpenCL 
-cuda
-cpu_features
-avcodec
-avdevice
-avfilter
-avformat
-avutil
-swresample
-swscale
-nvapi64
-nvcuvid
-nvencodeapi
+    OpenCL 
+    cuda
+    cpu_features
+    avcodec
+    avdevice
+    avfilter
+    avformat
+    avutil
+    swresample
+    swscale
+    nvapi64
+    nvcuvid
+    nvencodeapi
 )
 endif()
 
@@ -65,7 +78,7 @@ set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} /NODEFAULTLIB:libcmt.lib")
 endif()
 
 if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx512f -mavx512vl -mavx512bw -ffp-contract off")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx512f -mavx512vl -mavx512bw -ffp-contract=off")
 endif()
 
 add_subdirectory(Common)
