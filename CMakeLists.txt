@@ -78,7 +78,7 @@ set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} /NODEFAULTLIB:libcmt.lib")
 endif()
 
 if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx512f -mavx512vl -mavx512bw -ffp-contract=off")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx512f -mavx512vl -mavx512bw -ffp-contract=off -g")
 endif()
 
 add_subdirectory(Common)

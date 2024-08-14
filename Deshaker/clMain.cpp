@@ -111,8 +111,8 @@ void cl::probeRuntime(OpenClInfo& info) {
 			//std::vector<cl_name_version> extensions = dev.getInfo<CL_DEVICE_EXTENSIONS_WITH_VERSION>(); //Missing before version 3.0.
 
 			//we have a valid device
-			DeviceInfo<OpenClFrame> devInfo(DeviceType::OPEN_CL, maxPixel);
-			devInfo.device = dev;
+			DeviceInfoOpenCl devInfo(DeviceType::OPEN_CL, maxPixel);
+			devInfo.device = std::make_shared<Device>(dev);
 			devInfo.versionDevice = versionDevice;
 			devInfo.versionC = versionC;
 			devInfo.pitch = pitch;
@@ -125,12 +125,12 @@ void cl::probeRuntime(OpenClInfo& info) {
 //set up device to use
 void cl::init(CoreData& core, ImageYuv& inputFrame, const DeviceInfoBase* device) {
 	assert(device->type == DeviceType::OPEN_CL && "device type must be OpenCL here");
-	const DeviceInfo<OpenClFrame>* devInfo = static_cast<const DeviceInfo<OpenClFrame>*>(device);
+	const DeviceInfoOpenCl* devInfo = static_cast<const DeviceInfoOpenCl*>(device);
 
 	try {
-		clData.context = Context(devInfo->device);
-		clData.queue = CommandQueue(clData.context, devInfo->device);
-		clData.secondQueue = CommandQueue(clData.context, devInfo->device);
+		clData.context = Context(*devInfo->device);
+		clData.queue = CommandQueue(clData.context, *devInfo->device);
+		clData.secondQueue = CommandQueue(clData.context, *devInfo->device);
 
 		//supported image formats
 		std::vector<ImageFormat> fmts;

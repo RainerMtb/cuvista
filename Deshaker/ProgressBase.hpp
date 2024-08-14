@@ -26,4 +26,5 @@ public:
 	virtual void forceUpdate() { update(true); }
 	virtual void terminate() {}
 	virtual void writeMessage(const std::string& msg) {}
+	virtual ~ProgressBase() {}
 };

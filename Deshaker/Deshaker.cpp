@@ -20,7 +20,6 @@
 #include "CudaWriter.hpp"
 #include "MovieReader.hpp"
 #include "MovieFrame.hpp"
-
 #include "FrameResult.hpp"
 #include "ProgressDisplayConsole.hpp"
 #include "UserInputConsole.hpp"

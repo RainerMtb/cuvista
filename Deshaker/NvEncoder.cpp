@@ -67,7 +67,7 @@ void NvEncoder::probeEncoding(CudaInfo& cudaInfo) {
 }
 
 
-void NvEncoder::probeSupportedCodecs(DeviceInfo<CudaFrame>& deviceInfoCuda) {
+void NvEncoder::probeSupportedCodecs(DeviceInfoCuda& deviceInfoCuda) {
 	//create instance
 	NV_ENCODE_API_FUNCTION_LIST encFuncList = { NV_ENCODE_API_FUNCTION_LIST_VER };
 	handleResult(NvEncodeAPICreateInstance(&encFuncList), "cannot create api instance");

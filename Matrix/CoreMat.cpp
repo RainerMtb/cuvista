@@ -39,12 +39,12 @@ template <class T> CoreMat<T>::CoreMat(const CoreMat<T>& other) :
 
 //move constructor
 template <class T> CoreMat<T>::CoreMat(CoreMat<T>&& other) noexcept : 
-	CoreMat<T>(other.array, other.h, other.w, other.ownData) {
+	CoreMat<T>(other.array, other.h, other.w, true) {
 	//std::cout << "!! 2 move constructor" << std::endl;
 	other.array = nullptr;
 	other.h = 0;
 	other.w = 0;
-	other.ownData = true;
+	other.ownData = false;
 }
 
 //virtual destructor

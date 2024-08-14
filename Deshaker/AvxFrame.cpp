@@ -624,14 +624,19 @@ void AvxFrame::write(std::span<unsigned char> nv12, int cudaPitch) {
 	for (int rr = 0; rr < mData.h / 2; rr++) {
 		int r = rr * 2;
 		__m512i a, b, x, sumU, sumV, sum;
+		VF16 vec;
 
 		for (int c = 0; c < mData.w; c += 16) {
-			a = _mm512_cvt_roundps_epi32(_mm512_loadu_ps(mOutput[1].addr(r, c)), _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
-			b = _mm512_cvt_roundps_epi32(_mm512_loadu_ps(mOutput[1].addr(r + 1, c)), _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
+			vec = mOutput[1].addr(r, c);
+			a = _mm512_cvt_roundps_epi32(vec * 255.0f, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
+			vec = mOutput[1].addr(r + 1, c);
+			b = _mm512_cvt_roundps_epi32(vec * 255.0f, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
 			sumU = _mm512_add_epi32(a, b);
 
-			a = _mm512_cvt_roundps_epi32(_mm512_loadu_ps(mOutput[2].addr(r, c)), _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
-			b = _mm512_cvt_roundps_epi32(_mm512_loadu_ps(mOutput[2].addr(r + 1, c)), _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
+			vec = mOutput[2].addr(r, c);
+			a = _mm512_cvt_roundps_epi32(vec * 255.0f, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
+			vec = mOutput[2].addr(r + 1, c);
+			b = _mm512_cvt_roundps_epi32(vec * 255.0f, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
 			sumV = _mm512_add_epi32(a, b);
 
 			//cross over and combine

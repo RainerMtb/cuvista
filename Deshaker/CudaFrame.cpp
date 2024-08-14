@@ -24,8 +24,8 @@ CudaFrame::CudaFrame(MainData& data, MovieReader& reader, MovieWriter& writer) :
 {
 	DeviceInfoBase* dev = data.deviceList[data.deviceSelected];
 	assert(dev->type == DeviceType::CUDA && "device type must be CUDA here");
-	device = static_cast<DeviceInfo<CudaFrame>*>(dev);
-	cudaInit(data, device->cudaIndex, device->props, mBufferFrame);
+	device = static_cast<DeviceInfoCuda*>(dev);
+	cudaInit(data, device->cudaIndex, *device->props, mBufferFrame);
 }
 
 CudaFrame::~CudaFrame() {
@@ -43,7 +43,7 @@ void CudaFrame::createPyramid(int64_t frameIndex) {
 }
 
 void CudaFrame::computeStart(int64_t frameIndex) {
-	cudaCompute(frameIndex, mData, device->props);
+	cudaCompute(frameIndex, mData, *device->props);
 }
 
 void CudaFrame::computeTerminate(int64_t frameIndex) {

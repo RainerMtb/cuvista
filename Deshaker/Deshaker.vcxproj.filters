@@ -128,6 +128,9 @@
     <ClCompile Include="CudaFrame.cpp">
       <Filter>Frame</Filter>
     </ClCompile>
+    <ClCompile Include="OpenClFrame.cpp">
+      <Filter>Frame</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MovieReader.hpp">

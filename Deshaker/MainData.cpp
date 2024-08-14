@@ -24,6 +24,8 @@
 #include "NvEncoder.hpp"
 #include "MovieReader.hpp"
 #include "MovieWriter.hpp"
+#include "CudaFrame.hpp"
+#include "OpenClFrame.hpp"
 #include "SelfTest.hpp"
 
 #include <algorithm>
@@ -305,10 +307,10 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 
 void MainData::collectDeviceInfo() {
 	//sort cuda devices by compute
-	auto less = [] (const DeviceInfo<CudaFrame>& a, const DeviceInfo<CudaFrame>& b) {
-		return a.props.major == b.props.major ? a.props.minor < b.props.minor : a.props.major < b.props.major;
+	auto less = [] (const DeviceInfoCuda& a, const DeviceInfoCuda& b) {
+		return a.props->major == b.props->major ? a.props->minor < b.props->minor : a.props->major < b.props->major;
 	};
-	std::sort(cudaInfo->devices.begin(), cudaInfo->devices.end(), less);
+	std::sort(cudaInfo.devices.begin(), cudaInfo.devices.end(), less);
 
 	//cpu encoders
 	std::vector<EncodingOption> cpuEncoders = {
@@ -318,31 +320,29 @@ void MainData::collectDeviceInfo() {
 	};
 
 	//CPU device
-	deviceInfoCpu = std::make_shared<DeviceInfo<CpuFrame>>();
-	deviceInfoCpu->encodingOptions = cpuEncoders;
-	if (cudaInfo->devices.size() > 0) {
-		DeviceInfo<CudaFrame>& dic = cudaInfo->devices.front();
-		std::copy(dic.encodingOptions.begin(), dic.encodingOptions.end(), std::back_inserter(deviceInfoCpu->encodingOptions));
+	deviceInfoCpu.encodingOptions = cpuEncoders;
+	if (cudaInfo.devices.size() > 0) {
+		DeviceInfoCuda& dic = cudaInfo.devices.front();
+		std::copy(dic.encodingOptions.begin(), dic.encodingOptions.end(), std::back_inserter(deviceInfoCpu.encodingOptions));
 	}
-	deviceList.push_back(deviceInfoCpu.get());
+	deviceList.push_back(&deviceInfoCpu);
 
 	//check for Avx512
-	deviceInfoAvx = std::make_shared<DeviceInfo<AvxFrame>>();
-	if (deviceInfoAvx->hasAvx512()) {
-		deviceInfoAvx->encodingOptions = deviceInfoCpu->encodingOptions;
-		deviceList.push_back(deviceInfoAvx.get());
+	if (deviceInfoAvx.hasAvx512()) {
+		deviceInfoAvx.encodingOptions = deviceInfoCpu.encodingOptions;
+		deviceList.push_back(&deviceInfoAvx);
 	}
-
+	
 	///OpenCL devices
-	for (DeviceInfo<OpenClFrame>& dic : clinfo->devices) {
-		std::copy(cpuEncoders.begin(), cpuEncoders.end(), std::back_inserter(dic.encodingOptions));
-		deviceList.push_back(&dic);
+	for (DeviceInfoOpenCl& dev : clinfo.devices) {
+		std::copy(cpuEncoders.begin(), cpuEncoders.end(), std::back_inserter(dev.encodingOptions));
+		deviceList.push_back(&dev);
 	}
 
 	//Cuda devices
-	for (DeviceInfo<CudaFrame>& cu : cudaInfo->devices) {
-		std::copy(cpuEncoders.begin(), cpuEncoders.end(), std::back_inserter(cu.encodingOptions));
-		deviceList.push_back(&cu);
+	for (DeviceInfoCuda& dev : cudaInfo.devices) {
+		std::copy(cpuEncoders.begin(), cpuEncoders.end(), std::back_inserter(dev.encodingOptions));
+		deviceList.push_back(&dev);
 	}
 }
 
@@ -505,8 +505,8 @@ std::ostream& MainData::showDeviceInfo(std::ostream& os) const {
 	//display nvidia info
 	os << std::endl;
 	os << "Nvidia/Cuda System Details:" << std::endl;
-	if (cudaInfo->nvidiaDriverVersion.size() > 0) {
-		os << "Nvidia Driver: " << cudaInfo->nvidiaDriverVersion;
+	if (cudaInfo.nvidiaDriverVersion.size() > 0) {
+		os << "Nvidia Driver: " << cudaInfo.nvidiaDriverVersion;
 	} else {
 		os << "Nvidia driver not found";
 	}
@@ -514,24 +514,24 @@ std::ostream& MainData::showDeviceInfo(std::ostream& os) const {
 	//display cuda info
 	os << std::endl;
 	if (deviceCountCuda() > 0) {
-		os << "Cuda Runtime:  " << cudaInfo->runtimeToString() << std::endl;
-		os << "Cuda Driver:   " << cudaInfo->driverToString() << std::endl;
-		os << "Nvenc Api:     " << cudaInfo->nvencApiToString() << std::endl;
-		os << "Nvenc Driver:  " << cudaInfo->nvencDriverToString() << std::endl;
+		os << "Cuda Runtime:  " << cudaInfo.runtimeToString() << std::endl;
+		os << "Cuda Driver:   " << cudaInfo.driverToString() << std::endl;
+		os << "Nvenc Api:     " << cudaInfo.nvencApiToString() << std::endl;
+		os << "Nvenc Driver:  " << cudaInfo.nvencDriverToString() << std::endl;
 	}
 	os << std::endl;
 
-	for (auto& info : cudaInfo->devices) {
+	for (auto& info : cudaInfo.devices) {
 		os << "Cuda Device:" << std::endl;
 		os << info << std::endl;
 	}
 
 	//display OpenCL info
-	if (clinfo->devices.size() == 0) {
+	if (clinfo.devices.size() == 0) {
 		os << "OpenCL devices not found" << std::endl;
 	}
 
-	for (auto& info : clinfo->devices) {
+	for (auto& info : clinfo.devices) {
 		os << "OpenCL Device:" << std::endl;
 		os << info << std::endl;
 	}
@@ -585,52 +585,47 @@ bool MainData::Parameters::nextArg(std::string&& param, std::string& nextParam) 
 
 void MainData::probeCuda() {
 	//check Nvidia Driver
-	cudaInfo->nvidiaDriverVersion = probeNvidiaDriver();
+	cudaInfo.nvidiaDriverVersion = probeNvidiaDriver();
 	//check present cuda devices
 	CudaProbeResult res = cudaProbeRuntime();
-	cudaInfo->cudaDriverVersion = res.driverVersion;
-	cudaInfo->cudaRuntimeVersion = res.runtimeVersion;
+	cudaInfo.cudaDriverVersion = res.driverVersion;
+	cudaInfo.cudaRuntimeVersion = res.runtimeVersion;
 	if (res.props.size() > 0) {
 		//check if nvenc available
-		NvEncoder::probeEncoding(*cudaInfo);
+		NvEncoder::probeEncoding(cudaInfo);
 
 		for (int i = 0; i < res.props.size(); i++) {
 			cudaDeviceProp& prop = res.props[i];
 
 			//create device info struct
-			DeviceInfo<CudaFrame> cuda(DeviceType::CUDA, prop.sharedMemPerBlock / sizeof(float));
-			cuda.props = prop;
+			DeviceInfoCuda cuda(DeviceType::CUDA, prop.sharedMemPerBlock / sizeof(float));
+			cuda.props = std::make_shared<cudaDeviceProp>(prop);
 			cuda.cudaIndex = i;
-			if (cudaInfo->nvencVersionDriver >= cudaInfo->nvencVersionApi) {
+			if (cudaInfo.nvencVersionDriver >= cudaInfo.nvencVersionApi) {
 				//check supported codecs
 				NvEncoder::probeSupportedCodecs(cuda);
 			}
-			cudaInfo->devices.push_back(cuda);
+			cudaInfo.devices.push_back(cuda);
 		}
 	}
 }
 
 size_t MainData::deviceCountCuda() const {
-	return cudaInfo->devices.size();
+	return cudaInfo.devices.size();
 }
 
 void MainData::probeOpenCl() {
-	cl::probeRuntime(*clinfo);
+	cl::probeRuntime(clinfo);
 }
 
 size_t MainData::deviceCountOpenCl() const {
-	return clinfo->devices.size();
+	return clinfo.devices.size();
 }
 
 std::string MainData::getCpuName() const {
-	return deviceInfoCpu->getCpuName();
+	return deviceInfoCpu.getCpuName();
 }
 
 bool MainData::hasAvx512() const {
-	return deviceInfoAvx->hasAvx512();
-}
-
-MainData::MainData() {
-	cudaInfo = std::make_shared<CudaInfo>();
-	clinfo = std::make_shared<OpenClInfo>();
+	return deviceInfoAvx.hasAvx512();
 }

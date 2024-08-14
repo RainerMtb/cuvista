@@ -18,7 +18,7 @@ For Cuda acceleration a device with Compute Version 5 or later is required. For 
 
 ## Typical Performance
 
-On a RTX 3060 graphics card a typical video in FullHD resolution (1920 x 1080) should be processed at 75-100 frames per second, including decoding, stabilizing and encoding.
+On a RTX 3060 graphics card a typical video in FullHD resolution (1920 x 1080) should be processed at around 100 frames per second, including decoding, stabilizing and encoding.
 
 # Using CUVISTA
 For Windows you can get the latest version from the [Releases](https://github.com/RainerMtb/cuvista/releases) page. Just download, unzip and run either ```cuvista.exe``` on the command line or ```cuvistaGui.exe``` for a windowed user interface. 
@@ -118,7 +118,7 @@ cuvistaGui/cuvistaGui
 ## Future Ideas
 - Improve performance on all devices
 - Improve quality and robustness of stabilization - likely degrading performace
-- Look into more advanced algorithms like 3D stabilization - but I currently lack information on the fundamental math of such processes
+- Look into more advanced algorithms like 3D stabilization - but I currently lack information on the fundamental math of such an approach
 - Use this codebase to remove duplicate frames from videos
 - Maybe improve performace by using multiple GPUs - dont know if anyone would need that though
 

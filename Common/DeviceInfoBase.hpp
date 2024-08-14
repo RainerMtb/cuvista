@@ -50,6 +50,7 @@ enum class DeviceType {
 	CUDA,
 	OPEN_CL,
 	AVX,
+	UNKNOWN,
 };
 
 class DeviceInfoBase {

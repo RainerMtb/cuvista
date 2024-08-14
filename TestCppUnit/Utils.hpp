@@ -30,7 +30,7 @@ private:
 	int64_t testFrameCount = 20;
 
 public:
-	void open(std::string_view source) override {
+	void open(const std::string& source) override {
 		frameCount = testFrameCount;
 		h = 100;
 		w = 200;

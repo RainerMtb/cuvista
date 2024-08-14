@@ -22,17 +22,11 @@
 #include "AVException.hpp"
 #include "FFmpegUtil.hpp"
 #include "RandomSource.hpp"
-#include "cuDeshaker.cuh"
-#include "clMain.hpp"
 #include "SelfTest.hpp"
 #include "Util.hpp"
 #include "Version.hpp"
-
-template <class T> class DeviceInfo;
-struct CudaInfo;
-struct OpenClInfo;
-class CpuFrame;
-class AvxFrame;
+#include "CudaData.cuh"
+#include "DeviceInfo.hpp"
 
 enum class DeshakerPass {
 	NONE,
@@ -109,8 +103,6 @@ private:
 	bool checkFileForWriting(const std::string& file, DecideYNA permission) const;
 
 public:
-	MainData();
-
 	std::map<std::string, Codec> mapStringToCodec = {
 		{"AUTO", Codec::AUTO},
 		{"H264", Codec::H264},
@@ -144,10 +136,10 @@ public:
 	} limits;
 
 	std::vector<DeviceInfoBase*> deviceList;
-	std::shared_ptr<DeviceInfo<CpuFrame>> deviceInfoCpu;
-	std::shared_ptr<DeviceInfo<AvxFrame>> deviceInfoAvx;
-	std::shared_ptr<CudaInfo> cudaInfo;
-	std::shared_ptr<OpenClInfo> clinfo;
+	DeviceInfoCpu deviceInfoCpu;
+	DeviceInfoAvx deviceInfoAvx;
+	OpenClInfo clinfo;
+	CudaInfo cudaInfo;
 	bool deviceRequested = false;
 	size_t deviceSelected = 0;
 

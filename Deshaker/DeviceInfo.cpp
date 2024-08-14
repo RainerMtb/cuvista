@@ -18,6 +18,11 @@
 
 #include "DeviceInfo.hpp"
 #include "cpu_features/cpuinfo_x86.h"
+#include "CpuFrame.hpp"
+#include "AvxFrame.hpp"
+#include "OpenClFrame.hpp"
+#include "CudaFrame.hpp"
+
 #include <thread>
 #include <format>
 
@@ -26,95 +31,95 @@ using namespace cpu_features;
 static const X86Info cpu = GetX86Info();
 
  //CPU Device Info
-std::string DeviceInfo<CpuFrame>::getName() const {
+std::string DeviceInfoCpu::getName() const {
 	X86Microarchitecture arch = GetX86Microarchitecture(&cpu);
 	return std::format("CPU, {}, {} threads", cpu.brand_string, std::to_string(std::thread::hardware_concurrency()));
 }
 
-std::string DeviceInfo<CpuFrame>::getNameShort() const {
+std::string DeviceInfoCpu::getNameShort() const {
 	return "Cpu";
 }
 
 //full name of this cpu
-std::string DeviceInfo<CpuFrame>::getCpuName() const {
+std::string DeviceInfoCpu::getCpuName() const {
 	return cpu.brand_string;
 }
 
-std::shared_ptr<MovieFrame> DeviceInfo<CpuFrame>::createClass(MainData& data, MovieReader& reader, MovieWriter& writer) {
+std::shared_ptr<MovieFrame> DeviceInfoCpu::createClass(MainData& data, MovieReader& reader, MovieWriter& writer) {
 	return std::make_shared<CpuFrame>(data, reader, writer);
 }
 
 //CPU Device Info
-std::string DeviceInfo<AvxFrame>::getName() const {
+std::string DeviceInfoAvx::getName() const {
 	X86Microarchitecture arch = GetX86Microarchitecture(&cpu);
 	return std::format("AVX 512, {}", cpu.brand_string);
 }
 
-std::string DeviceInfo<AvxFrame>::getNameShort() const {
+std::string DeviceInfoAvx::getNameShort() const {
 	return "Avx 512";
 }
 
 //check if avx512 is available
-bool DeviceInfo<AvxFrame>::hasAvx512() const {
+bool DeviceInfoAvx::hasAvx512() const {
 	return cpu.features.avx512f & cpu.features.avx512vl & cpu.features.avx512bw;
 }
 
-std::shared_ptr<MovieFrame> DeviceInfo<AvxFrame>::createClass(MainData& data, MovieReader& reader, MovieWriter& writer) {
+std::shared_ptr<MovieFrame> DeviceInfoAvx::createClass(MainData& data, MovieReader& reader, MovieWriter& writer) {
 	return std::make_shared<AvxFrame>(data, reader, writer);
 }
 
 
 //OPENCL Info
-std::string DeviceInfo<OpenClFrame>::getName() const {
-	std::string name = device.getInfo<CL_DEVICE_NAME>();
-	std::string vendor = device.getInfo<CL_DEVICE_VENDOR>();
+std::string DeviceInfoOpenCl::getName() const {
+	std::string name = device->getInfo<CL_DEVICE_NAME>();
+	std::string vendor = device->getInfo<CL_DEVICE_VENDOR>();
 	return std::format("OpenCL, {}, {}", name, vendor);
 }
 
-std::string DeviceInfo<OpenClFrame>::getNameShort() const {
+std::string DeviceInfoOpenCl::getNameShort() const {
 	return "OpenCL";
 }
 
-std::shared_ptr<MovieFrame> DeviceInfo<OpenClFrame>::createClass(MainData& data, MovieReader& reader, MovieWriter& writer) {
+std::shared_ptr<MovieFrame> DeviceInfoOpenCl::createClass(MainData& data, MovieReader& reader, MovieWriter& writer) {
 	return std::make_shared<OpenClFrame>(data, reader, writer);
 }
 
-std::ostream& operator << (std::ostream& os, const DeviceInfo<OpenClFrame>& info) {
-	auto w = info.device.getInfo<CL_DEVICE_IMAGE2D_MAX_WIDTH>();
-	auto h = info.device.getInfo<CL_DEVICE_IMAGE2D_MAX_HEIGHT>();
-	os << "Device Vendor:        " << info.device.getInfo<CL_DEVICE_VENDOR>() << std::endl;
-	os << "Device Name:          " << info.device.getInfo<CL_DEVICE_NAME>() << std::endl;
-	os << "Total Global Memory:  " << info.device.getInfo<CL_DEVICE_GLOBAL_MEM_SIZE>() / 1024 / 1024 << " Mb" << std::endl;
-	os << "Driver Version        " << info.device.getInfo<CL_DRIVER_VERSION>() << std::endl;
+std::ostream& operator << (std::ostream& os, const DeviceInfoOpenCl& info) {
+	auto w = info.device->getInfo<CL_DEVICE_IMAGE2D_MAX_WIDTH>();
+	auto h = info.device->getInfo<CL_DEVICE_IMAGE2D_MAX_HEIGHT>();
+	os << "Device Vendor:        " << info.device->getInfo<CL_DEVICE_VENDOR>() << std::endl;
+	os << "Device Name:          " << info.device->getInfo<CL_DEVICE_NAME>() << std::endl;
+	os << "Total Global Memory:  " << info.device->getInfo<CL_DEVICE_GLOBAL_MEM_SIZE>() / 1024 / 1024 << " Mb" << std::endl;
+	os << "Driver Version        " << info.device->getInfo<CL_DRIVER_VERSION>() << std::endl;
 	os << "OpenCL Version:       " << info.versionDevice / 1000 << "." << info.versionDevice % 1000 << std::endl;
 	os << "OpenCL C Version:     " << info.versionC / 1000 << "." << info.versionC % 1000 << std::endl;
-	os << "Compute Units:        " << info.device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>() << std::endl;
+	os << "Compute Units:        " << info.device->getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>() << std::endl;
 	os << "Max Image Size:       " << w << " x " << h << std::endl;
 	return os;
 }
 
 
 //CUDA Info
-std::ostream& operator << (std::ostream& os, const DeviceInfo<CudaFrame>& info) {
-	os << "Device Name:          " << info.props.name << std::endl;
-	os << "Compute Version:      " << info.props.major << "." << info.props.minor << std::endl;
-	os << "Clock Rate:           " << info.props.clockRate / 1000 << " Mhz" << std::endl;
-	os << "Total Global Memory:  " << info.props.totalGlobalMem / 1024 / 1024 << " Mb" << std::endl;
-	os << "Multiprocessor count: " << info.props.multiProcessorCount << std::endl;
-	os << "Max Texture Size:     " << info.props.maxTexture2D[0] << " x " << info.props.maxTexture2D[1] << std::endl;
-	os << "Shared Mem per Block: " << info.props.sharedMemPerBlock / 1024 << " kb" << std::endl;
+std::ostream& operator << (std::ostream& os, const DeviceInfoCuda& info) {
+	os << "Device Name:          " << info.props->name << std::endl;
+	os << "Compute Version:      " << info.props->major << "." << info.props->minor << std::endl;
+	os << "Clock Rate:           " << info.props->clockRate / 1000 << " Mhz" << std::endl;
+	os << "Total Global Memory:  " << info.props->totalGlobalMem / 1024 / 1024 << " Mb" << std::endl;
+	os << "Multiprocessor count: " << info.props->multiProcessorCount << std::endl;
+	os << "Max Texture Size:     " << info.props->maxTexture2D[0] << " x " << info.props->maxTexture2D[1] << std::endl;
+	os << "Shared Mem per Block: " << info.props->sharedMemPerBlock / 1024 << " kb" << std::endl;
 	return os;
 }
 
-std::string DeviceInfo<CudaFrame>::getName() const {
-	return std::format("Cuda, {}, Compute {}.{}", props.name, props.major, props.minor);
+std::string DeviceInfoCuda::getName() const {
+	return std::format("Cuda, {}, Compute {}.{}", props->name, props->major, props->minor);
 }
 
-std::string DeviceInfo<CudaFrame>::getNameShort() const {
+std::string DeviceInfoCuda::getNameShort() const {
 	return "Cuda";
 }
 
-std::shared_ptr<MovieFrame> DeviceInfo<CudaFrame>::createClass(MainData& data, MovieReader& reader, MovieWriter& writer) {
+std::shared_ptr<MovieFrame> DeviceInfoCuda::createClass(MainData& data, MovieReader& reader, MovieWriter& writer) {
 	return std::make_shared<CudaFrame>(data, reader, writer);
 }
 

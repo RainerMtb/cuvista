@@ -21,7 +21,7 @@
 #include <span>
 #include "Affine2D.hpp"
 #include "CoreData.hpp"
-#include "ThreadPool.hpp"
+#include "ThreadPoolBase.h"
 
 struct PointContext {
 	PointResult* ptr;
@@ -111,13 +111,13 @@ public:
 class AffineSolverFast : public AffineSolver {
 
 private:
-	ThreadPool& threadPool;
+	ThreadPoolBase& threadPool;
 	Matd Adata;
 
 	const AffineTransform& computeSimilar(std::span<PointBase> points) override;
 
 public:
-	AffineSolverFast(ThreadPool& threadPool, size_t maxPoints) :
+	AffineSolverFast(ThreadPoolBase& threadPool, size_t maxPoints) :
 		threadPool { threadPool },
 		Adata { Matd::allocate(6, maxPoints * 2) } {}
 };

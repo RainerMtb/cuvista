@@ -35,7 +35,7 @@ public:
 
 	virtual ~MovieReader() = default;
 
-	virtual void open(std::string_view source) = 0;
+	virtual void open(const std::string& source) = 0;
 	virtual void read(ImageYuv& inputFrame) = 0;
 	virtual std::future<void> readAsync(ImageYuv& inputFrame);
 	virtual void close() {}
@@ -50,7 +50,7 @@ public:
 class NullReader : public MovieReader {
 
 public:
-	void open(std::string_view source) override {};
+	void open(const std::string& source) override {};
 	void read(ImageYuv& frame) override;
 };
 
@@ -77,7 +77,7 @@ private:
 public:
 	~FFmpegReader() override;
 
-	void open(std::string_view source) override;
+	void open(const std::string& source) override;
 	void read(ImageYuv& frame) override;
 	void close() override;
 	void rewind() override;
@@ -103,5 +103,5 @@ public:
 	MemoryFFmpegReader(std::span<unsigned char> movieData);
 	~MemoryFFmpegReader() override;
 
-	void open(std::string_view source) override;
+	void open(const std::string& source) override;
 };

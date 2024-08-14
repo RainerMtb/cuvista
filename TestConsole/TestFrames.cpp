@@ -17,9 +17,9 @@
  */
 
 #include "TestMain.hpp"
-#include "clTest.hpp"
-#include "Util.hpp"
-#include "SelfTestData.hpp"
+//#include "clTest.hpp"
+//#include "Util.hpp"
+//#include "SelfTestData.hpp"
 
 #include <fstream>
 #include <iterator>
@@ -35,44 +35,69 @@ struct Result {
 };
 
 template <class T> Result runPyramid(MainData& data) {
-	std::vector<unsigned char> bytes = util::base64_decode(movieTestData);
-	MemoryFFmpegReader reader(bytes);
-	reader.open("");
-	data.collectDeviceInfo();
-	data.validate(reader);
-	BaseWriter writer(data, reader);
-	std::unique_ptr<MovieFrame> frame = std::make_unique<T>(data, reader, writer);
-	std::cout << "running " << frame->getId().nameShort << std::endl;
-	reader.read(frame->mBufferFrame);
-	frame->inputData();
-	frame->createPyramid(frame->mReader.frameIndex);
+	try {
+		std::cout << "1" << std::endl;
+		//std::vector<unsigned char> bytes = util::base64_decode(movieTestData);
+		std::cout << "2" << std::endl;
+		//MemoryFFmpegReader reader(bytes);
+		FFmpegReader reader;
+		std::cout << "3" << std::endl;
+		//reader.open("");
+		reader.open("//READYNAS/Data/VideoTest/02.mp4");
+		std::cout << "4" << std::endl;
+		data.collectDeviceInfo();
+		std::cout << "5" << std::endl;
+		data.validate(reader);
+		std::cout << "6" << std::endl;
+		BaseWriter writer(data, reader);
+		std::cout << "7" << std::endl;
+		std::unique_ptr<MovieFrame> frame = std::make_unique<T>(data, reader, writer);
+		std::cout << "running " << frame->getId().nameShort << std::endl;
+		reader.read(frame->mBufferFrame);
+		frame->inputData();
+		frame->createPyramid(frame->mReader.frameIndex);
+		std::cout << "8" << std::endl;
 
-	reader.read(frame->mBufferFrame);
-	frame->inputData();
-	frame->createPyramid(frame->mReader.frameIndex);
+		reader.read(frame->mBufferFrame);
+		std::cout << "9" << std::endl;
+		frame->inputData();
+		std::cout << "10" << std::endl;
+		frame->createPyramid(frame->mReader.frameIndex);
+		std::cout << "11" << std::endl;
 
-	frame->computeStart(frame->mReader.frameIndex);
-	frame->computeTerminate(frame->mReader.frameIndex);
+		frame->computeStart(frame->mReader.frameIndex);
+		std::cout << "12" << std::endl;
+		frame->computeTerminate(frame->mReader.frameIndex);
+		std::cout << "13" << std::endl;
 
-	ImageRGBA im(data.h, data.w);
-	frame->getInput(0, im);
+		ImageRGBA im(data.h, data.w);
+		frame->getInput(0, im);
 
-	AffineTransform trf;
-	trf.addRotation(0.2).addTranslation(-40, 30);
-	trf.frameIndex = 0;
-	frame->outputData(trf);
-	writer.prepareOutput(*frame);
-	Result result = {
-		frame->getPyramid(0),
-		frame->getTransformedOutput(),
-		frame->mResultPoints,
-		frame->getId().nameShort,
-		writer.getOutputFrame(),
-		im,
-		(errorLogger.hasError() ? errorLogger.getErrorMessage() : "")
-	};
+		AffineTransform trf;
+		trf.addRotation(0.2).addTranslation(-40, 30);
+		trf.frameIndex = 0;
+		frame->outputData(trf);
+		writer.prepareOutput(*frame);
+		Result result = {
+			frame->getPyramid(0),
+			frame->getTransformedOutput(),
+			frame->mResultPoints,
+			frame->getId().nameShort,
+			writer.getOutputFrame(),
+			im,
+			(errorLogger.hasError() ? errorLogger.getErrorMessage() : "")
+		};
 
-	return result;
+		return result;
+
+	} catch (AVException e) {
+		std::cout << "exception " << e.what() << std::endl;
+
+	} catch (...) {
+		std::cout << "general exception" << std::endl;
+	}
+
+	return {};
 }
 
 void compareFramesPlatforms() {

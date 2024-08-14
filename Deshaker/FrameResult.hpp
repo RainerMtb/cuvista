@@ -21,16 +21,15 @@
 #include <span>
 #include "AffineTransform.hpp"
 #include "MainData.hpp"
-
-class ThreadPool;
+#include "ThreadPoolBase.h"
 
 class FrameResult {
 
 public:
-	FrameResult(MainData& data, ThreadPool& threadPool);
+	FrameResult(MainData& data, ThreadPoolBase& threadPool);
 
 	//compute resulting transformation for this frame
-	void computeTransform(std::vector<PointResult>& results, ThreadPool& threadPool, int64_t frameIndex, RNG rng);
+	void computeTransform(std::vector<PointResult>& results, ThreadPoolBase& threadPool, int64_t frameIndex, RNG rng);
 
 	//get the last computed treansform
 	const AffineTransform& getTransform() const;
@@ -46,8 +45,8 @@ private:
 
 	void computePointContext(std::span<PointContext> points, const AffineTransform& trf, double radius);
 
-	void computeExperimental(std::vector<PointResult>& results, ThreadPool& threadPool, int64_t frameIndex, RNG rng);
-	void compute(std::vector<PointResult>& results, ThreadPool& threadPool, int64_t frameIndex, RNG rng);
+	void computeExperimental(std::vector<PointResult>& results, ThreadPoolBase& threadPool, int64_t frameIndex, RNG rng);
+	void compute(std::vector<PointResult>& results, ThreadPoolBase& threadPool, int64_t frameIndex, RNG rng);
 
 	double sqr(double value);
 };

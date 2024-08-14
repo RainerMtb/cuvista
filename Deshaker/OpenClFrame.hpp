@@ -26,72 +26,35 @@ private:
 	DeviceInfoBase* device;
 
 public:
-	OpenClFrame(MainData& data, MovieReader& reader, MovieWriter& writer) : 
-		MovieFrame(data, reader, writer) 
-	{
-		device = data.deviceList[data.deviceSelected];
-		cl::init(data, mBufferFrame, device);
-	}
+	OpenClFrame(MainData& data, MovieReader& reader, MovieWriter& writer);
 
-	~OpenClFrame() {
-		cl::shutdown(mData);
-	}
+	~OpenClFrame();
 
-	void inputData() override {
-		cl::inputData(mBufferFrame.index, mData, mBufferFrame);
-	}
+	void inputData() override;
 
-	void createPyramid(int64_t frameIndex) override {
-		cl::createPyramid(frameIndex, mData);
-	}
+	void createPyramid(int64_t frameIndex) override;
 
-	void computeStart(int64_t frameIndex) override {
-		cl::computeStart(frameIndex, mData);
-	}
+	void computeStart(int64_t frameIndex) override;
 
-	void computeTerminate(int64_t frameIndex) override {
-		cl::computeTerminate(frameIndex, mData, mResultPoints);
-	}
+	void computeTerminate(int64_t frameIndex) override;
 
-	void outputData(const AffineTransform& trf) override {
-		cl::outputData(trf.frameIndex, mData, trf.toArray());
-	}
+	void outputData(const AffineTransform& trf) override;
 
-	void getOutput(int64_t frameIndex, ImageYuv& image) override {
-		cl::outputDataCpu(frameIndex, mData, image);
-	}
+	void getOutput(int64_t frameIndex, ImageYuv& image) override;
 
-	void getOutput(int64_t frameIndex, ImageRGBA& image) override {
-		cl::outputDataCpu(frameIndex, mData, image);
-	}
+	void getOutput(int64_t frameIndex, ImageRGBA& image) override;
 
-	void getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) override {
-		throw std::runtime_error("not supported");
-	}
+	void getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) override;
 
-	void getWarped(int64_t frameIndex, ImageRGBA& image) override {
-		cl::getTransformedOutput(image);
-	}
+	void getWarped(int64_t frameIndex, ImageRGBA& image) override;
 
-	Mat<float> getPyramid(int64_t index) const override {
-		Mat<float> out = Mat<float>::zeros(mData.pyramidRowCount, mData.w);
-		cl::getPyramid(out.data(), index, mData);
-		return out;
-	}
+	Mat<float> getPyramid(int64_t index) const override;
 
-	Mat<float> getTransformedOutput() const override {
-		return cl::getTransformedOutput(mData);
-	}
+	Mat<float> getTransformedOutput() const override;
 
-	void getInput(int64_t idx, ImageYuv& image) const override {
-		return cl::getInput(idx, image, mData);
-	}
+	void getInput(int64_t idx, ImageYuv& image) const override;
 
-	void getInput(int64_t frameIndex, ImageRGBA& image) override {
-		cl::getCurrentInputFrame(image, frameIndex);
-	}
+	void getInput(int64_t frameIndex, ImageRGBA& image) override;
 
-	MovieFrameId getId() const override {
-		return { "OpenCL", device->getName() };
-	}
+	MovieFrameId getId() const override;
 };

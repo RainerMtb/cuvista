@@ -41,7 +41,7 @@ CpuFrame::CpuFrame(MainData& data, MovieReader& reader, MovieWriter& writer) :
 	mPrevOut.push_back(Matf::values(data.h, data.w, data.bgcol_yuv.colors[2]));
 
 	//buffer for output and pyramid creation
-	mBuffer.assign(4, Matf::allocate(data.h, data.w));
+	mBuffer = { Matf::allocate(data.h, data.w), Matf::allocate(data.h, data.w), Matf::allocate(data.h, data.w) };
 	mFilterBuffer = Matf::allocate(data.h, data.w);
 	mFilterResult = Matf::allocate(data.h, data.w);
 	mYuvPlane = Matf::allocate(data.h, data.w);

@@ -21,7 +21,7 @@
 
 double FrameResult::sqr(double value) { return value * value; }
 
-FrameResult::FrameResult(MainData& data, ThreadPool& threadPool) :
+FrameResult::FrameResult(MainData& data, ThreadPoolBase& threadPool) :
 	mData { data } 
 {
 	if (data.hasAvx512()) {
@@ -31,11 +31,11 @@ FrameResult::FrameResult(MainData& data, ThreadPool& threadPool) :
 	}
 }
 
-void FrameResult::computeTransform(std::vector<PointResult>& results, ThreadPool& threadPool, int64_t frameIndex, RNG rng) {
+void FrameResult::computeTransform(std::vector<PointResult>& results, ThreadPoolBase& threadPool, int64_t frameIndex, RNG rng) {
 	computeExperimental(results, threadPool, frameIndex, rng);
 }
 
-void FrameResult::computeExperimental(std::vector<PointResult>& results, ThreadPool& threadPool, int64_t frameIndex, RNG rng) {
+void FrameResult::computeExperimental(std::vector<PointResult>& results, ThreadPoolBase& threadPool, int64_t frameIndex, RNG rng) {
 	const ptrdiff_t cMinConsensPoints = 8;	     //min numbers of points for consensus set
 	const double cRetryPercentage = 8.0;         //run loop as long as percentage of valid points is not reached
 	const int cConsLoopCount = 8;			     //max number of loops when searching for consensus set
@@ -186,7 +186,7 @@ void FrameResult::reset() {
 }
 
 //old style stabilization
-void FrameResult::compute(std::vector<PointResult>& results, ThreadPool& threadPool, int64_t frameIndex, RNG rng) {
+void FrameResult::compute(std::vector<PointResult>& results, ThreadPoolBase& threadPool, int64_t frameIndex, RNG rng) {
 	const size_t cMinConsensPoints = 8;	     //min numbers of points for consensus set
 	const int cConsLoopCount = 8;			     //max number of loops when searching for consensus set
 	const int cConsLoopPercent = 95;		     //percentage of points for next loop 0..100

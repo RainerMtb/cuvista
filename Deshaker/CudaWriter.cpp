@@ -45,10 +45,10 @@ void CudaFFmpegWriter::open(EncodingOption videoCodec) {
     int result;
 
     //select codec
-    const DeviceInfo<CudaFrame>* dic = &mData.cudaInfo->devices[0];
+    const DeviceInfoCuda* dic = &mData.cudaInfo.devices[0];
     DeviceInfoBase* dev = mData.deviceList[mData.deviceSelected];
     if (dev->type == DeviceType::CUDA) {
-        dic = static_cast<DeviceInfo<CudaFrame>*>(dev);
+        dic = static_cast<DeviceInfoCuda*>(dev);
     }
     if (videoCodec.codec == Codec::AUTO) videoCodec.codec = dic->encodingOptions[0].codec;
     GUID guid = guidMap[videoCodec.codec];

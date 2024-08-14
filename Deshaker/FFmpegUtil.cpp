@@ -80,4 +80,5 @@ StreamContext::~StreamContext() {
     for (AVPacket* packet : packets) {
         av_packet_free(&packet);
     }
+    packets.clear();
 }

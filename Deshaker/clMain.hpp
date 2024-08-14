@@ -22,8 +22,7 @@
 #include "CoreData.hpp"
 #include "DeviceInfoBase.hpp"
 #include "Mat.hpp"
-
-struct OpenClInfo;
+#include "DeviceInfo.hpp"
 
 namespace cl {
 	void probeRuntime(OpenClInfo& clinfo); //called on startup

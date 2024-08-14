@@ -20,12 +20,10 @@
 
 #include "MovieFrame.hpp"
 
-template <class T> class DeviceInfo;
-
 class CudaFrame : public MovieFrame {
 
 private:
-	DeviceInfo<CudaFrame>* device;
+	DeviceInfoCuda* device;
 
 public:
 	CudaFrame(MainData& data, MovieReader& reader, MovieWriter& writer);

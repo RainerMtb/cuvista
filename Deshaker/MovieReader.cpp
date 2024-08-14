@@ -61,7 +61,7 @@ void NullReader::read(ImageYuv& frame) {
 //----------------------------------
 
 
-void FFmpegReader::open(std::string_view source) {
+void FFmpegReader::open(const std::string& source) {
     //av_log_set_level(AV_LOG_ERROR);
     av_log_set_callback(ffmpeg_log);
 
@@ -70,6 +70,7 @@ void FFmpegReader::open(std::string_view source) {
     if (av_fmt == nullptr)
         throw AVException("could not create AVFormatContext");
 
+    std::cout << "X1" << std::endl;
     openInput(av_fmt, source.data());
 }
 
@@ -78,32 +79,41 @@ void FFmpegReader::open(std::string_view source) {
 void FFmpegFormatReader::openInput(AVFormatContext* fmt, const char* source) {
     av_format_ctx = fmt;
 
+    std::cout << "X5" << std::endl;
     // Open the file using libavformat
     int err = avformat_open_input(&av_format_ctx, source, NULL, NULL);
     if (err < 0) 
         throw AVException(av_make_error(err, "could not open input video file"));
 
+    std::cout << "X6" << std::endl;
     //without find_stream_info width or height might be 0
     err = avformat_find_stream_info(av_format_ctx, NULL);
     if (err < 0) 
         throw AVException(av_make_error(err, "could not get stream info"));
 
+    std::cout << "X60" << std::endl;
     //search streams
     const AVCodec* av_codec = nullptr;
     for (size_t i = 0; i < av_format_ctx->nb_streams; i++) {
+        std::cout << "X61" << std::endl;
         AVStream* stream = av_format_ctx->streams[i];
 
+        std::cout << "X62" << std::endl;
         if (videoStream == nullptr && stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
             //store first video stream
+            std::cout << "X63" << std::endl;
             av_codec = avcodec_find_decoder(stream->codecpar->codec_id);
+            std::cout << "X64" << std::endl;
             if (av_codec) {
                 videoStream = stream;
             }
+            std::cout << "X65" << std::endl;
         }
 
         //store every stream found in input
-        inputStreams.push_back({ stream });
+        inputStreams.emplace_back(stream); //????????????
     }
+    std::cout << "X7" << std::endl;
     //continue only when there is a video stream to decode
     if (videoStream == nullptr || av_codec == nullptr)
         throw AVException("could not find a valid video stream");
@@ -114,6 +124,7 @@ void FFmpegFormatReader::openInput(AVFormatContext* fmt, const char* source) {
     if (avcodec_parameters_to_context(av_codec_ctx, videoStream->codecpar) < 0)
         throw AVException("could not initialize AVCodecContext");
 
+    std::cout << "X8" << std::endl;
     //enable multi threading for decoder
     av_codec_ctx->thread_count = 0;
 
@@ -128,6 +139,7 @@ void FFmpegFormatReader::openInput(AVFormatContext* fmt, const char* source) {
     if (!av_packet) 
         throw AVException("could not allocate AVPacket");
 
+    std::cout << "X9" << std::endl;
     //set values in InputContext object
     avformatDuration = av_format_ctx->duration;
     fpsNum = videoStream->avg_frame_rate.num;
@@ -139,6 +151,7 @@ void FFmpegFormatReader::openInput(AVFormatContext* fmt, const char* source) {
     sourceName = source;
     frameCount = videoStream->nb_frames;
     //av_dump_format(av_format_ctx, av_stream->index, av_format_ctx->url, 0); //uses av_log
+    std::cout << "X10" << std::endl;
 }
 
 //read one frame from ffmpeg
@@ -282,7 +295,7 @@ FFmpegReader::~FFmpegReader() {
 MemoryFFmpegReader::MemoryFFmpegReader(std::span<unsigned char> movieData) :
     mData { movieData } {}
 
-void MemoryFFmpegReader::open(std::string_view source) {
+void MemoryFFmpegReader::open(const std::string& source) {
     int bufsiz = 4 * 1024;
     mBuffer = (unsigned char*) av_malloc(bufsiz);
     av_avio = avio_alloc_context(mBuffer, bufsiz, 0, this, &MemoryFFmpegReader::readBuffer, nullptr, &MemoryFFmpegReader::seekBuffer);
