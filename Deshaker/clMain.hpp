@@ -19,30 +19,43 @@
 #pragma once
 
 #include "clHeaders.hpp"
+#include "clFunctions.hpp"
 #include "CoreData.hpp"
 #include "DeviceInfoBase.hpp"
 #include "Mat.hpp"
 #include "DeviceInfo.hpp"
+#include "Image2.hpp"
+#include "FrameExecutor.hpp"
+
+
+class OpenClFrame : public FrameExecutor {
+
+private:
+	cl::Data clData;
+
+public:
+	OpenClFrame(CudaData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool);
+
+	void init() override;
+	void inputData(int64_t frameIndex, const ImageYuv& inputFrame) override;
+	void createPyramid(int64_t frameIndex) override;
+	void computeStart(int64_t frameIndex, std::vector<PointResult>& results) override;
+	void computeTerminate(int64_t frameIndex, std::vector<PointResult>& results) override;
+	void outputData(int64_t frameIndex, const Affine2D& trf) override;
+	void getOutput(int64_t frameIndex, ImageYuv& image) override;
+	void getOutput(int64_t frameIndex, ImageRGBA& image) override;
+	void getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) override;
+	Matf getTransformedOutput() const override;
+	Matf getPyramid(int64_t frameIndex) const override;
+	void getInput(int64_t frameIndex, ImageYuv& image) const override;
+	void getInput(int64_t frameIndex, ImageRGBA& image) const override;
+	void getWarped(int64_t frameIndex, ImageRGBA& image) override;
+
+	void compute(int64_t frameIdx, const CoreData& core, int rowStart, int rowEnd);
+	void readImage(cl::Image src, size_t destPitch, void* dest, cl::CommandQueue queue) const;
+};
 
 namespace cl {
+
 	void probeRuntime(OpenClInfo& clinfo); //called on startup
-	void init(CoreData& core, ImageYuv& inputFrame, const DeviceInfoBase* device); //called from constructor of MovieFrame
-	void shutdown(const CoreData& core); //called from destructor of MovieFrame
-
-	void inputData(int64_t frameIdx, const CoreData& core, const ImageYuv& inputFrame);
-	void createPyramid(int64_t frameIdx, const CoreData& core);
-	void computeStart(int64_t frameIdx, const CoreData& core);
-	void computeTerminate(int64_t frameIdx, const CoreData& core, std::vector<PointResult>& results);
-	void outputData(int64_t frameIdx, const CoreData& core, std::array<double, 6> trf);
-	void outputDataCpu(int64_t frameIndex, const CoreData& core, ImageYuv& image);
-	void outputDataCpu(int64_t frameIndex, const CoreData& core, ImageRGBA& image);
-
-	void getInput(int64_t idx, ImageYuv& image, const CoreData& core);
-	Matf getTransformedOutput(const CoreData& core);
-	void getPyramid(float* pyramid, int64_t index, const CoreData& core);
-	void getCurrentInputFrame(ImageRGBA& image, int64_t idx);
-	void getTransformedOutput(ImageRGBA& image);
-
-	void readImage(Image src, size_t destPitch, void* dest, CommandQueue queue);
-	void compute(int64_t frameIdx, const CoreData& core, int rowStart, int rowEnd);
 }

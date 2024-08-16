@@ -115,7 +115,7 @@ namespace im {
 
 		bool saveAsBMP(const std::string& filename, T scale = 1) const;
 
-		bool saveAsPPM(const std::string& filename, T scale = 1) const;
+		bool saveAsPGM(const std::string& filename, T scale = 1) const;
 
 	private:
 		double fpart(double d);

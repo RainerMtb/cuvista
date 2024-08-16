@@ -49,7 +49,7 @@ PipeWriter::~PipeWriter() {}
 
 #endif
 
-void PipeWriter::write(const MovieFrame& frame) {
+void PipeWriter::write(const FrameExecutor& executor) {
 	packYuv();
 	size_t siz = fwrite(yuvPacked.data(), 1, yuvPacked.size(), stdout);
 	if (siz != yuvPacked.size()) {

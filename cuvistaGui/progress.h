@@ -53,17 +53,19 @@ public:
 class ProgressGui : public ProgressDisplay {
 
 private:
-    ImageRGBA input;
-    ImageRGBA output;
-    std::chrono::steady_clock::time_point timePoint = std::chrono::steady_clock::now();
-    ProgressWindow* progressWindow;
+    ImageRGBA mInput;
+    ImageRGBA mOutput;
+    std::chrono::steady_clock::time_point mTimePoint = std::chrono::steady_clock::now();
+    ProgressWindow* mProgressWindow;
+    FrameExecutor& mExecutor;
 
 public:
-    ProgressGui(MainData& data, MovieFrame& frame, ProgressWindow* progressWindow) :
+    ProgressGui(MainData& data, MovieFrame& frame, ProgressWindow* progressWindow, FrameExecutor& executor) :
         ProgressDisplay(frame, 50),
-        input(data.h, data.w),
-        output(data.h, data.w),
-        progressWindow { progressWindow } {}
+        mInput(data.h, data.w),
+        mOutput(data.h, data.w),
+        mProgressWindow { progressWindow },
+        mExecutor { executor } {}
 
     void update(bool force = false) override;
 };

@@ -68,25 +68,25 @@ void ProgressWindow::updateOutput(QImage im, QString time) {
 
 void ProgressGui::update(bool force) {
 	if (isDue(force)) {
-		progressWindow->sigProgress(isFinite(), progressPercent());
+		mProgressWindow->sigProgress(isFinite(), progressPercent());
 	}
 
 	auto timePointNow = std::chrono::steady_clock::now();
-	std::chrono::nanoseconds delta = timePointNow - timePoint;
+	std::chrono::nanoseconds delta = timePointNow - mTimePoint;
 	bool imageDue = delta.count() / 1'000'000 > 250;
 
-	if (imageDue && frame.mReader.frameIndex > 0 && progressWindow->isVisible()) {
-		timePoint = timePointNow;
+	if (imageDue && frame.mReader.frameIndex > 0 && mProgressWindow->isVisible()) {
+		mTimePoint = timePointNow;
 		uint64_t idx = frame.mReader.frameIndex - 1;
-		frame.getInput(idx, input);
-		QImage im(input.data(), input.w, input.h, QImage::Format_RGBX8888);
-		progressWindow->sigUpdateInput(im, QString::fromStdString(frame.ptsForFrameString(idx)));
+		mExecutor.getInput(idx, mInput);
+		QImage im(mInput.data(), mInput.w, mInput.h, QImage::Format_RGBX8888);
+		mProgressWindow->sigUpdateInput(im, QString::fromStdString(frame.ptsForFrameString(idx)));
 	}
-	if (imageDue && frame.mWriter.frameIndex > 0 && progressWindow->isVisible()) {
-		timePoint = timePointNow;
+	if (imageDue && frame.mWriter.frameIndex > 0 && mProgressWindow->isVisible()) {
+		mTimePoint = timePointNow;
 		uint64_t idx = frame.mWriter.frameIndex - 1;
-		frame.getWarped(idx, output);
-		QImage im(output.data(), output.w, output.h, QImage::Format_RGBX8888);
-		progressWindow->sigUpdateOutput(im, QString::fromStdString(frame.ptsForFrameString(idx)));
+		mExecutor.getWarped(idx, mOutput);
+		QImage im(mOutput.data(), mOutput.w, mOutput.h, QImage::Format_RGBX8888);
+		mProgressWindow->sigUpdateOutput(im, QString::fromStdString(frame.ptsForFrameString(idx)));
 	}
 }

@@ -18,35 +18,37 @@
 
 #pragma once
 
-#include "MovieFrame.hpp"
 #include "AvxMat.hpp"
 #include "AvxWrapper.hpp"
-#include <span>
+#include "Image2.hpp"
+#include "Affine2D.hpp"
+#include "FrameExecutor.hpp"
 
 
  //---------------------------------------------------------------------
  //---------- AVX FRAME ------------------------------------------------
  //---------------------------------------------------------------------
 
-class AvxFrame : public MovieFrame {
+
+class AvxFrame : public FrameExecutor {
 
 public:
-	AvxFrame(MainData& data, MovieReader& reader, MovieWriter& writer);
+	AvxFrame(CudaData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool);
 
-	void inputData() override;
-	void createPyramid(int64_t frameIndex) override;
-	void computeStart(int64_t frameIndex) override;
-	void computeTerminate(int64_t frameIndex) override;
-	void outputData(const AffineTransform& trf) override;
+	virtual void init() override;
+	void inputData(int64_t frameIndex, const ImageYuv& inputFrame) override;
+	void createPyramid(int64_t frameIndex) override ;
+	void computeStart(int64_t frameIndex, std::vector<PointResult>& results) override;
+	void computeTerminate(int64_t frameIndex, std::vector<PointResult>& results) override;
+	void outputData(int64_t frameIndex, const Affine2D& trf) override;
 	void getOutput(int64_t frameIndex, ImageYuv& image) override;
 	void getOutput(int64_t frameIndex, ImageRGBA& image) override;
 	void getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) override;
-	Mat<float> getTransformedOutput() const override;
-	Mat<float> getPyramid(int64_t index) const override;
-	void getInput(int64_t index, ImageYuv& image) const override;
-	void getInput(int64_t frameIndex, ImageRGBA& image) override;
+	Matf getTransformedOutput() const override;
+	Matf getPyramid(int64_t frameIndex) const override;
+	void getInput(int64_t frameIndex, ImageYuv& image) const override;
+	void getInput(int64_t frameIndex, ImageRGBA& image) const override;
 	void getWarped(int64_t frameIndex, ImageRGBA& image) override;
-	MovieFrameId getId() const override;
 
 private:
 	int walign = 32;
@@ -68,17 +70,16 @@ private:
 	void write(std::span<unsigned char> nv12, int cudaPitch);
 	void downsample(const float* srcptr, int h, int w, int stride, float* destptr, int destStride);
 	void filter(const AvxMatf& src, int r0, int h, int w, AvxMatf& dest, std::span<float> k);
-	//void filter(std::span<VF16> v, std::span<float> k, AvxMatf& dest, int r0, int c0);
 
 	std::pair<VD8, VD8> transform(VD8 x, VD8 y, VD8 m00, VD8 m01, VD8 m02, VD8 m10, VD8 m11, VD8 m12);
-	void warpBack(const AffineTransform& trf, const AvxMatf& input, AvxMatf& dest);
+	void warpBack(const Affine2D& trf, const AvxMatf& input, AvxMatf& dest);
 
 	VF16 interpolate(VF16 f00, VF16 f10, VF16 f01, VF16 f11, VF16 dx, VF16 dy);
 	VF16 interpolate(VF16 f00, VF16 f10, VF16 f01, VF16 f11, VF16 dx, VF16 dy, VF16 dx1, VF16 dy1);
 
 	void yuvToFloat(const ImageYuv& yuv, size_t plane, AvxMatf& dest);
-	void yuvToRgba(const unsigned char* y, const unsigned char* u, const unsigned char* v, int h, int w, int stride, ImageRGBA& dest);
-	void yuvToRgba(const float* y, const float* u, const float* v, int h, int w, int stride, ImageRGBA& dest);
+	void yuvToRgba(const unsigned char* y, const unsigned char* u, const unsigned char* v, int h, int w, int stride, ImageRGBA& dest) const;
+	void yuvToRgba(const float* y, const float* u, const float* v, int h, int w, int stride, ImageRGBA& dest) const;
 
 	int align(int base, int alignment);
 };

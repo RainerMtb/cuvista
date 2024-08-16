@@ -18,43 +18,17 @@
 
 #pragma once
 
-#include "MovieFrame.hpp"
+#include "cuDeshaker.cuh"
 
-class CudaFrame : public MovieFrame {
-
-private:
-	DeviceInfoCuda* device;
+class CudaFrame : public CudaFrameExecutor {
 
 public:
-	CudaFrame(MainData& data, MovieReader& reader, MovieWriter& writer);
+	CudaFrame(MainData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool);
 
-	~CudaFrame();
-
-	void inputData() override;
-
-	void createPyramid(int64_t frameIndex) override;
-
-	void computeStart(int64_t frameIndex) override;
-
-	void computeTerminate(int64_t frameIndex) override;
-
-	void outputData(const AffineTransform& trf) override;
-
-	void getOutput(int64_t frameIndex, ImageYuv& image) override;
-
-	void getOutput(int64_t frameIndex, ImageRGBA& image) override;
-
-	void getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) override;
-
+	void init() override; 
+	void outputData(int64_t frameIndex, const Affine2D& trf) override;
+	Mat<float> getPyramid(int64_t frameIndex) const override;
 	Mat<float> getTransformedOutput() const override;
-
-	Mat<float> getPyramid(int64_t index) const override;
-
-	void getInput(int64_t index, ImageYuv& image) const override;
-
-	void getInput(int64_t frameIndex, ImageRGBA& image) override;
-
-	void getWarped(int64_t frameIndex, ImageRGBA& image) override;
-	
-	MovieFrameId getId() const override;
 };
+
+void encodeNvData(const std::vector<unsigned char>& nv12, unsigned char* nvencPtr);

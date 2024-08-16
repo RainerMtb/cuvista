@@ -28,13 +28,16 @@
 void __syncthreads();
 void __trap();
 long long int clock64();
-double fabs(double);
 float __saturatef(float);
 double __fma_rn(double, double, double);
 double min(double, double);
 double max(double, double);
 
 namespace cu {
+	struct Affine {
+		double m00, m01, m02, m10, m11, m12;
+	};
+
 	const int THREAD_COUNT = 16;	//number of threads used in kernels to access textures
 
 	//check if first thread is running

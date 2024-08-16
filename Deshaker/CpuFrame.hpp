@@ -18,7 +18,8 @@
 
 #pragma once
 
-#include "MovieFrame.hpp"
+#include "FrameExecutor.hpp"
+#include "Affine2D.hpp"
 
 //---------------------------------------------------------------------
 //---------- CPU FRAME ------------------------------------------------
@@ -30,25 +31,25 @@ struct FilterKernel {
 	float k[maxSize];
 };
 
-class CpuFrame : public MovieFrame {
+class CpuFrame : public FrameExecutor {
 
 public:
-	CpuFrame(MainData& data, MovieReader& reader, MovieWriter& writer);
+	CpuFrame(MainData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool);
 
-	void inputData() override;
+	void init() override;
+	void inputData(int64_t frameIndex, const ImageYuv& inputFrame) override;
 	void createPyramid(int64_t frameIndex) override;
-	void computeStart(int64_t frameIndex) override;
-	void computeTerminate(int64_t frameIndex) override;
-	void outputData(const AffineTransform& trf) override;
+	void computeStart(int64_t frameIndex, std::vector<PointResult>& results) override;
+	void computeTerminate(int64_t frameIndex, std::vector<PointResult>& results) override;
+	void outputData(int64_t frameIndex, const Affine2D& trf) override;
 	void getOutput(int64_t frameIndex, ImageYuv& image) override;
 	void getOutput(int64_t frameIndex, ImageRGBA& image) override;
 	void getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) override;
 	Matf getTransformedOutput() const override;
-	Matf getPyramid(int64_t index) const override;
-	void getInput(int64_t index, ImageYuv& image) const override;
-	void getInput(int64_t frameIndex, ImageRGBA& image) override;
+	Matf getPyramid(int64_t frameIndex) const override;
+	void getInput(int64_t frameIndex, ImageYuv& image) const override;
+	void getInput(int64_t frameIndex, ImageRGBA& image) const override;
 	void getWarped(int64_t frameIndex, ImageRGBA& image) override;
-	MovieFrameId getId() const override;
 
 private:
 	FilterKernel filterKernels[4] = {
@@ -64,7 +65,7 @@ private:
 		int64_t frameIndex = -1;
 		std::vector<Matf> mY;
 
-		CpuPyramid(MainData& data);
+		CpuPyramid(CoreData& data);
 	};
 
 	//frame input buffer, number of frames = frameBufferCount

@@ -23,30 +23,6 @@
 #include "CoreData.hpp"
 #include "ThreadPoolBase.h"
 
-struct PointContext {
-	PointResult* ptr;
-	double delta = 0.0;
-	double deltaAngleCos = 0.0;
-	double deltaAngle = 0.0;
-	double distanceEllipse = 0.0;
-	double tx = 0.0;
-	double ty = 0.0;
-	double confidence = 0.0;
-
-	double distance = 0.0;
-	double distanceRelative = 0.0;
-
-	PointContext(PointResult& pr) : ptr { &pr } {}
-	PointContext() : ptr { nullptr } {}
-};
-
-struct PointBase {
-	int x, y;
-	double u, v;
-
-	PointBase(const PointResult& pr) : x { pr.x }, y { pr.y }, u { pr.u }, v { pr.v } {}
-	PointBase(const PointContext& pc) : x { pc.ptr->x }, y { pc.ptr->y }, u { pc.ptr->u }, v { pc.ptr->v } {}
-};
 
 class AffineTransform : public Affine2D {
 

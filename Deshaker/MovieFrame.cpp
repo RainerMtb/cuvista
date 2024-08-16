@@ -21,6 +21,31 @@
 #include "ProgressDisplay.hpp"
 #include "Util.hpp"
 
+
+//only constructor for Frame class
+MovieFrame::MovieFrame(MainData& data, MovieReader& reader, MovieWriter& writer) :
+	mData { data },
+	mReader { reader },
+	mWriter { writer },
+	mPool(data.cpuThreads),
+	mFrameResult(data, mPool),
+	mBufferFrame(data.h, data.w, data.cpupitch),
+	mResultPoints(data.resultCount) {
+	//set a reference to this frame class into writer object
+	writer.movieFrame = this;
+
+	//set PointResult indizes
+	int idx = 0;
+	for (int y = 0; y < data.iyCount; y++) {
+		for (int x = 0; x < data.ixCount; x++) {
+			mResultPoints[idx].idx = idx;
+			mResultPoints[idx].ix0 = x;
+			mResultPoints[idx].iy0 = y;
+			idx++;
+		}
+	}
+}
+
 std::string MovieFrame::ptsForFrameString(int64_t frameIndex) {
 	return mReader.ptsForFrameString(frameIndex).value_or("");
 }
@@ -60,110 +85,61 @@ bool MovieFrame::doLoop(UserInput& input) {
 
 
 //---------------------------------------------------------------------
-//---------- DUMMY FRAME ----------------------------------------------
-//---------------------------------------------------------------------
-
-void DummyFrame::inputData() {
-	size_t idx = mBufferFrame.index % mFrames.size();
-	mBufferFrame.copyTo(mFrames[idx], mPool);
-}
-
-void DummyFrame::outputData(const AffineTransform& trf) {
-	size_t idx = trf.frameIndex % mFrames.size();
-	assert(mFrames[idx].index == trf.frameIndex && "invalid frame index to output");
-}
-
-void DummyFrame::getOutput(int64_t frameIndex, ImageYuv& image) {
-	size_t idx = frameIndex % mFrames.size();
-	mFrames[idx].copyTo(image, mPool);
-}
-
-void DummyFrame::getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) {
-	static std::vector<unsigned char> nv12(cudaPitch * mData.h * 3 / 2);
-	size_t idx = frameIndex % mFrames.size();
-	mFrames[idx].toNV12(nv12, cudaPitch, mPool);
-	encodeNvData(nv12, cudaNv12ptr);
-}
-
-void DummyFrame::getOutput(int64_t frameIndex, ImageRGBA& image) {
-	size_t idx = frameIndex % mFrames.size();
-	mFrames[idx].toRGBA(image, mPool);
-}
-
-void DummyFrame::getWarped(int64_t frameIndex, ImageRGBA& image) {
-	size_t idx = frameIndex % mFrames.size();
-	mFrames[idx].toRGBA(image, mPool);
-}
-
-void DummyFrame::getInput(int64_t frameIndex, ImageYuv& image) const {
-	size_t idx = frameIndex % mFrames.size();
-	mFrames[idx].copyTo(image);
-}
-
-
-//---------------------------------------------------------------------
 //---------- DESHAKER LOOPS  ------------------------------------------
 //---------------------------------------------------------------------
 
-void MovieFrame::runLoop(DeshakerPass pass, ProgressBase& progress, UserInput& input, AuxWriters& auxWriters) {
-	if (pass == DeshakerPass::COMBINED) runLoopCombined(progress, input, auxWriters);
-	else if (pass == DeshakerPass::FIRST_PASS) runLoopFirst(progress, input, auxWriters);
-	else if (pass == DeshakerPass::SECOND_PASS) runLoopSecond(progress, input, auxWriters);
-	else if (pass == DeshakerPass::CONSECUTIVE) runLoopConsecutive(progress, input, auxWriters);
-	else throw AVException("loop not implemented");
-}
-
-void MovieFrame::loopInit(ProgressBase& progress, const std::string& message) {
+void MovieFrame::loopInit(std::shared_ptr<ProgressBase> progress, std::shared_ptr<FrameExecutor> executor, const std::string& message) {
 	//read first frame from input into buffer
 	if (errorLogger.hasNoError()) read();
 	//show program header on console
-	if (errorLogger.hasNoError() && mData.printHeader) mData.showIntro(getId().nameLong, mReader);
+	if (errorLogger.hasNoError() && mData.printHeader) mData.showIntro(executor->mDeviceInfo.getName(), mReader);
 	//init progress display
-	progress.init();
-	progress.writeMessage(message);
-	progress.update();
+	progress->init();
+	progress->writeMessage(message);
+	progress->update();
 
 	//first pyramid
 	if (errorLogger.hasNoError() && mReader.endOfInput == false) {
-		inputData(); //input first frame
-		createPyramid(mReader.frameIndex);
+		executor->inputData(mReader.frameIndex, mBufferFrame); //input first frame
+		executor->createPyramid(mReader.frameIndex);
 		read(); //read second frame
-		progress.update();
+		progress->update();
 	}
 }
 
-void MovieFrame::loopTerminate(ProgressBase& progress, UserInput& input, AuxWriters& auxWriters) {
+void MovieFrame::loopTerminate(std::shared_ptr<ProgressBase> progress, UserInput& input, AuxWriters& auxWriters, std::shared_ptr<FrameExecutor> executor) {
 	//flush writer buffer
 	bool hasFrame = mWriter.startFlushing();
 	while (errorLogger.hasNoError() && input.mCurrentInput < UserInputEnum::HALT && hasFrame) {
 		hasFrame = mWriter.flush();
-		progress.update();
+		progress->update();
 	}
-	progress.forceUpdate();
+	progress->forceUpdate();
 }
 
 //loop to handle input - stabilization - output in one go
-void MovieFrame::runLoopCombined(ProgressBase& progress, UserInput& input, AuxWriters& auxWriters) {
-	loopInit(progress);
+void MovieFrameCombined::runLoop(std::shared_ptr<ProgressBase> progress, UserInput& input, AuxWriters& auxWriters, std::shared_ptr<FrameExecutor> executor) {
+	executor->init();
+	loopInit(progress, executor);
 
 	//fill input buffer and compute transformations
 	while (doLoop(input) && mReader.frameIndex < mData.bufferCount - 1LL) {
 		//process current frame
-		inputData();
-		createPyramid(mReader.frameIndex);
+		executor->inputData(mReader.frameIndex, mBufferFrame);
+		executor->createPyramid(mReader.frameIndex);
 		//transform for previous frame
 		computeTransform(mReader.frameIndex - 1);
 		mTrajectory.addTrajectoryTransform(mFrameResult.getTransform());
-		auxWriters.writeAll(*this);
+		auxWriters.writeAll(*executor);
 		//compute flow for current frame
-		computeStart(mReader.frameIndex);
-		computeTerminate(mReader.frameIndex);
+		executor->computeStart(mReader.frameIndex, mResultPoints);
+		executor->computeTerminate(mReader.frameIndex, mResultPoints);
 		//read next frame into buffer
 		read();
 
 		//check if there is input on the console
 		input.checkState();
-		progress.update();
+		progress->update();
 	}
 
 	//main loop
@@ -174,9 +150,9 @@ void MovieFrame::runLoopCombined(ProgressBase& progress, UserInput& input, AuxWr
 		assert(readIndex % mData.bufferCount != mWriter.frameIndex % mData.bufferCount && "accessing the same buffer for read and write");
 		
 		//process current frame
-		inputData();
-		createPyramid(readIndex);
-		computeStart(readIndex);
+		executor->inputData(mReader.frameIndex, mBufferFrame);
+		executor->createPyramid(readIndex);
+		executor->computeStart(readIndex, mResultPoints);
 		//read next frame async
 		std::future<void> futRead = readAsync();
 		
@@ -185,22 +161,22 @@ void MovieFrame::runLoopCombined(ProgressBase& progress, UserInput& input, AuxWr
 		const AffineTransform& currentTransform = mFrameResult.getTransform();
 		const TrajectoryItem& item = mTrajectory.addTrajectoryTransform(currentTransform);
 		const AffineTransform& finalTransform = mTrajectory.computeSmoothTransform(mData, mWriter.frameIndex);
-		outputData(finalTransform);
-		mWriter.prepareOutput(*this);
+		executor->outputData(mWriter.frameIndex, finalTransform);
+		mWriter.prepareOutput(*executor);
 		
 		//write output
-		mWriter.write(*this);
-		auxWriters.writeAll(*this);
+		mWriter.write(*executor);
+		auxWriters.writeAll(*executor);
 		
 		//get computed flow for current frame
-		computeTerminate(readIndex);
+		executor->computeTerminate(readIndex, mResultPoints);
 
 		//wait for async to complete
 		futRead.wait();
 
 		//check if there is input on the console
 		input.checkState();
-		progress.update();
+		progress->update();
 	}
 
 	//process last frame in buffer
@@ -208,128 +184,131 @@ void MovieFrame::runLoopCombined(ProgressBase& progress, UserInput& input, AuxWr
 		computeTransform(mReader.frameIndex);
 		mTrajectory.addTrajectoryTransform(mFrameResult.getTransform());
 		const AffineTransform& finalTransform = mTrajectory.computeSmoothTransform(mData, mWriter.frameIndex);
-		outputData(finalTransform);
-		mWriter.prepareOutput(*this);
-		mWriter.write(*this);
-		auxWriters.writeAll(*this);
-		progress.update();
+		executor->outputData(mWriter.frameIndex, finalTransform);
+		mWriter.prepareOutput(*executor);
+		mWriter.write(*executor);
+		auxWriters.writeAll(*executor);
+		progress->update();
 	}
 
 	//write remaining frames
 	while (errorLogger.hasNoError() && mWriter.frameIndex < mReader.frameIndex && input.mCurrentInput <= UserInputEnum::END) {
 		const AffineTransform& tf = mTrajectory.computeSmoothTransform(mData, mWriter.frameIndex);
-		outputData(tf);
-		mWriter.prepareOutput(*this);
-		mWriter.write(*this);
+		executor->outputData(mWriter.frameIndex, tf);
+		mWriter.prepareOutput(*executor);
+		mWriter.write(*executor);
 
 		//check if there is input on the console
 		input.checkState();
-		progress.update();
+		progress->update();
 	}
 
-	loopTerminate(progress, input, auxWriters);
+	loopTerminate(progress, input, auxWriters, executor);
 }
 
-void MovieFrame::runLoopFirst(ProgressBase& progress, UserInput& input, AuxWriters& auxWriters) {
+void MovieFrameFirst::runLoop(std::shared_ptr<ProgressBase> progress, UserInput& input, AuxWriters& auxWriters, std::shared_ptr<FrameExecutor> executor) {
+	executor->init();
 	mReader.storePackets = false; //do not keep any secondary packets when we do not write output anyway
-	loopInit(progress);
+	loopInit(progress, executor);
 	mFrameResult.reset();
 	mTrajectory.addTrajectoryTransform(mFrameResult.getTransform()); //first frame has no transform applied
-	mWriter.write(*this);
-	auxWriters.writeAll(*this);
+	mWriter.write(*executor);
+	auxWriters.writeAll(*executor);
 
 	while (doLoop(input)) {
-		inputData();
-		createPyramid(mReader.frameIndex);
+		executor->inputData(mReader.frameIndex, mBufferFrame);
+		executor->createPyramid(mReader.frameIndex);
 
-		computeStart(mReader.frameIndex);
-		computeTerminate(mReader.frameIndex);
+		executor->computeStart(mReader.frameIndex, mResultPoints);
+		executor->computeTerminate(mReader.frameIndex, mResultPoints);
 		computeTransform(mReader.frameIndex);
-		mWriter.write(*this);
-		auxWriters.writeAll(*this);
+		mWriter.write(*executor);
+		auxWriters.writeAll(*executor);
 		read();
 
 		//check if there is input on the console
 		input.checkState();
-		progress.update();
+		progress->update();
 	}
-	progress.forceUpdate();
+	progress->forceUpdate();
 }
 
-void MovieFrame::runLoopSecond(ProgressBase& progress, UserInput& input, AuxWriters& auxWriters) {
+void MovieFrameSecond::runLoop(std::shared_ptr<ProgressBase> progress, UserInput& input, AuxWriters& auxWriters, std::shared_ptr<FrameExecutor> executor) {
+	executor->init();
 	//setup list of transforms from file
 	auto map = readTransforms();
 	if (errorLogger.hasNoError()) mTrajectory.readTransforms(map);
 
 	//init
 	if (errorLogger.hasNoError()) read();
-	if (errorLogger.hasNoError() && mData.printHeader) mData.showIntro(getId().nameShort, mReader);
-	progress.init();
-	progress.update();
+	if (errorLogger.hasNoError() && mData.printHeader) mData.showIntro(executor->mDeviceInfo.getName(), mReader);
+	progress->init();
+	progress->update();
 
 	//looping for output
 	while (doLoop(input)) {
-		inputData();
+		executor->inputData(mReader.frameIndex, mBufferFrame);
 		read();
 
 		const AffineTransform& tf = mTrajectory.computeSmoothTransform(mData, mWriter.frameIndex);
-		outputData(tf);
-		mWriter.prepareOutput(*this);
-		mWriter.write(*this);
+		executor->outputData(mWriter.frameIndex, tf);
+		mWriter.prepareOutput(*executor);
+		mWriter.write(*executor);
 
 		//check if there is input on the console
 		input.checkState();
-		progress.update();
+		progress->update();
 	}
 
-	loopTerminate(progress, input, auxWriters);
+	loopTerminate(progress, input, auxWriters, executor);
 }
 
-void MovieFrame::runLoopConsecutive(ProgressBase& progress, UserInput& input, AuxWriters& auxWriters) {
+void MovieFrameConsecutive::runLoop(std::shared_ptr<ProgressBase> progress, UserInput& input, AuxWriters& auxWriters, std::shared_ptr<FrameExecutor> executor) {
+	executor->init();
 	mReader.storePackets = false; //we do not want packets to pile up on first iteration
-	loopInit(progress, "first pass - analyzing input\n");
+	loopInit(progress, executor, "first pass - analyzing input\n");
 	mFrameResult.reset();
 	mTrajectory.addTrajectoryTransform(mFrameResult.getTransform()); //first frame has no transform applied
-	auxWriters.writeAll(*this);
+	auxWriters.writeAll(*executor);
 
 	//first run - analyse
 	while (doLoop(input)) {
-		inputData();
-		createPyramid(mReader.frameIndex);
+		executor->inputData(mReader.frameIndex, mBufferFrame);
+		executor->createPyramid(mReader.frameIndex);
 
-		computeStart(mReader.frameIndex);
-		computeTerminate(mReader.frameIndex);
+		executor->computeStart(mReader.frameIndex, mResultPoints);
+		executor->computeTerminate(mReader.frameIndex, mResultPoints);
 		computeTransform(mReader.frameIndex);
 		mTrajectory.addTrajectoryTransform(mFrameResult.getTransform());
-		auxWriters.writeAll(*this);
+		auxWriters.writeAll(*executor);
 		read();
 
 		//check if there is input on the console
 		input.checkState();
-		progress.update();
+		progress->update();
 	}
-	progress.forceUpdate();
+	progress->forceUpdate();
 
 	//rewind input
 	mReader.rewind();
 	mReader.storePackets = true;
-	progress.writeMessage("\nsecond pass - generating output\n");
-	progress.update();
+	progress->writeMessage("\nsecond pass - generating output\n");
+	progress->update();
 
 	read();
 	while (doLoop(input)) {
-		inputData();
+		executor->inputData(mReader.frameIndex, mBufferFrame);
 
 		const AffineTransform& tf = mTrajectory.computeSmoothTransform(mData, mWriter.frameIndex);
-		outputData(tf);
-		mWriter.prepareOutput(*this);
-		mWriter.write(*this);
+		executor->outputData(mWriter.frameIndex, tf);
+		mWriter.prepareOutput(*executor);
+		mWriter.write(*executor);
 		read();
 
 		//check if there is input on the console
 		input.checkState();
-		progress.update();
+		progress->update();
 	}
 
-	loopTerminate(progress, input, auxWriters);
+	loopTerminate(progress, input, auxWriters, executor);
 }

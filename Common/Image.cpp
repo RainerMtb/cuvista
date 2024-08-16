@@ -493,9 +493,9 @@ template <class T> bool im::ImageBase<T>::saveAsBMP(const std::string& filename,
 	return os.good();
 }
 
-template <class T> bool im::ImageBase<T>::saveAsPPM(const std::string& filename, T scale) const {
+template <class T> bool im::ImageBase<T>::saveAsPGM(const std::string& filename, T scale) const {
 	std::ofstream os(filename, std::ios::binary);
-	im::PgmHeader(stride, h).writeHeader(os);
+	im::PgmHeader(w, h).writeHeader(os);
 	std::vector<char> data(w);
 
 	for (int i = 0; i < numPlanes; i++) {

@@ -31,6 +31,7 @@
 #include "UserInputGui.hpp"
 #include "MovieFrame.hpp"
 #include "progress.h"
+#include "CudaWriter.hpp"
 
 cuvistaGui::cuvistaGui(QWidget *parent) : 
     QMainWindow(parent) 
@@ -278,32 +279,35 @@ void cuvistaGui::stabilize() {
 
     //select writer
     if (ui.chkStack->isChecked())
-        mWriter = std::make_unique<StackedWriter>(mData, mReader, ui.slideStack->value() / 100.0);
+        mWriter = std::make_shared<StackedWriter>(mData, mReader, ui.slideStack->value() / 100.0);
     else if (ui.chkSequence->isChecked() && ui.comboImageType->currentData().value<OutputType>() == OutputType::SEQUENCE_BMP)
-        mWriter = std::make_unique<BmpImageWriter>(mData, mReader);
+        mWriter = std::make_shared<BmpImageWriter>(mData, mReader);
     else if (ui.chkSequence->isChecked() && ui.comboImageType->currentData().value<OutputType>() == OutputType::SEQUENCE_JPG)
-        mWriter = std::make_unique<JpegImageWriter>(mData, mReader);
+        mWriter = std::make_shared<JpegImageWriter>(mData, mReader);
     else if (ui.chkPlayer->isChecked())
-        mWriter = std::make_unique<PlayerWriter>(mData, mReader, mPlayerWindow, mWorkingImage);
+        mWriter = std::make_shared<PlayerWriter>(mData, mReader, mPlayerWindow, mWorkingImage);
     else if (ui.chkEncode->isChecked() && mData.requestedEncoding.device == EncodingDevice::NVENC)
-        mWriter = std::make_unique<CudaFFmpegWriter>(mData, mReader);
+        mWriter = std::make_shared<CudaFFmpegWriter>(mData, mReader);
     else if (ui.chkEncode->isChecked())
-        mWriter = std::make_unique<FFmpegWriter>(mData, mReader);
+        mWriter = std::make_shared<FFmpegWriter>(mData, mReader);
     else
         return;
 
     //open writer
     mWriter->open(mData.requestedEncoding);
 
-    //select frame handler class
-    mFrame = mData.deviceList[mData.deviceSelected]->createClass(mData, mReader, *mWriter);
+    //select frame handler
+    mFrame = std::make_shared<MovieFrameCombined>(mData, mReader, *mWriter);
+
+    //select frame executor class
+    mExecutor = mData.deviceList[mData.deviceSelected]->create(mData, *mFrame);
 
     //set up output
     if (ui.chkPlayer->isChecked()) {
         mProgress = std::make_shared<PlayerProgress>(mData, *mFrame, mPlayerWindow);
 
     } else {
-        mProgress = std::make_shared<ProgressGui>(mData, *mFrame, mProgressWindow);
+        mProgress = std::make_shared<ProgressGui>(mData, *mFrame, mProgressWindow, *mExecutor);
         mProgressWindow->updateInput(mWorkingImage, "");
         mProgressWindow->updateOutput(mWorkingImage, "");
         QPoint p = pos();
@@ -312,11 +316,11 @@ void cuvistaGui::stabilize() {
     }
 
     //set up worker thread
-    auto fcn = [this, progress = mProgress] {
+    auto fcn = [&] {
         //no secondary writers
         AuxWriters writers;
         //run loop
-        mFrame->runLoop(DeshakerPass::COMBINED, *progress, mInputHandler, writers);
+        mFrame->runLoop(mProgress, mInputHandler, writers, mExecutor);
     };
     mThread = QThread::create(fcn);
     connect(mThread, &QThread::finished, this, &cuvistaGui::done);
@@ -336,6 +340,7 @@ void cuvistaGui::done() {
 
     //always destruct writer before frame
     mWriter.reset();
+    mExecutor.reset();
     mFrame.reset();
     mProgress.reset();
 

@@ -18,37 +18,6 @@
 
 #include "TestMain.hpp"
 
-void imageOutput() {
-	int frameOut = 10;
-
-	MainData data;
-	FFmpegReader reader;
-	data.probeCuda();
-	data.collectDeviceInfo();
-	reader.open("d:/VideoTest/02.mp4");
-	data.validate(reader);
-	BaseWriter writer(data, reader);
-	AvxFrame frame(data, reader, writer);
-	ResultImageWriter resim(data);
-	data.resultImageFile = "f:/im%03d.bmp";
-
-	reader.read(frame.mBufferFrame);
-	frame.inputData();
-	frame.createPyramid(frame.mReader.frameIndex);
-
-	for (int i = 0; i < frameOut; i++) {
-		std::cout << "reading " << frame.mReader.frameIndex << std::endl;
-		reader.read(frame.mBufferFrame);
-		frame.inputData();
-		frame.createPyramid(frame.mReader.frameIndex);
-		frame.computeStart(frame.mReader.frameIndex);
-		frame.computeTerminate(frame.mReader.frameIndex);
-		frame.computeTransform(frame.mReader.frameIndex);
-		resim.write(frame);
-	}
-
-}
-
 void cudaInvTest(size_t s1, size_t s2) {
 	for (size_t s = s1; s <= s2; s++) {
 		Matd a = Matd::rand(s, s, -20, 50, 1000);

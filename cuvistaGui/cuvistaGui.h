@@ -25,6 +25,7 @@
 #include "MovieFrame.hpp"
 #include "MovieReader.hpp"
 #include "FrameResult.hpp"
+#include "FrameExecutor.hpp"
 #include "UserInputGui.hpp"
 
 #include "ui_cuvistaGui.h"
@@ -62,8 +63,9 @@ private:
     QThread* mThread = QThread::create([] {});
     Player* mPlayerWindow;
     ProgressWindow* mProgressWindow;
-    std::unique_ptr<MovieWriter> mWriter;
+    std::shared_ptr<MovieWriter> mWriter;
     std::shared_ptr<MovieFrame> mFrame;
+    std::shared_ptr<FrameExecutor> mExecutor;
     std::shared_ptr<ProgressBase> mProgress;
 
     UserInputGui mInputHandler;

@@ -21,7 +21,7 @@
 #include "Utils.hpp"
 #include "MovieFrame.hpp"
 #include "CpuFrame.hpp"
-#include "OpenClFrame.hpp"
+#include "clMain.hpp"
 #include "CudaFrame.hpp"
 
 
@@ -34,11 +34,10 @@ namespace CudaTest {
 private:
 
 	inline static MainData dataCuda, dataCpu;
+	inline static std::unique_ptr<FrameExecutor> exCuda, exCpu;
 	inline static std::unique_ptr<MovieFrame> frameCuda, frameCpu;
 
-	double sqr(double d) { return d * d; }
-
-	template <class T> static std::unique_ptr<MovieFrame> runInit(MainData& data) {
+	template <class T> static void runInit(MainData& data, DeviceInfoBase* device, std::unique_ptr<FrameExecutor>& ex, std::unique_ptr<MovieFrame>& frame) {
 		AffineTransform trf;
 		trf.addRotation(0.2).addTranslation(-40, 30);
 		trf.frameIndex = 0;
@@ -46,20 +45,21 @@ private:
 		reader.open("d:/VideoTest/02.mp4");
 		data.validate(reader);
 		TestWriter writer(data, reader);
-		std::unique_ptr<MovieFrame> frame = std::make_unique<T>(data, reader, writer);
+		frame = std::make_unique<MovieFrame>(data, reader, writer);
+		ex = std::make_unique<T>(data, *device, *frame, frame->mPool);
+		ex->init();
 
 		reader.read(frame->mBufferFrame);
-		frame->inputData();
-		frame->createPyramid(reader.frameIndex);
+		ex->inputData(reader.frameIndex, frame->mBufferFrame);
+		ex->createPyramid(reader.frameIndex);
 
 		reader.read(frame->mBufferFrame);
-		frame->inputData();
-		frame->createPyramid(reader.frameIndex);
-		frame->computeStart(reader.frameIndex);
-		frame->computeTerminate(reader.frameIndex);
-		frame->outputData(trf);
-		writer.prepareOutput(*frame);
-		return frame;
+		ex->inputData(reader.frameIndex, frame->mBufferFrame);
+		ex->createPyramid(reader.frameIndex);
+		ex->computeStart(reader.frameIndex, frame->mResultPoints);
+		ex->computeTerminate(reader.frameIndex, frame->mResultPoints);
+		ex->outputData(0, trf);
+		writer.prepareOutput(*ex);
 	}
 	
 public:
@@ -71,15 +71,16 @@ public:
 		dataCuda.probeCuda();
 		dataCuda.probeOpenCl();
 		dataCuda.collectDeviceInfo();
-		dataCuda.deviceSelected = 3;
-		frameCuda = runInit<CudaFrame>(dataCuda);
+		runInit<CudaFrame>(dataCuda, dataCuda.deviceList[3], exCuda, frameCuda);
 
 		//CPU
 		dataCpu.collectDeviceInfo();
-		frameCpu = runInit<CpuFrame>(dataCpu);
+		runInit<CpuFrame>(dataCpu, dataCpu.deviceList[0], exCpu, frameCpu);
 	}
 
 	TEST_CLASS_CLEANUP(shutdown) {
+		exCuda.reset();
+		exCpu.reset();
 		frameCuda.reset();
 		frameCpu.reset();
 	}
@@ -89,24 +90,22 @@ public:
 	}
 
 	TEST_METHOD(pyramid) {
-		//frameCuda->getPyramid(0).saveAsBinary("f:/pyr_g0.dat");
-		//frameCpu->getPyramid(0).saveAsBinary("f:/pyr_c0.dat");
-		Mat cpu0 = frameCpu->getPyramid(0);
+		Mat cpu0 = exCpu->getPyramid(0);
 		Assert::AreNotEqual(0.0f, cpu0.sum());
-		Assert::IsTrue(cpu0.equals(frameCuda->getPyramid(0), 0), L"pyramid 0 mismatch");
+		Assert::IsTrue(cpu0.equals(exCuda->getPyramid(0), 0), L"pyramid 0 mismatch");
 
-		Mat cpu1 = frameCpu->getPyramid(1);
+		Mat cpu1 = exCpu->getPyramid(1);
 		Assert::AreNotEqual(0.0f, cpu1.sum());
-		Assert::IsTrue(cpu1.equals(frameCuda->getPyramid(1), 0), L"pyramid 1 mismatch");
+		Assert::IsTrue(cpu1.equals(exCuda->getPyramid(1), 0), L"pyramid 1 mismatch");
 	}
 
 	TEST_METHOD(equalPointResultSize) {
-		Assert::AreEqual(frameCpu->mResultPoints.size(), frameCuda->mResultPoints.size());
+		Assert::AreEqual(exCpu->mFrame.mResultPoints.size(), exCuda->mFrame.mResultPoints.size());
 	}
 
 	TEST_METHOD(equalPointResults) {
-		std::vector pc = frameCpu->mResultPoints;
-		std::vector pg = frameCuda->mResultPoints;
+		std::vector pc = exCpu->mFrame.mResultPoints;
+		std::vector pg = exCuda->mFrame.mResultPoints;
 		for (int i = 0; i < pc.size(); i++) {
 			//only check when both results are numerically stable
 			Assert::AreEqual(pc[i], pg[i], L"results not equal");
@@ -114,8 +113,8 @@ public:
 	}
 
 	TEST_METHOD(transform) {
-		Mat cpuMat = frameCpu->getTransformedOutput();
-		Mat gpuMat = frameCuda->getTransformedOutput();
+		Mat cpuMat = exCpu->getTransformedOutput();
+		Mat gpuMat = exCuda->getTransformedOutput();
 		Assert::AreEqual(cpuMat.rows(), gpuMat.rows(), L"row dimension does not agree");
 		Assert::AreEqual(cpuMat.cols(), gpuMat.cols(), L"col dimension does not agree");
 		//cpuMat.saveAsBinary("f:/matCpu.dat");
@@ -137,7 +136,7 @@ public:
 		//compute transformation matrix multiple times
 		for (int i = 0; i < siz; i++) {
 			FrameResult frameResult(dataCpu, pool);
-			frameResult.computeTransform(frameCpu->mResultPoints, pool, -1, rng);
+			frameResult.computeTransform(exCpu->mFrame.mResultPoints, pool, -1, rng);
 			trfs[i] = frameResult.getTransform();
 		}
 
@@ -157,7 +156,7 @@ public:
 		RNG rng; //std::unique_ptr<RNGbase> rng = std::make_unique<RNG<std::default_random_engine>>();
 		for (int i = 0; i < siz; i++) {
 			FrameResult frameResult(dataCpu, pool);
-			frameResult.computeTransform(frameCpu->mResultPoints, pool, -1, rng);
+			frameResult.computeTransform(exCpu->mFrame.mResultPoints, pool, -1, rng);
 			trfs[i] = frameResult.getTransform();
 		}
 

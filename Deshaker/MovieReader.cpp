@@ -70,7 +70,6 @@ void FFmpegReader::open(const std::string& source) {
     if (av_fmt == nullptr)
         throw AVException("could not create AVFormatContext");
 
-    std::cout << "X1" << std::endl;
     openInput(av_fmt, source.data());
 }
 
@@ -79,41 +78,32 @@ void FFmpegReader::open(const std::string& source) {
 void FFmpegFormatReader::openInput(AVFormatContext* fmt, const char* source) {
     av_format_ctx = fmt;
 
-    std::cout << "X5" << std::endl;
     // Open the file using libavformat
     int err = avformat_open_input(&av_format_ctx, source, NULL, NULL);
     if (err < 0) 
         throw AVException(av_make_error(err, "could not open input video file"));
 
-    std::cout << "X6" << std::endl;
     //without find_stream_info width or height might be 0
     err = avformat_find_stream_info(av_format_ctx, NULL);
     if (err < 0) 
         throw AVException(av_make_error(err, "could not get stream info"));
 
-    std::cout << "X60" << std::endl;
     //search streams
     const AVCodec* av_codec = nullptr;
     for (size_t i = 0; i < av_format_ctx->nb_streams; i++) {
-        std::cout << "X61" << std::endl;
         AVStream* stream = av_format_ctx->streams[i];
 
-        std::cout << "X62" << std::endl;
         if (videoStream == nullptr && stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
             //store first video stream
-            std::cout << "X63" << std::endl;
             av_codec = avcodec_find_decoder(stream->codecpar->codec_id);
-            std::cout << "X64" << std::endl;
             if (av_codec) {
                 videoStream = stream;
             }
-            std::cout << "X65" << std::endl;
         }
 
         //store every stream found in input
         inputStreams.emplace_back(stream); //????????????
     }
-    std::cout << "X7" << std::endl;
     //continue only when there is a video stream to decode
     if (videoStream == nullptr || av_codec == nullptr)
         throw AVException("could not find a valid video stream");
@@ -124,7 +114,6 @@ void FFmpegFormatReader::openInput(AVFormatContext* fmt, const char* source) {
     if (avcodec_parameters_to_context(av_codec_ctx, videoStream->codecpar) < 0)
         throw AVException("could not initialize AVCodecContext");
 
-    std::cout << "X8" << std::endl;
     //enable multi threading for decoder
     av_codec_ctx->thread_count = 0;
 
@@ -139,7 +128,6 @@ void FFmpegFormatReader::openInput(AVFormatContext* fmt, const char* source) {
     if (!av_packet) 
         throw AVException("could not allocate AVPacket");
 
-    std::cout << "X9" << std::endl;
     //set values in InputContext object
     avformatDuration = av_format_ctx->duration;
     fpsNum = videoStream->avg_frame_rate.num;
@@ -151,7 +139,6 @@ void FFmpegFormatReader::openInput(AVFormatContext* fmt, const char* source) {
     sourceName = source;
     frameCount = videoStream->nb_frames;
     //av_dump_format(av_format_ctx, av_stream->index, av_format_ctx->url, 0); //uses av_log
-    std::cout << "X10" << std::endl;
 }
 
 //read one frame from ffmpeg
@@ -246,8 +233,8 @@ void FFmpegReader::read(ImageYuv& frame) {
         }
 
         //stamp frame index into image
-        //frame.writeText(std::to_string(status.frameReadIndex), 100, 100, 3, 3, ColorYuv::WHITE, ColorYuv::GRAY);
-        //frame.saveAsColorBMP(std::format("c:/temp/im{:03d}.bmp", status.frameReadIndex));
+        //frame.writeText(std::to_string(frameIndex), 100, 100, 3, 3, ColorYuv::WHITE, ColorYuv::GRAY);
+        // frame.saveAsColorBMP(std::format("f:/im{:03d}.bmp", frameIndex));
     }
 }
 

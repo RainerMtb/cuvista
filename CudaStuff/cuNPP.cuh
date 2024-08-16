@@ -27,10 +27,6 @@ using cuMatf4 = cu::Mat<float4>;
 using cuMatc = cu::Mat<uchar>;
 
 namespace cu {
-	struct Affine {
-		double m00, m01, m02, m10, m11, m12;
-	};
-
 	cudaError_t scale_8u32f(uchar* src, int srcStep, float* dest, int destStep, int w, int h, cudaStream_t cs = 0);
 	cudaError_t scale_8u32f_3(uchar* src, int srcStep, float4* dest, int destStep, int w, int h, cudaStream_t cs = 0);
 

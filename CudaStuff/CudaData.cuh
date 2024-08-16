@@ -24,6 +24,7 @@
 
 #include "cuUtil.cuh"
 #include "CoreData.hpp"
+#include "Image2.hpp"
 
 struct CudaProbeResult {
 	int runtimeVersion;

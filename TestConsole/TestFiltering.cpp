@@ -20,7 +20,7 @@
 
 ThreadPool pool(4);
 
-void filter() {
+static void filter() {
 	int w = 2000;
 	int h = 1000;
 	Matd m = Matd::generate(h, w, [&] (size_t r, size_t c) { return (r + 1.0) / h * (c + 1.0) / w; });
@@ -34,26 +34,28 @@ void filter() {
 	std::cout << "elapsed " << sec * 1000 << std::endl;
 }
 
-void runInit(MainData& data, std::unique_ptr<MovieFrame>& frame, AffineTransform& trf) {
-	frame->mReader.read(frame->mBufferFrame);
-	frame->inputData();
-	frame->createPyramid(frame->mReader.frameIndex);
+static void runInit(MainData& data, std::unique_ptr<FrameExecutor>& ex, AffineTransform& trf) {
+	MovieReader& reader = ex->mFrame.mReader;
+	reader.read(ex->mFrame.mBufferFrame);
+	ex->inputData(reader.frameIndex, ex->mFrame.mBufferFrame);
+	ex->createPyramid(reader.frameIndex);
 
-	frame->mReader.read(frame->mBufferFrame);
-	frame->inputData();
-	frame->createPyramid(frame->mReader.frameIndex);
+	reader.read(ex->mFrame.mBufferFrame);
+	ex->inputData(reader.frameIndex, ex->mFrame.mBufferFrame);
+	ex->createPyramid(reader.frameIndex);
 
-	frame->computeStart(frame->mReader.frameIndex);
-	frame->computeTerminate(frame->mReader.frameIndex);
-	frame->outputData(trf);
-	frame->mWriter.prepareOutput(*frame);
+	ex->computeStart(reader.frameIndex, ex->mFrame.mResultPoints);
+	ex->computeTerminate(reader.frameIndex, ex->mFrame.mResultPoints);
+	ex->outputData(0, trf);
+	ex->mFrame.mWriter.prepareOutput(*ex);
 }
 
 void filterCompare() {
 	std::cout << "compare filtering on cpu and gpu" << std::endl;
 	std::string file = "d:/VideoTest/02.mp4";
 	MainData dataGpu, dataCpu;
-	std::unique_ptr<MovieFrame> gpu, cpu;
+
+	std::unique_ptr<FrameExecutor> gpu, cpu;
 	AffineTransform trf;
 	trf.addRotation(0.2).addTranslation(-40, 30);
 	trf.frameIndex = 0;
@@ -68,7 +70,9 @@ void filterCompare() {
 		reader.open(file);
 		dataGpu.validate(reader);
 		BaseWriter writer(dataGpu, reader);
-		gpu = std::make_unique<CudaFrame>(dataGpu, reader, writer);
+		MovieFrame frame(dataGpu, reader, writer);
+		gpu = std::make_unique<CudaFrame>(dataGpu, *dataGpu.deviceList[2], frame, frame.mPool);
+		gpu->init();
 		runInit(dataGpu, gpu, trf);
 	}
 	{
@@ -81,12 +85,14 @@ void filterCompare() {
 		reader.open(file);
 		dataCpu.validate(reader);
 		BaseWriter writer(dataCpu, reader);
-		cpu = std::make_unique<CpuFrame>(dataCpu, reader, writer);
+		MovieFrame frame(dataGpu, reader, writer);
+		cpu = std::make_unique<CpuFrame>(dataCpu, *dataCpu.deviceList[0], frame, frame.mPool);
+		cpu->init();
 		runInit(dataCpu, cpu, trf);
 	}
 
-	std::vector pc = cpu->mResultPoints;
-	std::vector pg = gpu->mResultPoints;
+	std::vector pc = cpu->mFrame.mResultPoints;
+	std::vector pg = gpu->mFrame.mResultPoints;
 	bool isEqual = true;
 	for (int i = 0; i < pc.size(); i++) {
 		if (pc[i] != pg[i]) {
@@ -101,4 +107,5 @@ void filterCompare() {
 
 	//c.saveAsBinary("D:/VideoTest/out/cpu.dat");
 	//g.saveAsBinary("D:/VideoTest/out/gpu.dat");
+	std::cout << errorLogger.getErrorMessage() << std::endl;
 }

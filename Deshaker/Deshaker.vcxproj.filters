@@ -24,9 +24,6 @@
     <Filter Include="Frame">
       <UniqueIdentifier>{ec8b31a3-908b-47a3-b139-3be3c03485f0}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Avx">
-      <UniqueIdentifier>{84592743-f293-4c0d-9c2e-c62d6651c3da}</UniqueIdentifier>
-    </Filter>
     <Filter Include="System">
       <UniqueIdentifier>{2278ac54-40d8-4ab9-ae67-c408b892321e}</UniqueIdentifier>
     </Filter>
@@ -116,19 +113,13 @@
     <ClCompile Include="MatrixInverter.cpp">
       <Filter>Util</Filter>
     </ClCompile>
-    <ClCompile Include="AvxUtil.cpp">
-      <Filter>Avx</Filter>
-    </ClCompile>
-    <ClCompile Include="AvxFrame.cpp">
-      <Filter>Frame</Filter>
-    </ClCompile>
     <ClCompile Include="SelfTest.cpp">
       <Filter>Util</Filter>
     </ClCompile>
     <ClCompile Include="CudaFrame.cpp">
       <Filter>Frame</Filter>
     </ClCompile>
-    <ClCompile Include="OpenClFrame.cpp">
+    <ClCompile Include="DummyFrame.cpp">
       <Filter>Frame</Filter>
     </ClCompile>
   </ItemGroup>
@@ -193,12 +184,6 @@
     <ClInclude Include="clKernelCompute.hpp">
       <Filter>OpenCl</Filter>
     </ClInclude>
-    <ClInclude Include="CudaFrame.hpp">
-      <Filter>Frame</Filter>
-    </ClInclude>
-    <ClInclude Include="OpenClFrame.hpp">
-      <Filter>Frame</Filter>
-    </ClInclude>
     <ClInclude Include="CpuFrame.hpp">
       <Filter>Frame</Filter>
     </ClInclude>
@@ -219,18 +204,6 @@
     </ClInclude>
     <ClInclude Include="MatrixInverter.hpp">
       <Filter>Util</Filter>
-    </ClInclude>
-    <ClInclude Include="AvxFrame.hpp">
-      <Filter>Frame</Filter>
-    </ClInclude>
-    <ClInclude Include="AvxMat.hpp">
-      <Filter>Avx</Filter>
-    </ClInclude>
-    <ClInclude Include="AvxWrapper.hpp">
-      <Filter>Avx</Filter>
-    </ClInclude>
-    <ClInclude Include="AvxUtil.hpp">
-      <Filter>Avx</Filter>
     </ClInclude>
     <ClInclude Include="MovieFrame.hpp">
       <Filter>Frame</Filter>
@@ -255,6 +228,12 @@
     </ClInclude>
     <ClInclude Include="DeviceInfo.hpp">
       <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="CudaFrame.hpp">
+      <Filter>Frame</Filter>
+    </ClInclude>
+    <ClInclude Include="DummyFrame.hpp">
+      <Filter>Frame</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

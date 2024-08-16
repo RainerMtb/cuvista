@@ -62,7 +62,7 @@ public:
 	TestWriter(MainData& data, MovieReader& reader) :
 		BaseWriter(data, reader) {}
 
-	void write(const MovieFrame& frame) override {
+	void write(const FrameExecutor& executor) override {
 		outputFrames.push_back(outputFrame);
 		this->frameIndex++;
 	}

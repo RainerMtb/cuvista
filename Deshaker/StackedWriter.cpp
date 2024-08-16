@@ -28,12 +28,12 @@ void StackedWriter::open(EncodingOption videoCodec) {
 	}
 }
 
-void StackedWriter::prepareOutput(MovieFrame& frame) {
-	frame.getOutput(frame.mWriter.frameIndex, mOutputFrame);
+void StackedWriter::prepareOutput(FrameExecutor& executor) {
+	executor.getOutput(frameIndex, mOutputFrame);
 }
 
-void StackedWriter::write(const MovieFrame& frame) {
-	frame.getInput(frameIndex, mInputFrame);
+void StackedWriter::write(const FrameExecutor& executor) {
+	executor.getInput(frameIndex, mInputFrame);
 
 	int bufferIndex = 0;
 	ImageYuv& combinedFrame = imageBuffer[bufferIndex];

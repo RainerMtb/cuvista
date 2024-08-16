@@ -1,4 +1,12 @@
 #project(Common)
 
-file(GLOB_RECURSE sources CONFIGURE_DEPENDS "*.cpp")
-add_library(Common STATIC ${sources})
+add_library(Common STATIC 
+    Color.cpp
+    CoreData.cpp
+    ErrorLogger.cpp
+    Image.cpp
+    Image2.cpp
+    ImageUtil.cpp
+    ThreadPoolBase.cpp
+    Util.cpp
+)

@@ -19,7 +19,9 @@
 #include "FrameResult.hpp"
 #include "Util.hpp"
 
-double FrameResult::sqr(double value) { return value * value; }
+double FrameResult::sqr(double value) { 
+	return value * value; 
+}
 
 FrameResult::FrameResult(MainData& data, ThreadPoolBase& threadPool) :
 	mData { data } 

@@ -23,6 +23,7 @@
 #include "Trajectory.hpp"
 #include "Stats.hpp"
 #include "ThreadPool.hpp"
+#include "FrameExecutor.hpp"
 
 class MovieFrame;
 
@@ -41,8 +42,8 @@ public:
 	virtual ~MovieWriter() = default;
 	virtual void open(EncodingOption videoCodec) {}
 	virtual void open() {}
-	virtual void prepareOutput(MovieFrame& frame) {}
-	virtual void write(const MovieFrame& frame) { frameIndex++; }
+	virtual void prepareOutput(FrameExecutor& executor) {}
+	virtual void write(const FrameExecutor& executor) { frameIndex++; }
 	virtual bool startFlushing() { return false; }
 	virtual bool flush() { return false; }
 };
@@ -73,8 +74,8 @@ public:
 		outputFrame(data.h, data.w, data.cpupitch) {}
 
 	const ImageYuv& getOutputFrame() { return outputFrame; }
-	void prepareOutput(MovieFrame& frame) override;
-	void write(const MovieFrame& frame) override;
+	void prepareOutput(FrameExecutor& executor) override;
+	void write(const FrameExecutor& executor) override;
 };
 
 
@@ -106,8 +107,8 @@ public:
 		image(data.h, data.w) {}
 
 	~BmpImageWriter() override;
-	void prepareOutput(MovieFrame& frame) override;
-	void write(const MovieFrame& frame) override;
+	void prepareOutput(FrameExecutor& executor) override;
+	void write(const FrameExecutor& executor) override;
 };
 
 
@@ -125,7 +126,7 @@ public:
 
 	~JpegImageWriter() override;
 	void open(EncodingOption videoCodec) override;
-	void write(const MovieFrame& frame) override;
+	void write(const FrameExecutor& executor) override;
 };
 
 
@@ -154,7 +155,7 @@ public:
 
 	~PipeWriter() override;
 	void open(EncodingOption videoCodec) override;
-	void write(const MovieFrame& frame) override;
+	void write(const FrameExecutor& executor) override;
 };
 
 
@@ -223,8 +224,8 @@ public:
 
 	~FFmpegWriter() override;
 	void open(EncodingOption videoCodec) override;
-	void prepareOutput(MovieFrame& frame) override;
-	void write(const MovieFrame& frame) override;
+	void prepareOutput(FrameExecutor& executor) override;
+	void write(const FrameExecutor& executor) override;
 	bool startFlushing() override;
 	bool flush() override;
 };
@@ -249,8 +250,8 @@ public:
 		mOutputFrame(data.h, data.w, data.cpupitch) {}
 
 	void open(EncodingOption videoCodec) override;
-	void prepareOutput(MovieFrame& frame) override;
-	void write(const MovieFrame& frame) override;
+	void prepareOutput(FrameExecutor& executor) override;
+	void write(const FrameExecutor& executor) override;
 };
 
 
@@ -284,7 +285,7 @@ public:
 		TransformsFile() {}
 
 	void open(EncodingOption videoCodec) override; //for use as a main writer
-	void write(const MovieFrame& frame) override;
+	void write(const FrameExecutor& executor) override;
 };
 
 
@@ -293,7 +294,7 @@ class AuxiliaryWriter {
 
 public:
 	virtual void open() = 0;
-	virtual void write(const MovieFrame& frame) = 0;
+	virtual void write(const FrameExecutor& executor) = 0;
 	virtual ~AuxiliaryWriter() {};
 };
 
@@ -307,7 +308,7 @@ public:
 		TransformsFile() {}
 
 	void open() override;
-	void write(const MovieFrame& frame) override;
+	void write(const FrameExecutor& executor) override;
 };
 
 
@@ -333,7 +334,7 @@ public:
 		imageInterpolated(data.h, data.w) {}
 
 	void open() override;
-	void write(const MovieFrame& frame) override;
+	void write(const FrameExecutor& executor) override;
 	~OpticalFlowWriter();
 };
 
@@ -351,7 +352,7 @@ public:
 		MovieWriter(data) {}
 
 	virtual void open() override;
-	virtual void write(const MovieFrame& frame) override;
+	virtual void write(const FrameExecutor& executor) override;
 };
 
 
@@ -370,7 +371,7 @@ public:
 		bgr(data.h, data.w) {}
 
 	virtual void open() override {}
-	virtual void write(const MovieFrame& frame) override;
+	virtual void write(const FrameExecutor& executor) override;
 };
 
 
@@ -378,5 +379,5 @@ public:
 class AuxWriters : public std::vector<std::unique_ptr<AuxiliaryWriter>> {
 
 public:
-	void writeAll(const MovieFrame& frame);
+	void writeAll(const FrameExecutor& executor);
 };

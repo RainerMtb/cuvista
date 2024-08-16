@@ -26,7 +26,7 @@
 #include "MovieWriter.hpp"
 #include "CpuFrame.hpp"
 #include "CudaFrame.hpp"
-#include "OpenClFrame.hpp"
+#include "clMain.hpp"
 #include "AvxFrame.hpp"
 #include "FrameResult.hpp"
 #include "cuTest.cuh"
@@ -55,7 +55,6 @@ void openClnorm1Test();
 
 void compareFramesPlatforms();
 
-void imageOutput();
 void flow();
 void pinvTest();
 

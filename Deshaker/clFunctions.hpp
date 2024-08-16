@@ -20,10 +20,10 @@
 
 #include "clHeaders.hpp"
 #include "ErrorLogger.hpp"
-#include <map>
 
 
 namespace cl {
+
 	class Size2 : public array<size_type, 2> {
 	public:
 		Size2(size_type x, size_type y) : array<size_type, 2>{x, y} {}
@@ -106,5 +106,5 @@ namespace cl {
 	void warp_back(Image src, Image dest, Data& clData, std::array<double, 6> trf);
 	void unsharp(Image src, Image dest, Image gauss, Data& clData, cl_float4 factor);
 
-	void yuv_to_rgba(Kernel& kernel, Image src, unsigned char* imageData, Data& clData, int w, int h);
+	void yuv_to_rgba(Kernel& kernel, Image src, unsigned char* imageData, const Data& clData, int w, int h);
 }

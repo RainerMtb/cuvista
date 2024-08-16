@@ -25,6 +25,7 @@
 
 #include "MovieWriter.hpp"
 #include "ProgressDisplay.hpp"
+#include "FrameExecutor.hpp"
 
 //player window
 class Player : public QMainWindow {
@@ -67,8 +68,8 @@ public:
     PlayerWriter(MainData& data, MovieReader& reader, Player* player, QImage imageWorking);
 
     void open(EncodingOption videoCodec) override;
-    void prepareOutput(MovieFrame& frame) override;
-    void write(const MovieFrame& frame) override;
+    void prepareOutput(FrameExecutor& executor) override;
+    void write(const FrameExecutor& executor) override;
     bool startFlushing() override;
     bool flush() override;
 };

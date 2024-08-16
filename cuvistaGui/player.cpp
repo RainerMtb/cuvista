@@ -87,14 +87,14 @@ void PlayerWriter::open(EncodingOption videoCodec) {
 }
 
 //load image data from MovieFrame into openGL texture
-void PlayerWriter::prepareOutput(MovieFrame& frame) {
-    int64_t idx = frame.mWriter.frameIndex;
-    frame.getOutput(idx, mOutput);
+void PlayerWriter::prepareOutput(FrameExecutor& executor) {
+    int64_t idx = frameIndex;
+    executor.getOutput(idx, mOutput);
     mPlayer->sigUpload(idx, mOutput);
 }
 
 //wait until presentation time has arrived and show video frame
-void PlayerWriter::write(const MovieFrame& frame) {
+void PlayerWriter::write(const FrameExecutor& executor) {
     //presentation time for next frame
     auto t1 = mReader.ptsForFrameMillis(frameIndex);
     auto t2 = mReader.ptsForFrameMillis(frameIndex + 1);

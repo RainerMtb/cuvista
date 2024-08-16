@@ -16,47 +16,43 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
-#include "AvxUtil.hpp"
 #include "AvxFrame.hpp"
-#include "Util.hpp"
+#include "AvxUtil.hpp"
+#include "cuDeshaker.cuh"
 
- //---------------------------------
- // ---- constructor ---------------
- //---------------------------------
 
-AvxFrame::AvxFrame(MainData& data, MovieReader& reader, MovieWriter& writer) :
-	MovieFrame(data, reader, writer),
-	pitch { align(data.w, walign) } 
-{
-	for (int i = 0; i < data.bufferCount; i++) mYUV.emplace_back(data.h, data.w, data.cpupitch);
-	mPyr.assign(data.pyramidCount, AvxMatf(data.pyramidRowCount, data.w, 0.0f));
-	mYuvPlane = AvxMatf(data.h, pitch, 0.0f);
-
-	mWarped.push_back(AvxMatf(data.h, pitch, data.bgcol_yuv.colors[0]));
-	mWarped.push_back(AvxMatf(data.h, pitch, data.bgcol_yuv.colors[1]));
-	mWarped.push_back(AvxMatf(data.h, pitch, data.bgcol_yuv.colors[2]));
-
-	mFilterBuffer = AvxMatf(data.w, align(data.h, walign)); //transposed
-	mFilterResult = AvxMatf(data.h, pitch);
-
-	mOutput.assign(3, AvxMatf(data.h, pitch));
-}
+AvxFrame::AvxFrame(CudaData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool) :
+	FrameExecutor(data, deviceInfo, frame, pool),
+	pitch { align(data.w, walign) } {}
 
 int AvxFrame::align(int base, int alignment) {
 	return (base + alignment - 1) / alignment * alignment;
+}
+
+void AvxFrame::init() {
+	assert(mDeviceInfo.type == DeviceType::AVX && "device type must be AVX here");
+	for (int i = 0; i < mData.bufferCount; i++) mYUV.emplace_back(mData.h, mData.w, mData.cpupitch);
+	mPyr.assign(mData.pyramidCount, AvxMatf(mData.pyramidRowCount, mData.w, 0.0f));
+	mYuvPlane = AvxMatf(mData.h, pitch, 0.0f);
+
+	mWarped.push_back(AvxMatf(mData.h, pitch, mData.bgcol_yuv.colors[0]));
+	mWarped.push_back(AvxMatf(mData.h, pitch, mData.bgcol_yuv.colors[1]));
+	mWarped.push_back(AvxMatf(mData.h, pitch, mData.bgcol_yuv.colors[2]));
+
+	mFilterBuffer = AvxMatf(mData.w, align(mData.h, walign)); //transposed
+	mFilterResult = AvxMatf(mData.h, pitch);
+
+	mOutput.assign(3, AvxMatf(mData.h, pitch));
 }
 
 //---------------------------------
 // ---- main functions ------------
 //---------------------------------
 
-MovieFrameId AvxFrame::getId() const {
-	return { "AVX 512", "AVX 512: " + mData.getCpuName() };
-}
 
-void AvxFrame::inputData() {
-	size_t idx = mBufferFrame.index % mYUV.size();
-	mBufferFrame.copyTo(mYUV[idx], mPool);
+void AvxFrame::inputData(int64_t frameIdx, const ImageYuv& inputFrame) {
+	size_t idx = frameIdx % mYUV.size();
+	inputFrame.copyTo(mYUV[idx], mPool);
 }
 
 void AvxFrame::createPyramid(int64_t frameIndex) {
@@ -87,11 +83,10 @@ void AvxFrame::createPyramid(int64_t frameIndex) {
 	}
 }
 
-void AvxFrame::outputData(const AffineTransform& trf) {
+void AvxFrame::outputData(int64_t frameIndex, const Affine2D& trf) {
 	//util::ConsoleTimer ic("avx output");
-	size_t yuvidx = trf.frameIndex % mYUV.size();
+	size_t yuvidx = frameIndex % mYUV.size();
 	const ImageYuv& input = mYUV[yuvidx];
-	assert(input.index == trf.frameIndex && "invalid frame index");
 
 	//for planes Y, U, V
 	for (size_t z = 0; z < 3; z++) {
@@ -132,9 +127,9 @@ Matf AvxFrame::getPyramid(int64_t index) const {
 	return mPyr[index].copyToMat();
 }
 
-void AvxFrame::getInput(int64_t frameIndex, ImageRGBA& image) {
+void AvxFrame::getInput(int64_t frameIndex, ImageRGBA& image) const {
 	size_t idx = frameIndex % mYUV.size();
-	ImageYuv& yuv = mYUV[idx];
+	const ImageYuv& yuv = mYUV[idx];
 	yuvToRgba(yuv.plane(0), yuv.plane(1), yuv.plane(2), mData.h, mData.w, yuv.stride, image);
 }
 
@@ -170,62 +165,6 @@ void AvxFrame::filter(const AvxMatf& src, int r0, int h, int w, AvxMatf& dest, s
 	});
 	mPool.wait();
 }
-
-//void AvxFrame::filter(std::span<VF16> v, std::span<float> k, AvxMatf& dest, int r0, int c0) {
-//	v[0] = v[0] * k[0] + v[0].rot<1>() * k[1] + v[0].rot<2>() * k[2] + v[0].rot<3>() * k[3] + v[0].rot<4>() * k[4];
-//	v[1] = v[1] * k[0] + v[1].rot<1>() * k[1] + v[1].rot<2>() * k[2] + v[1].rot<3>() * k[3] + v[1].rot<4>() * k[4];
-//	v[2] = v[2] * k[0] + v[2].rot<1>() * k[1] + v[2].rot<2>() * k[2] + v[2].rot<3>() * k[3] + v[2].rot<4>() * k[4];
-//	v[3] = v[3] * k[0] + v[3].rot<1>() * k[1] + v[3].rot<2>() * k[2] + v[3].rot<3>() * k[3] + v[3].rot<4>() * k[4];
-//	
-//	Avx::transpose16x4(v);
-//
-//	_mm_storeu_ps(dest.addr(r0 + 0, c0), _mm512_extractf32x4_ps(v[0], 0));
-//	_mm_storeu_ps(dest.addr(r0 + 1, c0), _mm512_extractf32x4_ps(v[1], 0));
-//	_mm_storeu_ps(dest.addr(r0 + 2, c0), _mm512_extractf32x4_ps(v[2], 0));
-//	_mm_storeu_ps(dest.addr(r0 + 3, c0), _mm512_extractf32x4_ps(v[3], 0));
-//	_mm_storeu_ps(dest.addr(r0 + 4, c0), _mm512_extractf32x4_ps(v[0], 1));
-//	_mm_storeu_ps(dest.addr(r0 + 5, c0), _mm512_extractf32x4_ps(v[1], 1));
-//	_mm_storeu_ps(dest.addr(r0 + 6, c0), _mm512_extractf32x4_ps(v[2], 1));
-//	_mm_storeu_ps(dest.addr(r0 + 7, c0), _mm512_extractf32x4_ps(v[3], 1));
-//	_mm_storeu_ps(dest.addr(r0 + 8, c0), _mm512_extractf32x4_ps(v[0], 2));
-//	_mm_storeu_ps(dest.addr(r0 + 9, c0), _mm512_extractf32x4_ps(v[1], 2));
-//	_mm_storeu_ps(dest.addr(r0 + 10, c0), _mm512_extractf32x4_ps(v[2], 2));
-//	_mm_storeu_ps(dest.addr(r0 + 11, c0), _mm512_extractf32x4_ps(v[3], 2));
-//}
-//
-//void AvxFrame::filter(const AvxMatf& src, int r0, int h, int w, AvxMatf& dest, std::span<float> k) {
-//	//util::ConsoleTimer ic("avx filter " + std::to_string(w) + "x" + std::to_string(h));
-//	assert(h >= 16 && w >= 16 && "invalid dimensions");
-//
-//	//always handle block of data of 4 rows of 16 values
-//	std::vector<VF16> v(4);
-//
-//	for (int r = 0; ; ) {
-//		//left edge
-//		for (int i = 0; i < 4; i++) {
-//			const float* in = src.addr(r0 + r + i, 0);
-//			v[i] = VF16(in[0], in[0], in[0], in[1], in[2], in[3], in[4], in[5], in[6], in[7], in[8], in[9], in[10], in[11], in[12], in[13]);
-//		}
-//		filter(v, k, dest, 0, r);
-//
-//		//main loop
-//		for (int c = 10; c < w - 15; c += 12) {
-//			for (int i = 0; i < 4; i++) v[i] = src.addr(r0 + r + i, c);
-//			filter(v, k, dest, c + 2, r);
-//		}
-//
-//		//right edge
-//		for (int i = 0; i < 4; i++) {
-//			const float* in = src.addr(r0 + r + i, w - 14);
-//			v[i] = VF16(in[0], in[1], in[2], in[3], in[4], in[5], in[6], in[7], in[8], in[9], in[10], in[11], in[12], in[13], in[13], in[13]);
-//		}
-//		filter(v, k, dest, w - 12, r);
-//
-//		//next rows
-//		if (r == h - 4) break;
-//		else r = std::min(r + 4, h - 4);
-//	}
-//}
 
 void AvxFrame::downsample(const float* srcptr, int h, int w, int stride, float* destptr, int destStride) {
 	__m512i idx1 = _mm512_setr_epi32(0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30);
@@ -270,9 +209,9 @@ void AvxFrame::yuvToFloat(const ImageYuv& yuv, size_t plane, AvxMatf& dest) {
 	}
 }
 
-void AvxFrame::computeStart(int64_t frameIndex) {}
+void AvxFrame::computeStart(int64_t frameIndex, std::vector<PointResult>& results) {}
 
-void AvxFrame::computeTerminate(int64_t frameIndex) {
+void AvxFrame::computeTerminate(int64_t frameIndex, std::vector<PointResult>& results) {
 	size_t pyrIdx = frameIndex % mPyr.size();
 	size_t pyrIdxPrev = (frameIndex - 1) % mPyr.size();
 	AvxMatf& Ycur = mPyr[pyrIdx];
@@ -335,15 +274,15 @@ void AvxFrame::computeTerminate(int64_t frameIndex) {
 							s[k] += a * sd.at(k, i);
 						}
 					}
-					//if (frameIndex == 1 && ix0 == 63 && iy0 == 1) Avx::toConsole(s); //----------------
+					//if (frameIndex == 1 && ix0 == 63 && iy0 == 1) avx::toConsole(s); //----------------
 
-					double ns = Avx::norm1(s);
+					double ns = avx::norm1(s);
 					std::span<VD8> g = s;
-					Avx::inv(g);
-					double gs = Avx::norm1(g);
+					avx::inv(g);
+					double gs = avx::norm1(g);
 					double rcond = 1 / (ns * gs);
 					result = (std::isnan(rcond) || rcond < mData.deps) ? PointResultType::FAIL_SINGULAR : PointResultType::RUNNING;
-					//if (frameIndex == 1 && ix0 == 75 && iy0 == 10) Avx::toConsole(g); //----------------
+					//if (frameIndex == 1 && ix0 == 75 && iy0 == 10) avx::toConsole(g); //----------------
 
 					int iter = 0;
 					double bestErr = std::numeric_limits<double>::max();
@@ -405,13 +344,13 @@ void AvxFrame::computeTerminate(int64_t frameIndex) {
 							VD8 dx1 = VD8(1.0) - dx;
 							VD8 dy1 = VD8(1.0) - dy;
 							VD8 jm = dx1 * dy1 * f00 + dx1 * dy * f10 + dx * dy1 * f01 + dx * dy * f11;
-							
+
 							//delta
 							VF8 im = VF8(Yprev.addr(rowOffset + ym + r - ir, xm - ir), maskIW);
 							VD8 nan = mData.dnan;
 							delta[r] = _mm512_mask_sub_pd(nan, mask, _mm512_cvtps_pd(im), jm);
 						}
-						//if (frameIndex == 1 && ix0 == 48 && iy0 == 0 && iter == 1) Avx::toConsole(delta, 18); //----------------
+						//if (frameIndex == 1 && ix0 == 48 && iy0 == 0 && iter == 1) avx::toConsole(delta, 18); //----------------
 
 						//eta = g.times(sd.times(delta.flatToCol())) //[6 x 1]
 						VD8 b = 0.0;
@@ -429,7 +368,7 @@ void AvxFrame::computeTerminate(int64_t frameIndex) {
 								eta[r] += g[r][c] * b[c];
 							}
 						}
-						//if (frameIndex == 1 && ix0 == 48 && iy0 == 0 && iter == 1) Avx::toConsole(b, 18);
+						//if (frameIndex == 1 && ix0 == 48 && iy0 == 0 && iter == 1) avx::toConsole(b, 18);
 						//if (frameIndex == 1 && ix0 == 48 && iy0 == 0 && iter == 1) Matd::fromArray(6, 1, eta.data(), false).toConsole("avx", 18);
 
 						dwp[0] = wp[0] * eta[2] + wp[1] * eta[4];
@@ -474,7 +413,7 @@ void AvxFrame::computeTerminate(int64_t frameIndex) {
 
 				//transformation for points with respect to center of image and level 0 of pyramid
 				int idx = iy0 * mData.ixCount + ix0;
-				mResultPoints[idx] = { idx, ix0, iy0, xm, ym, xm - mData.w / 2, ym - mData.h / 2, u, v, result, zp };
+				results[idx] = { idx, ix0, iy0, xm, ym, xm - mData.w / 2, ym - mData.h / 2, u, v, result, zp };
 			}
 		}
 	});
@@ -503,7 +442,7 @@ std::pair<VD8, VD8> AvxFrame::transform(VD8 x, VD8 y, VD8 m00, VD8 m01, VD8 m02,
 	return { xx, yy };
 }
 
-void AvxFrame::warpBack(const AffineTransform& trf, const AvxMatf& input, AvxMatf& dest) {
+void AvxFrame::warpBack(const Affine2D& trf, const AvxMatf& input, AvxMatf& dest) {
 	//util::ConsoleTimer ic("avx warp");
 	//transform parameters
 	VD8 m00 = trf.arrayValue(0);
@@ -657,27 +596,27 @@ void AvxFrame::write(std::span<unsigned char> nv12, int cudaPitch) {
 }
 
 //from uchar yuv to uchar rgb
-void AvxFrame::yuvToRgba(const unsigned char* y, const unsigned char* u, const unsigned char* v, int h, int w, int stride, ImageRGBA& dest) {
+void AvxFrame::yuvToRgba(const unsigned char* y, const unsigned char* u, const unsigned char* v, int h, int w, int stride, ImageRGBA& dest) const {
 	for (int r = 0; r < h; r++) {
 		for (int c = 0; c < w; c += 4) {
 			VF4 vecy = y + r * stride + c;
 			VF4 vecu = u + r * stride + c;
 			VF4 vecv = v + r * stride + c;
-			__m128i rgba = Avx::yuvToRgbaPacked(vecy, vecu, vecv);
+			__m128i rgba = avx::yuvToRgbaPacked(vecy, vecu, vecv);
 			_mm_storeu_epi8(dest.addr(0, r, c), rgba);
 		}
 	}
 }
 
 //from float yuv to uchar rgb
-void AvxFrame::yuvToRgba(const float* y, const float* u, const float* v, int h, int w, int stride, ImageRGBA& dest) {
+void AvxFrame::yuvToRgba(const float* y, const float* u, const float* v, int h, int w, int stride, ImageRGBA& dest) const {
 	VF4 f = 255.0f;
 	for (int r = 0; r < h; r++) {
 		for (int c = 0; c < w; c += 4) {
 			VF4 vecy = y + r * stride + c;
 			VF4 vecu = u + r * stride + c;
 			VF4 vecv = v + r * stride + c;
-			__m128i rgba = Avx::yuvToRgbaPacked(vecy * f, vecu * f, vecv * f);
+			__m128i rgba = avx::yuvToRgbaPacked(vecy * f, vecu * f, vecv * f);
 			_mm_storeu_epi8(dest.addr(0, r, c), rgba);
 		}
 	}

@@ -27,6 +27,7 @@
 #include "Version.hpp"
 #include "CudaData.cuh"
 #include "DeviceInfo.hpp"
+#include "MovieReader.hpp"
 
 enum class DeshakerPass {
 	NONE,
@@ -135,6 +136,7 @@ public:
 		int irMin = 0, irMax = 3;
 	} limits;
 
+	
 	std::vector<DeviceInfoBase*> deviceList;
 	DeviceInfoCpu deviceInfoCpu;
 	DeviceInfoAvx deviceInfoAvx;
@@ -142,6 +144,7 @@ public:
 	CudaInfo cudaInfo;
 	bool deviceRequested = false;
 	size_t deviceSelected = 0;
+	DeviceInfoNull deviceInfoNull;
 
 	DeshakerPass pass = DeshakerPass::COMBINED;
 
@@ -172,9 +175,6 @@ public:
 
 	//parameters for computation of trajectory, at least 0.33, greater -> more stable camera
 	double cSigmaParam = 1.25;
-
-	//cpu threads to use in cpu-compute and computing transform parameters, leave room for other things
-	int cpuThreads = std::max(1u, std::thread::hardware_concurrency() * 3 / 4);
 
 	int64_t maxFrames = std::numeric_limits<int32_t>::max();
 	im::ColorRgb bgcol_rgb { 0, 50, 0 };

@@ -20,7 +20,7 @@
 #include "CudaWriter.hpp"
 #include "MovieReader.hpp"
 #include "MovieFrame.hpp"
-#include "FrameResult.hpp"
+#include "DummyFrame.hpp"
 #include "ProgressDisplayConsole.hpp"
 #include "UserInputConsole.hpp"
 
@@ -33,6 +33,8 @@ int deshake(int argsCount, char** args) {
 	MainData data;
 	std::unique_ptr<MovieReader> reader = std::make_unique<NullReader>();
 	std::unique_ptr<MovieWriter> writer = std::make_unique<NullWriter>(data, *reader);
+	std::shared_ptr<ProgressDisplay> progress;
+	std::shared_ptr<FrameExecutor> executor;
 	std::shared_ptr<MovieFrame> frame;
 	AuxWriters auxWriters;
 	
@@ -67,15 +69,6 @@ int deshake(int argsCount, char** args) {
 
 		writer->open(data.requestedEncoding);
 
-		//----------- create Frame Handler Class
-		if (data.dummyFrame) {
-			//skip stabilizing stuff to test decoding and encoding
-			frame = std::make_unique<DummyFrame>(data, *reader, *writer);
-
-		} else {
-			frame = data.deviceList[data.deviceSelected]->createClass(data, *reader, *writer);
-		}
-
 		//----------- create secondary Writers
 		if (data.pass != DeshakerPass::FIRST_PASS && data.pass != DeshakerPass::SECOND_PASS && data.trajectoryFile.empty() == false) {
 			auxWriters.push_back(std::make_unique<AuxTransformsWriter>(data));
@@ -91,6 +84,29 @@ int deshake(int argsCount, char** args) {
 		}
 		for (auto& aw : auxWriters) {
 			aw->open();
+		}
+
+		//----------- create Frame Handler for selected loop
+		if (data.pass == DeshakerPass::COMBINED) {
+			frame = std::make_shared<MovieFrameCombined>(data, *reader, *writer);
+
+		} else if (data.pass == DeshakerPass::FIRST_PASS) {
+			frame = std::make_shared<MovieFrameFirst>(data, *reader, *writer);
+
+		} else if (data.pass == DeshakerPass::SECOND_PASS) {
+			frame = std::make_shared<MovieFrameSecond>(data, *reader, *writer);
+
+		} else if (data.pass == DeshakerPass::CONSECUTIVE) {
+			frame = std::make_shared<MovieFrameConsecutive>(data, *reader, *writer);
+		}
+
+		//----------- create Frame Executor Class
+		if (data.dummyFrame) {
+			//skip stabilizing stuff to test decoding and encoding
+			executor = data.deviceInfoNull.create(data, *frame);
+
+		} else {
+			executor = data.deviceList[data.deviceSelected]->create(data, *frame);
 		}
 
 	} catch (const SilentQuitException&) {
@@ -114,12 +130,11 @@ int deshake(int argsCount, char** args) {
 	}
 
 	//setup progress output
-	std::unique_ptr<ProgressDisplay> progress;
-	if (data.progressType == ProgressType::REWRITE_LINE) progress = std::make_unique<ProgressDisplayRewriteLine>(*frame, data.console);
-	else if (data.progressType == ProgressType::NEW_LINE) progress = std::make_unique<ProgressDisplayNewLine>(*frame, data.console);
-	else if (data.progressType == ProgressType::GRAPH) progress = std::make_unique<ProgressDisplayGraph>(*frame, data.console);
-	else if (data.progressType == ProgressType::DETAILED) progress = std::make_unique<ProgressDisplayDetailed>(*frame, data.console);
-	else progress = std::make_unique<ProgressDisplayNone>(*frame);
+	if (data.progressType == ProgressType::REWRITE_LINE) progress = std::make_shared<ProgressDisplayRewriteLine>(*frame, data.console);
+	else if (data.progressType == ProgressType::NEW_LINE) progress = std::make_shared<ProgressDisplayNewLine>(*frame, data.console);
+	else if (data.progressType == ProgressType::GRAPH) progress = std::make_shared<ProgressDisplayGraph>(*frame, data.console);
+	else if (data.progressType == ProgressType::DETAILED) progress = std::make_shared<ProgressDisplayDetailed>(*frame, data.console);
+	else progress = std::make_shared<ProgressDisplayNone>(*frame);
 
 	// --------------------------------------------------------------
 	// --------------- main loop start ------------------------------
@@ -128,7 +143,7 @@ int deshake(int argsCount, char** args) {
 	UserInputConsole inputHandler(*data.console);
 
 	if (errorLogger.hasNoError()) {
-		frame->runLoop(data.pass, *progress, inputHandler, auxWriters);
+		frame->runLoop(progress, inputHandler, auxWriters, executor);
 	}
 
 	// --------------------------------------------------------------
@@ -156,6 +171,7 @@ int deshake(int argsCount, char** args) {
 	auxWriters.clear();
 	writer.reset();
 	reader.reset();
+	executor.reset();
 	frame.reset();
 
 	//stopwatch

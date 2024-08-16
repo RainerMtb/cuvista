@@ -56,10 +56,10 @@
     <ClCompile>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)Common;$(SolutionDir)Matrix;$(SolutionDir)CudaStuff;$(CUDA_PATH)\include;$(FFMPEG_PATH)\include;$(SolutionDir)include\CL;$(SolutionDir)include\nvenc;$(SolutionDir)include;$(SolutionDir)nvapi</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)AvxStuff;$(SolutionDir)Common;$(SolutionDir)Matrix;$(SolutionDir)CudaStuff;$(CUDA_PATH)\include;$(FFMPEG_PATH)\include;$(SolutionDir)include\CL;$(SolutionDir)include\nvenc;$(SolutionDir)include;$(SolutionDir)nvapi</AdditionalIncludeDirectories>
       <WarningLevel>Level3</WarningLevel>
-      <EnableEnhancedInstructionSet>AdvancedVectorExtensions512</EnableEnhancedInstructionSet>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
+      <IntrinsicFunctions>false</IntrinsicFunctions>
       <ShowIncludes>false</ShowIncludes>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PreprocessorDefinitions>_UNICODE;UNICODE;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -77,9 +77,9 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)Common;$(SolutionDir)Matrix;$(SolutionDir)CudaStuff;$(CUDA_PATH)\include;$(FFMPEG_PATH)\include;$(SolutionDir)include\CL;$(SolutionDir)include\nvenc;$(SolutionDir)include;$(SolutionDir)nvapi</AdditionalIncludeDirectories>
-      <EnableEnhancedInstructionSet>AdvancedVectorExtensions512</EnableEnhancedInstructionSet>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <AdditionalIncludeDirectories>$(SolutionDir)AvxStuff;$(SolutionDir)Common;$(SolutionDir)Matrix;$(SolutionDir)CudaStuff;$(CUDA_PATH)\include;$(FFMPEG_PATH)\include;$(SolutionDir)include\CL;$(SolutionDir)include\nvenc;$(SolutionDir)include;$(SolutionDir)nvapi</AdditionalIncludeDirectories>
+      <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
+      <IntrinsicFunctions>false</IntrinsicFunctions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PreprocessorDefinitions>_UNICODE;UNICODE;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
@@ -93,16 +93,14 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="AffineTransform.cpp" />
-    <ClCompile Include="AvxFrame.cpp" />
-    <ClCompile Include="AvxUtil.cpp" />
     <ClCompile Include="clFunctions.cpp" />
     <ClCompile Include="clMain.cpp" />
     <ClCompile Include="clTest.cpp" />
     <ClCompile Include="CudaFrame.cpp" />
+    <ClCompile Include="DummyFrame.cpp" />
     <ClCompile Include="FrameResult.cpp" />
     <ClCompile Include="MainData.cpp" />
     <ClCompile Include="MatrixInverter.cpp" />
-    <ClCompile Include="OpenClFrame.cpp" />
     <ClCompile Include="SelfTest.cpp" />
     <ClCompile Include="StackedWriter.cpp" />
     <ClCompile Include="CpuFrame.cpp" />
@@ -129,10 +127,6 @@
   <ItemGroup>
     <ClInclude Include="AffineTransform.hpp" />
     <ClInclude Include="AVException.hpp" />
-    <ClInclude Include="AvxFrame.hpp" />
-    <ClInclude Include="AvxMat.hpp" />
-    <ClInclude Include="AvxUtil.hpp" />
-    <ClInclude Include="AvxWrapper.hpp" />
     <ClInclude Include="clFunctions.hpp" />
     <ClInclude Include="clHeaders.hpp" />
     <ClInclude Include="clKernelCompute.hpp" />
@@ -144,6 +138,7 @@
     <ClInclude Include="CudaWriter.hpp" />
     <ClInclude Include="Deshaker.hpp" />
     <ClInclude Include="DeviceInfo.hpp" />
+    <ClInclude Include="DummyFrame.hpp" />
     <ClInclude Include="FFmpegUtil.hpp" />
     <ClInclude Include="FrameResult.hpp" />
     <ClInclude Include="KeyboardInput.hpp" />
@@ -153,7 +148,6 @@
     <ClInclude Include="MovieFrame.hpp" />
     <ClInclude Include="MovieWriter.hpp" />
     <ClInclude Include="NvidiaDriver.hpp" />
-    <ClInclude Include="OpenClFrame.hpp" />
     <ClInclude Include="ProgressBase.hpp" />
     <ClInclude Include="ProgressDisplay.hpp" />
     <ClInclude Include="ProgressDisplayConsole.hpp" />

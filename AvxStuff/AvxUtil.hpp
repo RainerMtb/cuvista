@@ -21,8 +21,10 @@
 #include <span>
 #include "immintrin.h"
 #include "AvxWrapper.hpp"
+#include "CoreData.hpp"
+#include "Affine2D.hpp"
 
-namespace Avx {
+namespace avx {
 
 	void transpose16x8(std::span<VF16> data);
 
@@ -37,4 +39,6 @@ namespace Avx {
 	void toConsole(std::span<VD8> v, int digits = 5);
 
 	void toConsole(VD8 v, int digits = 5);
+
+	void computeSimilar(std::span<PointBase> points, Matd& M, Affine2D& affine);
 }

@@ -16,9 +16,9 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
+#include "CudaWriter.hpp"
 #include "MovieFrame.hpp"
 #include "MovieReader.hpp"
-#include "CudaWriter.hpp"
 #include "NvEncoder.hpp"
 #include "Util.hpp"
 #include "ThreadPool.hpp"
@@ -89,8 +89,8 @@ void CudaFFmpegWriter::open(EncodingOption videoCodec) {
 }
 
 
-void CudaFFmpegWriter::prepareOutput(MovieFrame& frame) {
-    frame.getOutput(frame.mWriter.frameIndex, reinterpret_cast<unsigned char*>(nvenc->getNextInputFramePtr()), nvenc->cudaPitch);
+void CudaFFmpegWriter::prepareOutput(FrameExecutor& executor) {
+    executor.getOutput(frameIndex, reinterpret_cast<unsigned char*>(nvenc->getNextInputFramePtr()), nvenc->cudaPitch);
 }
 
 
@@ -131,7 +131,7 @@ void CudaFFmpegWriter::encodePackets() {
 }
 
 
-void CudaFFmpegWriter::write(const MovieFrame& frame) {
+void CudaFFmpegWriter::write(const FrameExecutor& executor) {
     encodePackets();
     encodingQueue.push_back(encoderPool.add([this, pkts = *nvPackets] { writePacketsToFile(pkts, false); }));
     encodingQueue.front().wait();

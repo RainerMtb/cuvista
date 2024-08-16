@@ -17,39 +17,40 @@
  */
 
 #include "CpuFrame.hpp"
+#include "CudaFrame.hpp"
+#include "MovieFrame.hpp"
 #include "SubMat.hpp"
 #include "MatrixInverter.hpp"
 #include "Util.hpp"
 
-MovieFrameId CpuFrame::getId() const {
-	return { "Cpu only", "Cpu only: " + mData.getCpuName() };
-}
-
 //constructor
-CpuFrame::CpuFrame(MainData& data, MovieReader& reader, MovieWriter& writer) : 
-	MovieFrame(data, reader, writer)
-{
+CpuFrame::CpuFrame(MainData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool) :
+	FrameExecutor(data, deviceInfo, frame, pool) {}
+
+void CpuFrame::init() {
+	assert(mDeviceInfo.type == DeviceType::CPU && "device type must be CPU here");
+
 	//buffer to hold input frames in yuv format
-	for (int i = 0; i < data.bufferCount; i++) mYUV.emplace_back(data.h, data.w, data.cpupitch);
+	for (int i = 0; i < mData.bufferCount; i++) mYUV.emplace_back(mData.h, mData.w, mData.cpupitch);
 
 	//init pyramid structures
-	for (int i = 0; i < data.pyramidCount; i++) mPyr.emplace_back(data);
+	for (int i = 0; i < mData.pyramidCount; i++) mPyr.emplace_back(mData);
 
 	//init storage for previous output frame to background colors
-	mPrevOut.push_back(Matf::values(data.h, data.w, data.bgcol_yuv.colors[0]));
-	mPrevOut.push_back(Matf::values(data.h, data.w, data.bgcol_yuv.colors[1]));
-	mPrevOut.push_back(Matf::values(data.h, data.w, data.bgcol_yuv.colors[2]));
+	mPrevOut.push_back(Matf::values(mData.h, mData.w, mData.bgcol_yuv.colors[0]));
+	mPrevOut.push_back(Matf::values(mData.h, mData.w, mData.bgcol_yuv.colors[1]));
+	mPrevOut.push_back(Matf::values(mData.h, mData.w, mData.bgcol_yuv.colors[2]));
 
 	//buffer for output and pyramid creation
-	mBuffer = { Matf::allocate(data.h, data.w), Matf::allocate(data.h, data.w), Matf::allocate(data.h, data.w) };
-	mFilterBuffer = Matf::allocate(data.h, data.w);
-	mFilterResult = Matf::allocate(data.h, data.w);
-	mYuvPlane = Matf::allocate(data.h, data.w);
-	mOutput = ImageYuv(data.h, data.w, data.cpupitch);
+	mBuffer.assign(3, Matf::allocate(mData.h, mData.w));
+	mFilterBuffer = Matf::allocate(mData.h, mData.w);
+	mFilterResult = Matf::allocate(mData.h, mData.w);
+	mYuvPlane = Matf::allocate(mData.h, mData.w);
+	mOutput = ImageYuv(mData.h, mData.w, mData.cpupitch);
 }
 
 //construct data for one pyramid
-CpuFrame::CpuPyramid::CpuPyramid(MainData& data) {
+CpuFrame::CpuPyramid::CpuPyramid(CoreData& data) {
 	//allocate matrices for pyramid
 	for (int z = 0; z <= data.zMax; z++) {
 		int hz = data.h >> z;
@@ -59,9 +60,9 @@ CpuFrame::CpuPyramid::CpuPyramid(MainData& data) {
 }
 
 //read input frame and put into buffer
-void CpuFrame::inputData() {
-	size_t idx = mBufferFrame.index % mYUV.size();
-	mBufferFrame.copyTo(mYUV[idx], mPool);
+void CpuFrame::inputData(int64_t frameIndex, const ImageYuv& inputFrame) {
+	size_t idx = frameIndex % mYUV.size();
+	inputFrame.copyTo(mYUV[idx], mPool);
 }
 
 void CpuFrame::createPyramid(int64_t frameIndex) {
@@ -97,9 +98,9 @@ void CpuFrame::createPyramid(int64_t frameIndex) {
 	//if (status.frameInputIndex == 1) frame.Y[1].saveAsBinary("f:/cpu.dat");
 }
 
-void CpuFrame::computeStart(int64_t frameIndex) {}
+void CpuFrame::computeStart(int64_t frameIndex, std::vector<PointResult>& results) {}
 
-void CpuFrame::computeTerminate(int64_t frameIndex) {
+void CpuFrame::computeTerminate(int64_t frameIndex, std::vector<PointResult>& results) {
 	size_t pyrIdx = frameIndex % mPyr.size();
 	size_t pyrIdxPrev = (frameIndex - 1) % mPyr.size();
 	CpuPyramid& frame = mPyr[pyrIdx];
@@ -241,7 +242,7 @@ void CpuFrame::computeTerminate(int64_t frameIndex) {
 
 				//transformation for points with respect to center of image and level 0 of pyramid
 				int idx = iy0 * mData.ixCount + ix0;
-				mResultPoints[idx] = { idx, ix0, iy0, xm, ym, xm - mData.w / 2, ym - mData.h / 2, u, v, result, zp };
+				results[idx] = { idx, ix0, iy0, xm, ym, xm - mData.w / 2, ym - mData.h / 2, u, v, result, zp };
 			}
 		}
 	});
@@ -253,10 +254,9 @@ void CpuFrame::computeTerminate(int64_t frameIndex) {
 //	return std::round(f * 256.0f) / 256.0f;
 //}
 
-void CpuFrame::outputData(const AffineTransform& trf) {
-	size_t yuvidx = trf.frameIndex % mYUV.size();
+void CpuFrame::outputData(int64_t frameIndex, const Affine2D& trf) {
+	size_t yuvidx = frameIndex % mYUV.size();
 	const ImageYuv& input = mYUV[yuvidx];
-	assert(input.index == trf.frameIndex && "invalid frame index");
 	for (size_t z = 0; z < 3; z++) {
 		float f = 1.0f / 255.0f;
 		mYuvPlane.setValues([&] (size_t r, size_t c) { return input.at(z, r, c) * f; }, mPool);
@@ -290,7 +290,7 @@ void CpuFrame::outputData(const AffineTransform& trf) {
 		//forward to thread pool for iteration there
 		mPool.addAndWait(func2, 0, mData.h);
 	}
-	mOutput.index = trf.frameIndex;
+	mOutput.index = frameIndex;
 }
 
 void CpuFrame::getOutput(int64_t frameIndex, ImageYuv& image) {
@@ -327,7 +327,7 @@ Matf CpuFrame::getPyramid(int64_t index) const {
 	return out;
 }
 
-void CpuFrame::getInput(int64_t frameIndex, ImageRGBA& image) {
+void CpuFrame::getInput(int64_t frameIndex, ImageRGBA& image) const {
 	size_t idx = frameIndex % mYUV.size();
 	mYUV[idx].toRGBA(image, mPool);
 }

@@ -18,7 +18,6 @@
 
 #include <format>
 #include "ProgressDisplay.hpp"
-#include "Util.hpp"
 #include "MovieFrame.hpp"
 #include "MovieReader.hpp"
 

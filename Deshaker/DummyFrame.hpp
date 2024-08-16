@@ -18,43 +18,28 @@
 
 #pragma once
 
-#include "MovieFrame.hpp"
+#include "FrameExecutor.hpp"
 
-class OpenClFrame : public MovieFrame {
+class DummyFrame : public FrameExecutor {
 
 private:
-	DeviceInfoBase* device;
+	std::vector<ImageYuv> mFrames;
 
 public:
-	OpenClFrame(MainData& data, MovieReader& reader, MovieWriter& writer);
+	DummyFrame(MainData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool);
 
-	~OpenClFrame();
-
-	void inputData() override;
-
-	void createPyramid(int64_t frameIndex) override;
-
-	void computeStart(int64_t frameIndex) override;
-
-	void computeTerminate(int64_t frameIndex) override;
-
-	void outputData(const AffineTransform& trf) override;
-
+	void init() override;
+	void inputData(int64_t frameIndex, const ImageYuv& inputFrame) override;
+	void createPyramid(int64_t frameIndex) override {};
+	void computeStart(int64_t frameIndex, std::vector<PointResult>& results) override {};
+	void computeTerminate(int64_t frameIndex, std::vector<PointResult>& results) override {};
+	void outputData(int64_t frameIndex, const Affine2D& trf) override;
 	void getOutput(int64_t frameIndex, ImageYuv& image) override;
-
 	void getOutput(int64_t frameIndex, ImageRGBA& image) override;
-
 	void getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) override;
-
-	void getWarped(int64_t frameIndex, ImageRGBA& image) override;
-
-	Mat<float> getPyramid(int64_t index) const override;
-
 	Mat<float> getTransformedOutput() const override;
-
-	void getInput(int64_t idx, ImageYuv& image) const override;
-
-	void getInput(int64_t frameIndex, ImageRGBA& image) override;
-
-	MovieFrameId getId() const override;
+	Mat<float> getPyramid(int64_t frameIndex) const override;
+	void getInput(int64_t frameIndex, ImageYuv& image) const override;
+	void getInput(int64_t frameIndex, ImageRGBA& image) const override;
+	void getWarped(int64_t frameIndex, ImageRGBA& image) override;
 };

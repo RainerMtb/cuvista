@@ -79,27 +79,29 @@ void readAndWriteOneFrame() {
 		reader.h = 1080;
 		data.validate(reader);
 		BaseWriter writer(data, reader);
-		CudaFrame frame(data, reader, writer);
+		MovieFrame frame(data, reader, writer);
+		CudaFrame ex(data, *data.deviceList[2], frame, frame.mPool);
+		ex.init();
 
 		frame.mBufferFrame.readFromPGM("d:/VideoTest/v00.pgm");
 		frame.mBufferFrame.index = 0;
-		frame.mReader.frameIndex = 0;
-		frame.inputData();
-		frame.createPyramid(frame.mReader.frameIndex);
+		reader.frameIndex = 0;
+		ex.inputData(reader.frameIndex, frame.mBufferFrame);
+		ex.createPyramid(frame.mReader.frameIndex);
 
 		frame.mBufferFrame.readFromPGM("D:/VideoTest/v01.pgm");
 		frame.mBufferFrame.index = 1;
-		frame.mReader.frameIndex = 1;
-		frame.inputData();
-		frame.createPyramid(frame.mReader.frameIndex);
-		frame.computeStart(frame.mReader.frameIndex);
-		frame.computeTerminate(frame.mReader.frameIndex);
+		reader.frameIndex = 1;
+		ex.inputData(reader.frameIndex, frame.mBufferFrame);
+		ex.createPyramid(frame.mReader.frameIndex);
+		ex.computeStart(frame.mReader.frameIndex, frame.mResultPoints);
+		ex.computeTerminate(frame.mReader.frameIndex, frame.mResultPoints);
 
 		AffineTransform trf;
 		trf.addRotation(0.3).addTranslation(-200, 100);
 		trf.frameIndex = 0;
-		frame.outputData(trf);
-		writer.prepareOutput(frame);
+		ex.outputData(0, trf);
+		writer.prepareOutput(ex);
 		std::string fileOut = "f:/test.bmp";
 		std::cout << "writing file " << fileOut << std::endl;
 		writer.getOutputFrame().saveAsColorBMP(fileOut);
@@ -193,17 +195,19 @@ void flow() {
 	reader.open(file);
 	data.validate(reader);
 	BaseWriter writer(data, reader);
-	CpuFrame frame(data, reader, writer);
+	MovieFrame frame(data, reader, writer);
+	CpuFrame ex(data, *data.deviceList[0], frame, frame.mPool);
+	ex.init();
 	reader.read(frame.mBufferFrame);
-	frame.inputData();
-	frame.createPyramid(reader.frameIndex);
+	ex.inputData(reader.frameIndex, frame.mBufferFrame);
+	ex.createPyramid(reader.frameIndex);
 
 	reader.read(frame.mBufferFrame);
-	frame.inputData();
-	frame.createPyramid(reader.frameIndex);
+	ex.inputData(reader.frameIndex, frame.mBufferFrame);
+	ex.createPyramid(reader.frameIndex);
 
-	frame.computeStart(reader.frameIndex);
-	frame.computeTerminate(reader.frameIndex);
+	ex.computeStart(reader.frameIndex, frame.mResultPoints);
+	ex.computeTerminate(reader.frameIndex, frame.mResultPoints);
 
 	OpticalFlowImageWriter fw(data, reader);
 	fw.writeFlow(frame, "f:/flow.bmp");
@@ -223,4 +227,5 @@ void flow() {
 
 	std::chrono::time_point t2 = std::chrono::system_clock::now();
 	std::cout << "time [ms]: " << std::chrono::duration<double, std::milli>(t2 - t1).count() << std::endl;
+	std::cout << errorLogger.getErrorMessage() << std::endl;
 }

@@ -19,35 +19,31 @@
 #pragma once
 
 #include "DeviceInfoBase.hpp"
+#include "FrameExecutor.hpp"
+#include "cpu_features/cpuinfo_x86.h"
+
+inline cpu_features::X86Info cpuInfo = cpu_features::GetX86Info();
 
 //CpuFrame
 class DeviceInfoCpu : public DeviceInfoBase {
 public:
-	DeviceInfoCpu()
-		: DeviceInfoBase(DeviceType::CPU, 16384) {}
+	DeviceInfoCpu() :
+		DeviceInfoBase(DeviceType::CPU, 16384) {}
 
 	std::string getName() const override;
-
 	std::string getNameShort() const override;
-
-	std::string getCpuName() const;
-
-	std::shared_ptr<MovieFrame> createClass(MainData& data, MovieReader& reader, MovieWriter& writer) override;
+	std::shared_ptr<FrameExecutor> create(MainData& data, MovieFrame& frame) override;
 };
 
 //AvxFrame
 class DeviceInfoAvx : public DeviceInfoBase {
 public:
-	DeviceInfoAvx()
-		: DeviceInfoBase(DeviceType::AVX, 16384) {}
+	DeviceInfoAvx() :
+		DeviceInfoBase(DeviceType::AVX, 16384) {}
 
 	std::string getName() const override;
-
 	std::string getNameShort() const override;
-
-	std::shared_ptr<MovieFrame> createClass(MainData& data, MovieReader& reader, MovieWriter& writer) override;
-
-	bool hasAvx512() const;
+	std::shared_ptr<FrameExecutor> create(MainData& data, MovieFrame& frame) override;
 };
 
 namespace cl { class Device; }
@@ -61,14 +57,12 @@ public:
 	int pitch = 0;
 	std::vector<std::string> extensions;
 
-	DeviceInfoOpenCl(DeviceType type, int64_t maxPixel)
-		: DeviceInfoBase(type, maxPixel) {}
+	DeviceInfoOpenCl(DeviceType type, int64_t maxPixel) :
+		DeviceInfoBase(type, maxPixel) {}
 
 	std::string getName() const override;
-
 	std::string getNameShort() const override;
-
-	std::shared_ptr<MovieFrame> createClass(MainData& data, MovieReader& reader, MovieWriter& writer) override;
+	std::shared_ptr<FrameExecutor> create(MainData& data, MovieFrame& frame) override;
 
 	friend std::ostream& operator << (std::ostream& os, const DeviceInfoOpenCl& info);
 };
@@ -86,14 +80,12 @@ public:
 	std::shared_ptr<cudaDeviceProp> props;
 	int cudaIndex = 0;
 
-	DeviceInfoCuda(DeviceType type, int64_t maxPixel)
-		: DeviceInfoBase(type, maxPixel) {}
+	DeviceInfoCuda(DeviceType type, int64_t maxPixel) :
+		DeviceInfoBase(type, maxPixel) {}
 
 	std::string getName() const override;
-
 	std::string getNameShort() const override;
-
-	std::shared_ptr<MovieFrame> createClass(MainData& data, MovieReader& reader, MovieWriter& writer) override;
+	std::shared_ptr<FrameExecutor> create(MainData& data, MovieFrame& frame) override;
 
 	friend std::ostream& operator << (std::ostream& os, const DeviceInfoCuda& info);
 };
@@ -117,4 +109,15 @@ struct CudaInfo {
 	std::string driverToString() const;
 	std::string nvencApiToString() const;
 	std::string nvencDriverToString() const;
+};
+
+//Null Device
+class DeviceInfoNull : public DeviceInfoBase {
+public:
+	DeviceInfoNull() :
+		DeviceInfoBase(DeviceType::UNKNOWN, 0) {}
+
+	std::string getName() const override;
+	std::string getNameShort() const override;
+	std::shared_ptr<FrameExecutor> create(MainData& data, MovieFrame& frame) override;
 };

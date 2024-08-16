@@ -23,7 +23,7 @@
 
 
  //transpose 4 vectors of 16 floats
-void Avx::transpose16x4(std::span<VF16> data) {
+void avx::transpose16x4(std::span<VF16> data) {
 	VF16 tmp[8];
 
 	tmp[0] = _mm512_unpacklo_ps(data[0], data[1]);
@@ -41,7 +41,7 @@ void Avx::transpose16x4(std::span<VF16> data) {
 //transpose 8 vectors of 16 floats
 //result is returned again in 8 vectors of 16 floats
 //each vector contains two 'blocks' of 8 floats representing data rows
-void Avx::transpose16x8(std::span<VF16> data) {
+void avx::transpose16x8(std::span<VF16> data) {
 	VF16 tmp[8];
 
 	tmp[0] = _mm512_unpacklo_ps(data[0], data[1]);
@@ -83,7 +83,7 @@ void Avx::transpose16x8(std::span<VF16> data) {
 
 
 //convert individual vectors in float for Y U V to one vector holding uchar packed RGB
-__m128i Avx::yuvToRgbaPacked(VF4 y, VF4 u, VF4 v) {
+__m128i avx::yuvToRgbaPacked(VF4 y, VF4 u, VF4 v) {
 	//distribute y, u, v values to 16 places
 	__m512i index = _mm512_setr_epi32(0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3);
 	VF16 yy = _mm512_permutexvar_ps(index, _mm512_castps128_ps512(y));
@@ -110,7 +110,7 @@ __m128i Avx::yuvToRgbaPacked(VF4 y, VF4 u, VF4 v) {
 
 //invert matrix given in avx vectors
 //matrix must be square
-void Avx::inv(std::span<VD8> v) {
+void avx::inv(std::span<VD8> v) {
 	size_t m = v.size();
 	std::vector<size_t> piv(m);
 	std::iota(piv.begin(), piv.end(), 0);
@@ -179,7 +179,7 @@ void Avx::inv(std::span<VD8> v) {
 
 
 //compute 1-norm of square matrix given in avx vectors
-double Avx::norm1(std::span<VD8> v) {
+double avx::norm1(std::span<VD8> v) {
 	VD8 sum;
 	size_t m = v.size();
 	for (size_t i = 0; i < m; i++) {
@@ -191,7 +191,7 @@ double Avx::norm1(std::span<VD8> v) {
 
 
 //print matrix of avx vectors to console
-void Avx::toConsole(std::span<VD8> v, int digits) {
+void avx::toConsole(std::span<VD8> v, int digits) {
 	int siz = int(v.size());
 	AvxMatd mat(siz, 8);
 	for (int i = 0; i < siz; i++) v[i].storeu(mat.row(i));
@@ -199,7 +199,133 @@ void Avx::toConsole(std::span<VD8> v, int digits) {
 }
 
 
-void Avx::toConsole(VD8 v, int digits) {
+void avx::toConsole(VD8 v, int digits) {
 	std::vector<VD8> vec = { v };
 	toConsole(vec, digits);
+}
+
+
+//compute similar transform using avx
+void avx::computeSimilar(std::span<PointBase> points, Matd& M, Affine2D& affine) {
+	assert(points.size() >= 2 && "similar transform needs at least two points");
+	size_t m = points.size() * 2;
+	Matd A = M.share(6, m + 8);
+
+	int dy = points[0].y;        //represents a2, needs to be smallest value
+	int dx = points[1].x;        //represents a3
+	long long int nn = 0;        //int could overflow
+	long long int s0 = 0;        //in docs s1
+	long long int s1 = 0;        //in docs s2
+
+	double* p = A.addr(4, 0);
+	double* q = A.addr(5, 0);
+
+	//accumulate s0, s1, nn and adjust coords
+	for (size_t idx = 0, k = 0; idx < points.size(); idx++) {
+		PointBase& pb = points[idx];
+		int x = pb.x - dx;
+		p[k] = x;
+		s0 += x;
+		nn += x * x;
+		q[k] = pb.x + pb.u - dx;
+		k++;
+
+		int y = pb.y - dy;
+		p[k] = y;
+		s1 += y;
+		nn += y * y;
+		q[k] = pb.y + pb.v - dy;
+		k++;
+	}
+
+	//compute parameters
+	double sign0 = p[0] < 0 ? -1.0 : 1.0;
+	double n = std::sqrt(nn) * sign0;
+	double b = p[0] + n;
+	double sign2 = sign0 * n * b < p[3] * s1 ? -1.0 : 1.0;
+	double t = sign2 * std::sqrt(points.size() * nn - s0 * s0 - s1 * s1);
+	double z = b * (n + t) - p[3] * s1;
+	double e = n / t;
+	double f = s1 / (b * t);
+
+	double sn = s0 + n;
+	double g = sn / (b * t);
+	double h = (p[3] / b * (sn * sn + s1 * s1) - s1 * (n + t)) / (t * z);
+	double j = sn * (t + n) / (t * z);
+	double k = p[3] * n * sn / (t * z);
+
+	double rd[] = { n, -n, t / n, t / n };
+
+	//------------
+	A[0][0] = b / n;
+	A[0][1] = 0.0;
+	A[0][2] = 0.0;
+	A[0][3] = p[3] / n;
+
+	A[1][0] = 0.0;
+	A[1][1] = 1.0 + p[0] / n;
+	A[1][2] = -p[3] / n;
+	A[1][3] = 0.0;
+
+	A[2][0] = -s0 / n;
+	A[2][1] = s1 / n;
+	A[2][2] = 1.0 + e - p[3] * f;
+	A[2][3] = -p[3] * g;
+
+	A[3][0] = -s1 / n;
+	A[3][1] = -s0 / n;
+	A[3][2] = 0.0;
+	A[3][3] = 1.0 + e + p[3] * h;
+
+	VD8 pd_n0 = n;
+	VD8 pd_n1 = VD8(-n, n);
+	VD8 pd_e = VD8(e, 0);
+	VD8 pd_f = VD8(-f, f);
+	VD8 pd_g = g;
+	VD8 pd_ek = VD8(-k, e);
+	VD8 pd_h = h;
+	VD8 pd_j = VD8(j, -j);
+	for (size_t idx = 4; idx < m; idx += 8) {
+		VD8 pd_a = p + idx;
+		VD8 pd_b = _mm512_permute_pd(pd_a, 0b0101'0101); //switch idx <-> idx+1
+		(pd_a / pd_n0).storeu(A.addr(0, idx));
+		(pd_b / pd_n1).storeu(A.addr(1, idx));
+		(pd_e + pd_b * pd_f - pd_a * pd_g).storeu(A.addr(2, idx));
+		(pd_ek + pd_a * pd_h + pd_b * pd_j).storeu(A.addr(3, idx));
+	}
+
+	//clear padding values to 0
+	for (size_t i = 0; i < 6; i++) {
+		for (size_t idx = m; idx < m + 8; idx++) {
+			A.at(i, idx) = 0.0;
+		}
+	}
+
+	//back substitution step 1
+	for (size_t k = 0; k < 4; k++) {
+		double s = 0.0;
+		for (size_t i = k; i < m; i += 8) {
+			VD8 a = A.addr(k, i);
+			VD8 b = A.addr(5, i);
+			s += _mm512_reduce_add_pd(a.mul(b));
+		}
+		s /= -A[k][k];
+		VD8 pd_s = s;
+		for (size_t i = k; i < m; i += 8) {
+			VD8 a = A.addr(k, i);
+			VD8 b = A.addr(5, i);
+			(b + a * s).storeu(A.addr(5, i));
+		}
+	}
+
+	//back substitution step 2, only need first four values
+	for (int k = 3; k >= 0; k--) {
+		q[k] /= -rd[k];
+		for (int i = 0; i < k; i++) {
+			q[i] -= q[k] * A[k][i];
+		}
+	}
+
+	//readjust transform parameter values back to given points
+	affine.setParam(q[0], q[1], -dx * q[0] - dy * q[1] + q[2] + dx, dx * q[1] - dy * q[0] + q[3] + dy);
 }

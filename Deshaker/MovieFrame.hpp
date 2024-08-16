@@ -18,26 +18,19 @@
 
 #pragma once
 
-#include "CudaWriter.hpp"
+#include "MovieWriter.hpp"
 #include "ThreadPool.hpp"
 #include "UserInput.hpp"
 #include "MainData.hpp"
 #include "Trajectory.hpp"
-#include "cuDeshaker.cuh"
-#include "clMain.hpp"
 #include "ProgressBase.hpp"
+#include "FrameExecutor.hpp"
 
 
  //---------------------------------------------------------------------
  //---------- MOVIE FRAME BASE CLASS -----------------------------------
  //---------------------------------------------------------------------
 
-struct MovieFrameId {
-	std::string nameShort;
-	std::string nameLong;
-};
-
-class ProgressDisplay;
 
 class MovieFrame {
 
@@ -45,170 +38,77 @@ protected:
 	const MainData& mData;
 	Trajectory mTrajectory;
 
+	void read();
+	std::future<void> readAsync();
+	bool doLoop(UserInput& input);
+
+	void loopInit(std::shared_ptr<ProgressBase> progress, std::shared_ptr<FrameExecutor> executor, const std::string& message = "");
+	void loopTerminate(std::shared_ptr<ProgressBase> progress, UserInput& input, AuxWriters& auxWriters, std::shared_ptr<FrameExecutor> executor);
+
 public:
 	MovieReader& mReader;
 	MovieWriter& mWriter;
-
-	//get frame data from reader into frame object
-	virtual void inputData() = 0;
-	//set up image pyramid
-	virtual void createPyramid(int64_t frameIndex) = 0;
-	//start computation asynchronously for some part of a frame
-	virtual void computeStart(int64_t frameIndex) = 0;
-	//start computation asynchronously for second part and get results
-	virtual void computeTerminate(int64_t frameIndex) = 0;
-	//prepare data for output to writer
-	virtual void outputData(const AffineTransform& trf) = 0;
-	//prepare data for encoding on cpu
-	virtual void getOutput(int64_t frameIndex, ImageYuv& image) = 0;
-	//prepare data for encoding on cpu
-	virtual void getOutput(int64_t frameIndex, ImageRGBA& image) = 0;
-	//prepare data for encoding on cuda
-	virtual void getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) = 0;
-	//output rgb data warped but not unsharped
-	virtual void getWarped(int64_t frameIndex, ImageRGBA& image) = 0;
-	//get input image as stored in frame buffers
-	virtual void getInput(int64_t frameIndex, ImageYuv& image) const {}
-	//get input image as stored in frame buffers
-	virtual void getInput(int64_t frameIndex, ImageRGBA& image) {}
-
-	/*
-	* run the stabilizing loop
-	*/
-	virtual void runLoop(DeshakerPass pass, ProgressBase& progress, UserInput& input, AuxWriters& secondaryWriters);
-
-	/*
-	* call transform calculation
-	*/
-	virtual void computeTransform(int64_t frameIndex) final;
-
-	/*
-	* read transforms from previous pass
-	*/
-	virtual std::map<int64_t, TransformValues> readTransforms() final;
-
-	/*
-	* get the current frame transform
-	*/
-	virtual const AffineTransform& getTransform() const final;
-
-	/*
-	* get transformed image as Mat<float> where YUV color planes are stacked vertically
-	* image is warped output before unsharping, useful for debugging
-	*/
-	virtual Mat<float> getTransformedOutput() const { return {}; }
-
-	/*
-	* get image pyramid as single Mat<float> where images are stacked vertically from large to small
-	* useful for debugging
-	*/
-	virtual Mat<float> getPyramid(int64_t frameIndex) const { return {}; }
-
-	/*
-	* identify instance
-	*/
-	virtual MovieFrameId getId() const { return { "None", "None" }; }
-
-	/*
-	* play time for given frame
-	*/
-	std::string ptsForFrameString(int64_t frameIndex);
-
-
 	ThreadPool mPool;
 	FrameResult mFrameResult;
 	ImageYuv mBufferFrame;
 	std::vector<PointResult> mResultPoints;
-
 	RNG rng;
+
+	//only constructor for Frame class
+	MovieFrame(MainData& data, MovieReader& reader, MovieWriter& writer);
 
 	MovieFrame(const MovieFrame& other) = delete;
 	MovieFrame(MovieFrame&& other) = delete;
 	virtual ~MovieFrame();
 
-protected:
-	//only constructor for Frame class
-	MovieFrame(MainData& data, MovieReader& reader, MovieWriter& writer) :
-		mData { data },
-		mReader { reader },
-		mWriter { writer },
-		mPool(data.cpuThreads),
-		mFrameResult(data, mPool),
-		mBufferFrame(data.h, data.w, data.cpupitch),
-		mResultPoints(data.resultCount) {
-		//set a reference to this frame class into writer object
-		writer.movieFrame = this;
+	// call transform calculation
+	virtual void computeTransform(int64_t frameIndex) final;
 
-		//set PointResult indizes
-		int idx = 0;
-		for (int y = 0; y < data.iyCount; y++) {
-			for (int x = 0; x < data.ixCount; x++) {
-				mResultPoints[idx].idx = idx;
-				mResultPoints[idx].ix0 = x;
-				mResultPoints[idx].iy0 = y;
-				idx++;
-			}
-		}
-	}
+	// read transforms from previous pass
+	virtual std::map<int64_t, TransformValues> readTransforms() final;
 
-private:
-	void read();
-	std::future<void> readAsync();
-	bool doLoop(UserInput& input);
+	// get the current frame transform
+	virtual const AffineTransform& getTransform() const final;
 
-	void runLoopCombined(ProgressBase& progress, UserInput& input, AuxWriters& auxWriters);
-	void runLoopFirst(ProgressBase& progress, UserInput& input, AuxWriters& auxWriters);
-	void runLoopSecond(ProgressBase& progress, UserInput& input, AuxWriters& auxWriters);
-	void runLoopConsecutive(ProgressBase& progress, UserInput& input, AuxWriters& auxWriters);
+	// play time for given frame
+	std::string ptsForFrameString(int64_t frameIndex);
 
-	void loopInit(ProgressBase& progress, const std::string& message = "");
-	void loopTerminate(ProgressBase& progress, UserInput& input, AuxWriters& auxWriters);
+	//run loop in subclass
+	virtual void runLoop(std::shared_ptr<ProgressBase> progress, UserInput& input, AuxWriters& auxWriters, std::shared_ptr<FrameExecutor> executor) {}
 };
 
 
-//---------------------------------------------------------------------
-//---------- DUMMY FRAME ----------------------------------------------
-//---------------------------------------------------------------------
-
-class DummyFrame : public MovieFrame {
-
-private:
-	std::vector<ImageYuv> mFrames;
-
+class MovieFrameCombined : public MovieFrame {
 public:
-	DummyFrame(MainData& data, MovieReader& reader, MovieWriter& writer) :
-		MovieFrame(data, reader, writer),
-		mFrames(data.bufferCount, { data.h, data.w, data.w }) {}
-
-	void inputData() override;
-	void createPyramid(int64_t frameIndex) override {}
-	void computeStart(int64_t frameIndex) override {}
-	void computeTerminate(int64_t frameIndex) override {}
-	void outputData(const AffineTransform& trf) override;
-	void getOutput(int64_t frameIndex, ImageYuv& image) override;
-	void getOutput(int64_t frameIndex, ImageRGBA& image) override;
-	void getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) override;
-	void getWarped(int64_t frameIndex, ImageRGBA& image) override;
-	void getInput(int64_t frameIndex, ImageYuv& image) const override;
-};
-
-
-//---------------------------------------------------------------------
-//---------- DEFAULT FRAME ----------------------------------------------
-//---------------------------------------------------------------------
-
-class DefaultFrame : public MovieFrame {
-public:
-	DefaultFrame(MainData& data, MovieReader& reader, MovieWriter& writer) :
+	MovieFrameCombined(MainData& data, MovieReader& reader, MovieWriter& writer) :
 		MovieFrame(data, reader, writer) {}
 
-	void inputData() override {}
-	void createPyramid(int64_t frameIndex) override {}
-	void computeStart(int64_t frameIndex) override {}
-	void computeTerminate(int64_t frameIndex) override {}
-	void outputData(const AffineTransform& trf) override {};
-	void getOutput(int64_t frameIndex, ImageYuv& image) override {};
-	void getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) override {};
-	void getOutput(int64_t frameIndex, ImageRGBA& image) override {};
-	void getWarped(int64_t frameIndex, ImageRGBA& image) override {};
+	void runLoop(std::shared_ptr<ProgressBase> progress, UserInput& input, AuxWriters& auxWriters, std::shared_ptr<FrameExecutor> executor) override;
+};
+
+
+class MovieFrameFirst : public MovieFrame {
+public:
+	MovieFrameFirst(MainData& data, MovieReader& reader, MovieWriter& writer) :
+		MovieFrame(data, reader, writer) {}
+
+	void runLoop(std::shared_ptr<ProgressBase> progress, UserInput& input, AuxWriters& auxWriters, std::shared_ptr<FrameExecutor> executor) override;
+};
+
+
+class MovieFrameSecond : public MovieFrame {
+public:
+	MovieFrameSecond(MainData& data, MovieReader& reader, MovieWriter& writer) :
+		MovieFrame(data, reader, writer) {}
+
+	void runLoop(std::shared_ptr<ProgressBase> progress, UserInput& input, AuxWriters& auxWriters, std::shared_ptr<FrameExecutor> executor) override;
+};
+
+
+class MovieFrameConsecutive : public MovieFrame {
+public:
+	MovieFrameConsecutive(MainData& data, MovieReader& reader, MovieWriter& writer) :
+		MovieFrame(data, reader, writer) {}
+
+	void runLoop(std::shared_ptr<ProgressBase> progress, UserInput& input, AuxWriters& auxWriters, std::shared_ptr<FrameExecutor> executor) override;
 };

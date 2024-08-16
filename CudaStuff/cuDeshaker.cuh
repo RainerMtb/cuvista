@@ -20,6 +20,7 @@
 
 #include "cuDecompose.cuh"
 #include "CudaData.cuh"
+#include "FrameExecutor.hpp"
 
 #include <sstream>
 #include <fstream>
@@ -46,7 +47,7 @@ class ComputeTextures {
 public:
 	cudaTextureObject_t Ycur, Yprev;
 
-	__host__ void create(int64_t idx, int64_t idxPrev, const CudaData& core);
+	__host__ void create(int64_t idx, int64_t idxPrev, const CudaData& core, float* pyrBase);
 
 	__host__ void destroy();
 };
@@ -65,64 +66,81 @@ struct ComputeKernelParam {
 
 void kernelComputeCall(ComputeKernelParam param, ComputeTextures& tex, CudaPointResult* d_results);
 
-//----------------------------------
-// interface to host callers
-//----------------------------------
-
-/*
-brief probe present cuda devices and capabilities
-*/
 CudaProbeResult cudaProbeRuntime();
 
-/*
-@brief initialize cuda device
-@param core: CudaData structure
-@param yuvFrame: the object used later to transfer frame data
-*/
-void cudaInit(CudaData& core, int devIdx, const cudaDeviceProp& prop, ImageYuv& yuvFrame);
 
-/*
-@brief read a frame into device memory
-@param frameIdx: frame index to read
-@param core: CudaData structure
-@param inputFrame: YUV pixel data to load into device for processing
-*/
-void cudaReadFrame(int64_t frameIdx, const CudaData& core, const ImageYuv& inputFrame);
+class CudaFrameExecutor : public FrameExecutor {
 
-/*
-@brief create image pyramid
-*/
-void cudaCreatePyramid(int64_t frameIdx, const CudaData& core);
+private:
+	unsigned char* d_yuvData;			     //continuous array of all pixel values in yuv format, allocated on device
+	unsigned char** d_yuvRows;			     //index into rows of pixels, allocated on device
+	unsigned char*** d_yuvPlanes;		     //index into Y-U-V planes of frames, allocated on device 
 
-/*
-@brief compute displacements between frame and previous frame in video for part of a frame
-*/
-void cudaCompute(int64_t frameIdx, const CudaData& core, const cudaDeviceProp& props);
+	unsigned char* d_yuvOut;   //image data for encoding on host
+	unsigned char* d_rgba;     //image data for progress update
 
-/*
-@brief return vector of results from async computation
-*/
-void cudaComputeTerminate(int64_t frameIdx, const CudaData& core, std::vector<PointResult>& results);
+	struct {
+		float4* data;
+		float4* start;
+		float4* warped;
+		float4* filterH;
+		float4* filterV;
+		float4* final;
+		float4* background;
+	} out;
 
-/*
-@brief transform a frame and prepare for output of pixel data
-*/
-void cudaOutput(int64_t frameIdx, const CudaData& core, std::array<double, 6> trf);
+	float* d_bufferH;
+	float* d_bufferV;
 
-/*
-@brief output pixel data to host
-*/
-void cudaOutputCpu(int64_t frameIndex, ImageYuv& image, const CudaData& core);
+	float* d_pyrData;
+	float** d_pyrRows;
 
-/*
-@brief output pixel data in ARGB format to host
-*/
-void cudaOutputCpu(int64_t frameIndex, ImageRGBA& image, const CudaData& core);
+	//results from compute kernel
+	CudaPointResult* d_results;
+	CudaPointResult* h_results;
 
-/*
-@brief output pixel data to cuda encoding
-*/
-void cudaOutputCuda(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch, const CudaData& core);
+	//init cuda streams
+	std::vector<cudaStream_t> cs;
+
+	//data output from kernels for later analysis
+	cu::DebugData debugData = {};
+
+	//registered memory
+	void* registeredMemPtr = nullptr;
+
+	//textures used in compute kernel
+	ComputeTextures compTex;
+
+	//signal to interrupt compute kernel
+	char* d_interrupt;
+
+	//keep track of frames in the buffer
+	std::vector<int64_t> frameIndizes;
+
+	//properties of device in use
+	cudaDeviceProp props = {};
+
+	void getDebugData(const CudaData& core, const std::string& imageFile, std::function<void(size_t, size_t, double*)> fcn);
+
+public:
+	CudaFrameExecutor(CudaData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool);
+	~CudaFrameExecutor();
+
+	void cudaInit(CudaData& core, int devIdx, const cudaDeviceProp& prop, ImageYuv& yuvFrame);
+	void inputData(int64_t frameIndex, const ImageYuv& inputFrame) override;
+	void createPyramid(int64_t frameIndex) override;
+	void computeStart(int64_t frameIndex, std::vector<PointResult>& results) override;
+	void computeTerminate(int64_t frameIndex, std::vector<PointResult>& results) override;
+	void cudaOutputData(int64_t frameIndex, const std::array<double, 6> trf);
+	void getOutput(int64_t frameIndex, ImageYuv& image) override;
+	void getOutput(int64_t frameIndex, ImageRGBA& image) override;
+	void getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) override;
+	void cudaGetTransformedOutput(float* data) const;
+	void cudaGetPyramid(int64_t frameIndex, float* data) const;
+	void getInput(int64_t frameIndex, ImageYuv& image) const override;
+	void getInput(int64_t frameIndex, ImageRGBA& image) const override;
+	void getWarped(int64_t frameIndex, ImageRGBA& image) override;
+};
 
 /*
 @brief only encode given nv12 data
@@ -133,39 +151,3 @@ void encodeNvData(const std::vector<unsigned char>& nv12, unsigned char* nvencPt
 @brief get NV12 data prepared for cuda encoding
 */
 void getNvData(std::vector<unsigned char>& nv12, unsigned char* cudaNv12ptr);
-
-/*
-@brief shutdown cuda device
-*/
-void cudaShutdown(const CudaData& core);
-
-/*
-@brief get debug data from device
-@return timing values and debug data
-*/
-void getDebugData(const CudaData& core, const std::string& imageFile, std::function<void(size_t,size_t,double*)> fcn);
-
-/*
-@brief get transformed float output for testing
-*/
-void cudaGetTransformedOutput(float* warpedData, const CudaData& core);
-
-/*
-@brief get pyramid image for given index
-*/
-void cudaGetPyramid(float* pyramid, const CudaData& core, int64_t frameIndex);
-
-/*
-@brief get input iomage from buffers
-*/
-void cudaGetInput(ImageYuv& image, const CudaData& core, int64_t frameIndex);
-
-/*
-@brief get current input frame for progress display
-*/
-void cudaGetCurrentInputFrame(ImageRGBA& image, const CudaData& core, int64_t frameIndex);
-
-/*
-@brief get current output frame for progress display
-*/
-void cudaGetTransformedOutput(ImageRGBA& image, const CudaData& core);

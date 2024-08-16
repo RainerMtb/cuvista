@@ -6,12 +6,13 @@
 1. Create subclass of MovieReader and open input
 1. Validate MainData variables with input
 1. Create subclass of MovieWriter and open output
-1. Create subclass of MovieFrame handler class
-1. Set up progress information handler class
-1. Decide on the type of loop to run
+1. Create subclass of MovieFrame handler class - this selects the loop mechanism
+1. Create subclass of FrameExecutor - this selects the device for computations
+1. Create subclass of progress information handler class
 1. Run the loop in the frame class
 1. Close Writer
 1. Close Reader
+1. Close Executor
 1. Close Frame
 
 # Dependencies

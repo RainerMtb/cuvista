@@ -20,7 +20,7 @@
 #include "CppUnitTest.h"
 #include "MovieFrame.hpp"
 #include "CudaFrame.hpp"
-#include "OpenClFrame.hpp"
+#include "clMain.hpp"
 #include "CpuFrame.hpp"
 #include "AvxFrame.hpp"
 
@@ -36,21 +36,21 @@ namespace CudaTest {
 
 private:
 
-	std::vector<PointResult> run(MovieFrame& frame, MainData& data) {
+	std::vector<PointResult> run(FrameExecutor& ex, MovieFrame& frame, MainData& data) {
 		//read first frame
 		frame.mReader.read(frame.mBufferFrame);
-		frame.inputData();
-		frame.createPyramid(frame.mReader.frameIndex);
+		ex.inputData(frame.mReader.frameIndex, frame.mBufferFrame);
+		ex.createPyramid(frame.mReader.frameIndex);
 
 		//read second frame
 		frame.mReader.read(frame.mBufferFrame);
-		frame.inputData();
-		frame.createPyramid(frame.mReader.frameIndex);
+		ex.inputData(frame.mReader.frameIndex, frame.mBufferFrame);
+		ex.createPyramid(frame.mReader.frameIndex);
 
 		//compute
-		frame.computeStart(frame.mReader.frameIndex);
-		frame.computeTerminate(frame.mReader.frameIndex);
-		Assert::IsTrue(errorLogger.hasNoError());
+		ex.computeStart(frame.mReader.frameIndex, frame.mResultPoints);
+		ex.computeTerminate(frame.mReader.frameIndex, frame.mResultPoints);
+		Assert::IsTrue(errorLogger.hasNoError(), toWString(errorLogger.getErrorMessage()).c_str());
 		return frame.mResultPoints;
 	}
 
@@ -66,10 +66,12 @@ public:
 			data.collectDeviceInfo();
 			data.validate(reader);
 			TestWriter writer(data, reader);
-			CpuFrame frame(data, reader, writer);
-			ProgressDisplayNone progress(frame);
+			MovieFrame frame(data, reader, writer);
+			auto ex = std::make_shared<CpuFrame>(data, *data.deviceList[0], frame, frame.mPool);
+			ex->init();
+			auto progress = std::make_shared<ProgressDisplayNone>(frame);
 			AuxWriters writers;
-			frame.runLoop(DeshakerPass::COMBINED, progress, input, writers);
+			frame.runLoop(progress, input, writers, ex);
 			cpuImages = writer.outputFrames;
 			Assert::IsTrue(errorLogger.hasNoError());
 		}
@@ -84,10 +86,12 @@ public:
 			data.collectDeviceInfo();
 			data.validate(reader);
 			TestWriter writer(data, reader);
-			CudaFrame frame(data, reader, writer);
-			ProgressDisplayNone progress(frame);
+			MovieFrame frame(data, reader, writer);
+			auto ex = std::make_shared<CudaFrame>(data, *data.deviceList[2], frame, frame.mPool);
+			ex->init();
+			auto progress = std::make_shared<ProgressDisplayNone>(frame);
 			AuxWriters writers;
-			frame.runLoop(DeshakerPass::COMBINED, progress, input, writers);
+			frame.runLoop(progress, input, writers, ex);
 			gpuImages = writer.outputFrames;
 			Assert::IsTrue(errorLogger.hasNoError());
 		}
@@ -116,11 +120,13 @@ public:
 			data.collectDeviceInfo();
 			data.validate(reader);
 			BaseWriter writer(data, reader);
-			CpuFrame frame(data, reader, writer);
+			MovieFrame frame(data, reader, writer);
+			CpuFrame ex(data, *data.deviceList[0], frame, frame.mPool);
+			ex.init();
 
-			resCpu = run(frame, data);
-			pyramids.push_back(frame.getPyramid(0));
-			pyramids.push_back(frame.getPyramid(1));
+			resCpu = run(ex, frame, data);
+			pyramids.push_back(ex.getPyramid(0));
+			pyramids.push_back(ex.getPyramid(1));
 		}
 
 		{
@@ -131,11 +137,13 @@ public:
 			data.collectDeviceInfo();
 			data.validate(reader);
 			BaseWriter writer(data, reader);
-			CudaFrame frame(data, reader, writer);
+			MovieFrame frame(data, reader, writer);
+			CudaFrame ex(data, *data.deviceList[2], frame, frame.mPool);
+			ex.init();
 
-			resGpu = run(frame, data);
-			pyramids.push_back(frame.getPyramid(0));
-			pyramids.push_back(frame.getPyramid(1));
+			resGpu = run(ex, frame, data);
+			pyramids.push_back(ex.getPyramid(0));
+			pyramids.push_back(ex.getPyramid(1));
 		}
 
 		//pyramids[0].saveAsBinary("f:/p0.dat");
@@ -170,7 +178,7 @@ private:
 		std::string id;
 	};
 
-	template <class T> Result compareFrame2func(MainData& data) {
+	template <class T> Result compareFrame2func(MainData& data, int deviceIndex) {
 		Result res;
 		AffineTransform trf(0, 0.95, 0.3, 2, 3);
 		data.collectDeviceInfo();
@@ -179,27 +187,29 @@ private:
 		reader.h = 1080;
 		data.validate(reader);
 		TestWriter writer(data, reader);
-		std::unique_ptr<MovieFrame> frame = std::make_unique<T>(data, reader, writer);
+		MovieFrame frame(data, reader, writer);
+		std::unique_ptr<FrameExecutor> ex = std::make_unique<T>(data, *data.deviceList[deviceIndex], frame, frame.mPool);
+		ex->init();
 
-		frame->mBufferFrame.readFromPGM("d:/VideoTest/v00.pgm");
-		frame->mBufferFrame.index = 0;
+		frame.mBufferFrame.readFromPGM("d:/VideoTest/v00.pgm");
+		frame.mBufferFrame.index = 0;
 		reader.frameIndex = 0;
-		frame->inputData();
-		frame->createPyramid(frame->mReader.frameIndex);
+		ex->inputData(reader.frameIndex, frame.mBufferFrame);
+		ex->createPyramid(reader.frameIndex);
 
-		frame->mBufferFrame.readFromPGM("D:/VideoTest/v01.pgm");
-		frame->mBufferFrame.index = 1;
+		frame.mBufferFrame.readFromPGM("D:/VideoTest/v01.pgm");
+		frame.mBufferFrame.index = 1;
 		reader.frameIndex = 1;
-		frame->inputData();
-		frame->createPyramid(frame->mReader.frameIndex);
-		frame->computeStart(frame->mReader.frameIndex);
-		frame->computeTerminate(frame->mReader.frameIndex);
-		frame->outputData(trf);
-		writer.prepareOutput(*frame);
-		writer.write(*frame);
-		Assert::IsTrue(errorLogger.hasNoError());
+		ex->inputData(reader.frameIndex, frame.mBufferFrame);
+		ex->createPyramid(reader.frameIndex);
+		ex->computeStart(reader.frameIndex, frame.mResultPoints);
+		ex->computeTerminate(reader.frameIndex, frame.mResultPoints);
+		ex->outputData(0, trf);
+		writer.prepareOutput(*ex);
+		writer.write(*ex);
+		Assert::IsTrue(errorLogger.hasNoError(), toWString(errorLogger.getErrorMessage()).c_str());
 
-		return { frame->mResultPoints, frame->getPyramid(0), frame->getTransformedOutput(), writer.outputFrames[0], frame->getId().nameShort};
+		return { frame.mResultPoints, ex->getPyramid(0), ex->getTransformedOutput(), writer.outputFrames[0], ex->mDeviceInfo.getNameShort() };
 	}
 
 public:
@@ -209,14 +219,14 @@ public:
 		//freopen_s(&ptr, "f:/redir.txt", "w", stdout);
 		MainData data[4];
 		Result res[4];
-		res[0] = compareFrame2func<CpuFrame>(data[0]);
-		res[1] = compareFrame2func<AvxFrame>(data[1]);
+		res[0] = compareFrame2func<CpuFrame>(data[0], 0);
+		res[1] = compareFrame2func<AvxFrame>(data[1], 1);
 		
 		data[2].probeCuda();
-		res[2] = compareFrame2func<CudaFrame>(data[2]);
+		res[2] = compareFrame2func<CudaFrame>(data[2], 2);
 		
 		data[3].probeOpenCl();
-		res[3] = compareFrame2func<OpenClFrame>(data[3]);
+		res[3] = compareFrame2func<OpenClFrame>(data[3], 2);
 
 		//check pyramids against cpu
 		for (int i = 1; i < 4; i++) {

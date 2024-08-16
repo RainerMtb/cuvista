@@ -54,28 +54,31 @@ void runSelfTest(util::MessagePrinter& out, std::vector<DeviceInfoBase*> deviceL
 		reader.open("");
 		data.validate(reader);
 		BaseWriter writer(data, reader);
-		auto frame = deviceList[i]->createClass(data, reader, writer);
-
+		
+		//executor and frame
+		MovieFrameCombined frame(data, reader, writer);
+		auto executor = deviceList[i]->create(data, frame);
+		executor->init();
+		
 		//first frame
-		reader.read(frame->mBufferFrame);
-		frame->inputData();
-		frame->createPyramid(frame->mReader.frameIndex);
+		reader.read(frame.mBufferFrame);
+		executor->inputData(reader.frameIndex, frame.mBufferFrame);
+		executor->createPyramid(reader.frameIndex);
 		//second frame
-		reader.read(frame->mBufferFrame);
-		frame->inputData();
-		frame->createPyramid(frame->mReader.frameIndex);
+		reader.read(frame.mBufferFrame);
+		executor->inputData(reader.frameIndex, frame.mBufferFrame);
+		executor->createPyramid(reader.frameIndex);
 		//compute
-		frame->computeStart(frame->mReader.frameIndex);
-		frame->computeTerminate(frame->mReader.frameIndex);
+		executor->computeStart(reader.frameIndex, frame.mResultPoints);
+		executor->computeTerminate(reader.frameIndex, frame.mResultPoints);
 		//input
 		ImageRGBA input(data.h, data.w);
-		frame->getInput(0, input);
+		executor->getInput(0, input);
 		//output
 		AffineTransform trf;
 		trf.addRotation(0.2).addTranslation(-40, 30);
-		trf.frameIndex = 0;
-		frame->outputData(trf);
-		writer.prepareOutput(*frame);
+		executor->outputData(0, trf);
+		writer.prepareOutput(*executor);
 
 		//checks
 		bool check = true;
@@ -83,11 +86,11 @@ void runSelfTest(util::MessagePrinter& out, std::vector<DeviceInfoBase*> deviceL
 			out.print("FAIL input ");
 			check = false;
 		}
-		if (frame->getPyramid(0).crc() != crcPyramid) {
+		if (executor->getPyramid(0).crc() != crcPyramid) {
 			out.print("FAIL pyramid ");
 			check = false;
 		}
-		if (frame->getTransformedOutput().crc() != crcTransformed) {
+		if (executor->getTransformedOutput().crc() != crcTransformed) {
 			out.print("FAIL transformed ");
 			check = false;
 		}
@@ -96,7 +99,7 @@ void runSelfTest(util::MessagePrinter& out, std::vector<DeviceInfoBase*> deviceL
 			check = false;
 		}
 		util::CRC64 crc;
-		for (const PointResult& pr : frame->mResultPoints) {
+		for (const PointResult& pr : frame.mResultPoints) {
 			crc.add(pr.result); 
 			crc.add(pr.idx);
 			crc.add(pr.ix0);

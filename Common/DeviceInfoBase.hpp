@@ -22,10 +22,9 @@
 #include <string>
 #include <memory>
 
-class MovieFrame;
 class MainData;
-class MovieReader;
-class MovieWriter;
+class FrameExecutor;
+class MovieFrame;
 
 enum class Codec {
 	AUTO,
@@ -63,8 +62,6 @@ public:
 		: type { type }, maxPixel { maxPixel } {}
 
 	virtual std::string getName() const = 0;
-
 	virtual std::string getNameShort() const = 0;
-
-	virtual std::shared_ptr<MovieFrame> createClass(MainData& data, MovieReader& reader, MovieWriter& writer) = 0;
+	virtual std::shared_ptr<FrameExecutor> create(MainData& data, MovieFrame& frame) = 0;
 };

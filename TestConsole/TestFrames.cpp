@@ -17,9 +17,9 @@
  */
 
 #include "TestMain.hpp"
-//#include "clTest.hpp"
-//#include "Util.hpp"
-//#include "SelfTestData.hpp"
+#include "clTest.hpp"
+#include "Util.hpp"
+#include "SelfTestData.hpp"
 
 #include <fstream>
 #include <iterator>
@@ -34,55 +34,46 @@ struct Result {
 	std::string error;
 };
 
-template <class T> Result runPyramid(MainData& data) {
+template <class T> Result runPyramid(MainData& data, int deviceIndex) {
+	errorLogger.clearErrors();
 	try {
-		std::cout << "1" << std::endl;
-		//std::vector<unsigned char> bytes = util::base64_decode(movieTestData);
-		std::cout << "2" << std::endl;
-		//MemoryFFmpegReader reader(bytes);
-		FFmpegReader reader;
-		std::cout << "3" << std::endl;
-		//reader.open("");
-		reader.open("//READYNAS/Data/VideoTest/02.mp4");
-		std::cout << "4" << std::endl;
+		std::vector<unsigned char> bytes = util::base64_decode(movieTestData);
+		MemoryFFmpegReader reader(bytes);
+		reader.open("");
 		data.collectDeviceInfo();
-		std::cout << "5" << std::endl;
 		data.validate(reader);
-		std::cout << "6" << std::endl;
 		BaseWriter writer(data, reader);
-		std::cout << "7" << std::endl;
-		std::unique_ptr<MovieFrame> frame = std::make_unique<T>(data, reader, writer);
-		std::cout << "running " << frame->getId().nameShort << std::endl;
-		reader.read(frame->mBufferFrame);
-		frame->inputData();
-		frame->createPyramid(frame->mReader.frameIndex);
-		std::cout << "8" << std::endl;
 
-		reader.read(frame->mBufferFrame);
-		std::cout << "9" << std::endl;
-		frame->inputData();
-		std::cout << "10" << std::endl;
-		frame->createPyramid(frame->mReader.frameIndex);
-		std::cout << "11" << std::endl;
+		MovieFrameCombined frame(data, reader, writer);
+		std::unique_ptr<FrameExecutor> executor = std::make_unique<T>(data, *data.deviceList[deviceIndex], frame, frame.mPool);
+		std::string name = executor->mDeviceInfo.getNameShort();
+		executor->init();
 
-		frame->computeStart(frame->mReader.frameIndex);
-		std::cout << "12" << std::endl;
-		frame->computeTerminate(frame->mReader.frameIndex);
-		std::cout << "13" << std::endl;
+		std::cout << "running " << name << std::endl;
+		reader.read(frame.mBufferFrame);
+		executor->inputData(reader.frameIndex, frame.mBufferFrame);
+		executor->createPyramid(reader.frameIndex);
+
+		reader.read(frame.mBufferFrame);
+		executor->inputData(reader.frameIndex, frame.mBufferFrame);
+		executor->createPyramid(reader.frameIndex);
+
+		executor->computeStart(reader.frameIndex, frame.mResultPoints);
+		executor->computeTerminate(reader.frameIndex, frame.mResultPoints);
 
 		ImageRGBA im(data.h, data.w);
-		frame->getInput(0, im);
+		executor->getInput(0, im);
 
 		AffineTransform trf;
 		trf.addRotation(0.2).addTranslation(-40, 30);
 		trf.frameIndex = 0;
-		frame->outputData(trf);
-		writer.prepareOutput(*frame);
+		executor->outputData(0, trf);
+		writer.prepareOutput(*executor);
 		Result result = {
-			frame->getPyramid(0),
-			frame->getTransformedOutput(),
-			frame->mResultPoints,
-			frame->getId().nameShort,
+			executor->getPyramid(0),
+			executor->getTransformedOutput(),
+			frame.mResultPoints,
+			name,
 			writer.getOutputFrame(),
 			im,
 			(errorLogger.hasError() ? errorLogger.getErrorMessage() : "")
@@ -107,31 +98,31 @@ void compareFramesPlatforms() {
 	{
 		//CPU
 		MainData data;
-		results[0] = runPyramid<CpuFrame>(data);
+		data.deviceRequested = true;
+		results[0] = runPyramid<CpuFrame>(data, 0);
 	}
 
 	{
 		//AVX
 		MainData data;
-		results[1] = runPyramid<AvxFrame>(data);
+		data.deviceRequested = true;
+		results[1] = runPyramid<AvxFrame>(data, 1);
 	}
 
 	{
 		//Cuda
 		MainData data;
 		data.deviceRequested = true;
-		data.deviceSelected = 2;
 		data.probeCuda();
-		results[2] = runPyramid<CudaFrame>(data);
+		results[2] = runPyramid<CudaFrame>(data, 2);
 	}
 
 	{
 		//OpenCL
 		MainData data;
 		data.deviceRequested = true;
-		data.deviceSelected = 2;
 		data.probeOpenCl();
-		results[3] = runPyramid<OpenClFrame>(data);
+		results[3] = runPyramid<OpenClFrame>(data, 2);
 	}
 	std::cout << std::endl;
 	//results[0].input.saveAsColorBMP("f:/0.bmp");
@@ -168,7 +159,5 @@ void compareFramesPlatforms() {
 		std::cout << std::endl;
 	}
 
-	if (errorLogger.hasError()) {
-		std::cout << errorLogger.getErrorMessage() << std::endl;
-	}
+	std::cout << errorLogger.getErrorMessage() << std::endl;
 }

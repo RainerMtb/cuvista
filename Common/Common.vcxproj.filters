@@ -21,5 +21,6 @@
     <ClInclude Include="Image2.hpp" />
     <ClInclude Include="ImageUtil.hpp" />
     <ClInclude Include="ThreadPoolBase.h" />
+    <ClInclude Include="FrameExecutor.hpp" />
   </ItemGroup>
 </Project>

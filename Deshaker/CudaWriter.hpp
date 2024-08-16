@@ -38,8 +38,8 @@ public:
 	~CudaFFmpegWriter() override;
 
 	void open(EncodingOption videoCodec) override;
-	void prepareOutput(MovieFrame& frame) override;
-	void write(const MovieFrame& frame) override;
+	void prepareOutput(FrameExecutor& executor) override;
+	void write(const FrameExecutor& executor) override;
 	bool startFlushing() override;
 	bool flush() override;
 };

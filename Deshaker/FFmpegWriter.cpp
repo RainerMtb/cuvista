@@ -120,9 +120,9 @@ void FFmpegWriter::open(EncodingOption videoCodec, int h, int w, int stride, con
 }
 
 
-void FFmpegWriter::prepareOutput(MovieFrame& frame) {
-    int64_t idx = frame.mWriter.frameIndex % imageBufferSize;
-    frame.getOutput(frame.mWriter.frameIndex, imageBuffer[idx]);
+void FFmpegWriter::prepareOutput(FrameExecutor& executor) {
+    int64_t idx = frameIndex % imageBufferSize;
+    executor.getOutput(frameIndex, imageBuffer[idx]);
 }
 
 
@@ -183,9 +183,9 @@ void FFmpegWriter::write(int bufferIndex) {
 }
 
 
-void FFmpegWriter::write(const MovieFrame& frame) {
-    assert(frame.mWriter.frameIndex == this->frameIndex && "invalid frame index");
-    int idx = frame.mWriter.frameIndex % imageBufferSize;
+void FFmpegWriter::write(const FrameExecutor& executor) {
+    assert(frameIndex == this->frameIndex && "invalid frame index");
+    int idx = frameIndex % imageBufferSize;
     write(idx);
 }
 

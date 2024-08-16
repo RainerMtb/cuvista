@@ -25,7 +25,8 @@
 #include "MovieReader.hpp"
 #include "MovieWriter.hpp"
 #include "CudaFrame.hpp"
-#include "OpenClFrame.hpp"
+#include "clMain.hpp"
+#include "cuDeshaker.cuh"
 #include "SelfTest.hpp"
 
 #include <algorithm>
@@ -328,7 +329,7 @@ void MainData::collectDeviceInfo() {
 	deviceList.push_back(&deviceInfoCpu);
 
 	//check for Avx512
-	if (deviceInfoAvx.hasAvx512()) {
+	if (hasAvx512()) {
 		deviceInfoAvx.encodingOptions = deviceInfoCpu.encodingOptions;
 		deviceList.push_back(&deviceInfoAvx);
 	}
@@ -347,6 +348,8 @@ void MainData::collectDeviceInfo() {
 }
 
 void MainData::validate(const MovieReader& reader) {
+	this->cpuThreads = std::max(1u, std::thread::hardware_concurrency() * 3 / 4);
+
 	//main metrics
 	this->w = reader.w;
 	this->h = reader.h;
@@ -623,9 +626,9 @@ size_t MainData::deviceCountOpenCl() const {
 }
 
 std::string MainData::getCpuName() const {
-	return deviceInfoCpu.getCpuName();
+	return deviceInfoCpu.getName();
 }
 
 bool MainData::hasAvx512() const {
-	return deviceInfoAvx.hasAvx512();
+	return cpuInfo.features.avx512f & cpuInfo.features.avx512vl & cpuInfo.features.avx512bw;
 }

@@ -26,7 +26,6 @@ pkg_check_modules(ffmpeg REQUIRED IMPORTED_TARGET
     libswresample
     libswscale
 )
-
 set(CORE_LIBS 
     OpenCL 
     cuda
@@ -41,7 +40,7 @@ endif()
 #settings specific to Windows ------------------------------
 if (CMAKE_SYSTEM_NAME MATCHES Windows)
 message("Looking for ffmpeg components in folder ${FFMPEG_PATH}")
-#check one exemplary shared ffmpeg file
+#check one exemplary shared ffmpeg file, assume others will be there
 find_library(ffmpegLIB avcodec.lib REQUIRED HINTS "${FFMPEG_PATH}/lib")
 find_path(ffmpegH avcodec.h REQUIRED HINTS "${FFMPEG_PATH}/include/libavcodec")
 find_program(ffmpegDLL avcodec-61.dll REQUIRED HINTS "${FFMPEG_PATH}/bin")
@@ -70,20 +69,34 @@ set(CORE_LIBS
     nvencodeapi
 )
 endif()
+#-----------------------------------
 
-#settings specific to compilers ------------------------------
-if (CMAKE_CXX_COMPILER_ID MATCHES MSVC)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP /arch:AVX512")
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} /NODEFAULTLIB:libcmt.lib")
-endif()
-
-if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx512f -mavx512vl -mavx512bw -ffp-contract=off -g")
-endif()
-
+#main stuff
 add_subdirectory(Common)
 add_subdirectory(Matrix)
 add_subdirectory(CudaStuff)
+add_subdirectory(AvxStuff)
 add_subdirectory(Deshaker)
 add_subdirectory(cuvistaCli)
 add_subdirectory(cuvistaGui)
+
+#compiler options
+target_compile_options(CudaStuff PUBLIC $<$<COMPILE_LANGUAGE:CUDA>: -rdc=true -fmad=false>)
+
+if (CMAKE_CXX_COMPILER_ID MATCHES MSVC)
+    target_compile_options(AvxStuff PUBLIC /MP /arch:AVX512)
+    target_compile_options(Deshaker PUBLIC /MP)
+    target_compile_options(cuvista PUBLIC /MP)
+    target_compile_options(cuvistaGui PUBLIC /MP)
+    target_link_options(cuvista PUBLIC /NODEFAULTLIB:libcmt.lib)
+    target_link_options(cuvistaGui PUBLIC /NODEFAULTLIB:libcmt.lib)
+endif()
+
+if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
+    target_compile_options(Common PUBLIC -ffp-contract=off)
+    target_compile_options(Matrix PUBLIC -ffp-contract=off)
+    target_compile_options(AvxStuff PUBLIC -ffp-contract=off -mavx512f -mavx512vl -mavx512bw)
+    target_compile_options(Deshaker PUBLIC -ffp-contract=off)
+    target_compile_options(cuvista PUBLIC -ffp-contract=off)
+    target_compile_options(cuvistaGui PUBLIC -ffp-contract=off)
+endif()

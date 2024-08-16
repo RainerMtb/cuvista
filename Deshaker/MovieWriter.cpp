@@ -21,17 +21,17 @@
 #include "MovieFrame.hpp"
 
 
-void AuxWriters::writeAll(const MovieFrame& frame) {
+void AuxWriters::writeAll(const FrameExecutor& executor) {
 	for (auto it = begin(); it != end(); it++) {
-		it->get()->write(frame);
+		it->get()->write(executor);
 	}
 }
 
-void BaseWriter::prepareOutput(MovieFrame& frame) {
-	frame.getOutput(frame.mWriter.frameIndex, outputFrame);
+void BaseWriter::prepareOutput(FrameExecutor& executor) {
+	executor.getOutput(frameIndex, outputFrame);
 }
 
-void BaseWriter::write(const MovieFrame& frame) {
+void BaseWriter::write(const FrameExecutor& executor) {
 	this->frameIndex++;
 }
 
@@ -61,12 +61,12 @@ std::string ImageWriter::makeFilename(const std::string& extension) const {
 // BMP Images
 //-----------------------------------------------------------------------------------
 
-void BmpImageWriter::prepareOutput(MovieFrame& frame) {
+void BmpImageWriter::prepareOutput(FrameExecutor& executor) {
 	worker.join();
-	frame.getOutput(frame.mWriter.frameIndex, image);
+	executor.getOutput(frameIndex, image);
 }
 
-void BmpImageWriter::write(const MovieFrame& frame) {
+void BmpImageWriter::write(const FrameExecutor& executor) {
 	std::string fname = makeFilename("bmp");
 	worker = std::jthread([&, fname] { image.saveAsColorBMP(fname); });
 	outputBytesWritten += image.bytes();
@@ -110,7 +110,7 @@ void JpegImageWriter::open(EncodingOption videoCodec) {
 	packet = av_packet_alloc();
 }
 
-void JpegImageWriter::write(const MovieFrame& frame) {
+void JpegImageWriter::write(const FrameExecutor& executor) {
 	av_frame->pts = this->frameIndex;
 	int result = avcodec_send_frame(ctx, av_frame);
 	if (result < 0)
@@ -210,7 +210,7 @@ void TransformsWriterMain::open(EncodingOption videoCodec) {
 	TransformsFile::open(mData.trajectoryFile);
 }
 
-void TransformsWriterMain::write(const MovieFrame& frame) {
+void TransformsWriterMain::write(const FrameExecutor& executor) {
 	writeTransform(movieFrame->mFrameResult.getTransform(), frameIndex);
 	this->frameIndex++;
 	this->outputBytesWritten = file.tellp();
@@ -220,8 +220,8 @@ void AuxTransformsWriter::open() {
 	TransformsFile::open(mData.trajectoryFile);
 }
 
-void AuxTransformsWriter::write(const MovieFrame& frame) {
-	writeTransform(frame.mFrameResult.getTransform(), frameIndex);
+void AuxTransformsWriter::write(const FrameExecutor& executor) {
+	writeTransform(executor.mFrame.mFrameResult.getTransform(), frameIndex);
 	this->frameIndex++;
 }
 
@@ -346,8 +346,8 @@ void OpticalFlowWriter::writeAVFrame(AVFrame* av_frame) {
 	}
 }
 
-void OpticalFlowWriter::write(const MovieFrame& frame) {
-	writeFlow(frame);
+void OpticalFlowWriter::write(const FrameExecutor& executor) {
+	writeFlow(executor.mFrame);
 	//imageInterpolated.saveAsBMP("f:/im.bmp");
 
 	//stamp color legend onto image
@@ -394,8 +394,8 @@ void ResultDetailsWriter::write(const std::vector<PointResult>& results, int64_t
 	file << ss.str();
 }
 
-void ResultDetailsWriter::write(const MovieFrame& frame) {
-	write(frame.mResultPoints, frameIndex);
+void ResultDetailsWriter::write(const FrameExecutor& executor) {
+	write(executor.mFrame.mResultPoints, frameIndex);
 	this->frameIndex++;
 }
 
@@ -469,10 +469,10 @@ void ResultImageWriter::write(const AffineTransform& trf, const std::vector<Poin
 	}
 }
 
-void ResultImageWriter::write(const MovieFrame& frame) {
+void ResultImageWriter::write(const FrameExecutor& executor) {
 	//get input image from buffers
-	frame.getInput(frameIndex, yuv);
+	executor.getInput(frameIndex, yuv);
 	std::string fname = ImageWriter::makeFilename(mData.resultImageFile, frameIndex, "bmp");
-	write(frame.getTransform(), frame.mResultPoints, frameIndex, yuv, fname);
+	write(executor.mFrame.getTransform(), executor.mFrame.mResultPoints, frameIndex, yuv, fname);
 	this->frameIndex++;
 }

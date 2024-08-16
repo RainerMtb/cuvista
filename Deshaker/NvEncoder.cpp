@@ -26,6 +26,7 @@ static std::strong_ordering compareGuid(const GUID& g1, const GUID& g2) {
 	return t1 <=> t2;
 }
 
+//on windows we already have an == operator
 #ifndef _WIN64
 bool operator == (const GUID& g1, const GUID& g2) {
 	return compareGuid(g1, g2) == std::strong_ordering::equal;
@@ -37,19 +38,19 @@ bool operator < (const GUID& g1, const GUID& g2) {
 }
 
 
-void handleResult(bool isError, std::string&& msg) {
+static void handleResult(bool isError, std::string&& msg) {
 	if (isError) 
 		throw AVException(msg);
 }
 
 
-void handleResult(NVENCSTATUS status, std::string&& msg) {
+static void handleResult(NVENCSTATUS status, std::string&& msg) {
 	if (status != NV_ENC_SUCCESS) 
 		throw AVException("encoder error " + std::to_string(status) + ": " + msg);
 }
 
 
-void handleResult(CUresult result, std::string&& msg) {
+static void handleResult(CUresult result, std::string&& msg) {
 	if (result != CUDA_SUCCESS) {
 		const char* custr;
 		cuGetErrorString(result, &custr);

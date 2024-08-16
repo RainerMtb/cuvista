@@ -19,7 +19,7 @@
 #pragma once
 
 #include "ErrorLogger.hpp"
-#include "Image2.hpp"
+#include "Image.hpp"
 
 struct Triplet {
 	float y, u, v;
@@ -74,6 +74,8 @@ struct CoreData {
 	double radsec = 0.5;		//radius in senconds
 
 	int bufferCount = -1;		//number of frames to read before starting to average out trajectory
+	
+	int cpuThreads = 1;         //cpu threads to use in cpu-compute and computing transform parameters, leave room for other things
 };
 
 //result type of one computed point
@@ -120,4 +122,29 @@ public:
 	bool operator != (const PointResult& other) const;
 
 	friend std::ostream& operator << (std::ostream& out, const PointResult& res);
+};
+
+struct PointContext {
+	PointResult* ptr;
+	double delta = 0.0;
+	double deltaAngleCos = 0.0;
+	double deltaAngle = 0.0;
+	double distanceEllipse = 0.0;
+	double tx = 0.0;
+	double ty = 0.0;
+	double confidence = 0.0;
+
+	double distance = 0.0;
+	double distanceRelative = 0.0;
+
+	PointContext(PointResult& pr) : ptr { &pr } {}
+	PointContext() : ptr { nullptr } {}
+};
+
+struct PointBase {
+	int x, y;
+	double u, v;
+
+	PointBase(const PointResult& pr) : x { pr.x }, y { pr.y }, u { pr.u }, v { pr.v } {}
+	PointBase(const PointContext& pc) : x { pc.ptr->x }, y { pc.ptr->y }, u { pc.ptr->u }, v { pc.ptr->v } {}
 };
