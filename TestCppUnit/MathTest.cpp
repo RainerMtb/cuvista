@@ -30,7 +30,7 @@ namespace MathTest {
 private:
 	bool testTransform(Affine2D& tf, PointResult& pr) {
 		auto p = tf.transform(pr.x, pr.y);
-		return std::abs(p.first - pr.x - pr.u) < 1e-10 && std::abs(p.second - pr.y - pr.v) < 1e-10;
+		return std::abs(p.x - pr.x - pr.u) < 1e-10 && std::abs(p.y - pr.y - pr.v) < 1e-10;
 	}
 
 public:
@@ -93,11 +93,11 @@ public:
 
 		//expected results
 		std::vector<Affine2D> resultSet = {
-			Affine2D::fromValues(1.0, 0.0, 0.5, 0.4),
-			Affine2D::fromValues(1.0, 0.0, 0.75, 0.3),
-			Affine2D::fromValues(1.0, 0.5, 0.0, 0.0),
-			Affine2D::fromValues(1.0, 0.0, 1.5, -2.3),
-			Affine2D::fromValues(1.0, 0.0, 15, -23),
+			Affine2D::fromParam(1.0, 0.0, 0.5, 0.4),
+			Affine2D::fromParam(1.0, 0.0, 0.75, 0.3),
+			Affine2D::fromParam(1.0, 0.5, 0.0, 0.0),
+			Affine2D::fromParam(1.0, 0.0, 1.5, -2.3),
+			Affine2D::fromParam(1.0, 0.0, 15, -23),
 		};
 
 		//checks

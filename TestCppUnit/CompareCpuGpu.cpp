@@ -47,7 +47,6 @@ private:
 		TestWriter writer(data, reader);
 		frame = std::make_unique<MovieFrame>(data, reader, writer);
 		ex = std::make_unique<T>(data, *device, *frame, frame->mPool);
-		ex->init();
 
 		reader.read(frame->mBufferFrame);
 		ex->inputData(reader.frameIndex, frame->mBufferFrame);

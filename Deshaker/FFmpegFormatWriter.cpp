@@ -417,6 +417,8 @@ void FFmpegFormatWriter::writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsI
     int encodedBytes = pkt->size;
     encodedDts = pkt->dts;
     encodedPts = pkt->pts;
+    //static std::ofstream time("f:/time.txt");
+    //time << frameEncoded << " " << pkt->pts << " " << pkt->dts << std::endl;
 
     //write packet to output
     writePacket(pkt);

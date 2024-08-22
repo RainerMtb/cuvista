@@ -25,9 +25,8 @@
 
 //constructor
 CpuFrame::CpuFrame(MainData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool) :
-	FrameExecutor(data, deviceInfo, frame, pool) {}
-
-void CpuFrame::init() {
+	FrameExecutor(data, deviceInfo, frame, pool) 
+{
 	assert(mDeviceInfo.type == DeviceType::CPU && "device type must be CPU here");
 
 	//buffer to hold input frames in yuv format
@@ -248,11 +247,6 @@ void CpuFrame::computeTerminate(int64_t frameIndex, std::vector<PointResult>& re
 	});
 	mPool.wait();
 }
-
-//fractions with 8bit precision used in cuda textures
-//float frac(float f) {
-//	return std::round(f * 256.0f) / 256.0f;
-//}
 
 void CpuFrame::outputData(int64_t frameIndex, const Affine2D& trf) {
 	size_t yuvidx = frameIndex % mYUV.size();

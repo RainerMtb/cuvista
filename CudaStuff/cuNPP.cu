@@ -144,7 +144,7 @@ __global__ void kernel_scale_8u32f_3(cudaTextureObject_t texObj, cuMatf4 dest) {
 	}
 }
 
-__global__ void kernel_warp_back_3(cudaTextureObject_t texObj, cuMatf4 dest, cu::Affine trf) {
+__global__ void kernel_warp_back_3(cudaTextureObject_t texObj, cuMatf4 dest, AffineCore trf) {
 	double x = blockIdx.x * blockDim.x + threadIdx.x;
 	double y = blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -325,7 +325,7 @@ cudaError_t cu::scale_8u32f_3(uchar* src, int srcStep, float4* dest, int destSte
 	return cudaGetLastError();
 }
 
-cudaError_t cu::warp_back_32f_3(float4* src, int srcStep, float4* dest, int destStep, int w, int h, cu::Affine trf, cudaStream_t cs) {
+cudaError_t cu::warp_back_32f_3(float4* src, int srcStep, float4* dest, int destStep, int w, int h, const AffineCore& trf, cudaStream_t cs) {
 	KernelContext ki = prepareTexture(src, srcStep, w, h);
 	cuMatf4 destMat(dest, h, w, destStep);
 	kernel_warp_back_3 <<<ki.blocks, ki.threads, 0, cs>>> (ki.texture, destMat, trf);

@@ -18,16 +18,11 @@
 
 #pragma once
 
-#include "cuDeshaker.cuh"
+#include "clMain.hpp"
 
-class CudaFrame : public CudaExecutor {
+class OpenClFrame : public OpenClExecutor {
 
 public:
-	CudaFrame(MainData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool);
+	OpenClFrame(CudaData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool);
 
-	void outputData(int64_t frameIndex, const Affine2D& trf) override;
-	Mat<float> getPyramid(int64_t frameIndex) const override;
-	Mat<float> getTransformedOutput() const override;
 };
-
-void encodeNvData(const std::vector<unsigned char>& nv12, unsigned char* nvencPtr);

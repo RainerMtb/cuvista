@@ -26,7 +26,7 @@ class NvEncoder; //do not fully include NvEncoder.hpp here
 class CudaFFmpegWriter : public FFmpegFormatWriter {
 
 private:
-	std::unique_ptr<NvEncoder> nvenc;
+	std::shared_ptr<NvEncoder> nvenc = nullptr;
 	std::unique_ptr<std::list<NvPacket>> nvPackets; //encoded packets
 
 	void writePacketToFile(const NvPacket& nvpkt, bool terminate);

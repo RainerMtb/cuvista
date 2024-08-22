@@ -76,8 +76,10 @@ quality and performance settings:
 -radius sec     the temporal radius where frames will be considered for 
                 stabilization, given in seconds
                 default: 0.5
--zoom value     zoom value to apply to the frames after stabilization
-                default: 1.05
+-zoom n         fixed zoom value to apply to the frames after stabilization
+                value n is given in percent
+-zoom n:m       dynamic zoom between values n and m, minimizing to fill frame
+                default zoom setting is dynamic between 5 % and 40 %
 -bgmode mode    background mode, how to fill void when frame is out of center
                 blend: use preceding frames to blend into current frame
                 color: use defined color, see -bgcol

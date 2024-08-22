@@ -122,6 +122,9 @@
     <ClCompile Include="DummyFrame.cpp">
       <Filter>Frame</Filter>
     </ClCompile>
+    <ClCompile Include="OpenClFrame.cpp">
+      <Filter>Frame</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MovieReader.hpp">
@@ -233,6 +236,9 @@
       <Filter>Frame</Filter>
     </ClInclude>
     <ClInclude Include="DummyFrame.hpp">
+      <Filter>Frame</Filter>
+    </ClInclude>
+    <ClInclude Include="OpenClFrame.hpp">
       <Filter>Frame</Filter>
     </ClInclude>
   </ItemGroup>

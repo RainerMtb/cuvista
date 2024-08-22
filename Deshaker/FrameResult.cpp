@@ -33,6 +33,16 @@ FrameResult::FrameResult(MainData& data, ThreadPoolBase& threadPool) :
 	}
 }
 
+const AffineTransform& FrameResult::getTransform() const {
+	return mBestTransform;
+}
+
+void FrameResult::reset() {
+	mAffineSolver->reset();
+	mAffineSolver->frameIndex = 0;
+	mBestTransform.reset();
+}
+
 void FrameResult::computeTransform(std::vector<PointResult>& results, ThreadPoolBase& threadPool, int64_t frameIndex, RNG rng) {
 	computeExperimental(results, threadPool, frameIndex, rng);
 }
@@ -160,8 +170,8 @@ void FrameResult::computeExperimental(std::vector<PointResult>& results, ThreadP
 
 void FrameResult::computePointContext(std::span<PointContext> points, const AffineTransform& trf, double radius) {
 	for (PointContext& pc : points) {
-		auto tp = trf.transform(pc.ptr->x, pc.ptr->y);                      //apply transform to point
-		pc.tx = tp.first; pc.ty = tp.second;                                //store transformed point
+		auto tp = trf.transform(pc.ptr->x, pc.ptr->y);          //apply transform to point
+		pc.tx = tp.x; pc.ty = tp.y;                             //store transformed point
 
 		double px = pc.ptr->x + pc.ptr->u, py = pc.ptr->y + pc.ptr->v;      //actual computed point
 		double dx = pc.tx - px, dy = pc.ty - py;                            //error vector
@@ -175,16 +185,6 @@ void FrameResult::computePointContext(std::span<PointContext> points, const Affi
 
 		pc.confidence = pc.delta / pc.distanceEllipse;
 	}
-}
-
-const AffineTransform& FrameResult::getTransform() const {
-	return mBestTransform;
-}
-
-void FrameResult::reset() {
-	mAffineSolver->reset();
-	mAffineSolver->frameIndex = 0;
-	mBestTransform.reset();
 }
 
 //old style stabilization

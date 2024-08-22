@@ -58,7 +58,6 @@ void runSelfTest(util::MessagePrinter& out, std::vector<DeviceInfoBase*> deviceL
 		//executor and frame
 		MovieFrameCombined frame(data, reader, writer);
 		auto executor = deviceList[i]->create(data, frame);
-		executor->init();
 		
 		//first frame
 		reader.read(frame.mBufferFrame);

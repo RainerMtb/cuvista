@@ -59,27 +59,27 @@ static void handleResult(CUresult result, std::string&& msg) {
 }
 
 
-void NvEncoder::probeEncoding(CudaInfo& cudaInfo) {
+void NvEncoder::probeEncoding(uint32_t* nvencVersionApi, uint32_t* nvencVersionDriver) {
 	//check supported encoder version on this system
-	cudaInfo.nvencVersionApi = NVENCAPI_MAJOR_VERSION * 1000 + NVENCAPI_MINOR_VERSION * 10; //api version for the libraries
+	*nvencVersionApi = NVENCAPI_MAJOR_VERSION * 1000 + NVENCAPI_MINOR_VERSION * 10; //api version for the libraries
 	uint32_t versionDriver = 0;
 	handleResult(NvEncodeAPIGetMaxSupportedVersion(&versionDriver), "cannot get max supported version"); //max version supported by driver
-	cudaInfo.nvencVersionDriver = versionDriver / 16 * 1000 + versionDriver % 16 * 10;
+	*nvencVersionDriver = versionDriver / 16 * 1000 + versionDriver % 16 * 10;
 }
 
 
-void NvEncoder::probeSupportedCodecs(DeviceInfoCuda& deviceInfoCuda) {
+void NvEncoder::init() {
 	//create instance
-	NV_ENCODE_API_FUNCTION_LIST encFuncList = { NV_ENCODE_API_FUNCTION_LIST_VER };
 	handleResult(NvEncodeAPICreateInstance(&encFuncList), "cannot create api instance");
-
-	void* encoder = nullptr;
+	handleResult(encFuncList.nvEncOpenEncodeSession == NULL, "cannot create api instance");
 
 	//create context per device
-	CUcontext cuctx;
 	CUdevice dev;
-	handleResult(cuDeviceGet(&dev, (int) deviceInfoCuda.cudaIndex), "cannot get device");
-	handleResult(cuCtxCreate_v2(&cuctx, 0, dev), "cannot create device context");
+	handleResult(cuCtxGetCurrent(&cuctx), "cannot get device context");
+	if (cuctx == NULL) {
+		handleResult(cuDeviceGet(&dev, cudaIndex), "cannot get device");
+		handleResult(cuCtxCreate_v2(&cuctx, 0, dev), "cannot create device context");
+	}
 
 	//open session
 	NV_ENC_OPEN_ENCODE_SESSION_EX_PARAMS encodeSessionExParams = { NV_ENC_OPEN_ENCODE_SESSION_EX_PARAMS_VER };
@@ -87,6 +87,11 @@ void NvEncoder::probeSupportedCodecs(DeviceInfoCuda& deviceInfoCuda) {
 	encodeSessionExParams.deviceType = NV_ENC_DEVICE_TYPE_CUDA;
 	encodeSessionExParams.apiVersion = NVENCAPI_VERSION;
 	handleResult(encFuncList.nvEncOpenEncodeSessionEx(&encodeSessionExParams, &encoder), "cannot open encoder session");
+}
+
+
+void NvEncoder::probeSupportedCodecs(DeviceInfoCuda& deviceInfoCuda) {
+	init();
 
 	//check available guid
 	uint32_t guidCount;
@@ -103,31 +108,14 @@ void NvEncoder::probeSupportedCodecs(DeviceInfoCuda& deviceInfoCuda) {
 		deviceInfoCuda.encodingOptions.emplace_back(EncodingDevice::NVENC, Codec::H265);
 	if (std::find(guids.cbegin(), guids.cend(), NV_ENC_CODEC_H264_GUID) != guids.cend())
 		deviceInfoCuda.encodingOptions.emplace_back(EncodingDevice::NVENC, Codec::H264);
-
-	handleResult(cuCtxDestroy_v2(cuctx), "cannot destroy context");
 }
 
 
-void NvEncoder::createEncoder(int fpsNum, int fpsDen, uint32_t gopLen, std::optional<uint8_t> crf, GUID guid, int deviceNum) {
-	CUcontext cuctx;
-	handleResult(cuCtxGetCurrent(&cuctx), "cannot get device context");
-	if (cuctx == NULL) 
-		handleResult(cuCtxCreate_v2(&cuctx, 0, deviceNum), "cannot create device context");
-	createEncoder(fpsNum, fpsDen, gopLen, crf, guid, cuctx);
-}
+void NvEncoder::createEncoder(int w, int h, int fpsNum, int fpsDen, uint32_t gopLen, std::optional<uint8_t> crf, GUID guid) {
+	this->h = h;
+	this->w = w;
 
-
-void NvEncoder::createEncoder(int fpsNum, int fpsDen, uint32_t gopLen, std::optional<uint8_t> crf, GUID guid, CUcontext cuctx) {
-	this->cuctx = cuctx;
-	handleResult(NvEncodeAPICreateInstance(&encFuncList), "cannot create api instance");
-	handleResult(encFuncList.nvEncOpenEncodeSession == NULL, "error opening encode session");
-
-	//open session
-	NV_ENC_OPEN_ENCODE_SESSION_EX_PARAMS encodeSessionExParams = { NV_ENC_OPEN_ENCODE_SESSION_EX_PARAMS_VER };
-	encodeSessionExParams.device = cuctx;
-	encodeSessionExParams.deviceType = NV_ENC_DEVICE_TYPE_CUDA;
-	encodeSessionExParams.apiVersion = NVENCAPI_VERSION;
-	handleResult(encFuncList.nvEncOpenEncodeSessionEx(&encodeSessionExParams, &encoder), "cannot open encoder session");
+	init();
 
 	//check support for given guid
 	uint32_t guidCount;
@@ -353,4 +341,6 @@ void NvEncoder::destroyEncoder() {
 	if (encoder != nullptr) {
 		encFuncList.nvEncDestroyEncoder(encoder);
 	}
+
+	//cuCtxDestroy_v2(cuctx); //do not destroy while cuda is still executing
 }

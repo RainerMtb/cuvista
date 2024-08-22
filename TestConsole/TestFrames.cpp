@@ -47,7 +47,6 @@ template <class T> Result runPyramid(MainData& data, int deviceIndex) {
 		MovieFrameCombined frame(data, reader, writer);
 		std::unique_ptr<FrameExecutor> executor = std::make_unique<T>(data, *data.deviceList[deviceIndex], frame, frame.mPool);
 		std::string name = executor->mDeviceInfo.getNameShort();
-		executor->init();
 
 		std::cout << "running " << name << std::endl;
 		reader.read(frame.mBufferFrame);

@@ -73,11 +73,13 @@ struct OpenClInfo {
 };
 
 struct cudaDeviceProp;
+class NvEncoder;
 
 //Cuda
 class DeviceInfoCuda : public DeviceInfoBase {
 public:
 	std::shared_ptr<cudaDeviceProp> props;
+	std::shared_ptr<NvEncoder> nvenc;
 	int cudaIndex = 0;
 
 	DeviceInfoCuda(DeviceType type, int64_t maxPixel) :
@@ -97,13 +99,12 @@ struct CudaInfo {
 	std::string nvidiaDriverVersion = "";
 	int cudaRuntimeVersion = 0;
 	int cudaDriverVersion = 0;
+	uint32_t nvencVersionApi = 0;
+	uint32_t nvencVersionDriver = 0;
 
 	int nppMajor = 0;
 	int nppMinor = 0;
 	int nppBuild = 0;
-
-	uint32_t nvencVersionApi;
-	uint32_t nvencVersionDriver;
 
 	std::string runtimeToString() const;
 	std::string driverToString() const;

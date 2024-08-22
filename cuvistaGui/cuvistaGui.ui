@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>601</width>
-    <height>632</height>
+    <height>659</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -62,7 +62,7 @@
          <property name="minimumSize">
           <size>
            <width>0</width>
-           <height>65</height>
+           <height>70</height>
           </size>
          </property>
          <property name="maximumSize">
@@ -93,7 +93,7 @@
          <property name="minimumSize">
           <size>
            <width>45</width>
-           <height>65</height>
+           <height>70</height>
           </size>
          </property>
          <property name="styleSheet">
@@ -121,7 +121,7 @@
          </property>
          <property name="sizePolicy">
           <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-           <horstretch>0</horstretch>
+           <horstretch>3</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
@@ -152,7 +152,7 @@
         <widget class="ImageLabel" name="imageInput">
          <property name="sizePolicy">
           <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
-           <horstretch>0</horstretch>
+           <horstretch>2</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
@@ -220,7 +220,7 @@
         <number>10</number>
        </property>
        <property name="verticalSpacing">
-        <number>8</number>
+        <number>10</number>
        </property>
        <property name="topMargin">
         <number>8</number>
@@ -301,65 +301,11 @@
           </sizepolicy>
          </property>
          <property name="text">
-          <string>Temporal Radius [sec]</string>
+          <string>Temporal Radius</string>
          </property>
         </widget>
        </item>
-       <item row="4" column="1">
-        <widget class="QDoubleSpinBox" name="spinRadius">
-         <property name="minimumSize">
-          <size>
-           <width>70</width>
-           <height>24</height>
-          </size>
-         </property>
-         <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;how much of the video before and after a frame is used to average motions&lt;/p&gt;&lt;p&gt;use higher value for smoother result&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-         </property>
-         <property name="decimals">
-          <number>1</number>
-         </property>
-         <property name="singleStep">
-          <double>0.100000000000000</double>
-         </property>
-         <property name="value">
-          <double>0.500000000000000</double>
-         </property>
-        </widget>
-       </item>
-       <item row="5" column="0">
-        <widget class="QLabel" name="label_6">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="text">
-          <string>Image Zoom Factor</string>
-         </property>
-        </widget>
-       </item>
-       <item row="5" column="1">
-        <widget class="QDoubleSpinBox" name="spinZoom">
-         <property name="minimumSize">
-          <size>
-           <width>70</width>
-           <height>24</height>
-          </size>
-         </property>
-         <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;zoom to be applied to stabilized video&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-         </property>
-         <property name="singleStep">
-          <double>0.010000000000000</double>
-         </property>
-         <property name="value">
-          <double>1.050000000000000</double>
-         </property>
-        </widget>
-       </item>
-       <item row="6" column="0">
+       <item row="9" column="0">
         <widget class="QLabel" name="label_8">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
@@ -372,8 +318,8 @@
          </property>
         </widget>
        </item>
-       <item row="6" column="1">
-        <layout class="QHBoxLayout" name="horizontalLayout" stretch="0,0,0">
+       <item row="9" column="1">
+        <layout class="QHBoxLayout" name="layBackground" stretch="0,0,0">
          <property name="spacing">
           <number>15</number>
          </property>
@@ -438,6 +384,140 @@
          </item>
         </layout>
        </item>
+       <item row="7" column="1">
+        <layout class="QHBoxLayout" name="layZoom">
+         <property name="spacing">
+          <number>4</number>
+         </property>
+         <item>
+          <widget class="QSpinBox" name="spinZoomMin">
+           <property name="minimumSize">
+            <size>
+             <width>70</width>
+             <height>24</height>
+            </size>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Min zoom to be applied to stabilized video&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="suffix">
+            <string>%</string>
+           </property>
+           <property name="value">
+            <number>0</number>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="label_2">
+           <property name="text">
+            <string>min</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="horizontalSpacer_5">
+           <property name="orientation">
+            <enum>Qt::Orientation::Horizontal</enum>
+           </property>
+           <property name="sizeType">
+            <enum>QSizePolicy::Policy::Fixed</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>20</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QCheckBox" name="chkDynamicZoom">
+           <property name="text">
+            <string>dynamically up to</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QSpinBox" name="spinZoomMax">
+           <property name="minimumSize">
+            <size>
+             <width>70</width>
+             <height>24</height>
+            </size>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Max zoom to be applied to stabilized video&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="suffix">
+            <string>%</string>
+           </property>
+           <property name="value">
+            <number>0</number>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="label_3">
+           <property name="text">
+            <string>max</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="7" column="0">
+        <widget class="QLabel" name="label_6">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="text">
+          <string>Image Zoom</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="1">
+        <layout class="QHBoxLayout" name="layRadius">
+         <property name="spacing">
+          <number>4</number>
+         </property>
+         <item>
+          <widget class="QDoubleSpinBox" name="spinRadius">
+           <property name="minimumSize">
+            <size>
+             <width>70</width>
+             <height>24</height>
+            </size>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;how much of the video before and after a frame is used to average motions&lt;/p&gt;&lt;p&gt;use higher value for smoother result&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="decimals">
+            <number>1</number>
+           </property>
+           <property name="singleStep">
+            <double>0.100000000000000</double>
+           </property>
+           <property name="value">
+            <double>0.500000000000000</double>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="label_7">
+           <property name="text">
+            <string>sec</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
       </layout>
      </widget>
     </item>
@@ -448,7 +528,7 @@
       </property>
       <layout class="QFormLayout" name="formLayout_3">
        <property name="verticalSpacing">
-        <number>8</number>
+        <number>10</number>
        </property>
        <item row="2" column="1">
         <layout class="QHBoxLayout" name="hbox2">

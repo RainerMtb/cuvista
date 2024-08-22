@@ -24,8 +24,8 @@
 #include "CoreData.hpp"
 
 template <class T> class Mat;
-class Affine2D;
 class MovieFrame;
+class Affine2D;
 struct CudaData;
 
 class FrameExecutor {
@@ -42,8 +42,6 @@ public:
 		mFrame { frame },
 		mPool { pool } {}
 	
-	//init executor with MovieFrame
-	virtual void init() = 0;
 	//get frame data from reader into frame object
 	virtual void inputData(int64_t frameIndex, const ImageYuv& inputFrame) = 0;
 	//set up image pyramid

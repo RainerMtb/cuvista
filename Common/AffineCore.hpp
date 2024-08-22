@@ -18,16 +18,7 @@
 
 #pragma once
 
-#include "cuDeshaker.cuh"
-
-class CudaFrame : public CudaExecutor {
-
-public:
-	CudaFrame(MainData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool);
-
-	void outputData(int64_t frameIndex, const Affine2D& trf) override;
-	Mat<float> getPyramid(int64_t frameIndex) const override;
-	Mat<float> getTransformedOutput() const override;
+//the six parameters for an affine transformation
+struct AffineCore {
+	double m00, m01, m02, m10, m11, m12;
 };
-
-void encodeNvData(const std::vector<unsigned char>& nv12, unsigned char* nvencPtr);

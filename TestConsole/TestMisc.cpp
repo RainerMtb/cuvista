@@ -81,7 +81,6 @@ void readAndWriteOneFrame() {
 		BaseWriter writer(data, reader);
 		MovieFrame frame(data, reader, writer);
 		CudaFrame ex(data, *data.deviceList[2], frame, frame.mPool);
-		ex.init();
 
 		frame.mBufferFrame.readFromPGM("d:/VideoTest/v00.pgm");
 		frame.mBufferFrame.index = 0;
@@ -197,7 +196,6 @@ void flow() {
 	BaseWriter writer(data, reader);
 	MovieFrame frame(data, reader, writer);
 	CpuFrame ex(data, *data.deviceList[0], frame, frame.mPool);
-	ex.init();
 	reader.read(frame.mBufferFrame);
 	ex.inputData(reader.frameIndex, frame.mBufferFrame);
 	ex.createPyramid(reader.frameIndex);
@@ -228,4 +226,17 @@ void flow() {
 	std::chrono::time_point t2 = std::chrono::system_clock::now();
 	std::cout << "time [ms]: " << std::chrono::duration<double, std::milli>(t2 - t1).count() << std::endl;
 	std::cout << errorLogger.getErrorMessage() << std::endl;
+}
+
+void testZoom() {
+	std::cout << "testing zoom calculation..." << std::endl;
+	MainData data;
+	Trajectory t;
+
+	double x = 0.0;
+	double y = 0.0;
+	double deg = 15.0;
+	double rad = deg * std::numbers::pi / 180.0;
+	double z = t.calcRequiredZoom(x, y, rad, 100, 50, data, 0);
+	std::cout << z << std::endl;
 }

@@ -37,7 +37,6 @@ std::map<Codec, GUID> guidMap = {
 
 CudaFFmpegWriter::CudaFFmpegWriter(MainData& data, MovieReader& reader) :
     FFmpegFormatWriter(data, reader),
-    nvenc { std::make_unique<NvEncoder>(data.w, data.h) },
     nvPackets { std::make_unique<std::list<NvPacket>>() } {}
 
 //cuda encoding contructor
@@ -45,19 +44,20 @@ void CudaFFmpegWriter::open(EncodingOption videoCodec) {
     int result;
 
     //select codec
-    const DeviceInfoCuda* dic = &mData.cudaInfo.devices[0];
-    DeviceInfoBase* dev = mData.deviceList[mData.deviceSelected];
-    if (dev->type == DeviceType::CUDA) {
-        dic = static_cast<DeviceInfoCuda*>(dev);
-    }
+    const DeviceInfoBase* dev = mData.deviceList[mData.deviceSelected];
+    const DeviceInfoCuda* dic;
+    if (dev->type == DeviceType::CUDA) dic = static_cast<const DeviceInfoCuda*>(dev);
+    else dic = &mData.cudaInfo.devices[0];
+
     if (videoCodec.codec == Codec::AUTO) videoCodec.codec = dic->encodingOptions[0].codec;
     GUID guid = guidMap[videoCodec.codec];
+    nvenc = dic->nvenc;
 
     //open ffmpeg output format
     FFmpegFormatWriter::open(videoCodec, mData.fileOut, 4);
 
     //setup nvenc class
-    nvenc->createEncoder(mReader.fpsNum, mReader.fpsDen, GOP_SIZE, mData.crf, guid, dic->cudaIndex);
+    nvenc->createEncoder(mReader.w, mReader.h, mReader.fpsNum, mReader.fpsDen, GOP_SIZE, mData.crf, guid);
 
     //setup codec parameters for ffmpeg format output
     AVCodecParameters* params = videoStream->codecpar;

@@ -175,11 +175,11 @@ CudaProbeResult cudaProbeRuntime() {
 //----------------------------------
 
 
-CudaFrameExecutor::CudaFrameExecutor(CudaData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool) :
+CudaExecutor::CudaExecutor(CudaData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool) :
 	FrameExecutor(data, deviceInfo, frame, pool) {}
 
 
-void CudaFrameExecutor::cudaInit(CudaData& core, int devIdx, const cudaDeviceProp& prop, ImageYuv& yuvFrame) {
+void CudaExecutor::cudaInit(CudaData& core, int devIdx, const cudaDeviceProp& prop, ImageYuv& yuvFrame) {
 	//copy device prop structure
 	props = prop;
 
@@ -333,7 +333,7 @@ void CudaFrameExecutor::cudaInit(CudaData& core, int devIdx, const cudaDevicePro
 //----------------------------------
 
 //copy yuv input to device
-void CudaFrameExecutor::inputData(int64_t frameIndex, const ImageYuv& inputFrame) {
+void CudaExecutor::inputData(int64_t frameIndex, const ImageYuv& inputFrame) {
 	int64_t fr = frameIndex % mData.bufferCount;
 	frameIndizes[fr] = frameIndex;
 	size_t frameSizeBytes = 3ull * mData.strideChar * mData.h;
@@ -348,7 +348,7 @@ void CudaFrameExecutor::inputData(int64_t frameIndex, const ImageYuv& inputFrame
 //----------------------------------
 
 //create image pyramid
-void CudaFrameExecutor::createPyramid(int64_t frameIndex) {
+void CudaExecutor::createPyramid(int64_t frameIndex) {
 	int w = mData.w;
 	int h = mData.h;
 
@@ -384,7 +384,7 @@ void CudaFrameExecutor::createPyramid(int64_t frameIndex) {
 //-------- COMPUTE
 //----------------------------------
 
-void CudaFrameExecutor::computeStart(int64_t frameIndex, std::vector<PointResult>& results) {
+void CudaExecutor::computeStart(int64_t frameIndex, std::vector<PointResult>& results) {
 	assert(frameIndex > 0 && "invalid pyramid index");
 	int64_t pyrIdx = frameIndex % mData.pyramidCount;
 	int64_t pyrIdxPrev = (frameIndex - 1) % mData.pyramidCount;
@@ -413,7 +413,7 @@ void CudaFrameExecutor::computeStart(int64_t frameIndex, std::vector<PointResult
 	handleStatus(cudaGetLastError(), "error @compute #20");
 }
 
-void CudaFrameExecutor::computeTerminate(int64_t frameIndex, std::vector<PointResult>& results) {
+void CudaExecutor::computeTerminate(int64_t frameIndex, std::vector<PointResult>& results) {
 	//reset interrupt signal
 	handleStatus(cudaMemsetAsync(d_interrupt, 0, sizeof(char), cs[1]), "error @compute #50");
 
@@ -449,7 +449,7 @@ void CudaFrameExecutor::computeTerminate(int64_t frameIndex, std::vector<PointRe
 //-------- OUTPUT
 //----------------------------------
 
-void CudaFrameExecutor::cudaOutputData(int64_t frameIndex, const std::array<double, 6> trf) {
+void CudaExecutor::cudaOutputData(int64_t frameIndex, const AffineCore& trf) {
 	//ConsoleTimer timer;
 	//interrupt compute kernel
 	handleStatus(cudaMemsetAsync(d_interrupt, 1, sizeof(char), cs[1]), "error @output #10");
@@ -470,8 +470,7 @@ void CudaFrameExecutor::cudaOutputData(int64_t frameIndex, const std::array<doub
 		cu::copy_32f_3(out.background, mData.strideFloat4N, out.warped, mData.strideFloat4N, w, h, cs[1]);
 	}
 	//warp input
-	cu::Affine cutrf = { trf[0], trf[1], trf[2], trf[3], trf[4], trf[5] };
-	cu::warp_back_32f_3(out.start, mData.strideFloat4N, out.warped, mData.strideFloat4N, w, h, cutrf, cs[1]);
+	cu::warp_back_32f_3(out.start, mData.strideFloat4N, out.warped, mData.strideFloat4N, w, h, trf, cs[1]);
 	//first filter pass
 	cu::filter_32f_h_3(out.warped, out.filterH, mData.strideFloat4N, w, h, cs[1]);
 	//second filter pass
@@ -482,7 +481,7 @@ void CudaFrameExecutor::cudaOutputData(int64_t frameIndex, const std::array<doub
 	//writeText(std::to_string(frameIdx), 10, 10, 2, 3, bufferFrames[18], mData);
 }
 
-void CudaFrameExecutor::getOutput(int64_t frameIndex, ImageYuv& image) {
+void CudaExecutor::getOutput(int64_t frameIndex, ImageYuv& image) {
 	cu::outputHost(out.final, mData.strideFloat4N, d_yuvOut, mData.strideChar, mData.w, mData.h, cs[1]);
 	cu::copy_32f_3(d_yuvOut, mData.strideChar, image.data(), image.stride, mData.w, mData.h * 3, cs[1]);
 	image.index = frameIndex;
@@ -490,7 +489,7 @@ void CudaFrameExecutor::getOutput(int64_t frameIndex, ImageYuv& image) {
 	handleStatus(cudaGetLastError(), "error @output #91");
 }
 
-void CudaFrameExecutor::getOutput(int64_t frameIndex, ImageRGBA& image) {
+void CudaExecutor::getOutput(int64_t frameIndex, ImageRGBA& image) {
 	cu::yuv_to_rgba(out.final, mData.strideFloat4N, d_rgba, -1, mData.w, mData.h, cs[1]);
 	handleStatus(cudaMemcpyAsync(image.data(), d_rgba, 4ull * mData.w * mData.h, cudaMemcpyDefault, cs[1]), "error @output #94");
 	image.index = frameIndex;
@@ -498,13 +497,13 @@ void CudaFrameExecutor::getOutput(int64_t frameIndex, ImageRGBA& image) {
 	handleStatus(cudaGetLastError(), "error @output #93");
 }
 
-void CudaFrameExecutor::getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) {
+void CudaExecutor::getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) {
 	cu::outputNvenc(out.final, mData.strideFloat4N, cudaNv12ptr, cudaPitch, mData.w, mData.h, cs[1]);
 	handleStatus(cudaStreamSynchronize(cs[1]), "error @output #95");
 	handleStatus(cudaGetLastError(), "error @output #96");
 }
 
-void CudaFrameExecutor::cudaGetTransformedOutput(float* warped) const {
+void CudaExecutor::cudaGetTransformedOutput(float* warped) const {
 	std::vector<float4> data(1ull * mData.w * mData.h);
 	size_t wbytes = mData.w * sizeof(float4);
 	handleStatus(cudaMemcpy2D(data.data(), wbytes, out.warped, mData.strideFloat4, wbytes, mData.h, cudaMemcpyDefault), "error @transformedOutput");
@@ -516,7 +515,7 @@ void CudaFrameExecutor::cudaGetTransformedOutput(float* warped) const {
 	}
 }
 
-void CudaFrameExecutor::cudaGetPyramid(int64_t frameIndex, float* data) const {
+void CudaExecutor::cudaGetPyramid(int64_t frameIndex, float* data) const {
 	int pyrIdx = frameIndex % mData.pyramidCount;
 	float* devptr = d_pyrData + pyrIdx * mData.pyramidRowCount * mData.strideFloatN;
 	size_t wbytes = mData.w * sizeof(float);
@@ -524,7 +523,7 @@ void CudaFrameExecutor::cudaGetPyramid(int64_t frameIndex, float* data) const {
 	handleStatus(cudaMemcpy2D(data, wbytes, devptr, mData.strideFloat, wbytes, mData.pyramidRowCount, cudaMemcpyDefault), "error @getPyramid");
 }
 
-void CudaFrameExecutor::getInput(int64_t frameIndex, ImageYuv& image) const {
+void CudaExecutor::getInput(int64_t frameIndex, ImageYuv& image) const {
 	int fr = frameIndex % mData.bufferCount;
 	//start of input yuv data
 	unsigned char* yuvSrc = d_yuvData + fr * 3 * mData.h * mData.strideChar;
@@ -532,7 +531,7 @@ void CudaFrameExecutor::getInput(int64_t frameIndex, ImageYuv& image) const {
 	handleStatus(cudaMemcpy2D(image.data(), image.stride, yuvSrc, mData.strideChar, image.w, 3ll * image.h, cudaMemcpyDefault), "error @getInput");
 }
 
-void CudaFrameExecutor::getInput(int64_t frameIndex, ImageRGBA& image) const {
+void CudaExecutor::getInput(int64_t frameIndex, ImageRGBA& image) const {
 	int fridx = frameIndex % mData.bufferCount;
 	assert(frameIndizes[fridx] == frameIndex && "invalid frame in buffer");
 	unsigned char* yuvSrc = d_yuvData + fridx * 3ull * mData.h * mData.strideChar;
@@ -540,7 +539,7 @@ void CudaFrameExecutor::getInput(int64_t frameIndex, ImageRGBA& image) const {
 	handleStatus(cudaMemcpy(image.data(), d_rgba, 4ull * mData.w * mData.h, cudaMemcpyDefault), "error @progress input");
 }
 
-void CudaFrameExecutor::getWarped(int64_t frameIndex, ImageRGBA& image) {
+void CudaExecutor::getWarped(int64_t frameIndex, ImageRGBA& image) {
 	cu::yuv_to_rgba(out.warped, mData.strideFloat4N, d_rgba, -1, mData.w, mData.h);
 	handleStatus(cudaMemcpy(image.data(), d_rgba, 4ull * mData.w * mData.h, cudaMemcpyDefault), "error @progress output");
 }
@@ -564,7 +563,7 @@ void cudaSynchronize() {
 //-------- SHUTDOWN
 //----------------------------------
 
-void CudaFrameExecutor::getDebugData(const CudaData& core, const std::string& imageFile, std::function<void(size_t, size_t, double*)> fcn) {
+void CudaExecutor::getDebugData(const CudaData& core, const std::string& imageFile, std::function<void(size_t, size_t, double*)> fcn) {
 	std::vector<double> data(debugData.maxSize / sizeof(double));
 	handleStatus(cudaMemcpy(data.data(), debugData.d_data, debugData.maxSize, cudaMemcpyDefault), "error @shutdown #5 copy debug data");
 
@@ -600,7 +599,7 @@ void CudaFrameExecutor::getDebugData(const CudaData& core, const std::string& im
 	kernelTimerImage.saveAsColorBMP(imageFile);
 }
 
-CudaFrameExecutor::~CudaFrameExecutor() {
+CudaExecutor::~CudaExecutor() {
 	
 	//delete device memory
 	void* d_arr[] = { d_results, d_yuvOut, d_rgba, d_yuvData, d_yuvRows, d_yuvPlanes, 

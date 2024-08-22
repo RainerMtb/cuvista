@@ -16,18 +16,10 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
-#pragma once
+#include "OpenClFrame.hpp"
 
-#include "cuDeshaker.cuh"
-
-class CudaFrame : public CudaExecutor {
-
-public:
-	CudaFrame(MainData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool);
-
-	void outputData(int64_t frameIndex, const Affine2D& trf) override;
-	Mat<float> getPyramid(int64_t frameIndex) const override;
-	Mat<float> getTransformedOutput() const override;
-};
-
-void encodeNvData(const std::vector<unsigned char>& nv12, unsigned char* nvencPtr);
+OpenClFrame::OpenClFrame(CudaData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool) :
+	OpenClExecutor(data, deviceInfo, frame, pool) 
+{
+	init();
+}

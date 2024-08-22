@@ -22,19 +22,24 @@
 #include <utility>
 #include <array>
 
+struct AffineCore;
+struct Point;
+
 class Affine2D : protected Mat<double> {
 
 protected:
 	void setParam(double m00, double m01, double m02, double m10, double m11, double m12);
 
 	Affine2D(double m00, double m01, double m02, double m10, double m11, double m12);
-	Affine2D(double scale, double rot, double dx, double dy);
-	Affine2D(Mat<double> mat);
+	Affine2D(Matd mat);
 
 public:
 	Affine2D();
 
-	//rigid transform parameters
+	//set rigid transform parameters directly
+	static Affine2D fromParam(double scale, double rot, double dx, double dy);
+
+	//add values to identity transform
 	static Affine2D fromValues(double scale, double rot, double dx, double dy);
 
 	//identity transform
@@ -53,16 +58,21 @@ public:
 
 	Affine2D& addRotation(double angleRad);
 
+	Affine2D& addRotationDegrees(double angleRad);
+
 	Affine2D& addZoom(double zoom);
 
 	//transform point x0, y0
-	std::pair<double, double> transform(size_t x0, size_t y0) const;
+	Point transform(size_t x0, size_t y0) const;
 
 	//transform point x0, y0
-	std::pair<double, double> transform(int x0, int y0) const;
+	Point transform(int x0, int y0) const;
 
 	//transform point x0, y0
-	std::pair<double, double> transform(double x0, double y0) const;
+	Point transform(const Point& p) const;
+
+	//transform point x0, y0
+	Point transform(double x0, double y0) const;
 
 	double scale() const;
 
@@ -77,6 +87,8 @@ public:
 	double arrayValue(int idx) const;
 
 	std::array<double, 6> toArray() const;
+
+	AffineCore toAffineCore() const;
 
 	std::string toString(const std::string& title = "", int digits = -1) const override;
 

@@ -21,6 +21,7 @@
 #include "cuDecompose.cuh"
 #include "CudaData.cuh"
 #include "FrameExecutor.hpp"
+#include "AffineCore.hpp"
 
 #include <sstream>
 #include <fstream>
@@ -69,7 +70,7 @@ void kernelComputeCall(ComputeKernelParam param, ComputeTextures& tex, CudaPoint
 CudaProbeResult cudaProbeRuntime();
 
 
-class CudaFrameExecutor : public FrameExecutor {
+class CudaExecutor : public FrameExecutor {
 
 private:
 	unsigned char* d_yuvData;			     //continuous array of all pixel values in yuv format, allocated on device
@@ -123,15 +124,15 @@ private:
 	void getDebugData(const CudaData& core, const std::string& imageFile, std::function<void(size_t, size_t, double*)> fcn);
 
 public:
-	CudaFrameExecutor(CudaData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool);
-	~CudaFrameExecutor();
+	CudaExecutor(CudaData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool);
+	~CudaExecutor();
 
 	void cudaInit(CudaData& core, int devIdx, const cudaDeviceProp& prop, ImageYuv& yuvFrame);
 	void inputData(int64_t frameIndex, const ImageYuv& inputFrame) override;
 	void createPyramid(int64_t frameIndex) override;
 	void computeStart(int64_t frameIndex, std::vector<PointResult>& results) override;
 	void computeTerminate(int64_t frameIndex, std::vector<PointResult>& results) override;
-	void cudaOutputData(int64_t frameIndex, const std::array<double, 6> trf);
+	void cudaOutputData(int64_t frameIndex, const AffineCore& trf);
 	void getOutput(int64_t frameIndex, ImageYuv& image) override;
 	void getOutput(int64_t frameIndex, ImageRGBA& image) override;
 	void getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) override;

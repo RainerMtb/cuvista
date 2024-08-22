@@ -36,7 +36,6 @@ class MovieFrame {
 
 protected:
 	const MainData& mData;
-	Trajectory mTrajectory;
 
 	void read();
 	std::future<void> readAsync();
@@ -51,6 +50,7 @@ public:
 	ThreadPool mPool;
 	FrameResult mFrameResult;
 	ImageYuv mBufferFrame;
+	Trajectory mTrajectory;
 	std::vector<PointResult> mResultPoints;
 	RNG rng;
 

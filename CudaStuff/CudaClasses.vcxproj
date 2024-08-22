@@ -68,7 +68,7 @@
       <TargetMachinePlatform>64</TargetMachinePlatform>
       <CodeGeneration>compute_50,sm_50;compute_60,sm_60;compute_70,sm_70;compute_80,sm_80;compute_90,sm_90</CodeGeneration>
       <Include>$(SolutionDir)Common</Include>
-      <AdditionalOptions>-fmad=false -std=c++20 -Wno-deprecated-gpu-targets</AdditionalOptions>
+      <AdditionalOptions>-fmad=false -std=c++17 -Wno-deprecated-gpu-targets</AdditionalOptions>
       <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
       <AdditionalDeps>
       </AdditionalDeps>
@@ -103,7 +103,7 @@
       <Optimization>O2</Optimization>
       <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
       <Include>$(SolutionDir)Common</Include>
-      <AdditionalOptions>-fmad=false -std=c++20 -Wno-deprecated-gpu-targets</AdditionalOptions>
+      <AdditionalOptions>-fmad=false -std=c++17 -Wno-deprecated-gpu-targets</AdditionalOptions>
       <AdditionalDeps>
       </AdditionalDeps>
       <CompileOut>$(SolutionDir)bin_inter\$(ProjectName)\$(Platform)\$(Configuration)\%(Filename)%(Extension).obj</CompileOut>

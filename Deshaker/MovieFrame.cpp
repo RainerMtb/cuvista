@@ -119,7 +119,6 @@ void MovieFrame::loopTerminate(std::shared_ptr<ProgressBase> progress, UserInput
 
 //loop to handle input - stabilization - output in one go
 void MovieFrameCombined::runLoop(std::shared_ptr<ProgressBase> progress, UserInput& input, AuxWriters& auxWriters, std::shared_ptr<FrameExecutor> executor) {
-	executor->init();
 	loopInit(progress, executor);
 
 	//fill input buffer and compute transformations
@@ -159,7 +158,7 @@ void MovieFrameCombined::runLoop(std::shared_ptr<ProgressBase> progress, UserInp
 		//now compute transform for previous frame while results for current frame are potentially computed on device
 		computeTransform(readIndex - 1);
 		const AffineTransform& currentTransform = mFrameResult.getTransform();
-		const TrajectoryItem& item = mTrajectory.addTrajectoryTransform(currentTransform);
+		mTrajectory.addTrajectoryTransform(currentTransform);
 		const AffineTransform& finalTransform = mTrajectory.computeSmoothTransform(mData, mWriter.frameIndex);
 		executor->outputData(mWriter.frameIndex, finalTransform);
 		mWriter.prepareOutput(*executor);
@@ -207,7 +206,6 @@ void MovieFrameCombined::runLoop(std::shared_ptr<ProgressBase> progress, UserInp
 }
 
 void MovieFrameFirst::runLoop(std::shared_ptr<ProgressBase> progress, UserInput& input, AuxWriters& auxWriters, std::shared_ptr<FrameExecutor> executor) {
-	executor->init();
 	mReader.storePackets = false; //do not keep any secondary packets when we do not write output anyway
 	loopInit(progress, executor);
 	mFrameResult.reset();
@@ -234,7 +232,6 @@ void MovieFrameFirst::runLoop(std::shared_ptr<ProgressBase> progress, UserInput&
 }
 
 void MovieFrameSecond::runLoop(std::shared_ptr<ProgressBase> progress, UserInput& input, AuxWriters& auxWriters, std::shared_ptr<FrameExecutor> executor) {
-	executor->init();
 	//setup list of transforms from file
 	auto map = readTransforms();
 	if (errorLogger.hasNoError()) mTrajectory.readTransforms(map);
@@ -264,7 +261,6 @@ void MovieFrameSecond::runLoop(std::shared_ptr<ProgressBase> progress, UserInput
 }
 
 void MovieFrameConsecutive::runLoop(std::shared_ptr<ProgressBase> progress, UserInput& input, AuxWriters& auxWriters, std::shared_ptr<FrameExecutor> executor) {
-	executor->init();
 	mReader.storePackets = false; //we do not want packets to pile up on first iteration
 	loopInit(progress, executor, "first pass - analyzing input\n");
 	mFrameResult.reset();

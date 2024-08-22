@@ -19,7 +19,7 @@
 #include "DeviceInfo.hpp"
 #include "CpuFrame.hpp"
 #include "AvxFrame.hpp"
-#include "clMain.hpp"
+#include "OpenClFrame.hpp"
 #include "CudaFrame.hpp"
 #include "DummyFrame.hpp"
 #include "MainData.hpp"

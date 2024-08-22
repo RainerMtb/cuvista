@@ -21,7 +21,7 @@
 #include "ErrorLogger.hpp"
 
 #include <fstream>
-#include <iostream>
+#include <numeric>
 
  //----------------------------------
  //-------- Movie Reader Main
@@ -179,9 +179,19 @@ void FFmpegReader::read(ImageYuv& frame) {
                 //do not store any secondary packets
 
             } else if (sh == StreamHandling::STREAM_COPY || sh == StreamHandling::STREAM_TRANSCODE) {
+                std::list<AVPacket*>& lst = inputStreams[sidx].packets;
                 //we should store a packet from a secondary stream for processing
                 AVPacket* pktcopy = av_packet_clone(av_packet);
-                inputStreams[sidx].packets.push_back(pktcopy);
+                lst.push_back(pktcopy);
+
+                //limiting packets in memory
+                auto fcn = [] (int sum, AVPacket* ptr) { return sum + ptr->size; };
+                int siz = std::accumulate(lst.begin(), lst.end(), 0, fcn);
+                while (siz > sideDataMaxSize) {
+                    av_packet_free(&lst.front());
+                    lst.pop_front();
+                    siz = std::accumulate(lst.begin(), lst.end(), 0, fcn);
+                }
             }
 
         } else { //nothing left in input format, terminate the process, dump frames from decoder buffer
@@ -253,6 +263,13 @@ void FFmpegReader::rewind() {
     frameIndex = -1;
     endOfInput = true;
     packetList.clear();
+    for (StreamContext& s : inputStreams) {
+        for (AVPacket* pkt : s.packets) av_packet_free(&pkt);
+        s.packets.clear();
+        s.packetsWritten = 0;
+        s.lastPts = 0;
+        s.pts = 0;
+    }
 }
 
 void FFmpegReader::close() {

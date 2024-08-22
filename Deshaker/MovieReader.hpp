@@ -44,6 +44,9 @@ public:
 
 	std::optional<std::string> ptsForFrameString(int64_t frameIndex);
 	std::optional<int64_t> ptsForFrameMillis(int64_t frameIndex);
+
+protected:
+	int sideDataMaxSize = 20 * 1024 * 1024;
 };
 
 

@@ -20,7 +20,7 @@
 #include "CppUnitTest.h"
 #include "MovieFrame.hpp"
 #include "CudaFrame.hpp"
-#include "clMain.hpp"
+#include "OpenClFrame.hpp"
 #include "CpuFrame.hpp"
 #include "AvxFrame.hpp"
 
@@ -68,7 +68,6 @@ public:
 			TestWriter writer(data, reader);
 			MovieFrame frame(data, reader, writer);
 			auto ex = std::make_shared<CpuFrame>(data, *data.deviceList[0], frame, frame.mPool);
-			ex->init();
 			auto progress = std::make_shared<ProgressDisplayNone>(frame);
 			AuxWriters writers;
 			frame.runLoop(progress, input, writers, ex);
@@ -88,7 +87,6 @@ public:
 			TestWriter writer(data, reader);
 			MovieFrame frame(data, reader, writer);
 			auto ex = std::make_shared<CudaFrame>(data, *data.deviceList[2], frame, frame.mPool);
-			ex->init();
 			auto progress = std::make_shared<ProgressDisplayNone>(frame);
 			AuxWriters writers;
 			frame.runLoop(progress, input, writers, ex);
@@ -122,7 +120,6 @@ public:
 			BaseWriter writer(data, reader);
 			MovieFrame frame(data, reader, writer);
 			CpuFrame ex(data, *data.deviceList[0], frame, frame.mPool);
-			ex.init();
 
 			resCpu = run(ex, frame, data);
 			pyramids.push_back(ex.getPyramid(0));
@@ -139,7 +136,6 @@ public:
 			BaseWriter writer(data, reader);
 			MovieFrame frame(data, reader, writer);
 			CudaFrame ex(data, *data.deviceList[2], frame, frame.mPool);
-			ex.init();
 
 			resGpu = run(ex, frame, data);
 			pyramids.push_back(ex.getPyramid(0));
@@ -180,7 +176,7 @@ private:
 
 	template <class T> Result compareFrame2func(MainData& data, int deviceIndex) {
 		Result res;
-		AffineTransform trf(0, 0.95, 0.3, 2, 3);
+		Affine2D trf = Affine2D::fromParam(0.95, 0.3, 2.0, 3.0);
 		data.collectDeviceInfo();
 		NullReader reader;
 		reader.w = 1920;
@@ -189,7 +185,6 @@ private:
 		TestWriter writer(data, reader);
 		MovieFrame frame(data, reader, writer);
 		std::unique_ptr<FrameExecutor> ex = std::make_unique<T>(data, *data.deviceList[deviceIndex], frame, frame.mPool);
-		ex->init();
 
 		frame.mBufferFrame.readFromPGM("d:/VideoTest/v00.pgm");
 		frame.mBufferFrame.index = 0;

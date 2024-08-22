@@ -72,7 +72,6 @@ void filterCompare() {
 		BaseWriter writer(dataGpu, reader);
 		MovieFrame frame(dataGpu, reader, writer);
 		gpu = std::make_unique<CudaFrame>(dataGpu, *dataGpu.deviceList[2], frame, frame.mPool);
-		gpu->init();
 		runInit(dataGpu, gpu, trf);
 	}
 	{
@@ -87,7 +86,6 @@ void filterCompare() {
 		BaseWriter writer(dataCpu, reader);
 		MovieFrame frame(dataGpu, reader, writer);
 		cpu = std::make_unique<CpuFrame>(dataCpu, *dataCpu.deviceList[0], frame, frame.mPool);
-		cpu->init();
 		runInit(dataCpu, cpu, trf);
 	}
 

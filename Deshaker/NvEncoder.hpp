@@ -33,7 +33,6 @@
 bool operator < (const GUID& g1, const GUID& g2);
 bool operator == (const GUID& g1, const GUID& g2);
 
-struct CudaInfo;
 class DeviceInfoCuda;
 
 struct NvPacket {
@@ -46,11 +45,13 @@ class NvEncoder {
 private:
 	NV_ENC_BUFFER_FORMAT mBufferFormat = NV_ENC_BUFFER_FORMAT_NV12;
 
-	int h, w;
+	int cudaIndex;
+	CUcontext cuctx = nullptr;
 	void* encoder = nullptr;
+	int h = 0;
+	int w = 0;
 	int32_t encBufferSize = 0;
 	int32_t outputDelay = 0;
-	CUcontext cuctx = nullptr;
 	int32_t frameToSend = 0;
 	int32_t frameGot = 0;
 
@@ -67,17 +68,13 @@ public:
 	std::vector<uint8_t> mExtradata;
 	uint32_t mExtradataSize = 0;
 
-	NvEncoder(int w, int h) :
-		h { h }, 
-		w { w } {}
+	NvEncoder(int cudaIndex) :
+		cudaIndex { cudaIndex } {}
 
-	NvEncoder() :
-		NvEncoder(0, 0) {}
-
-	static void probeEncoding(CudaInfo& cudaInfo);
-	static void probeSupportedCodecs(DeviceInfoCuda& deviceInfoCuda);
-	void createEncoder(int fpsNum, int fpsDen, uint32_t gopLen, std::optional<uint8_t> crf, GUID guid, int deviceNum);
-	void createEncoder(int fpsNum, int fpsDen, uint32_t gopLen, std::optional<uint8_t> crf, GUID guid, CUcontext cuctx);
+	void init();
+	void probeEncoding(uint32_t* nvencVersionApi, uint32_t* nvencVersionDriver);
+	void probeSupportedCodecs(DeviceInfoCuda& deviceInfoCuda);
+	void createEncoder(int w, int h, int fpsNum, int fpsDen, uint32_t gopLen, std::optional<uint8_t> crf, GUID guid);
 	void destroyEncoder();
 
 	CUdeviceptr getNextInputFramePtr();

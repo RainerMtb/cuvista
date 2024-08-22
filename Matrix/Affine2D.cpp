@@ -17,12 +17,8 @@
  */
 
 #include "Affine2D.hpp"
-
-void Affine2D::setParam(double m00, double m01, double m02, double m10, double m11, double m12) {
-	array[0] = m00;   array[1] = m01;   array[2] = m02;
-	array[3] = m10;   array[4] = m11;   array[5] = m12;
-	array[6] = 0;     array[7] = 0;     array[8] = 1;
-}
+#include "AffineCore.hpp"
+#include "CoreData.hpp"
 
 Affine2D::Affine2D(double m00, double m01, double m02, double m10, double m11, double m12) :
 	Mat<double>(3, 3) 
@@ -30,26 +26,30 @@ Affine2D::Affine2D(double m00, double m01, double m02, double m10, double m11, d
 	setParam(m00, m01, m02, m10, m11, m12);
 }
 
-Affine2D::Affine2D(double scale, double rot, double dx, double dy) :
-	Affine2D(scale, rot, dx, -rot, scale, dy) {}
-
-Affine2D::Affine2D(Mat<double> mat) :
+Affine2D::Affine2D(Matd mat) :
 	Mat<double>(mat.array, mat.rows(), mat.cols(), true) {}
 
 Affine2D::Affine2D() :
-		Affine2D(1, 0, 0, 0) {}
+		Affine2D(1, 0, 0, 0, 1, 0) {}
 
-//rigid transform parameters
-Affine2D Affine2D::fromValues(double scale, double rot, double dx, double dy) {
-	return Affine2D(scale, rot, dx, dy);
-}
-
-//identity transform
 Affine2D Affine2D::identity() {
 	return Affine2D();
 }
 
-//reset to null transform = identity
+void Affine2D::setParam(double m00, double m01, double m02, double m10, double m11, double m12) {
+	array[0] = m00;   array[1] = m01;   array[2] = m02;
+	array[3] = m10;   array[4] = m11;   array[5] = m12;
+	array[6] = 0;     array[7] = 0;     array[8] = 1;
+}
+
+Affine2D Affine2D::fromParam(double scale, double rot, double dx, double dy) {
+	return Affine2D().setParam(scale, rot, dx, dy);
+}
+
+Affine2D Affine2D::fromValues(double scale, double rot, double dx, double dy) {
+	return Affine2D().addTranslation(dx, dy).addRotation(rot).addZoom(scale);
+}
+
 Affine2D& Affine2D::reset() {
 	setValuesByRow({ 1, 0, 0, 0, 1, 0, 0, 0, 1 });
 	return *this;
@@ -69,35 +69,40 @@ Affine2D& Affine2D::setParam(double scale, double rot, double dx, double dy) {
 }
 
 Affine2D& Affine2D::addTranslation(double dx, double dy) {
-	setValues(times(Mat<double>::fromRowData(3, 3, { 1, 0, dx, 0, 1, dy, 0, 0, 1 })));
+	setValues(times(Matd::fromRowData(3, 3, { 1, 0, dx, 0, 1, dy, 0, 0, 1 })));
 	return *this;
 }
 
 Affine2D& Affine2D::addRotation(double angleRad) {
-	setValues(times(Mat<double>::fromRowData(3, 3, { std::cos(angleRad), std::sin(angleRad), 0, -std::sin(angleRad), std::cos(angleRad), 0, 0, 0, 1 })));
+	setValues(times(Matd::fromRowData(3, 3, { std::cos(angleRad), std::sin(angleRad), 0, -std::sin(angleRad), std::cos(angleRad), 0, 0, 0, 1 })));
 	return *this;
+}
+
+Affine2D& Affine2D::addRotationDegrees(double angleDegrees) {
+	return addRotation(angleDegrees * std::numbers::pi / 180.0);
 }
 
 Affine2D& Affine2D::addZoom(double zoom) {
-	setValues(times(Mat<double>::fromRowData(3, 3, { 1 / zoom, 0, 0, 0, 1 / zoom, 0, 0, 0, 1 })));
+	setValues(times(Matd::fromRowData(3, 3, { 1 / zoom, 0, 0, 0, 1 / zoom, 0, 0, 0, 1 })));
 	return *this;
 }
 
-//transform point x0, y0
-std::pair<double, double> Affine2D::transform(size_t x0, size_t y0) const {
+Point Affine2D::transform(size_t x0, size_t y0) const {
 	return transform((double) x0, (double) y0);
 }
 
-//transform point x0, y0
-std::pair<double, double> Affine2D::transform(int x0, int y0) const {
+Point Affine2D::transform(int x0, int y0) const {
 	return transform((double) x0, (double) y0);
 }
 
-//transform point x0, y0
-std::pair<double, double> Affine2D::transform(double x0, double y0) const {
+Point Affine2D::transform(const Point& p) const {
+	return transform(p.x, p.y);
+}
+
+Point Affine2D::transform(double x0, double y0) const {
 	double x = std::fma(x0, at(0, 0), std::fma(y0, at(0, 1), at(0, 2)));
 	double y = std::fma(x0, at(1, 0), std::fma(y0, at(1, 1), at(1, 2)));
-	return std::make_pair(x, y);
+	return { x, y };
 }
 
 double Affine2D::scale() const {
@@ -127,6 +132,10 @@ double Affine2D::arrayValue(int idx) const {
 }
 
 std::array<double, 6> Affine2D::toArray() const {
+	return { array[0], array[1], array[2], array[3], array[4], array[5] };
+}
+
+AffineCore Affine2D::toAffineCore() const {
 	return { array[0], array[1], array[2], array[3], array[4], array[5] };
 }
 

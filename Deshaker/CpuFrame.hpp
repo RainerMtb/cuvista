@@ -36,7 +36,6 @@ class CpuFrame : public FrameExecutor {
 public:
 	CpuFrame(MainData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool);
 
-	void init() override;
 	void inputData(int64_t frameIndex, const ImageYuv& inputFrame) override;
 	void createPyramid(int64_t frameIndex) override;
 	void computeStart(int64_t frameIndex, std::vector<PointResult>& results) override;

@@ -21,16 +21,15 @@
 #include "MovieFrame.hpp"
 
 CudaFrame::CudaFrame(MainData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool) :
-	CudaFrameExecutor(data, deviceInfo, frame, pool) {}
-
-void CudaFrame::init() {
-	assert(mDeviceInfo.type == DeviceType::CUDA && "device type must be CUDA here");
+	CudaExecutor(data, deviceInfo, frame, pool) 
+{
+	assert(deviceInfo.type == DeviceType::CUDA && "device type must be CUDA here");
 	const DeviceInfoCuda* device = static_cast<const DeviceInfoCuda*>(&mDeviceInfo);
 	cudaInit(mData, device->cudaIndex, *device->props, mFrame.mBufferFrame);
 }
 
 void CudaFrame::outputData(int64_t frameIndex, const Affine2D& trf) {
-	cudaOutputData(frameIndex, trf.toArray());
+	cudaOutputData(frameIndex, trf.toAffineCore());
 }
 
 Matf CudaFrame::getPyramid(int64_t frameIndex) const {

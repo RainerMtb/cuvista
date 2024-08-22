@@ -23,13 +23,8 @@
 
 AvxFrame::AvxFrame(CudaData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool) :
 	FrameExecutor(data, deviceInfo, frame, pool),
-	pitch { align(data.w, walign) } {}
-
-int AvxFrame::align(int base, int alignment) {
-	return (base + alignment - 1) / alignment * alignment;
-}
-
-void AvxFrame::init() {
+	pitch { align(data.w, walign) } 
+{
 	assert(mDeviceInfo.type == DeviceType::AVX && "device type must be AVX here");
 	for (int i = 0; i < mData.bufferCount; i++) mYUV.emplace_back(mData.h, mData.w, mData.cpupitch);
 	mPyr.assign(mData.pyramidCount, AvxMatf(mData.pyramidRowCount, mData.w, 0.0f));
@@ -43,6 +38,10 @@ void AvxFrame::init() {
 	mFilterResult = AvxMatf(mData.h, pitch);
 
 	mOutput.assign(3, AvxMatf(mData.h, pitch));
+}
+
+int AvxFrame::align(int base, int alignment) {
+	return (base + alignment - 1) / alignment * alignment;
 }
 
 //---------------------------------

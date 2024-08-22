@@ -33,8 +33,6 @@ Matf DummyFrame::getPyramid(int64_t frameIndex) const {
 	return {}; 
 };
 
-void DummyFrame::init() {}
-
 void DummyFrame::inputData(int64_t frameIndex, const ImageYuv& inputFrame) {
 	size_t idx = frameIndex % mFrames.size();
 	inputFrame.copyTo(mFrames[idx], mPool);

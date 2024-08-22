@@ -20,9 +20,21 @@
 
 #include "Trajectory.hpp"
 
+TrajectoryMat::TrajectoryMat(double u, double v, double a) : 
+	Matd(1, 3) 
+{
+	array[0] = u; array[1] = v; array[2] = a;
+}
+
+TrajectoryMat::TrajectoryMat() : TrajectoryMat(0, 0, 0) {}
+
+double TrajectoryMat::u() { return at(0, 0); }
+double TrajectoryMat::v() { return at(0, 1); }
+double TrajectoryMat::a() { return at(0, 2); }
+
 //create new item and append to list, transformation u, v, a
 TrajectoryItem::TrajectoryItem(double u, double v, double a, int64_t frameIndex) :
-	values { Matd::fromRow({u, v, a}) },
+	values { u, v, a },
 	frameIndex { frameIndex }
 {
 	currentSum += values;	   //sum to this point
@@ -43,10 +55,8 @@ int64_t Trajectory::getTrajectorySize() {
 	return trajectory.size();
 }
 
-int64_t clamp(int64_t val, int64_t lo, int64_t hi) {
-	if (val < lo) return lo;
-	if (val > hi) return hi;
-	return val;
+int64_t Trajectory::clamp(int64_t val, int64_t lo, int64_t hi) {
+	return std::clamp(val, lo, hi);
 }
 
 const AffineTransform& Trajectory::computeSmoothTransform(const MainData& data, int64_t frameWriteIndex) {
@@ -67,26 +77,32 @@ const AffineTransform& Trajectory::computeSmoothTransform(const MainData& data, 
 
 	if (ti.isDuplicateFrame) {
 		//take midpoint between transformation of previous frame and calculated transform
-		tempDelta += ti.sum;
-		tempDelta -= tempAvg;
-		tempDelta /= 2.0;
+		delta += ti.sum;
+		delta -= tempAvg;
+		delta /= 2.0;
 
 	} else {
 		//normal procedure
-		tempDelta.setValues(ti.sum);
-		tempDelta -= tempAvg;
+		delta.setValues(ti.sum);
+		delta -= tempAvg;
 	}
 
+	//calculate zoom
+	double fitZoom = calcRequiredZoom(delta.u(), delta.v(), delta.a(), data.w, data.h, data, frameWriteIndex);
+	double smoothFitZoom = std::max(currentZoom * data.zoomFallback, fitZoom);
+	trajectory[frameWriteIndex].zoom = currentZoom = smoothFitZoom;
+	double zoom = std::clamp(smoothFitZoom, data.zoomMin, data.zoomMax);
+
 	//get transform to apply to image
-	out.reset()
-		.addTranslation(data.w / 2.0, data.h / 2.0)			//translate to origin
-		.addRotation(tempDelta[0][2])						//rotation
-		.addTranslation(tempDelta[0][0], tempDelta[0][1])	//computed translation to stabilize
-		.addZoom(data.imZoom)								//zoom as set
-		.addTranslation(data.w / -2.0, data.h / -2.0)		//translate back to center
+	currentTransform.reset()
+		.addTranslation(data.w / 2.0, data.h / 2.0)		//translate to origin
+		.addRotation(delta.a())					    	//rotation
+		.addZoom(zoom)							        //zoom as set
+		.addTranslation(delta.u(), delta.v())	        //computed translation to stabilize
+		.addTranslation(data.w / -2.0, data.h / -2.0)	//translate back to center
 		;
-	out.frameIndex = frameWriteIndex;
-	return out;
+	currentTransform.frameIndex = frameWriteIndex;
+	return currentTransform;
 }
 
 void Trajectory::readTransforms(std::map<int64_t, TransformValues> transformsMap) {
@@ -98,4 +114,27 @@ void Trajectory::readTransforms(std::map<int64_t, TransformValues> transformsMap
 		if (item != transformsMap.end()) trf = item->second;
 		addTrajectoryTransform(trf.dx, trf.dy, trf.da, i);
 	}
+}
+
+double Trajectory::calcRequiredZoom(double dx, double dy, double rot, double w, double h, const MainData& data, int64_t frameWriteIndex) {
+	double w2 = w / 2.0;
+	double h2 = h / 2.0;
+	Affine2D trf = Affine2D::fromValues(1.0, -rot, dx, dy);
+	std::vector<Point> corners = { {w2, h2}, {-w2, h2}, {-w2, -h2}, {w2, -h2}, {w2, h2} };
+	std::vector<Point> transformedCorners(5);
+	for (int i = 0; i < 5; i++) transformedCorners[i] = trf.transform(corners[i]);
+	Point m = trf.transform(0.0, 0.0);
+
+	double zoom = 1.0;
+	for (size_t i = 0; i < 4; i++) {
+		Point& c = corners[i];
+		for (size_t k = 0; k < 4; k++) {
+			Point& a = transformedCorners[k];
+			Point& b = transformedCorners[k + 1];
+			double z = ((c.x - m.x) * (b.y - a.y) - (c.y - m.y) * (b.x - a.x)) / ((m.y - a.y) * (b.x - a.x) + (a.x - m.x) * (b.y - a.y));
+			zoom = std::max(zoom, z);
+		}
+	}
+	//std::cout << frameWriteIndex << " " << dx << " " << dy << " " << (rot * 180 / std::numbers::pi) << " " << zoom << std::endl;
+	return zoom;
 }

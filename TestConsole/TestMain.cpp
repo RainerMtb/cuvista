@@ -45,6 +45,8 @@ int main() {
 	//pinvTest();
 	//similarTransform();
 
-	compareFramesPlatforms();
+	//compareFramesPlatforms();
 	//avxCompute();
+
+	testZoom();
 }

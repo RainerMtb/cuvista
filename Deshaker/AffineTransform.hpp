@@ -40,11 +40,8 @@ protected:
 public:
 	int64_t frameIndex;
 
-	AffineTransform(int64_t frameIndex, double scale, double rot, double dx, double dy) :
-		AffineTransform(frameIndex, scale, rot, dx, -rot, scale, dy) {}
-
 	AffineTransform() :
-		AffineTransform(-1, 1, 0, 0, 0) {}
+		AffineTransform(-1, 1, 0, 0, 0, 1, 0) {}
 
 	//compute parameters from gives points
 	const AffineTransform& computeAffineDirect(const PointResult& p1, const PointResult& p2, const PointResult& p3);

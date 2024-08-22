@@ -21,13 +21,12 @@
 #include "DeshakerHelpText.hpp"
 #include "KeyboardInput.hpp"
 #include "NvidiaDriver.hpp"
-#include "NvEncoder.hpp"
 #include "MovieReader.hpp"
 #include "MovieWriter.hpp"
 #include "CudaFrame.hpp"
-#include "clMain.hpp"
-#include "cuDeshaker.cuh"
+#include "OpenClFrame.hpp"
 #include "SelfTest.hpp"
+#include "NvEncoder.hpp"
 
 #include <algorithm>
 #include <regex>
@@ -142,7 +141,17 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 
 		} else if (args.nextArg("zoom", next)) {
 			//zoom to apply after transformation
-			imZoom = std::stod(next);
+			std::regex pattern1("([-]*\\d+)");
+			std::regex pattern2("(\\d+):(\\d+)");
+			std::smatch matcher;
+			//check for dynamic zoom
+			if (std::regex_match(next, matcher, pattern2)) {
+				zoomMin = 1.0 + std::stoi(matcher[1]) / 100.0;
+				zoomMax = 1.0 + std::stoi(matcher[2]) / 100.0;
+			} else if (std::regex_match(next, matcher, pattern1)) {
+				zoomMin = 1.0 + std::stoi(matcher[1]) / 100.0;
+				zoomMax = 1.0 + std::stoi(matcher[1]) / 100.0;
+			} else throw AVException("invalid zoom: " + next);
 
 		} else if (args.nextArg("device", next)) {
 			deviceRequested = true;
@@ -395,8 +404,11 @@ void MainData::validate(const MovieReader& reader) {
 	cpupitch = (w + pitchBase - 1) / pitchBase * pitchBase;
 
 	//number of frames to buffer
-	this->radius = (int) std::round(radsec * reader.fpsNum / reader.fpsDen);
+	this->radius = (int) std::round(radsec * reader.fps());
 	this->bufferCount = radius + 2;
+
+	//zoom fallback rate
+	this->zoomFallback = 1.0 - zoomFallbackTotal / radius;
 
 	if (pass == DeshakerPass::FIRST_PASS) {
 		this->bufferCount = 2;
@@ -432,6 +444,9 @@ void MainData::validate(const MovieReader& reader) {
 	if (w > mp) throw AVException("frame width exceeds maximum of " + std::to_string(mp) + " px");
 	if (h > mp) throw AVException("frame height exceeds maximum of " + std::to_string(mp) + " px");
 	if (w % 2 != 0 || h % 2 != 0) throw AVException("width and height must be factors of two");
+	if (zoomMin > zoomMax) throw AVException("invalid zoom values, max zoom must be greater min zoom");
+	if (zoomMin < limits.imZoomMin || zoomMin > limits.imZoomMax) throw AVException("invalid zoom value");
+	if (zoomMax < limits.imZoomMin || zoomMax > limits.imZoomMax) throw AVException("invalid zoom value");
 
 	if (zCount < limits.levelsMin || zCount > limits.levelsMax) throw AVException("invalid pyramid levels:" + std::to_string(pyramidLevels));
 	if (ir < limits.irMin || ir > limits.irMax) throw AVException("invalid integration radius:" + std::to_string(ir));
@@ -593,23 +608,25 @@ void MainData::probeCuda() {
 	CudaProbeResult res = cudaProbeRuntime();
 	cudaInfo.cudaDriverVersion = res.driverVersion;
 	cudaInfo.cudaRuntimeVersion = res.runtimeVersion;
-	if (res.props.size() > 0) {
-		//check if nvenc available
-		NvEncoder::probeEncoding(cudaInfo);
 
-		for (int i = 0; i < res.props.size(); i++) {
-			cudaDeviceProp& prop = res.props[i];
+	for (int i = 0; i < res.props.size(); i++) {
+		cudaDeviceProp& prop = res.props[i];
 
-			//create device info struct
-			DeviceInfoCuda cuda(DeviceType::CUDA, prop.sharedMemPerBlock / sizeof(float));
-			cuda.props = std::make_shared<cudaDeviceProp>(prop);
-			cuda.cudaIndex = i;
-			if (cudaInfo.nvencVersionDriver >= cudaInfo.nvencVersionApi) {
-				//check supported codecs
-				NvEncoder::probeSupportedCodecs(cuda);
-			}
-			cudaInfo.devices.push_back(cuda);
+		//create device info struct
+		DeviceInfoCuda cuda(DeviceType::CUDA, prop.sharedMemPerBlock / sizeof(float));
+		cuda.props = std::make_shared<cudaDeviceProp>(prop);
+		cuda.cudaIndex = i;
+
+		//check encoder
+		cuda.nvenc = std::make_shared<NvEncoder>(i);
+		cuda.nvenc->probeEncoding(&cudaInfo.nvencVersionApi, &cudaInfo.nvencVersionDriver);
+
+		if (cudaInfo.nvencVersionDriver >= cudaInfo.nvencVersionApi) {
+			//check supported codecs
+			cuda.nvenc->probeSupportedCodecs(cuda);
 		}
+
+		cudaInfo.devices.push_back(cuda);
 	}
 }
 

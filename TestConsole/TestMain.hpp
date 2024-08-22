@@ -26,7 +26,7 @@
 #include "MovieWriter.hpp"
 #include "CpuFrame.hpp"
 #include "CudaFrame.hpp"
-#include "clMain.hpp"
+#include "OpenClFrame.hpp"
 #include "AvxFrame.hpp"
 #include "FrameResult.hpp"
 #include "cuTest.cuh"
@@ -59,3 +59,4 @@ void flow();
 void pinvTest();
 
 void avxCompute();
+void testZoom();

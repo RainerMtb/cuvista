@@ -32,6 +32,7 @@ struct Triplet {
 	}
 };
 
+
 //how to deal with background when frame does not cover complete output canvas
 enum class BackgroundMode {
 	BLEND,
@@ -70,11 +71,14 @@ struct CoreData {
 	BackgroundMode bgmode = BackgroundMode::BLEND;
 
 	int radius = -1;			//number of frames before and after used for smoothing
-	double imZoom = 1.05;		//additional zoom
 	double radsec = 0.5;		//radius in senconds
-
 	int bufferCount = -1;		//number of frames to read before starting to average out trajectory
-	
+
+	double zoomMin = 1.05;		      //min additional zoom
+	double zoomMax = 1.25;            //max additioanl zoom
+	double zoomFallbackTotal = 0.05;  //fallback rate for dynamic zoom, to be divided by frame radius
+	double zoomFallback = 0.0;        //fallback rate for dynamic zoom
+
 	int cpuThreads = 1;         //cpu threads to use in cpu-compute and computing transform parameters, leave room for other things
 };
 
@@ -122,6 +126,10 @@ public:
 	bool operator != (const PointResult& other) const;
 
 	friend std::ostream& operator << (std::ostream& out, const PointResult& res);
+};
+
+struct Point {
+	double x, y;
 };
 
 struct PointContext {
