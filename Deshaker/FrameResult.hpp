@@ -45,8 +45,8 @@ private:
 
 	void computePointContext(std::span<PointContext> points, const AffineTransform& trf, double radius);
 
-	void computeExperimental(std::vector<PointResult>& results, ThreadPoolBase& threadPool, int64_t frameIndex, RNG rng);
-	void compute(std::vector<PointResult>& results, ThreadPoolBase& threadPool, int64_t frameIndex, RNG rng);
+	void computeType2(std::vector<PointResult>& results, ThreadPoolBase& threadPool, int64_t frameIndex, RNG rng);
+	void computeType1(std::vector<PointResult>& results, ThreadPoolBase& threadPool, int64_t frameIndex, RNG rng);
 
 	double sqr(double value);
 };

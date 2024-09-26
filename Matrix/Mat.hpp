@@ -100,7 +100,7 @@ protected:
 	inline static int printDigits = 5;
 
 	//maximum width and height
-	static constexpr size_t MAX_DIM = 1 << 20;
+	static constexpr size_t MAX_DIM = 1 << 30;
 	static constexpr int MAX_DIGITS = 25;
 
 	//noop thread pool
@@ -242,6 +242,13 @@ public:
 	Mat(const CoreMat<T>& other) :
 		CoreMat<T>(other) {}
 
+	//conversion from other Mat
+	template <class R> Mat(const CoreMat<R>& other) :
+		Mat<T>(other.rows(), other.cols())
+	{
+		setValues([&] (size_t r, size_t c) { return (T) (other.at(r, c)); });
+	}
+
 	//move constructor from CoreMat
 	Mat(CoreMat<T>&& other) noexcept :
 		CoreMat<T>(other) {}
@@ -335,19 +342,12 @@ public:
 		file.read(reinterpret_cast<char*>(&cols), sizeof(size_t));
 		file.read(reinterpret_cast<char*>(&sizT), sizeof(size_t));
 
-		Mat<T> out;
+		Mat<T> mat = Mat<T>::allocate(rows, cols);
 		if (file.good() && sizT == sizeof(T)) {
-			out = Mat<T>::allocate(rows, cols);
-			for (size_t rr = 0; rr < rows; rr++) {
-				for (size_t cc = 0; cc < cols; cc++) {
-					T value = 0;
-					file.read(reinterpret_cast<char*>(&value), sizeof(T));
-					out.set(rr, cc, value);
-				}
-			}
+			file.read(reinterpret_cast<char*>(mat.addr(0, 0)), rows * cols * sizeof(T));
 		}
 		file.close();
-		return file.good() ? out : Mat<T>();
+		return file.good() ? mat : Mat<T>();
 	}
 
 	static Mat<T> eye(size_t size) {
@@ -470,6 +470,10 @@ public:
 
 	bool isSymmetric(T tolerance = EPS) const {
 		return compare(trans(), tolerance) == 0;
+	}
+
+	bool isFinite() const {
+		return std::all_of(cbegin(), cend(), [] (const T& a) { return std::isfinite(a); });
 	}
 
 	//compute 1-norm of Mat
@@ -810,6 +814,35 @@ public:
 			for (size_t i = 0; i < cols(); i++) sum += at(r, i) * other.at(i, c);
 			return sum;
 			});
+	}
+
+	//matrix multiplication A * B where both matrices must be symmetric
+	//only one value symmetric value is computed and copied
+	Mat<T> timesSymmetric(const Mat<T>& other) const {
+		assert(cols() == other.rows() && rows() == other.cols() && "dimensions do not agree");
+		Mat<T> out = Mat<T>::allocate(rows(), cols());
+		for (size_t r = 0; r < rows(); r++) {
+			for (size_t c = r; c < cols(); c++) {
+				T sum = (T) 0;
+				for (size_t i = 0; i < rows(); i++) {
+					sum += at(r, i) * other.at(i, c);
+				}
+				out.at(r, c) = out.at(c, r) = sum;
+			}
+		}
+		return out;
+	}
+
+	//make matrix symmetric by taking average values
+	Mat<T> averageSymmetric() const {
+		assert(cols() == rows() && "dimensions do not agree");
+		Mat<T> out = Mat<T>::allocate(rows(), cols());
+		for (size_t r = 0; r < rows(); r++) {
+			for (size_t c = r; c < cols(); c++) {
+				out.at(r, c) = out.at(c, r) = (at(r, c) + at(c, r)) / 2.0;
+			}
+		}
+		return out;
 	}
 
 	//multiplication A * A'

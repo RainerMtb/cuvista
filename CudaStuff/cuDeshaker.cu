@@ -129,7 +129,7 @@ void writeText(const std::string& text, int x0, int y0, int scaleX, int scaleY, 
 	}
 
 	//write text
-	im.writeText(text, x0, 0, scaleX, scaleY, im::ColorNorm::WHITE, im::ColorNorm::BLACK); //write into host memory
+	im.writeText(text, x0, 0, scaleX, scaleY, im::TextAlign::TOP_LEFT, im::ColorNorm::WHITE, im::ColorNorm::BLACK); //write into host memory
 
 	//copy YUV planes back into device memory
 	for (size_t z = 0; z < 3; z++) {

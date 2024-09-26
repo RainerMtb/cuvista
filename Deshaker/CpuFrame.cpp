@@ -110,14 +110,14 @@ void CpuFrame::computeTerminate(int64_t frameIndex, std::vector<PointResult>& re
 	for (int threadIdx = 0; threadIdx < mData.cpuThreads; threadIdx++) mPool.add([&, threadIdx] {
 		int ir = mData.ir;
 		int iw = mData.iw;
-		Mat jm = Matd::allocate(iw, iw);
-		Mat delta = Matd::allocate(iw, iw);
-		Mat sd = Matd::allocate(6, 1ull * iw * iw);
-		Mat etaMat = Matd::allocate(6, 1);
-		Mat wp = Matd::allocate(3, 3);
-		Mat dwp = Matd::allocate(3, 3);
-		Mat g = Matd::allocate(6, 6);
-		Mat I = Matd::eye(6);
+		Matd jm = Matd::allocate(iw, iw);
+		Matd delta = Matd::allocate(iw, iw);
+		Matd sd = Matd::allocate(6, 1ull * iw * iw);
+		Matd etaMat = Matd::allocate(6, 1);
+		Matd wp = Matd::allocate(3, 3);
+		Matd dwp = Matd::allocate(3, 3);
+		Matd g = Matd::allocate(6, 6);
+		Matd I = Matd::eye(6);
 
 		for (int iy0 = threadIdx; iy0 < mData.iyCount; iy0 += mData.cpuThreads) {
 			for (int ix0 = 0; ix0 < mData.ixCount; ix0++) {
@@ -157,6 +157,7 @@ void CpuFrame::computeTerminate(int64_t frameIndex, std::vector<PointResult>& re
 					//if (frameIndex == 1 && ix0 == 63 && iy0 == 1 && z == mData.zMax) sd.toConsole(); //----------------
 
 					Mat s = sd.timesTransposed();
+					//s.saveAsBinary(std::format("f:/1/{}-{}-{}-{}.mat", frameIndex, z, iy0, ix0));
 					//if (frameIndex == 1 && ix0 == 63 && iy0 == 1) s.toConsole(); //----------------
 
 					double ns = s.norm1();
@@ -164,6 +165,8 @@ void CpuFrame::computeTerminate(int64_t frameIndex, std::vector<PointResult>& re
 					double gs = g.norm1();
 					double rcond = 1 / (ns * gs); //reciprocal condition number
 					result = (std::isnan(rcond) || rcond < mData.deps) ? PointResultType::FAIL_SINGULAR : PointResultType::RUNNING;
+					//g = PseudoInverter(s, 6).inv();
+					//result = g.has_value() ? PointResultType::RUNNING : PointResultType::FAIL_SINGULAR;
 
 					//if (frameIndex == 1 && ix0 == 97 && iy0 == 4) std::printf("cpu %d %.14f\n", z, rcond);
 					//if (frameIndex == 1 && ix0 == 75 && iy0 == 10) g.toConsole(); //----------------

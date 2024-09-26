@@ -29,6 +29,7 @@
 #include "OpenClFrame.hpp"
 #include "AvxFrame.hpp"
 #include "FrameResult.hpp"
+#include "MatrixInverter.hpp"
 #include "cuTest.cuh"
 
 void matTest();
@@ -54,9 +55,11 @@ void openClInvGroupTest(int w1, int w2);
 void openClnorm1Test();
 
 void compareFramesPlatforms();
+void analyzeFrames();
 
 void flow();
 void pinvTest();
+void compareInv();
 
 void avxCompute();
 void testZoom();

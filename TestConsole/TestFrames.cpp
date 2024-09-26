@@ -105,6 +105,7 @@ void compareFramesPlatforms() {
 		//AVX
 		MainData data;
 		data.deviceRequested = true;
+		data.cpuThreadsRequired = 1;
 		results[1] = runPyramid<AvxFrame>(data, 1);
 	}
 
@@ -154,9 +155,65 @@ void compareFramesPlatforms() {
 			}
 		}
 		if (deltaCount == 0) std::cout << "results EQUAL" << std::endl;
-		else std::cout << "results difference count " << deltaCount << std::endl;
+		else std::cout << "results difference count " << deltaCount << " of " << r1.results.size() << std::endl;
 		std::cout << std::endl;
 	}
 
 	std::cout << errorLogger.getErrorMessage() << std::endl;
+}
+
+void analyzeFrames() {
+	std::string file = "d:/VideoTest/02.mp4";
+	std::string dest = "f:/";
+	int frameFrom = 100;
+	int frameTo = 105;
+
+	MainData data;
+	data.deviceRequested = true;
+	data.resultImageFile = dest;
+	FFmpegReader reader;
+	reader.open(file);
+	data.collectDeviceInfo();
+	data.validate(reader);
+	ResultImageWriter writer(data);
+	writer.open();
+	MovieFrameCombined frame(data, reader, writer);
+	std::unique_ptr<FrameExecutor> executor = std::make_unique<CpuFrame>(data, *data.deviceList[0], frame, frame.mPool);
+
+	while (true) {
+		reader.read(frame.mBufferFrame);
+
+		if (reader.frameIndex == frameFrom - data.radius) {
+			executor->inputData(reader.frameIndex, frame.mBufferFrame);
+			executor->createPyramid(reader.frameIndex);
+		} else if (reader.frameIndex > frameFrom - data.radius) {
+			executor->inputData(reader.frameIndex, frame.mBufferFrame);
+			executor->createPyramid(reader.frameIndex);
+			executor->computeStart(reader.frameIndex, frame.mResultPoints);
+			executor->computeTerminate(reader.frameIndex, frame.mResultPoints);
+		}
+		
+		if (writer.frameIndex >= frameFrom) {
+			frame.computeTransform(reader.frameIndex);
+			const AffineTransform& currentTransform = frame.mFrameResult.getTransform();
+			frame.mTrajectory.addTrajectoryTransform(currentTransform);
+			const AffineTransform& finalTransform = frame.mTrajectory.computeSmoothTransform(data, writer.frameIndex);
+			executor->outputData(writer.frameIndex, finalTransform);
+			writer.prepareOutput(*executor);
+			writer.write(*executor);
+		} else {
+			frame.mTrajectory.addTrajectoryTransform(AffineTransform());
+			writer.frameIndex++;
+		}
+
+		if (reader.frameIndex == frameTo) {
+			break;
+		}
+		if (errorLogger.hasError()) {
+			std::cout << errorLogger.getErrorMessage() << std::endl;
+			break;
+		}
+	}
+
+	std::cout << "done" << std::endl;
 }

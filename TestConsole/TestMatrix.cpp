@@ -20,41 +20,85 @@
 #include "SubMat.hpp"
 #include "MatrixInverter.hpp"
 
+void compareInv() {
+	Mat slist = Matd::fromBinaryFile("d:/VideoTest/s.mat");
+	size_t n = slist.cols() / 6;
+
+	int countNew = 0, countOld = 0, coundSvd = 0;
+
+	for (size_t i = 0; i < n; i++) {
+		Matd S = slist.subMat(0, i * 6, 6, 6);
+
+		Matd s = S;
+		Matd svd = s.pinv();
+
+		s = S;
+		PseudoInverter psi(s, 6);
+		auto inv = psi.inv();
+		if (inv.has_value() && inv.value().minus(svd).normF2() < 0.2) {
+			countNew++;
+		}
+
+		s = S;
+		double ns = s.norm1();
+		Matd I = Matd::eye(6);
+		Matd g = Matd::allocate(6, 6);
+		LUDecompositor<double>(s).solve(I, g); //decomposing will overwrite content of s
+		double gs = g.norm1();
+		double rcond = 1 / (ns * gs); //reciprocal condition number
+		if (std::isfinite(rcond) && rcond >= std::numeric_limits<double>::epsilon() && g.minus(svd).normF2() < 0.2) {
+			countOld++;
+		}
+
+		if (i % 5000 == 0) std::cout << i << std::endl;
+	}
+
+	std::cout << "total " << n << std::endl << "old style " << countOld << std::endl << "new style " << countNew << std::endl;
+}
+
 void pinvTest() {
 	size_t s = 6;
-	Matd I = Matd::eye(s);
-	Matd N = Matd::values(s, s, nan(""));
-	Matd M = Matd::fromBinaryFile("d:/VideoTest/s.dat");
-	IterativePseudoInverse1 ip(s);
-	int count = 0;
 
-	for (size_t i = 0; i < M.rows(); i += s) {
-		size_t idx = i / s;
-		Matd A = M.subMat(i, 0, s, s);
+	Matd m = Matd::hilb(s);
+	m.toConsole("hilb");
+	Matd A, inv;
 
-		{
-			Matd X;
-			std::chrono::time_point t1 = std::chrono::system_clock::now();
-			auto result = ip.inv(A);
-			std::chrono::time_point t2 = std::chrono::system_clock::now();
-			std::printf("iter %04zd", idx);
-			if (result.has_value()) {
-				X = result.value();
-				double nrm = X.times(A).minus(I).normF();
-				std::printf(" time [us] %.0f nrm %.4e", std::chrono::duration<double, std::micro>(t2 - t1).count(), nrm);
-				count++;
-			}
-		}
-		{
-			std::chrono::time_point t1 = std::chrono::system_clock::now();
-			Matd X = A.inv().value();
-			std::chrono::time_point t2 = std::chrono::system_clock::now();
-			double nrm = X.times(A).minus(I).normF();
-			std::printf(", classic: time [us] %.0f nrm %.4e\n", std::chrono::duration<double, std::micro>(t2 - t1).count(), nrm);
-		}
-	}
-	double valid = 100.0 * count / (M.rows() / 6);
-	std::printf("\nvalid results %d of %zd = %.1f%%\n", count, M.rows()/6, valid);
+	A = m;
+	LUDecompositor<double> ludec(A);
+	MatInverter<double>& inverter = ludec;
+	inv = inverter.inv().value();
+	inv.toConsole("inv 0");
+	std::cout << std::endl;
+
+	//A = m;
+	//IterativePseudoInverse1 p1(A, s);
+	//inv = p1.inv().value();
+	//inv.toConsole("inv 1");
+	//std::cout << std::endl;
+
+	//A = m;
+	//IterativePseudoInverse2 p2(A, s);
+	//inv = p2.inv().value();
+	//inv.toConsole("inv 2");
+	//std::cout << std::endl;
+
+	A = m;
+	PseudoInverter p(A, s);
+	inv = p.inv().value();
+	inv.toConsole("inv sym");
+	std::cout << std::endl;
+
+	//A = m;
+	//IterativePseudoInverse3 p3(A, s);
+	//inv = p3.inv().value();
+	//inv.toConsole("inv 3");
+	//std::cout << std::endl;
+
+	//A = m;
+	//IterativePseudoInverse4 p4(A, s);
+	//inv = p4.inv().value();
+	//inv.toConsole("inv 4");
+	//std::cout << std::endl;
 }
 
 void matTest() {

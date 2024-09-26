@@ -43,10 +43,12 @@ int main() {
 	//openClnorm1Test();
 	//flow();
 	//pinvTest();
+	//compareInv();
 	//similarTransform();
 
-	//compareFramesPlatforms();
+	compareFramesPlatforms();
 	//avxCompute();
 
-	testZoom();
+	//testZoom();
+	//analyzeFrames();
 }

@@ -37,7 +37,9 @@ namespace im {
 	ColorBgr ColorBgr::BLACK = {   0,   0,   0 };
 	ColorBgr ColorBgr::BLUE =  { 255,   0,   0 }; 
 
-	ColorRGBA ColorRGBA::BLACK = { 0,  0,  0, 255 };
+	ColorRGBA ColorRGBA::BLACK = {   0,   0,   0, 255 };
+	ColorRGBA ColorRGBA::WHITE = { 255, 255, 255, 255 };
+	ColorRGBA ColorRGBA::GRAY =  { 128, 128, 128, 255 };
 
 	int alignValue(int numToAlign, int alignment) {
 		assert(alignment && "factor must not be 0");

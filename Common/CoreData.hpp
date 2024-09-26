@@ -74,10 +74,10 @@ struct CoreData {
 	double radsec = 0.5;		//radius in senconds
 	int bufferCount = -1;		//number of frames to read before starting to average out trajectory
 
-	double zoomMin = 1.05;		      //min additional zoom
-	double zoomMax = 1.25;            //max additioanl zoom
-	double zoomFallbackTotal = 0.05;  //fallback rate for dynamic zoom, to be divided by frame radius
-	double zoomFallback = 0.0;        //fallback rate for dynamic zoom
+	double zoomMin = 1.05;		        //min additional zoom
+	double zoomMax = 1.15;              //max additioanl zoom
+	double zoomFallbackTotal = 0.025;   //fallback rate for dynamic zoom, to be divided by frame radius
+	double zoomFallback = 0.0;          //fallback rate for dynamic zoom
 
 	int cpuThreads = 1;         //cpu threads to use in cpu-compute and computing transform parameters, leave room for other things
 };

@@ -23,6 +23,18 @@
 
 namespace im {
 
+	enum class TextAlign {
+		TOP_LEFT,
+		TOP_CENTER,
+		TOP_RIGHT,
+		MIDDLE_LEFT,
+		MIDDLE_CENTER,
+		MIDDLE_RIGHT,
+		BOTTOM_LEFT,
+		BOTTOM_CENTER,
+		BOTTOM_RIGHT,
+	};
+
 	template <class T> class ImageBase {
 
 	public:
@@ -93,7 +105,7 @@ namespace im {
 		double compareTo(const ImageBase& other) const;
 
 		//imprint text
-		void writeText(std::string_view text, int x0, int y0, int scaleX, int scaleY, ColorBase<T> fg, ColorBase<T> bg = { 0, 0, 0, 0.0 });
+		void writeText(std::string_view text, int x, int y, int sx, int sy, TextAlign alignment, ColorBase<T> fg, ColorBase<T> bg = ColorBase<T>());
 
 		void drawLine(double x0, double y0, double x1, double y1, ColorBase<T> color, double alpha = 1.0);
 

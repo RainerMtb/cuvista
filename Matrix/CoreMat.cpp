@@ -26,7 +26,8 @@ template <class T> CoreMat<T>::CoreMat() :
 
 //copy constructor
 template <class T> CoreMat<T>::CoreMat(const CoreMat<T>& other) : 
-	CoreMat<T>(nullptr, other.h, other.w, true) {
+	CoreMat<T>(nullptr, other.h, other.w, true) 
+{
 	//std::cout << "!! 1 copy constructor" << std::endl;
 	//when template type is const, need to allocate a non const array to be able to write to it
 	using TT = std::remove_const_t<T>;
@@ -39,7 +40,8 @@ template <class T> CoreMat<T>::CoreMat(const CoreMat<T>& other) :
 
 //move constructor
 template <class T> CoreMat<T>::CoreMat(CoreMat<T>&& other) noexcept : 
-	CoreMat<T>(other.array, other.h, other.w, true) {
+	CoreMat<T>(other.array, other.h, other.w, true) 
+{
 	//std::cout << "!! 2 move constructor" << std::endl;
 	other.array = nullptr;
 	other.h = 0;
@@ -48,7 +50,8 @@ template <class T> CoreMat<T>::CoreMat(CoreMat<T>&& other) noexcept :
 }
 
 //virtual destructor
-template <class T>  CoreMat<T>::~CoreMat() {
+template <class T>  CoreMat<T>::~CoreMat() 
+{
 	//std::cout << "!! destructor " << &array << " " << h << ", " << w << std::endl;
 	if (ownData) {
 		delete[] array;

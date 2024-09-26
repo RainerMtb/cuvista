@@ -171,7 +171,7 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 
 		} else if (args.nextArg("cputhreads", next)) {
 			//number of threads to use on cpu
-			cpuThreads = std::stoul(next);
+			cpuThreadsRequired = { std::stoul(next) };
 
 		} else if (args.nextArg("bgcolor", next)) {
 			//background color
@@ -357,7 +357,8 @@ void MainData::collectDeviceInfo() {
 }
 
 void MainData::validate(const MovieReader& reader) {
-	this->cpuThreads = std::max(1u, std::thread::hardware_concurrency() * 3 / 4);
+	if (this->cpuThreadsRequired.has_value()) this->cpuThreads = this->cpuThreadsRequired.value();
+	else this->cpuThreads = std::max(1u, std::thread::hardware_concurrency() * 3 / 4);
 
 	//main metrics
 	this->w = reader.w;

@@ -57,6 +57,8 @@ private:
 	std::vector<AvxMatf> mWarped;
 	std::vector<AvxMatf> mOutput;
 	AvxMatf mFilterBuffer, mFilterResult, mYuvPlane;
+	std::vector<AvxMatd> mPyrDelta;
+	AvxMatd* mDeltaPtr[6];
 
 	float filterKernels[3][5] = {
 		{ 0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f },
@@ -81,4 +83,7 @@ private:
 	void yuvToRgba(const float* y, const float* u, const float* v, int h, int w, int stride, ImageRGBA& dest) const;
 
 	int align(int base, int alignment);
+	void storeDelta(VF16 a, VF16 b, AvxMatd& deltaMat, int rr, int cc);
+	double sdval(int r, int c, int y0, int x0);
+	VD8 sdval(int c, int y0, int x0);
 };

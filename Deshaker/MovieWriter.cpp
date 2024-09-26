@@ -36,16 +36,20 @@ void BaseWriter::write(const FrameExecutor& executor) {
 }
 
 std::string ImageWriter::makeFilename(const std::string& pattern, int64_t index, const std::string& extension) {
-	const int siz = 512;
-	char fname[siz];
-	if (pattern.empty() == false && std::filesystem::is_directory(pattern)) {
-		std::string file = pattern + "/im%04d." + extension;
-		std::snprintf(fname, siz, file.c_str(), index);
+	namespace fs = std::filesystem;
+	fs::path out;
+
+	if (pattern.empty() == false && fs::is_directory(pattern)) {
+		std::string file = std::format("im{:04d}.{}", index, extension);
+		out = fs::path(pattern) / fs::path(file);
 
 	} else {
+		const int siz = 512;
+		char fname[siz];
 		std::snprintf(fname, siz, pattern.c_str(), index);
+		out = fs::path(fname);
 	}
-	return std::filesystem::path(fname).make_preferred().string();
+	return out.make_preferred().string();
 }
 
 std::string ImageWriter::makeFilenameSamples(const std::string& pattern, const std::string& extension) {
@@ -314,9 +318,11 @@ void OpticalFlowWriter::writeFlow(const MovieFrame& frame) {
 		double y = 1.0 * iy / div - 1.0 - mData.ir;
 		for (size_t ix = 0; ix < mData.w; ix++) {
 			double x = 1.0 * ix / div - 1.0 - mData.ir;
-			imageInterpolated.at(0, iy, ix) = imageResults.sample(0, x, y);
-			imageInterpolated.at(1, iy, ix) = imageResults.sample(1, x, y);
-			imageInterpolated.at(2, iy, ix) = imageResults.sample(2, x, y);
+			for (int i = 0; i < 3; i++) {
+				unsigned char col = colorGray.at(i);
+				if (x >= -0.5 && x < mData.ixCount + 0.5 && y >= -0.5 && y < mData.iyCount + 0.5) col = imageResults.sample(i, x, y);
+				imageInterpolated.at(i, iy, ix) = col;
+			}
 		}
 	};
 	frame.mPool.addAndWait(fcn, 0, mData.h);
@@ -352,6 +358,9 @@ void OpticalFlowWriter::write(const FrameExecutor& executor) {
 
 	//stamp color legend onto image
 	legend.copyTo(imageInterpolated, 0ull + mData.h - 10 - legendSize, 10);
+	int tx = 10 + legendSize / 2;
+	int ty = 0ull + mData.h - 10 - legendSize / 2;
+	imageInterpolated.writeText(std::to_string(frameIndex), tx, ty, 1, 1, im::TextAlign::MIDDLE_CENTER, im::ColorRGBA::WHITE, im::ColorRGBA::BLACK);
 
 	//encode rgba image
 	uint8_t* src[] = { imageInterpolated.data(), nullptr, nullptr, nullptr};
@@ -458,9 +467,9 @@ void ResultImageWriter::write(const AffineTransform& trf, const std::vector<Poin
 	int textScale = bgr.h / 540;
 	double frac = numValid == 0 ? 0.0 : 100.0 * numConsens / numValid;
 	std::string s1 = std::format("index {}, consensus {}/{} ({:.0f}%)", idx, numConsens, numValid, frac);
-	bgr.writeText(s1, 0, bgr.h - textScale * 20, textScale, textScale, ColorBgr::WHITE, ColorBgr::BLACK);
+	bgr.writeText(s1, 0, bgr.h - textScale * 20, textScale, textScale, TextAlign::TOP_LEFT, ColorBgr::WHITE, ColorBgr::BLACK);
 	std::string s2 = std::format("transform dx={:.1f}, dy={:.1f}, scale={:.5f}, rot={:.1f}", trf.dX(), trf.dY(), trf.scale(), trf.rotMinutes());
-	bgr.writeText(s2, 0, bgr.h - textScale * 10, textScale, textScale, ColorBgr::WHITE, ColorBgr::BLACK);
+	bgr.writeText(s2, 0, bgr.h - textScale * 10, textScale, textScale, TextAlign::TOP_LEFT, ColorBgr::WHITE, ColorBgr::BLACK);
 
 	//save image to file
 	bool result = bgr.saveAsColorBMP(fname);

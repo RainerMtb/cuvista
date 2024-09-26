@@ -25,10 +25,13 @@ template <class T> class Mat;
 template <class T> class MatInverter {
 
 protected:
+	Mat<T>& A;
 	T sqr(T value) { return value * value; }
 
 public:
+	MatInverter(Mat<T>& A) :
+		A { A } {}
+
 	virtual ~MatInverter() = default;
-	virtual std::optional<Mat<T>> inv(Mat<T>& A) = 0;
 	virtual std::optional<Mat<T>> inv() { return std::nullopt; }
 };

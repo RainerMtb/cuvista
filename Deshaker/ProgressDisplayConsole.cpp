@@ -67,14 +67,9 @@ void ProgressDisplayNewLine::update(bool force) {
 //rewrite one line on the console
 void ProgressDisplayRewriteLine::update(bool force) {
 	if (isDue(force)) {
-		//overwrite existing line
-		output.assign(output.length() + 1, ' ');
-		output[0] = '\r';
-		*outstream << output;
-
-		//new line
+		size_t len = output.length();
 		output = "\r" + buildMessage().str();
-		*outstream << output << std::flush;
+		*outstream << '\r' << std::string(len, ' ') << output << std::flush;
 	}
 }
 

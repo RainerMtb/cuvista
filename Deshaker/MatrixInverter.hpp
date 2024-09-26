@@ -21,46 +21,131 @@
 #include "MatInverter.hpp"
 #include "Mat.hpp"
 
-class IterativePseudoInverse1 : public MatInverter<double> {
-
+class PseudoInverter : public MatInverter<double> {
 private:
-	Matd X1, X2, X3, X4, Xk, Xk1, I;
-
-	double normF2(size_t r, size_t c, std::function<double(size_t, size_t)> mat);
-	double normF2(Matd& mat);
-	void matMult(const Matd& A, std::function<double(size_t, size_t)> fcn, Matd& dest);
-	void matMult(const Matd& A, const Matd& B, Matd& dest);
-	void matMult(const Matd& A, double f, Matd& dest);
-	void matAdd(const Matd& A, std::function<double(size_t, size_t)> fcn, Matd& dest);
-	void matAdd(const Matd& A, const Matd& B, Matd& dest);
+	size_t s;
+	Matd I;
+	Matd Xk, Xk1, Yk;
 
 public:
-	IterativePseudoInverse1(size_t s) :
-		X1 { Matd::allocate(s, s) },
-		X2 { Matd::allocate(s, s) },
-		X3 { Matd::allocate(s, s) },
-		X4 { Matd::allocate(s, s) },
-		Xk { Matd::allocate(s, s) },
-		Xk1 { Matd::allocate(s, s) },
-		I { Matd::eye(s) } {}
+	PseudoInverter(Matd& A, size_t s);
 
-	std::optional<Matd> inv(Matd& A) override;
+	std::optional<Matd> inv();
 };
 
-
-class IterativePseudoInverse2 : public MatInverter<double> {
-
-private:
-	Matd X1, X2, I;
-
-	double beta = 0.1;
-	double eps = 1e-4;
+template <class T> class MatPseudoInverter : public MatInverter<T> {
+protected:
+	T eps = 0.05f;
+	T e = 1.0f;
+	size_t s;
+	int maxIter = 20;
+	Mat<T> I;
 
 public:
-	IterativePseudoInverse2(size_t s) :
-		X1 { Matd::allocate(s, s) },
-		X2 { Matd::allocate(s, s) },
-		I { Matd::eye(s) } {}
+	MatPseudoInverter(Mat<T>& A, size_t s) :
+		MatInverter<T>(A),
+		s { s },
+		I { Mat<T>::eye(s) } {}
+};
 
-	std::optional<Matd> inv(Matd& A) override;
+//3.19
+template <class T> class IterativePseudoInverse1 : public MatPseudoInverter<T> {
+	using MatPseudoInverter<T>::s;
+	using MatPseudoInverter<T>::I;
+	using MatInverter<T>::A;
+
+public:
+	IterativePseudoInverse1(Mat<T>& A, size_t s) :
+		MatPseudoInverter<T>(A, s) {}
+
+	std::optional<Mat<T>> inv() {
+		Mat<T> Xk = Mat<T>::eye(s).timesEach(1 / A.normF());
+		Mat<T> Bk, Sk, Xk1;
+
+		int i = 0;
+		for (; i < this->maxIter && this->e > this->eps; i++) {
+			Bk = A.times(Xk);
+			Sk = Bk.times(Bk.minus(I));
+			Xk1 = Xk.times(I.timesEach(2).minus(Bk)).times(I.timesEach(3).minus(Bk.timesEach(2)).plus(Sk)).times(I.plus(Sk));
+			Xk = Xk1;
+			this->e = A.times(Xk).minus(I).normF2();
+		}
+		return { Xk };
+	}
+};
+
+//3.18 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+template <class T> class IterativePseudoInverse2 : public MatPseudoInverter<T> {
+	using MatPseudoInverter<T>::s;
+	using MatPseudoInverter<T>::I;
+	using MatInverter<T>::A;
+
+public:
+	IterativePseudoInverse2(Mat<T>& A, size_t s) :
+		MatPseudoInverter<T>(A, s) {}
+
+	std::optional<Mat<T>> inv() {
+		Mat<T> Xk = Mat<T>::eye(s).timesEach(1 / A.normF());
+		Mat<T> Yk, Xk1;
+
+		int i = 0;
+		for (; i < this->maxIter && this->e > this->eps; i++) {
+			Yk = I.minus(A.times(Xk));
+			Xk1 = Xk.times(I.plus(Yk.times(I.plus(Yk.times(I.plus(Yk))))));
+			Xk = Xk1;
+			//this->e = A.times(Xk).minus(I).normF2();
+			this->e = Yk.normF2();
+		}
+		return { Xk };
+	}
+};
+
+//3.20
+template <class T> class IterativePseudoInverse3 : public MatPseudoInverter<T> {
+	using MatPseudoInverter<T>::s;
+	using MatPseudoInverter<T>::I;
+	using MatInverter<T>::A;
+
+public:
+	IterativePseudoInverse3(Mat<T>& A, size_t s) :
+		MatPseudoInverter<T>(A, s) {}
+
+	std::optional<Mat<T>> inv() {
+		Mat<T> Xk = Mat<T>::eye(s).timesEach(1 / A.normF());
+		Mat<T> Bk, Xk1;
+
+		int i = 0;
+		for (; i < this->maxIter && this->e > this->eps; i++) {
+			Bk = A.times(Xk);
+			Xk1 = Xk.timesEach(0.5).times(I.timesEach(9).minus(Bk.times(I.timesEach(16).minus(Bk.times(I.timesEach(14).minus(Bk.times(I.timesEach(6).minus(Bk))))))));
+			Xk = Xk1;
+			this->e = A.times(Xk).minus(I).normF2();
+		}
+		return { Xk };
+	}
+};
+
+//1.7
+template <class T> class IterativePseudoInverse4 : public MatPseudoInverter<T> {
+	using MatPseudoInverter<T>::s;
+	using MatPseudoInverter<T>::I;
+	using MatInverter<T>::A;
+
+public:
+	IterativePseudoInverse4(Mat<T>& A, size_t s) :
+		MatPseudoInverter<T>(A, s) {}
+
+	std::optional<Mat<T>> inv() {
+		Mat<T> Xk = Mat<T>::eye(s).timesEach(1 / A.normF());
+		Mat<T> Bk, Xk1;
+
+		int i = 0;
+		for (; i < this->maxIter && this->e > this->eps; i++) {
+			Bk = A.times(Xk);
+			Xk1 = Xk.minus(Xk.timesEach(0.5).times(Bk.times(Bk).minus(I)));
+			Xk = Xk1;
+			this->e = A.times(Xk).minus(I).normF2();
+		}
+		return { Xk };
+	}
 };

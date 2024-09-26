@@ -33,6 +33,7 @@ protected:
 
 public:
 	LUDecompositor(Mat<T>& mat) : 
+		MatInverter<T>(mat),
 		A { mat }, 
 		m { mat.rows() }, 
 		n { mat.cols() }, 
@@ -162,12 +163,6 @@ public:
 		bool result = solve(b, x);
 		if (result) return x;
 		else return std::nullopt;
-	}
-
-	std::optional<Mat<T>> inv(Mat<T>& A) override {
-		this->A = A;
-		this->dirty = true;
-		return solve(Mat<T>::eye(m));
 	}
 
 	std::optional<Mat<T>> inv() override {

@@ -36,10 +36,9 @@ namespace im {
 
 	void hsv_to_rgb(double h, double s, double v, unsigned char* out_r, unsigned char* out_g, unsigned char* out_b);
 
-	template <class T, int SIZ = 3> class ColorBase {
-
+	template <class T> class ColorBase {
 	public:
-		std::array<T, SIZ> colors;
+		std::array<T, 4> colors = { 0, 0, 0, 0 };
 		double alpha = 1.0;
 	};
 
@@ -62,9 +61,7 @@ namespace im {
 		ColorRgb toRgb() const;
 
 		unsigned char y() const { return colors[0]; }
-
 		unsigned char u() const { return colors[1]; }
-
 		unsigned char v() const { return colors[2]; }
 	};
 
@@ -75,9 +72,7 @@ namespace im {
 		ColorNorm toNormalized() const;
 
 		unsigned char r() const { return colors[0]; }
-
 		unsigned char g() const { return colors[1]; }
-
 		unsigned char b() const { return colors[2]; }
 	};
 
@@ -90,8 +85,10 @@ namespace im {
 		static ColorBgr BLUE;
 	};
 
-	class ColorRGBA : public ColorBase<unsigned char, 4> {
+	class ColorRGBA : public ColorBase<unsigned char> {
 	public:
 		static ColorRGBA BLACK;
+		static ColorRGBA WHITE;
+		static ColorRGBA GRAY;
 	};
 }

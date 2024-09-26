@@ -27,7 +27,7 @@ AvxFrame::AvxFrame(CudaData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame
 {
 	assert(mDeviceInfo.type == DeviceType::AVX && "device type must be AVX here");
 	for (int i = 0; i < mData.bufferCount; i++) mYUV.emplace_back(mData.h, mData.w, mData.cpupitch);
-	mPyr.assign(mData.pyramidCount, AvxMatf(mData.pyramidRowCount, mData.w, 0.0f));
+	mPyr.assign(mData.pyramidCount, AvxMatf(mData.pyramidRowCount, pitch, 0.0f));
 	mYuvPlane = AvxMatf(mData.h, pitch, 0.0f);
 
 	mWarped.push_back(AvxMatf(mData.h, pitch, mData.bgcol_yuv.colors[0]));
@@ -38,6 +38,14 @@ AvxFrame::AvxFrame(CudaData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame
 	mFilterResult = AvxMatf(mData.h, pitch);
 
 	mOutput.assign(3, AvxMatf(mData.h, pitch));
+
+	mPyrDelta.assign(2, AvxMatd(mData.pyramidRowCount, mData.w, 0.0));
+	mDeltaPtr[0] = { &mPyrDelta[0] };
+	mDeltaPtr[1] = { &mPyrDelta[1] };
+	mDeltaPtr[2] = { &mPyrDelta[0] };
+	mDeltaPtr[3] = { &mPyrDelta[1] };
+	mDeltaPtr[4] = { &mPyrDelta[0] };
+	mDeltaPtr[5] = { &mPyrDelta[1] };
 }
 
 int AvxFrame::align(int base, int alignment) {
@@ -208,7 +216,56 @@ void AvxFrame::yuvToFloat(const ImageYuv& yuv, size_t plane, AvxMatf& dest) {
 	}
 }
 
-void AvxFrame::computeStart(int64_t frameIndex, std::vector<PointResult>& results) {}
+void AvxFrame::storeDelta(VF16 a, VF16 b, AvxMatd& deltaMat, int rr, int cc) {
+	VF16 dy = a / 2.0f - b / 2.0f;
+	VD8 out;
+	out = _mm512_cvtpslo_pd(dy);
+	out.storeu(deltaMat.addr(rr, cc));
+	out = _mm512_cvtpslo_pd(_mm512_shuffle_f32x4(dy, dy, 0b1110'1110));
+	out.storeu(deltaMat.addr(rr, cc + 8));
+}
+
+void AvxFrame::computeStart(int64_t frameIndex, std::vector<PointResult>& results) {
+	//create dx and dy values
+	size_t idx = (frameIndex - 1) % mPyr.size();
+	int r = 0;
+	int h = mData.h;
+	int w = mData.w;
+	for (size_t z = 0; z < mData.pyramidLevels; z++) {
+		//build dx
+		for (int rr = r; rr < r + h; rr++) {
+			for (int cc = 1; cc < pitch - 18; cc += 16) {
+				storeDelta(mPyr[idx].addr(rr, cc + 1), mPyr[idx].addr(rr, cc - 1), mPyrDelta[0], rr, cc);
+			}
+			storeDelta(mPyr[idx].addr(rr, pitch - 16), mPyr[idx].addr(rr, pitch - 18), mPyrDelta[0], rr, pitch - 17);
+		}
+		
+		//build dy
+		for (int rr = r + 1; rr < r + h - 1; rr++) {
+			for (int cc = 0; cc < pitch; cc += 16) {
+				VF16 a = mPyr[idx].addr(rr + 1, cc);
+				VF16 b = mPyr[idx].addr(rr - 1, cc);
+				storeDelta(a, b, mPyrDelta[1], rr, cc);
+			}
+		}
+
+		//next pyramid level
+		r += h;
+		h /= 2;
+		w /= 2;
+	}
+}
+
+double AvxFrame::sdval(int r, int c, int y0, int x0) {
+	int c1 = c / mData.iw;
+	int c2 = c % mData.iw;
+	int f[6] = { 1, 1, c1 - mData.ir, c1 - mData.ir, c2 - mData.ir, c2 - mData.ir };
+	return mDeltaPtr[r]->at(y0 + c2, x0 + c1) * f[r];
+}
+
+VD8 AvxFrame::sdval(int c, int y0, int x0) {
+	return VD8(sdval(0, c, y0, x0), sdval(1, c, y0, x0), sdval(2, c, y0, x0), sdval(3, c, y0, x0), sdval(4, c, y0, x0), sdval(5, c, y0, x0), 0.0, 0.0);
+}
 
 void AvxFrame::computeTerminate(int64_t frameIndex, std::vector<PointResult>& results) {
 	size_t pyrIdx = frameIndex % mPyr.size();
@@ -220,15 +277,11 @@ void AvxFrame::computeTerminate(int64_t frameIndex, std::vector<PointResult>& re
 	for (int threadIdx = 0; threadIdx < mData.cpuThreads; threadIdx++) mPool.add([&, threadIdx] {
 		int ir = mData.ir;
 		int iw = mData.iw;
-		int iww = iw * iw;
 
-		AvxMatd sd(6, iw * iw);
 		std::vector<double> eta(6);
 		std::vector<double> wp(6);
 		std::vector<double> dwp(6);
 		__mmask8 maskIW = (1 << iw) - 1;
-		__m512i vindexScatter = _mm512_setr_epi64(0, iw, 2ll * iw, 3ll * iw, 4ll * iw, 5ll * iw, 6ll * iw, 7ll * iw);
-		__m512i vidxGather = _mm512_setr_epi64(0, iww, 2ll * iww, 3ll * iww, 4ll * iww, 5ll * iww, 0, 0);
 
 		for (int iy0 = threadIdx; iy0 < mData.iyCount; iy0 += mData.cpuThreads) {
 			for (int ix0 = 0; ix0 < mData.ixCount; ix0++) {
@@ -247,32 +300,15 @@ void AvxFrame::computeTerminate(int64_t frameIndex, std::vector<PointResult>& re
 				for (; z >= mData.zMin && result >= PointResultType::RUNNING; z--) {
 					rowOffset -= (mData.h >> z);
 
-					for (int c = 0; c < iw; c++) {
-						int iy = ym - ir + c + rowOffset;
-						int ix = xm - ir;
-						VD8 dx = VF8(Yprev.addr(iy, ix + 1)) / 2 - VF8(Yprev.addr(iy, ix - 1)) / 2;
-						VD8 dy = VF8(Yprev.addr(iy + 1, ix)) / 2 - VF8(Yprev.addr(iy - 1, ix)) / 2;
-						_mm512_mask_i64scatter_pd(sd.addr(0, c), maskIW, vindexScatter, dx, 8);
-						_mm512_mask_i64scatter_pd(sd.addr(1, c), maskIW, vindexScatter, dy, 8);
-
-						const VD8 f23 = VD8(0 - ir, 1 - ir, 2 - ir, 3 - ir, 4 - ir, 5 - ir, 6 - ir, 7 - ir);
-						_mm512_mask_i64scatter_pd(sd.addr(2, c), maskIW, vindexScatter, dx * f23, 8);
-						_mm512_mask_i64scatter_pd(sd.addr(3, c), maskIW, vindexScatter, dy * f23, 8);
-
-						const VD8 f45 = VD8(c - ir);
-						_mm512_mask_i64scatter_pd(sd.addr(4, c), maskIW, vindexScatter, dx * f45, 8);
-						_mm512_mask_i64scatter_pd(sd.addr(5, c), maskIW, vindexScatter, dy * f45, 8);
-					}
-					//if (frameIndex == 1 && ix0 == 63 && iy0 == 1 && z == mData.zMax) sd.toConsole(); //----------------
-
 					//s = sd * sd'
 					std::vector<VD8> s(6);
-					for (int i = 0; i < iww; i++) {
-						VD8 a = _mm512_i64gather_pd(vidxGather, sd.addr(0, i), 8);
+					for (int i = 0; i < iw * iw; i++) {
+						VD8 a = sdval(i, ym - ir + rowOffset, xm - ir);
 						for (int k = 0; k < 6; k++) {
-							s[k] += a * sd.at(k, i);
+							s[k] += a * sdval(k, i, ym - ir + rowOffset, xm - ir);
 						}
 					}
+
 					//if (frameIndex == 1 && ix0 == 63 && iy0 == 1) avx::toConsole(s); //----------------
 
 					double ns = avx::norm1(s);
@@ -355,10 +391,10 @@ void AvxFrame::computeTerminate(int64_t frameIndex, std::vector<PointResult>& re
 						VD8 b = 0.0;
 						for (int c = 0; c < iw; c++) {
 							for (int r = 0; r < iw; r++) {
-								VD8 val_sd = _mm512_i64gather_pd(vidxGather, sd.addr(0, c * iw + r), 8);
+								VD8 sd = sdval(c * iw + r, ym - ir + rowOffset, xm - ir);
 								__m512i vindex = _mm512_set1_epi64(c);
 								VD8 val_delta = _mm512_permutexvar_pd(vindex, delta[r]);
-								b += val_sd * val_delta;
+								b += sd * val_delta;
 							}
 						}
 						eta = { 0, 0, 1, 0, 0, 1 };

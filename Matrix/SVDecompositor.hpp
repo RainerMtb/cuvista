@@ -36,6 +36,7 @@ private:
 
 public:
 	SVDecompositor(Mat<T>& mat) : 
+		MatInverter<T>(A),
 		A { mat }, 
 		m { mat.rows() }, 
 		n { mat.cols() },
@@ -412,12 +413,6 @@ public:
 			}
 		}
 		return p;
-	}
-
-	std::optional<Mat<T>> inv(Mat<T>& A) override {
-		this->A = A;
-		this->dirty = true;
-		return inv();
 	}
 
 	T cond() {

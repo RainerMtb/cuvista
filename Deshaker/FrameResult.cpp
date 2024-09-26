@@ -44,10 +44,10 @@ void FrameResult::reset() {
 }
 
 void FrameResult::computeTransform(std::vector<PointResult>& results, ThreadPoolBase& threadPool, int64_t frameIndex, RNG rng) {
-	computeExperimental(results, threadPool, frameIndex, rng);
+	computeType1(results, threadPool, frameIndex, rng);
 }
 
-void FrameResult::computeExperimental(std::vector<PointResult>& results, ThreadPoolBase& threadPool, int64_t frameIndex, RNG rng) {
+void FrameResult::computeType2(std::vector<PointResult>& results, ThreadPoolBase& threadPool, int64_t frameIndex, RNG rng) {
 	const ptrdiff_t cMinConsensPoints = 8;	     //min numbers of points for consensus set
 	const double cRetryPercentage = 8.0;         //run loop as long as percentage of valid points is not reached
 	const int cConsLoopCount = 8;			     //max number of loops when searching for consensus set
@@ -188,7 +188,7 @@ void FrameResult::computePointContext(std::span<PointContext> points, const Affi
 }
 
 //old style stabilization
-void FrameResult::compute(std::vector<PointResult>& results, ThreadPoolBase& threadPool, int64_t frameIndex, RNG rng) {
+void FrameResult::computeType1(std::vector<PointResult>& results, ThreadPoolBase& threadPool, int64_t frameIndex, RNG rng) {
 	const size_t cMinConsensPoints = 8;	     //min numbers of points for consensus set
 	const int cConsLoopCount = 8;			     //max number of loops when searching for consensus set
 	const int cConsLoopPercent = 95;		     //percentage of points for next loop 0..100

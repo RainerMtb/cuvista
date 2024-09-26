@@ -81,6 +81,7 @@ public:
 	//copy assignment
 	CoreMat<T>& operator = (const CoreMat<T>& other);
 
+
 	//move assignment
 	CoreMat<T>& operator = (CoreMat<T>&& other) noexcept;
 

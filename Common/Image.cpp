@@ -182,7 +182,9 @@ template <class T> void im::ImageBase<T>::yuvToRgb(ImageBase<unsigned char>& des
 	pool.addAndWait(func, 0, h);
 }
 
-template <class T> void im::ImageBase<T>::copyTo(ImageBase<T>& dest, size_t r0, size_t c0, std::vector<int> srcPlanes, std::vector<int> destPlanes, ThreadPoolBase& pool) const {
+template <class T> void im::ImageBase<T>::copyTo(ImageBase<T>& dest, size_t r0, size_t c0, 
+	std::vector<int> srcPlanes, std::vector<int> destPlanes, ThreadPoolBase& pool) const {
+
 	assert(w <= dest.w && h <= dest.h && numPlanes == dest.numPlanes && "dimensions mismatch");
 	auto func = [&] (size_t i) {
 		for (size_t r = 0; r < h; r++) {
@@ -214,31 +216,40 @@ template <class T> void im::ImageBase<T>::copyTo(ImageBase<T>& dest, ThreadPoolB
 //write text
 //------------------------
 
-template <class T> void im::ImageBase<T>::writeText(std::string_view text, int x0, int y0, int scaleX, int scaleY, ColorBase<T> fg, ColorBase<T> bg) {
+template <class T> void im::ImageBase<T>::writeText(std::string_view text, int x, int y, int sx, int sy, 
+	TextAlign alignment, ColorBase<T> fg, ColorBase<T> bg) {
+
+	//compute alignment
+	int wt = int(text.size()) * 6 * sx;
+	int ht = 10 * sy;
+	int align = static_cast<int>(alignment);
+	int x0 = x - (align % 3) * wt / 2;
+	int y0 = y - (align / 3) * ht / 2;
+	
 	//fill background area
-	for (int x = x0; x < x0 + scaleX + int(text.size()) * 6 * scaleX; x++) { //TODO
-		for (int y = y0; y < y0 + 10 * scaleY; y++) {
-			if (y < h && x < w) {
-				plot(x, y, 1.0, bg);
+	for (int ix = x0; ix < x0 + sx + wt; ix++) {
+		for (int iy = y0; iy < y0 + 10 * sy; iy++) {
+			if (iy < h && ix < w) {
+				plot(ix, iy, 1.0, bg);
 			}
 		}
 	}
 
 	//write foreground characters
 	for (int charIdx = 0; charIdx < text.size(); charIdx++) {
-		char ch = text.at(charIdx); //one character from the string
+		unsigned char ch = text.at(charIdx); //one character from the string
 		auto it = charMap.find(ch);
 		uint64_t bitmap = it == charMap.end() ? charMap.at('\0') : it->second; //mapping sequence 0 or 1
 
 		for (int yi = 7; yi >= 0; yi--) { //row of character map
 			for (int xi = 4; xi >= 0; xi--) { //column of digit image
-				int x = x0 + scaleX + charIdx * 6 * scaleX + xi * scaleX; //character pixel to set
-				int y = y0 + scaleY + yi * scaleY;  //character pixel to set
+				int ix = x0 + sx + charIdx * 6 * sx + xi * sx; //character pixel to set
+				int iy = y0 + sy + yi * sy;  //character pixel to set
 				if (bitmap & 1) {
-					for (int sy = 0; sy < scaleY; sy++) {
-						for (int sx = 0; sx < scaleX; sx++) {
-							int xx = x + sx;
-							int yy = y + sy;
+					for (int scaleY = 0; scaleY < sy; scaleY++) {
+						for (int scaleX = 0; scaleX < sx; scaleX++) {
+							int xx = ix + scaleX;
+							int yy = iy + scaleY;
 							if (yy < h && xx < w) {
 								plot(xx, yy, 1.0, fg);
 							}

@@ -124,19 +124,19 @@ void draw() {
 	//text in yuv image
 	ImageYuv im(200, 500);
 	std::string file1 = "f:/draw1.bmp";
-	im.writeText("abcdefghijklmnopqrstuvwxyz", 10, 10, 2, 3, ColorYuv::WHITE, ColorYuv::BLACK);
-	im.writeText("ABCDEFGHIJKLMNOPQRSTUVWXYZ", 10, 50, 2, 3, ColorYuv::WHITE, ColorYuv::GRAY);
-	im.writeText("дцья %,.()/-=", 10, 90, 2, 3, ColorYuv::WHITE);
+	im.writeText("abcdefghijklmnopqrstuvwxyz", 10, 10, 2, 3, TextAlign::TOP_LEFT, ColorYuv::WHITE, ColorYuv::BLACK);
+	im.writeText("ABCDEFGHIJKLMNOPQRSTUVWXYZ", 10, 50, 2, 3, TextAlign::TOP_LEFT, ColorYuv::WHITE, ColorYuv::GRAY);
+	im.writeText("дцья %,.()/-=", 10, 90, 2, 3, TextAlign::TOP_LEFT, ColorYuv::WHITE);
 	std::cout << "save to " << file1 << std::endl;
 	im.saveAsColorBMP(file1);
 
 	//text in bgr image
 	ImageBGR bgr(500, 500);
 	std::string file2 = "f:/draw2.bmp";
-	bgr.writeText("A quick brown fox", 10, 10, 2, 3, { 255, 255, 0 });
-	bgr.writeText("jumps over a lazy dog", 10, 50, 2, 3, { 255, 255, 0, 0.5 });
-	bgr.writeText("A quick brown fox", 10, 90, 2, 3, { 255, 255, 0 }, { 0, 255, 255, 0.25 });
-	bgr.writeText("jumps over a lazy dog", 10, 130, 2, 3, { 255, 255, 0, 0.5 }, { 0, 255, 255, 0.5 });
+	bgr.writeText("A quick brown fox", 10, 10, 2, 3, TextAlign::TOP_LEFT, { 255, 255, 0 });
+	bgr.writeText("jumps over a lazy dog", 10, 50, 2, 3, TextAlign::TOP_LEFT, { 255, 255, 0, 0, 0.5 });
+	bgr.writeText("A quick brown fox", 10, 90, 2, 3, TextAlign::TOP_LEFT, { 255, 255, 0 }, { 0, 255, 255, 0, 0.25 });
+	bgr.writeText("jumps over a lazy dog", 10, 130, 2, 3, TextAlign::TOP_LEFT, { 255, 255, 0, 0, 0.5 }, { 0, 255, 255, 0, 0.5 });
 
 	//lines and dots
 	double len = 100.0;
