@@ -26,19 +26,19 @@
 
 namespace avx {
 
-	void transpose16x8(std::span<VF16> data);
+	void transpose16x8(std::span<V16f> data);
 
-	void transpose16x4(std::span<VF16> data);
+	void transpose16x4(std::span<V16f> data);
 
-	__m128i yuvToRgbaPacked(VF4 y, VF4 u, VF4 v);
+	__m128i yuvToRgbaPacked(V4f y, V4f u, V4f v);
 
-	void inv(std::span<VD8> v);
+	void inv(std::span<V8d> v);
 
-	double norm1(std::span<VD8> v);
+	double norm1(std::span<V8d> v);
 
-	void toConsole(std::span<VD8> v, int digits = 5);
+	void toConsole(std::span<V8d> v, int digits = 5);
 
-	void toConsole(VD8 v, int digits = 5);
+	void toConsole(V8d v, int digits = 5);
 
 	void computeSimilar(std::span<PointBase> points, Matd& M, Affine2D& affine);
 }

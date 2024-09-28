@@ -23,8 +23,8 @@
 
 
  //transpose 4 vectors of 16 floats
-void avx::transpose16x4(std::span<VF16> data) {
-	VF16 tmp[8];
+void avx::transpose16x4(std::span<V16f> data) {
+	V16f tmp[8];
 
 	tmp[0] = _mm512_unpacklo_ps(data[0], data[1]);
 	tmp[1] = _mm512_unpackhi_ps(data[0], data[1]);
@@ -41,8 +41,8 @@ void avx::transpose16x4(std::span<VF16> data) {
 //transpose 8 vectors of 16 floats
 //result is returned again in 8 vectors of 16 floats
 //each vector contains two 'blocks' of 8 floats representing data rows
-void avx::transpose16x8(std::span<VF16> data) {
-	VF16 tmp[8];
+void avx::transpose16x8(std::span<V16f> data) {
+	V16f tmp[8];
 
 	tmp[0] = _mm512_unpacklo_ps(data[0], data[1]);
 	tmp[1] = _mm512_unpackhi_ps(data[0], data[1]);
@@ -83,21 +83,21 @@ void avx::transpose16x8(std::span<VF16> data) {
 
 
 //convert individual vectors in float for Y U V to one vector holding uchar packed RGB
-__m128i avx::yuvToRgbaPacked(VF4 y, VF4 u, VF4 v) {
+__m128i avx::yuvToRgbaPacked(V4f y, V4f u, V4f v) {
 	//distribute y, u, v values to 16 places
 	__m512i index = _mm512_setr_epi32(0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3);
-	VF16 yy = _mm512_permutexvar_ps(index, _mm512_castps128_ps512(y));
-	VF16 uu = _mm512_permutexvar_ps(index, _mm512_castps128_ps512(u));
-	VF16 vv = _mm512_permutexvar_ps(index, _mm512_castps128_ps512(v));
+	V16f yy = _mm512_permutexvar_ps(index, _mm512_castps128_ps512(y));
+	V16f uu = _mm512_permutexvar_ps(index, _mm512_castps128_ps512(u));
+	V16f vv = _mm512_permutexvar_ps(index, _mm512_castps128_ps512(v));
 	
 	//factors for conversion yuv to rgb
-	VF16 fu = { 0.0f, -0.337633f, 1.732446f, 0.0f };
-	VF16 fv = { 1.370705f, -0.698001f, 0.0f, 0.0f };
+	V16f fu = { 0.0f, -0.337633f, 1.732446f, 0.0f };
+	V16f fv = { 1.370705f, -0.698001f, 0.0f, 0.0f };
 
 	//convert
-	VF16 ps255 = 255.0f;
-	VF16 ps128 = 128.0f;
-	VF16 rgba;
+	V16f ps255 = 255.0f;
+	V16f ps128 = 128.0f;
+	V16f rgba;
 	rgba = yy + (uu - ps128) * fu + (vv - ps128) * fv;
 	rgba = rgba.clamp(0.0f, 255.0f);
 	rgba = _mm512_mask_blend_ps(0b1000'1000'1000'1000, rgba, ps255);
@@ -110,11 +110,11 @@ __m128i avx::yuvToRgbaPacked(VF4 y, VF4 u, VF4 v) {
 
 //invert matrix given in avx vectors
 //matrix must be square
-void avx::inv(std::span<VD8> v) {
+void avx::inv(std::span<V8d> v) {
 	size_t m = v.size();
 	std::vector<size_t> piv(m);
 	std::iota(piv.begin(), piv.end(), 0);
-	VD8 tmp;
+	V8d tmp;
 
 	for (size_t j = 0; j < m; j++) {
 		__mmask8 mask = 1 << j;
@@ -131,7 +131,7 @@ void avx::inv(std::span<VD8> v) {
 		size_t p = j;
 		tmp = _mm512_mask_abs_pd(tmp, mask, v[p]);
 		for (size_t i = j + 1; i < m; i++) {
-			VD8 a = _mm512_mask_abs_pd(tmp, mask, v[i]);
+			V8d a = _mm512_mask_abs_pd(tmp, mask, v[i]);
 			if (_mm512_cmp_pd_mask(a, tmp, _CMP_GT_OS)) {
 				tmp = a;
 				p = i;
@@ -149,7 +149,7 @@ void avx::inv(std::span<VD8> v) {
 	// prepare temporary and destination vectors
 	// v indentity matrix but rows reordered according to piv - will turn into result
 	// x holds decomposed matrix
-	std::vector<VD8> x(m);
+	std::vector<V8d> x(m);
 	for (int i = 0; i < m; i++) {
 		double p[8] = {};
 		size_t idx = piv[i];
@@ -179,8 +179,8 @@ void avx::inv(std::span<VD8> v) {
 
 
 //compute 1-norm of square matrix given in avx vectors
-double avx::norm1(std::span<VD8> v) {
-	VD8 sum;
+double avx::norm1(std::span<V8d> v) {
+	V8d sum;
 	size_t m = v.size();
 	for (size_t i = 0; i < m; i++) {
 		sum += _mm512_abs_pd(v[i]);
@@ -191,7 +191,7 @@ double avx::norm1(std::span<VD8> v) {
 
 
 //print matrix of avx vectors to console
-void avx::toConsole(std::span<VD8> v, int digits) {
+void avx::toConsole(std::span<V8d> v, int digits) {
 	int siz = int(v.size());
 	AvxMatd mat(siz, 8);
 	for (int i = 0; i < siz; i++) v[i].storeu(mat.row(i));
@@ -199,8 +199,8 @@ void avx::toConsole(std::span<VD8> v, int digits) {
 }
 
 
-void avx::toConsole(VD8 v, int digits) {
-	std::vector<VD8> vec = { v };
+void avx::toConsole(V8d v, int digits) {
+	std::vector<V8d> vec = { v };
 	toConsole(vec, digits);
 }
 
@@ -277,17 +277,17 @@ void avx::computeSimilar(std::span<PointBase> points, Matd& M, Affine2D& affine)
 	A[3][2] = 0.0;
 	A[3][3] = 1.0 + e + p[3] * h;
 
-	VD8 pd_n0 = n;
-	VD8 pd_n1 = VD8(-n, n);
-	VD8 pd_e = VD8(e, 0);
-	VD8 pd_f = VD8(-f, f);
-	VD8 pd_g = g;
-	VD8 pd_ek = VD8(-k, e);
-	VD8 pd_h = h;
-	VD8 pd_j = VD8(j, -j);
+	V8d pd_n0 = n;
+	V8d pd_n1 = V8d(-n, n);
+	V8d pd_e = V8d(e, 0);
+	V8d pd_f = V8d(-f, f);
+	V8d pd_g = g;
+	V8d pd_ek = V8d(-k, e);
+	V8d pd_h = h;
+	V8d pd_j = V8d(j, -j);
 	for (size_t idx = 4; idx < m; idx += 8) {
-		VD8 pd_a = p + idx;
-		VD8 pd_b = _mm512_permute_pd(pd_a, 0b0101'0101); //switch idx <-> idx+1
+		V8d pd_a = p + idx;
+		V8d pd_b = _mm512_permute_pd(pd_a, 0b0101'0101); //switch idx <-> idx+1
 		(pd_a / pd_n0).storeu(A.addr(0, idx));
 		(pd_b / pd_n1).storeu(A.addr(1, idx));
 		(pd_e + pd_b * pd_f - pd_a * pd_g).storeu(A.addr(2, idx));
@@ -305,15 +305,15 @@ void avx::computeSimilar(std::span<PointBase> points, Matd& M, Affine2D& affine)
 	for (size_t k = 0; k < 4; k++) {
 		double s = 0.0;
 		for (size_t i = k; i < m; i += 8) {
-			VD8 a = A.addr(k, i);
-			VD8 b = A.addr(5, i);
+			V8d a = A.addr(k, i);
+			V8d b = A.addr(5, i);
 			s += _mm512_reduce_add_pd(a.mul(b));
 		}
 		s /= -A[k][k];
-		VD8 pd_s = s;
+		V8d pd_s = s;
 		for (size_t i = k; i < m; i += 8) {
-			VD8 a = A.addr(k, i);
-			VD8 b = A.addr(5, i);
+			V8d a = A.addr(k, i);
+			V8d b = A.addr(5, i);
 			(b + a * s).storeu(A.addr(5, i));
 		}
 	}

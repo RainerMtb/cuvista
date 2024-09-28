@@ -105,10 +105,10 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     ui.spinRadius->setMaximum(mData.limits.radsecMax);
     ui.spinZoomMin->setMinimum(mData.limits.imZoomMin * 100 - 100);
     ui.spinZoomMin->setMaximum(mData.limits.imZoomMax * 100 - 100);
-    ui.spinZoomMin->setValue(mData.zoomMin * 100 - 100);
+    ui.spinZoomMin->setValue(std::round(mData.zoomMin * 100 - 100));
     ui.spinZoomMax->setMinimum(mData.limits.imZoomMin * 100 - 100);
     ui.spinZoomMax->setMaximum(mData.limits.imZoomMax * 100 - 100);
-    ui.spinZoomMax->setValue(mData.zoomMax * 100 - 100);
+    ui.spinZoomMax->setValue(std::round(mData.zoomMax * 100 - 100));
 
     auto fcnEnable = [&] (Qt::CheckState state) { ui.spinZoomMax->setEnabled(state == Qt::CheckState::Checked); };
     connect(ui.chkDynamicZoom, &QCheckBox::checkStateChanged, this, fcnEnable);

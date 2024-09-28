@@ -105,7 +105,7 @@ void compareFramesPlatforms() {
 		//AVX
 		MainData data;
 		data.deviceRequested = true;
-		data.cpuThreadsRequired = 1;
+		//data.cpuThreadsRequired = 1;
 		results[1] = runPyramid<AvxFrame>(data, 1);
 	}
 
