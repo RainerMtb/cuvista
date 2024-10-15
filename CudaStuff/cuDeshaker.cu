@@ -205,7 +205,10 @@ void CudaExecutor::cudaInit(CudaData& core, int devIdx, const cudaDeviceProp& pr
 		+ 6 * 1     //eta
 		+ 6 * 1		//temp
 		;
-	core.computeSharedMem = doublesCount * sizeof(double) + 6 * sizeof(double*);
+	core.computeSharedMem = 0
+		+ doublesCount * sizeof(double)   //number of double values in shared memory
+		+ 6 * sizeof(double*)             //additional double pointers
+		;
 
 	//compute kernel configuration
 	core.computeBlocks = { core.ixCount, core.iyCount };

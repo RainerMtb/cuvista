@@ -168,9 +168,6 @@ void CpuFrame::computeTerminate(int64_t frameIndex, std::vector<PointResult>& re
 					//g = PseudoInverter(s, 6).inv();
 					//result = g.has_value() ? PointResultType::RUNNING : PointResultType::FAIL_SINGULAR;
 
-					//if (frameIndex == 1 && ix0 == 97 && iy0 == 4) std::printf("cpu %d %.14f\n", z, rcond);
-					//if (frameIndex == 1 && ix0 == 75 && iy0 == 10) g.toConsole(); //----------------
-
 					int iter = 0;
 					double bestErr = std::numeric_limits<double>::max();
 					while (result == PointResultType::RUNNING) {
@@ -187,7 +184,6 @@ void CpuFrame::computeTerminate(int64_t frameIndex, std::vector<PointResult>& re
 						delta.setValues([&] (size_t r, size_t c) {
 							return im.at(r, c) - jm.at(r, c); }
 						);
-						//if (frameIndex == 1 && ix0 == 48 && iy0 == 0 && iter == 1) delta.toConsole("cpu", 18); //----------------
 
 						//eta = g.times(sd.times(delta.flatToCol())) //[6 x 1]
 						etaMat.setValuesByRow({ 0, 0, 1, 0, 0, 1 });
@@ -226,9 +222,6 @@ void CpuFrame::computeTerminate(int64_t frameIndex, std::vector<PointResult>& re
 					//transformation * 2
 					wp[0][2] *= 2.0;
 					wp[1][2] *= 2.0;
-
-					//if (frameIndex == 1 && ix0 == 63 && iy0 == 1) etaMat.toConsole("cpu"); //------------------------
-					//if (frameIndex == 1 && ix0 == 97 && iy0 == 4) std::printf("cpu %d %.14f\n", z, wp[1][2]);
 				}
 				//bring values to level 0
 				double u = wp.at(0, 2);

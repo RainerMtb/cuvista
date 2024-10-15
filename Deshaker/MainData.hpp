@@ -168,9 +168,6 @@ public:
 	std::string resultImageFile;        //file to write result images, grayscale background and transform vectors
 	std::string flowFile;               //file to write video showing optical flow
 
-	std::string tcp_address;
-	unsigned short tcp_port = 0;
-
 	bool dummyFrame = false;
 	ProgressType progressType = ProgressType::REWRITE_LINE;
 
@@ -219,4 +216,6 @@ public:
 	std::string getCpuName() const;
 
 	bool hasAvx512() const;
+
+	bool hasAvx2() const;
 };

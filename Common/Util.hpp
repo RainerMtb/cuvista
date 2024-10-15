@@ -82,7 +82,7 @@ namespace util {
     };
 
 
-    //concat givens strings by using delimiters
+    //concat given strings by using delimiters
     std::string concatStrings(std::vector<std::string>& strings, std::string_view delimiter, std::string_view prefix, std::string_view suffix);
 
     //convert a number of bytes into more readable magnitude kb, Mb
@@ -97,7 +97,7 @@ namespace util {
     //encode bytes to base64 string
     std::string base64_encode(std::span<unsigned char> data);
 
-    //encode bytes to file in 76 coolumn wide text
+    //encode bytes to file in 76 column wide text
     void base64_encode(std::span<unsigned char> data, const std::string& filename);
 
     //decode base64 string to bytes

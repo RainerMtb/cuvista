@@ -18,8 +18,6 @@
 
 #include "cuDeshaker.cuh"
 
-using uint = unsigned int;
-
 struct ArrayIndex {
 	int r, c;
 };
@@ -43,6 +41,16 @@ __constant__ double eta0[] = { 0, 0, 1, 0, 0, 1 };
 template<class T> __device__ T tex2D(cudaTextureObject_t tex, float x, float y);
 
 extern __constant__ CudaData d_core;
+
+//compute value for sd matrix directly
+__device__ inline double sdf(int r, int c1, int c2, int y0, int x0, cudaTextureObject_t tex) {
+	int idx = r / 2;
+	int dy = r % 2;
+	int dx = 1 - dy;
+	double val = tex2D<float>(tex, x0 + c1 + dx, y0 + c2 + dy) / 2 - tex2D<float>(tex, x0 + c1 - dx, y0 + c2 - dy) / 2;
+	int f[] = { 1, c1 - d_core.ir, c2 - d_core.ir };
+	return val * f[idx];
+}
 
 //compute displacement
 //one cuda block works one point in the image using one warp

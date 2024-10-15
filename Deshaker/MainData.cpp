@@ -648,5 +648,10 @@ std::string MainData::getCpuName() const {
 }
 
 bool MainData::hasAvx512() const {
-	return cpuInfo.features.avx512f & cpuInfo.features.avx512vl & cpuInfo.features.avx512bw;
+	return cpuInfo.features.avx512f & cpuInfo.features.avx512vl & cpuInfo.features.avx512bw 
+		& cpuInfo.features.avx512dq & cpuInfo.features.sse3 & cpuInfo.features.avx2;
+}
+
+bool MainData::hasAvx2() const {
+	return cpuInfo.features.sse3 & cpuInfo.features.avx2;
 }

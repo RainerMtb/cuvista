@@ -3,7 +3,15 @@
         {
             "name": "Linux",
             "includePath": [
-                "${workspaceFolder}/**",
+                "${workspaceFolder}/AvxStuff",
+                "${workspaceFolder}/Common",
+                "${workspaceFolder}/CudaStuff",
+                "${workspaceFolder}/cuvistaCli",
+                "${workspaceFolder}/cuvistaGui",
+                "${workspaceFolder}/Deshaker",
+                "${workspaceFolder}/include/**",
+                "${workspaceFolder}/Matrix",
+                "${workspaceFolder}/nvapi/**",
                 "/usr/local/cuda/include",
                 "/home/rainer/Qt/6.7.2/gcc_64/include/**"
             ],

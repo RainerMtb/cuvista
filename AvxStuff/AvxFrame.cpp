@@ -20,7 +20,6 @@
 #include "AvxUtil.hpp"
 #include "cuDeshaker.cuh"
 
-
 AvxFrame::AvxFrame(CudaData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool) :
 	FrameExecutor(data, deviceInfo, frame, pool),
 	walign { 32 },
@@ -39,8 +38,6 @@ AvxFrame::AvxFrame(CudaData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame
 	mFilterResult = AvxMatf(mData.h, pitch);
 
 	mOutput.assign(3, AvxMatf(mData.h, pitch));
-
-	mPyrDelta = AvxMatd(mData.pyramidRowCount * 2, pitch, 0.0);
 }
 
 int AvxFrame::align(int base, int alignment) {
@@ -184,7 +181,7 @@ void AvxFrame::filter(const AvxMatf& src, int r0, int h, int w, AvxMatf& dest, s
 void AvxFrame::downsample(const float* srcptr, int h, int w, int stride, float* destptr, int destStride) {
 	const __m512i idx1 = _mm512_setr_epi32(0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30);
 	const __m512i idx2 = _mm512_setr_epi32(1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31);
-	V16f f = 0.5f;
+	const V16f f = 0.5f;
 
 	for (int r = 0; r < h - 1; r += 2) {
 		for (int c = 0; c < w; c += 32) {
@@ -224,34 +221,24 @@ void AvxFrame::yuvToFloat(const ImageYuv& yuv, size_t plane, AvxMatf& dest) {
 	}
 }
 
-V8d AvxFrame::sd(int c, int y0, int x0, const AvxMatf& Y) {
-	int c1 = c / mData.iw;
-	int c2 = c % mData.iw;
+V8d AvxFrame::sd(int c1, int c2, int y0, int x0, const AvxMatf& Y) {
+	__m128i w = _mm_set1_epi32(Y.w());
+	__m128i x = _mm_set1_epi32(x0 + c1);
+	__m128i y = _mm_set1_epi32(y0 + c2);
+	__m128i dx = _mm_setr_epi32(1, -1, 0, 0);
+	__m128i dy = _mm_setr_epi32(0, 0, 1, -1);
 
-	const __m256i dx = _mm256_setr_epi32(1, 0, 1, 0, 1, 0, 0, 0);
-	const __m256i dy = _mm256_setr_epi32(0, 1, 0, 1, 0, 1, 0, 0);
-	const __m256i ix = _mm256_set1_epi32(x0 + c1);
-	const __m256i iy = _mm256_set1_epi32(y0 + c2);
-	const __m256i w = _mm256_set1_epi32(Y.w());
-
-	__m256i idx = {};
-	idx = iy;
-	idx = _mm256_add_epi32(idx, dy);
-	idx = _mm256_mullo_epi32(idx, w);
-	idx = _mm256_add_epi32(idx, ix);
-	idx = _mm256_add_epi32(idx, dx);
-	V8f v1 = _mm256_i32gather_ps(Y.data(), idx, 4);
-
-	idx = iy;
-	idx = _mm256_sub_epi32(idx, dy);
-	idx = _mm256_mullo_epi32(idx, w);
-	idx = _mm256_add_epi32(idx, ix);
-	idx = _mm256_sub_epi32(idx, dx);
-	V8f v2 = _mm256_i32gather_ps(Y.data(), idx, 4);
-
-	V8d v = v1 / 2.0f - v2 / 2.0f;
+	__m128i idx = y;
+	idx = _mm_add_epi32(idx, dy);
+	idx = _mm_mullo_epi32(idx, w);
+	idx = _mm_add_epi32(idx, x);
+	idx = _mm_add_epi32(idx, dx);
+	V4f vf = _mm_i32gather_ps(Y.data(), idx, 4);
+	vf /= 2.0f;
+	vf = _mm_hsub_ps(vf, vf);
+	V8d vd = _mm256_broadcast_f32x2(vf);
 	V8d f(1, 1, c1 - mData.ir, c1 - mData.ir, c2 - mData.ir, c2 - mData.ir, 0, 0);
-	return v * f;
+	return vd * f;
 }
 
 void AvxFrame::computeStart(int64_t frameIndex, std::vector<PointResult>& results) {}
@@ -272,6 +259,7 @@ void AvxFrame::computeTerminate(int64_t frameIndex, std::vector<PointResult>& re
 		std::vector<double> wp(6);
 		std::vector<double> dwp(6);
 		__mmask8 maskIW = (1 << iw) - 1;
+		V8d iota = V8d(0, 1, 2, 3, 4, 5, 6, 7);
 
 		for (int iy0 = threadIdx; iy0 < mData.iyCount; iy0 += mData.cpuThreads) {
 			for (int ix0 = 0; ix0 < mData.ixCount; ix0++) {
@@ -292,10 +280,12 @@ void AvxFrame::computeTerminate(int64_t frameIndex, std::vector<PointResult>& re
 
 					//s = sd * sd'
 					std::vector<V8d> s(6);
-					for (int i = 0; i < iw * iw; i++) {
-						V8d a = sd(i, ym - ir + rowOffset, xm - ir, Yprev);
-						for (int k = 0; k < 6; k++) {
-							s[k] += a * a.broadcast(k);
+					for (int c1 = 0; c1 < iw; c1++) {
+						for (int c2 = 0; c2 < iw; c2++) {
+							V8d a = sd(c1, c2, ym - ir + rowOffset, xm - ir, Yprev);
+							for (int k = 0; k < 6; k++) {
+								s[k] += a * a.broadcast(k);
+							}
 						}
 					}
 
@@ -316,7 +306,7 @@ void AvxFrame::computeTerminate(int64_t frameIndex, std::vector<PointResult>& re
 					while (result == PointResultType::RUNNING) {
 						for (int r = 0; r < iw; r++) {
 							//compute coordinate point for interpolation
-							V8d x0 = V8d(0 - ir, 1 - ir, 2 - ir, 3 - ir, 4 - ir, 5 - ir, 6 - ir, 7 - ir);
+							V8d x0 = iota - ir;
 							V8d y0 = r - ir;
 							V8d x = V8d(xm) + x0 * wp[0] + y0 * wp[3] + wp[2];
 							V8d y = V8d(ym) + x0 * wp[1] + y0 * wp[4] + wp[5];
@@ -334,8 +324,8 @@ void AvxFrame::computeTerminate(int64_t frameIndex, std::vector<PointResult>& re
 							//compute fractions
 							V8d flx = _mm512_floor_pd(x);
 							V8d fly = _mm512_floor_pd(y);
-							V8d dx = _mm512_sub_pd(x, flx);
-							V8d dy = _mm512_sub_pd(y, fly);
+							V8d dx = x - flx;
+							V8d dy = y - fly;
 
 							//prepare values
 							V8d pd_zero = 0.0;
@@ -381,7 +371,7 @@ void AvxFrame::computeTerminate(int64_t frameIndex, std::vector<PointResult>& re
 						V8d b = 0.0;
 						for (int c = 0; c < iw; c++) {
 							for (int r = 0; r < iw; r++) {
-								V8d vsd = sd(c * iw + r, ym - ir + rowOffset, xm - ir, Yprev);
+								V8d vsd = sd(c, r, ym - ir + rowOffset, xm - ir, Yprev);
 								V8d vdelta = delta[r].broadcast(c);
 								b += vsd * vdelta;
 							}
@@ -476,13 +466,14 @@ void AvxFrame::warpBack(const Affine2D& trf, const AvxMatf& input, AvxMatf& dest
 	V8d m11 = trf.arrayValue(4);
 	V8d m12 = trf.arrayValue(5);
 	V8d offset = 8;
+	V8d iota = V8d(0, 1, 2, 3, 4, 5, 6, 7);
 
 	for (int threadIdx = 0; threadIdx < mData.cpuThreads; threadIdx++) mPool.add([&, threadIdx] {
 		for (int r = threadIdx; r < mData.h; r += mData.cpuThreads) {
-			__m512d iy = _mm512_set1_pd(r);
-			__m512d ix = _mm512_setr_pd(0, 1, 2, 3, 4, 5, 6, 7);
+			V8d ix = iota;
+			V8d iy = r;
+			
 			for (int c = 0; c < pitch; c += 16) {
-
 				auto t1 = transform(ix, iy, m00, m01, m02, m10, m11, m12);
 				ix = _mm512_add_pd(ix, offset);
 				auto t2 = transform(ix, iy, m00, m01, m02, m10, m11, m12);
