@@ -99,6 +99,7 @@ misc options:
 -n              never overwrite output, quit application
 -h, -help, -?   display help text
 -info           display information about software and hardware detected
+                run a test on available devices
 -copyframes     just copy input to output, do not stabilize
                 useful for testing decoding and encoding stuff
 -progress n     show progress in different ways
@@ -117,7 +118,6 @@ advanced computation parameters:
 -ir             integration radius
                 default: 3, maximum: 3
 -version        display version identifier
--selftest       run a test suite on all available devices
 
 keyboard input options at runtime:
 key [e]         stop reading input, write pending output, then terminate

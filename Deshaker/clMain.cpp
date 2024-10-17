@@ -41,88 +41,95 @@ OpenClExecutor::OpenClExecutor(CudaData& data, DeviceInfoBase& deviceInfo, Movie
 
 //check available devices
 void cl::probeRuntime(OpenClInfo& info) {
-	std::vector<Platform> platforms;
-	Platform::get(&platforms);
+	try {
+		std::vector<Platform> platforms;
+		Platform::get(&platforms);
 
-	for (Platform& platform : platforms) {
-		info.version = platform.getInfo<CL_PLATFORM_VERSION>();
-		std::vector<Device> devices;
-		platform.getDevices(CL_DEVICE_TYPE_GPU, &devices);
+		for (Platform& platform : platforms) {
+			info.version = platform.getInfo<CL_PLATFORM_VERSION>();
+			std::vector<Device> devices;
+			platform.getDevices(CL_DEVICE_TYPE_GPU, &devices);
+			for (Device& dev : devices) {
+				cl_bool avail = dev.getInfo<CL_DEVICE_AVAILABLE>();
+				if (avail == false) continue;
 
-		for (Device& dev : devices) {
-			cl_bool avail = dev.getInfo<CL_DEVICE_AVAILABLE>();
-			if (avail == false) continue;
+				cl_int prefWidth = dev.getInfo<CL_DEVICE_PREFERRED_VECTOR_WIDTH_DOUBLE>();
+				if (prefWidth == 0) continue;
 
-			cl_int prefWidth = dev.getInfo<CL_DEVICE_PREFERRED_VECTOR_WIDTH_DOUBLE>();
-			if (prefWidth == 0) continue;
+				cl_int nativeWidth = dev.getInfo<CL_DEVICE_NATIVE_VECTOR_WIDTH_DOUBLE>();
+				if (nativeWidth == 0) continue;
 
-			cl_int nativeWidth = dev.getInfo<CL_DEVICE_NATIVE_VECTOR_WIDTH_DOUBLE>();
-			if (nativeWidth == 0) continue;
+				cl_bool hasImage = dev.getInfo<CL_DEVICE_IMAGE_SUPPORT>();
+				if (hasImage == false) continue;
 
-			cl_bool hasImage = dev.getInfo<CL_DEVICE_IMAGE_SUPPORT>();
-			if (hasImage == false) continue;
+				//pixel dimensions
+				int64_t maxPixelWidth = dev.getInfo<CL_DEVICE_IMAGE2D_MAX_WIDTH>();
+				int64_t maxPixelHeight = dev.getInfo<CL_DEVICE_IMAGE2D_MAX_HEIGHT>();
 
-			//pixel dimensions
-			int64_t maxPixelWidth = dev.getInfo<CL_DEVICE_IMAGE2D_MAX_WIDTH>();
-			int64_t maxPixelHeight = dev.getInfo<CL_DEVICE_IMAGE2D_MAX_HEIGHT>();
+				cl_device_fp_config doubleConfig = dev.getInfo< CL_DEVICE_DOUBLE_FP_CONFIG>();
+				cl_int minDoubleConfig = CL_FP_FMA | CL_FP_ROUND_TO_NEAREST | CL_FP_INF_NAN | CL_FP_DENORM;
+				if ((doubleConfig & minDoubleConfig) == 0) continue;
 
-			cl_device_fp_config doubleConfig = dev.getInfo< CL_DEVICE_DOUBLE_FP_CONFIG>();
-			cl_int minDoubleConfig = CL_FP_FMA | CL_FP_ROUND_TO_NEAREST | CL_FP_INF_NAN | CL_FP_DENORM;
-			if ((doubleConfig & minDoubleConfig) == 0) continue;
+				cl_ulong localMemSize = dev.getInfo<CL_DEVICE_LOCAL_MEM_SIZE>();
+				int64_t maxPixel = localMemSize / sizeof(float);
+				if (maxPixelWidth < maxPixel) maxPixel = maxPixelWidth;
+				if (maxPixelHeight < maxPixel) maxPixel = maxPixelHeight;
 
-			cl_ulong localMemSize = dev.getInfo<CL_DEVICE_LOCAL_MEM_SIZE>();
-			int64_t maxPixel = localMemSize / sizeof(float);
-			if (maxPixelWidth < maxPixel) maxPixel = maxPixelWidth;
-			if (maxPixelHeight < maxPixel) maxPixel = maxPixelHeight;
-
-			//find device version
-			int versionDevice = 0;
-			int versionC = 0;
-			std::regex pattern("OpenCL (\\d)\\.(\\d) .*");
-			std::smatch matches;
-			std::string deviceVersion = dev.getInfo<CL_DEVICE_VERSION>();
-			if (std::regex_match(deviceVersion, matches, pattern) && matches.size() == 3) {
-				versionDevice = std::stoi(matches[1]) * 1000 + std::stoi(matches[2]);
-			}
-
-			//find C version dependent on device version
-			if (versionDevice < 3000) {
-				std::string str = dev.getInfo<CL_DEVICE_OPENCL_C_VERSION>();
-				std::regex pattern("OpenCL C (\\d)\\.(\\d) .*");
-				if (std::regex_match(str, matches, pattern) && matches.size() == 3) {
-					versionC = std::stoi(matches[1]) * 1000 + std::stoi(matches[2]);
+				//find device version
+				int versionDevice = 0;
+				int versionC = 0;
+				std::regex pattern("OpenCL (\\d)\\.(\\d) .*");
+				std::smatch matches;
+				std::string deviceVersion = dev.getInfo<CL_DEVICE_VERSION>();
+				if (std::regex_match(deviceVersion, matches, pattern) && matches.size() == 3) {
+					versionDevice = std::stoi(matches[1]) * 1000 + std::stoi(matches[2]);
 				}
 
-			} else {
-				auto versionList = dev.getInfo<CL_DEVICE_OPENCL_C_ALL_VERSIONS>();
-				auto func = [] (cl_name_version a, cl_name_version b) { return a.version < b.version; };
-				auto maxVersion = std::max_element(versionList.begin(), versionList.end(), func);
-				versionC = 1000 * (maxVersion->version >> 22) + (maxVersion->version >> 12 & 0x3FF);
+				//find C version dependent on device version
+				if (versionDevice < 3000) {
+					std::string str = dev.getInfo<CL_DEVICE_OPENCL_C_VERSION>();
+					std::regex pattern("OpenCL C (\\d)\\.(\\d) .*");
+					if (std::regex_match(str, matches, pattern) && matches.size() == 3) {
+						versionC = std::stoi(matches[1]) * 1000 + std::stoi(matches[2]);
+					}
+
+				} else {
+					auto versionList = dev.getInfo<CL_DEVICE_OPENCL_C_ALL_VERSIONS>();
+					auto func = [] (cl_name_version a, cl_name_version b) { return a.version < b.version; };
+					auto maxVersion = std::max_element(versionList.begin(), versionList.end(), func);
+					versionC = 1000 * (maxVersion->version >> 22) + (maxVersion->version >> 12 & 0x3FF);
+				}
+
+				//accept only devices of at least version 2.0
+				if (versionDevice < 2000) continue;
+				if (versionC < 2000) continue;
+
+				//images from buffer not supported on Nvidia on OpenCL 3.0
+				cl_uint pitch = dev.getInfo<CL_DEVICE_IMAGE_PITCH_ALIGNMENT>();
+
+				//list of device extensions
+				string str = dev.getInfo<CL_DEVICE_EXTENSIONS>();
+				std::regex delimiter(" ");
+				auto iter = std::sregex_token_iterator(str.begin(), str.end(), delimiter, -1);
+				std::vector<std::string> extensions(iter, {});
+				//std::vector<cl_name_version> extensions = dev.getInfo<CL_DEVICE_EXTENSIONS_WITH_VERSION>(); //Missing before version 3.0.
+
+				//we have a valid device
+				DeviceInfoOpenCl devInfo(DeviceType::OPEN_CL, maxPixel);
+				devInfo.device = std::make_shared<Device>(dev);
+				devInfo.versionDevice = versionDevice;
+				devInfo.versionC = versionC;
+				devInfo.pitch = pitch;
+				devInfo.extensions = extensions;
+				info.devices.push_back(devInfo);
 			}
-
-			//accept only devices of at least version 2.0
-			if (versionDevice < 2000) continue;
-			if (versionC < 2000) continue;
-
-			//images from buffer not supported on Nvidia on OpenCL 3.0
-			cl_uint pitch = dev.getInfo<CL_DEVICE_IMAGE_PITCH_ALIGNMENT>();
-
-			//list of device extensions
-			string str = dev.getInfo<CL_DEVICE_EXTENSIONS>();
-			std::regex delimiter(" ");
-			auto iter = std::sregex_token_iterator(str.begin(), str.end(), delimiter, -1);
-			std::vector<std::string> extensions(iter, {});
-			//std::vector<cl_name_version> extensions = dev.getInfo<CL_DEVICE_EXTENSIONS_WITH_VERSION>(); //Missing before version 3.0.
-
-			//we have a valid device
-			DeviceInfoOpenCl devInfo(DeviceType::OPEN_CL, maxPixel);
-			devInfo.device = std::make_shared<Device>(dev);
-			devInfo.versionDevice = versionDevice;
-			devInfo.versionC = versionC;
-			devInfo.pitch = pitch;
-			devInfo.extensions = extensions;
-			info.devices.push_back(devInfo);
 		}
+
+	} catch (const Error& err) {
+		info.warning = std::format("OpenCL init error: {}", err.what());
+
+	} catch (...) {
+		info.warning = "unknown error loading Open CL";
 	}
 }
 

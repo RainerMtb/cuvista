@@ -205,16 +205,13 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 
 		} else if (args.nextArg("info")) {
 			showHeader();
-			showDeviceInfo();
-
-		} else if (args.nextArg("version")) {
-			showVersionInfo();
-
-		} else if (args.nextArg("selftest")) {
-			showHeader();
+			showDeviceInfo(*console);
 			MessagePrinterConsole mpc(console);
 			runSelfTest(mpc, deviceList);
 			throw SilentQuitException();
+
+		} else if (args.nextArg("version")) {
+			showVersionInfo();
 
 		} else if (args.nextArg("h") || args.nextArg("help") || args.nextArg("?")) {
 			*console << helpString;
@@ -525,13 +522,15 @@ std::ostream& MainData::showDeviceInfo(std::ostream& os) const {
 	os << std::endl;
 	os << "Nvidia/Cuda System Details:" << std::endl;
 	if (cudaInfo.nvidiaDriverVersion.size() > 0) {
-		os << "Nvidia Driver: " << cudaInfo.nvidiaDriverVersion;
+		os << "Nvidia Driver: " << cudaInfo.nvidiaDriverVersion << std::endl;
 	} else {
-		os << "Nvidia driver not found";
+		os << "Nvidia driver not found" << std::endl;
+	}
+	if (cudaInfo.warning.empty() == false) {
+		os << "warning: " << cudaInfo.warning << std::endl;
 	}
 
 	//display cuda info
-	os << std::endl;
 	if (deviceCountCuda() > 0) {
 		os << "Cuda Runtime:  " << cudaInfo.runtimeToString() << std::endl;
 		os << "Cuda Driver:   " << cudaInfo.driverToString() << std::endl;
@@ -548,6 +547,9 @@ std::ostream& MainData::showDeviceInfo(std::ostream& os) const {
 	//display OpenCL info
 	if (clinfo.devices.size() == 0) {
 		os << "OpenCL devices not found" << std::endl;
+	}
+	if (clinfo.warning.empty() == false) {
+		os << "warning: " << clinfo.warning << std::endl;
 	}
 
 	for (auto& info : clinfo.devices) {
@@ -604,7 +606,10 @@ bool MainData::Parameters::nextArg(std::string&& param, std::string& nextParam) 
 
 void MainData::probeCuda() {
 	//check Nvidia Driver
-	cudaInfo.nvidiaDriverVersion = probeNvidiaDriver();
+	NvidiaDriverInfo driverInfo = probeNvidiaDriver();
+	cudaInfo.nvidiaDriverVersion = driverInfo.version;
+	cudaInfo.warning = driverInfo.warning;
+
 	//check present cuda devices
 	CudaProbeResult res = cudaProbeRuntime();
 	cudaInfo.cudaDriverVersion = res.driverVersion;
@@ -648,10 +653,11 @@ std::string MainData::getCpuName() const {
 }
 
 bool MainData::hasAvx512() const {
-	return cpuInfo.features.avx512f & cpuInfo.features.avx512vl & cpuInfo.features.avx512bw 
-		& cpuInfo.features.avx512dq & cpuInfo.features.sse3 & cpuInfo.features.avx2;
+	auto features = deviceInfoCpu.getCpuFeatures();
+	return features.avx512f & features.avx512vl & features.avx512bw & features.avx512dq & features.sse3 & features.avx2;
 }
 
 bool MainData::hasAvx2() const {
-	return cpuInfo.features.sse3 & cpuInfo.features.avx2;
+	auto features = deviceInfoCpu.getCpuFeatures();
+	return features.sse3 & features.avx2;
 }

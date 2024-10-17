@@ -3,6 +3,7 @@
   <ItemGroup>
     <ClCompile Include="AvxFrame.cpp" />
     <ClCompile Include="AvxUtil.cpp" />
+    <ClCompile Include="AvxWrapper.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AvxFrame.hpp" />

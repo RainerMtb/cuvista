@@ -27,7 +27,8 @@
 #include "Version.hpp"
 #include "CudaData.cuh"
 #include "DeviceInfo.hpp"
-#include "MovieReader.hpp"
+
+class MovieReader;
 
 enum class DeshakerPass {
 	NONE,
@@ -193,17 +194,17 @@ public:
 
 	void validate(const MovieReader& reader);
 
-	void showBasicInfo() const;
-
 	void showDeviceInfo() const;
+
+	std::ostream& showDeviceInfo(std::ostream& os) const;
+
+	void showBasicInfo() const;
 
 	void showVersionInfo() const;
 
 	void showHeader() const;
 
 	void showIntro(const std::string& deviceName, const MovieReader& reader) const;
-
-	std::ostream& showDeviceInfo(std::ostream& os) const;
 
 	size_t deviceCountCuda() const;
 

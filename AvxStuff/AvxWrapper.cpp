@@ -16,13 +16,12 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
-#pragma once
+#include "AvxWrapper.hpp"
 
-#include <string>
+V16f::operator __m512() { return a; }
 
-struct NvidiaDriverInfo {
-	std::string version;
-	std::string warning;
-};
+V8f::operator __m256() { return a; }
 
-NvidiaDriverInfo probeNvidiaDriver();
+V4f::operator __m128() { return a; }
+
+V8d::operator __m512d() { return a; }

@@ -109,8 +109,12 @@ void FFmpegFormatWriter::open(EncodingOption videoCodec, const std::string& sour
                 retval = av_channel_layout_copy(&sc.audioOutCtx->ch_layout, &sc.audioInCtx->ch_layout);
                 if (retval < 0)
                     throw AVException("cannot copy audio channel layout");
-                sc.audioOutCtx->sample_rate = sc.audioInCtx->sample_rate; //sample rate conversion does not work!
-                sc.audioOutCtx->sample_fmt = sc.audioOutCodec->sample_fmts[0];
+                sc.audioOutCtx->sample_rate = sc.audioInCtx->sample_rate;
+                sc.audioOutCtx->sample_fmt = sc.audioOutCodec->sample_fmts[0]; //deprecated
+                //const AVSampleFormat* sampleFmts = nullptr;
+                //int nFmts;
+                //avcodec_get_supported_config(sc.audioOutCtx, sc.audioOutCodec, AV_CODEC_CONFIG_SAMPLE_FORMAT, 0, (const void**) &sampleFmts, &nFmts);
+                //sc.audioOutCtx->sample_fmt = (sampleFmts)[0];
                 sc.audioOutCtx->bit_rate = 48000LL * sc.audioOutCtx->ch_layout.nb_channels;
 
                 if (fmt_ctx->oformat->flags & AVFMT_GLOBALHEADER)

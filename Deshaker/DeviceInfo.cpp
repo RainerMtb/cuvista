@@ -28,6 +28,8 @@
 #include <thread>
 #include <format>
 
+static cpu_features::X86Info cpuInfo = cpu_features::GetX86Info();
+
  //CPU Device Info
 std::string DeviceInfoCpu::getName() const {
 	return std::format("CPU, {}, {} threads", cpuInfo.brand_string, std::to_string(std::thread::hardware_concurrency()));
@@ -39,6 +41,10 @@ std::string DeviceInfoCpu::getNameShort() const {
 
 std::shared_ptr<FrameExecutor> DeviceInfoCpu::create(MainData& data, MovieFrame& frame) {
 	return std::make_shared<CpuFrame>(data, *this, frame, frame.mPool);
+}
+
+cpu_features::X86Features DeviceInfoCpu::getCpuFeatures() const {
+	return cpuInfo.features;
 }
 
 

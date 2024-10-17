@@ -22,8 +22,6 @@
 #include "FrameExecutor.hpp"
 #include "cpu_features/cpuinfo_x86.h"
 
-inline cpu_features::X86Info cpuInfo = cpu_features::GetX86Info();
-
 //CpuFrame
 class DeviceInfoCpu : public DeviceInfoBase {
 public:
@@ -33,6 +31,7 @@ public:
 	std::string getName() const override;
 	std::string getNameShort() const override;
 	std::shared_ptr<FrameExecutor> create(MainData& data, MovieFrame& frame) override;
+	cpu_features::X86Features getCpuFeatures() const;
 };
 
 //AvxFrame
@@ -69,7 +68,8 @@ public:
 
 struct OpenClInfo {
 	std::vector<DeviceInfoOpenCl> devices;
-	std::string version;
+	std::string version = "";
+	std::string warning = "";
 };
 
 struct cudaDeviceProp;
@@ -97,6 +97,8 @@ struct CudaInfo {
 	std::vector<DeviceInfoCuda> devices;
 
 	std::string nvidiaDriverVersion = "";
+	std::string warning = "";
+
 	int cudaRuntimeVersion = 0;
 	int cudaDriverVersion = 0;
 	uint32_t nvencVersionApi = 0;

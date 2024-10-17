@@ -28,10 +28,11 @@ extern "C" {
 #include "nvapi.h"
 }
 
-std::string probeNvidiaDriver() {
+NvidiaDriverInfo probeNvidiaDriver() {
 	NvAPI_Status status = NVAPI_OK;
 	NvAPI_ShortString str;
-	std::string retval = "";
+	std::string versionString = "";
+	std::string warning = "";
 
 	status = NvAPI_Initialize();
 	if (status == NVAPI_LIBRARY_NOT_FOUND) {
@@ -39,7 +40,7 @@ std::string probeNvidiaDriver() {
 
 	} else if (status != NVAPI_OK) {
 		NvAPI_GetErrorMessage(status, str);
-		throw AVException("error initializing nvapi: " + std::string(str));
+		warning = "error initializing nvapi: " + std::string(str);
 
 	} else {
 		NvU32 version = 0;
@@ -47,14 +48,14 @@ std::string probeNvidiaDriver() {
 		status = NvAPI_SYS_GetDriverAndBranchVersion(&version, branch);
 		if (status != NVAPI_OK) {
 			NvAPI_GetErrorMessage(status, str);
-			throw AVException("error getting driver version: " + std::string(str));
+			warning = "error getting driver version: " + std::string(str);
 
 		} else {
 			//we have valid nvidia driver
-			retval = std::to_string(version / 100) + "." + std::to_string(version % 100);
+			versionString = std::to_string(version / 100) + "." + std::to_string(version % 100);
 		}
 	}
-	return retval;
+	return { versionString, warning };
 }
 
 #else
@@ -64,19 +65,21 @@ extern "C" {
 #include "nvml.h"
 }
 
-std::string probeNvidiaDriver() {
+NvidiaDriverInfo probeNvidiaDriver() {
 	//nvidia-smi --query-gpu=driver_version --format=csv,noheader
+	std::string versionString = "";
+	std::string warning = "";
 	nvmlReturn_t status;
 	status = nvmlInit_v2();
-	if (status != NVML_SUCCESS) throw AVException("error loading nvml");
+	if (status != NVML_SUCCESS) warning = "error loading nvml";
 
 	const int siz = NVML_SYSTEM_DRIVER_VERSION_BUFFER_SIZE;
 	char version[siz];
 	status = nvmlSystemGetDriverVersion(version, siz);
-	if (status != NVML_SUCCESS) throw AVException("error getting nvidia driver version");
+	if (status != NVML_SUCCESS) warning = "error getting nvidia driver version";
 
 	nvmlShutdown();
-	return version;
+	return { versionString, warning };
 }
 
 #endif

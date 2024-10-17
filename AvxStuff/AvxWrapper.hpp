@@ -21,7 +21,7 @@
 #include <immintrin.h>
 #include <iostream>
 
- //wrapper for _mm512
+ //wrapper for __m512 (512 bits - 16 floats)
 class V16f {
 	__m512 a;
 
@@ -103,13 +103,13 @@ public:
 		_mm512_mask_storeu_ps(dest, mask, a);
 	}
 
-	operator __m512() { return a; }
+	operator __m512();
 };
 
 
 class V8d;
 
-//wrapper for _mm256
+//wrapper for __m256 (256 bits - 8 floats)
 class V8f {
 	__m256 a;
 
@@ -188,11 +188,11 @@ public:
 		_mm256_mask_storeu_ps(dest, mask, a);
 	}
 
-	operator __m256() { return a; }
+	operator __m256();
 };
 
 
-//wrapper for _m128 (128 bits - 4 floats)
+//wrapper for __m128 (128 bits - 4 floats)
 class V4f {
 	__m128 a;
 
@@ -271,11 +271,11 @@ public:
 		_mm_mask_storeu_ps(dest, mask, a);
 	}
 
-	operator __m128() { return a; }
+	operator __m128();
 };
 
 
-//wrapper for _mm512d
+//wrapper for __m512d (512 bits - 8 doubles)
 class V8d {
 	__m512d a;
 
@@ -358,5 +358,5 @@ public:
 		_mm512_mask_storeu_pd(dest, mask, a);
 	}
 
-	operator __m512d() { return a; }
+	operator __m512d();
 };

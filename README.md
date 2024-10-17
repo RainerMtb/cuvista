@@ -48,7 +48,7 @@ cd build
 ```
 prepare the locations of Cuda, Qt, FFMPEG and provide them to cmake as outlined. Better use forward slashes ```/``` to separate folders. Adapt locations to your system:
 ```
-cmake .. -D CMAKE_PREFIX_PATH=C:/Qt/6.7.2/msvc2019_64;C:/CUDA/version -D FFMPEG_PATH=C:/ffmpeg
+cmake .. -D CMAKE_PREFIX_PATH=C:/Qt/6.8.0/msvc2022_64;C:/CUDA/version -D FFMPEG_PATH=C:/ffmpeg
 cmake --build . --config Release
 ```
 Upon successfull completion you will get the files
@@ -68,7 +68,7 @@ Tested on Ubuntu 24.04
 ### Main Dependencies
 
 - Get Cuda https://developer.nvidia.com/cuda-downloads 
-- Get Qt https://www.qt.io/download-qt-installer 
+- Get Qt https://www.qt.io/download-qt-installer, only the essential packages are required
 - It is possible to install both packages purely from the command line, see respective instructions
 
 ### More Libraries
@@ -93,6 +93,10 @@ sudo apt install -y libcpu-features-dev
 Seems to be needed for the Qt stuff:
 ```
 sudo apt install -y libxkbcommon-dev
+```
+In case PkgConfig is missing:
+```
+sudo apt install -y pkg-config
 ```
 ### Building
 Finally, in a terminal session, starting from the project main directory, where this readme and the top level CMakeLists.txt is located
@@ -129,8 +133,8 @@ cuvistaGui/cuvistaGui
 - Windows 11 64bit
 - Ubuntu 24.04
 - Visual Studio 2022
-- Nvidia Cuda 12.5
+- Nvidia Cuda 12.6
 - Nvidia Video Codec SDK 12.2.72
 - FFmpeg 7.0
-- Qt 6.7.2
+- Qt 6.8.0
 - Cmake 3.28.3
