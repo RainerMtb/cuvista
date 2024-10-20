@@ -78,7 +78,7 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
         QString str = QFileDialog::getOpenFileName(this, QString("Select Video file to open"), mInputDir, "All Files (*.*)");
         if (!str.isEmpty()) setInputFile(str);
     };
-    connect(ui.btnOpen, &QToolButton::clicked, this, fcnOpen);
+    connect(ui.btnOpen, &QPushButton::clicked, this, fcnOpen);
 
     //color selection
     const im::ColorRgb& rgb = mData.bgcol_rgb;
@@ -200,7 +200,7 @@ void cuvistaGui::setInputFile(const QString& filePath) {
     } catch (const AVException& ex) {
         ui.imageInput->setImage(mErrorImage);
         ui.statusbar->showMessage(QString(ex.what()));
-        ui.texInput->setPlainText({});
+        ui.texInput->setPlainText("");
         mInputReady = false;
     }
     mFileInput = QFileInfo(filePath);
@@ -274,6 +274,7 @@ void cuvistaGui::stabilize() {
     mData.zoomMin = 1.0 + ui.spinZoomMin->value() / 100.0;
     mData.zoomMax = ui.chkDynamicZoom->isChecked() ? 1.0 + ui.spinZoomMax->value() / 100.0 : mData.zoomMin;
     mData.bgmode = ui.radioBlend->isChecked() ? BackgroundMode::BLEND : BackgroundMode::COLOR;
+    if (ui.chkFrameLimit->isChecked()) mData.maxFrames = ui.spinFrameLimit->value();
 
     using uchar = unsigned char;
     mData.bgcol_rgb = { (uchar) mBackgroundColor.red(), (uchar) mBackgroundColor.green(), (uchar) mBackgroundColor.blue() };

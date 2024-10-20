@@ -43,7 +43,7 @@ target_link_libraries(cuvistaGui PRIVATE
 )
 
 install(TARGETS
-  cuvistaGui
+cuvistaGui
 )
 qt_generate_deploy_app_script(
     TARGET cuvistaGui
