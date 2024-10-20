@@ -17,7 +17,6 @@ Have a look at a sample video comparing an original recording side by side to th
 For Cuda acceleration a device with Compute Version 5 or later is required. For OpenCL the device must support at least version 2.
 
 ## Typical Performance
-
 On a RTX 3060 graphics card a typical video in FullHD resolution (1920 x 1080) should be processed at around 100 frames per second, including decoding, stabilizing and encoding.
 
 # Using CUVISTA
@@ -33,14 +32,13 @@ To start, get the repository and submodules to your computer, then proceed below
 
 ## Building on Windows
 Tested on Windows 11
-### Core Dependencies
 
-- Get Cuda https://developer.nvidia.com/cuda-downloads
-- Get ffmeg with shared libraries https://www.ffmpeg.org/download.html#build-windows
+### Core Dependencies
+Get Cuda https://developer.nvidia.com/cuda-downloads  
+Get ffmeg with shared libraries https://www.ffmpeg.org/download.html#build-windows  
 
 ### Building the CLI executable
-In a command line window, starting from the project main directory, where this readme and the top level CMakeLists.txt is located, exectute the following commands
-
+In a command line window, starting from the project main directory, where this readme and the top level CMakeLists.txt is located, exectute the following commands.  
 It is recommended to build in a subdirectory:
 ```
 mkdir build
@@ -48,7 +46,7 @@ cd build
 ```
 prepare the locations of Cuda and FFMPEG and provide them to cmake. Better use forward slashes ```/``` to separate folders. Adapt locations to your system:
 ```
-cmake .. -D CMAKE_PREFIX_PATH=C:/CUDA/version -D FFMPEG_PATH=C:/ffmpeg -D BUILD_GUI=off
+cmake .. -D CMAKE_PREFIX_PATH=C:/CUDA/version -D FFMPEG_PATH=C:/ffmpeg
 cmake --build . --config Release
 ```
 Upon successfull completion you will get the file
@@ -61,12 +59,11 @@ cmake --install . --config Release
 ```
 This will put together the libraries for ffmpeg and the executable in the subfolder ```install```
 
-### Building the GUI executable
-In addition to the Core Dependencies above get Qt https://www.qt.io/download-qt-installer, only the essential packages are required
-
+### Including the GUI executable in the build
+In addition to the Core Dependencies above get Qt https://www.qt.io/download-qt-installer, only the essential packages are required  
 Provide the location of Qt to cmake via the ```CMAKE_PREFIX_PATH``` and proceed similar to the steps above. Adapt locations to your system:
 ```
-cmake .. -D CMAKE_PREFIX_PATH=C:/Qt/6.8.0/msvc2022_64;C:/CUDA/version -D FFMPEG_PATH=C:/ffmpeg -D BUILD_GUI=on
+cmake .. -D CMAKE_PREFIX_PATH=C:/Qt/6.8.0/msvc2022_64;C:/CUDA/version -D FFMPEG_PATH=C:/ffmpeg -D GUI=1
 cmake --build . --config Release
 ```
 Upon successfull completion you will get
@@ -79,13 +76,11 @@ Optionally continue to pack everything together into the ```install``` subfolder
 cmake --install . --config Release
 ```
 
-
 ## Building on Linux
 Tested on Ubuntu 24.04
+
 ### Core Dependencies
-
-Get Cuda https://developer.nvidia.com/cuda-downloads and follow instructions there
-
+Get Cuda https://developer.nvidia.com/cuda-downloads and follow instructions there  
 Execute commands in a Linux Terminal to download and install additional components if not already available on your system
 
 Cmake, the build tool:
@@ -108,6 +103,7 @@ In case PkgConfig is missing:
 ```
 sudo apt install -y pkg-config
 ```
+
 ### Building the CLI executable
 In a terminal session, starting from the project main directory, where this readme and the top level CMakeLists.txt is located
 
@@ -118,7 +114,7 @@ cd build
 ```
 Adapt the location of cuda to your system and execute the build process
 ```
-cmake .. -D CMAKE_PREFIX_PATH=/usr/local/cuda BUILD_GUI=off
+cmake .. -D CMAKE_PREFIX_PATH=/usr/local/cuda
 cmake --build .
 ```
 Upon successfull completion you will find the executable which should execute right away
@@ -126,8 +122,9 @@ Upon successfull completion you will find the executable which should execute ri
 cuvistaCli/cuvista
 ```
 
-### Building the GUI executable
-In addition to the Core Libraries above get Qt https://www.qt.io/download-qt-installer, only the essential packages are required. You might want to ```wget``` the installer from https://download.qt.io/official_releases/online_installers/
+### Including the GUI executable in the build
+In addition to the Core Libraries above get Qt https://www.qt.io/download-qt-installer, only the essential packages are required.  
+You might want to ```wget``` the installer from https://download.qt.io/official_releases/online_installers/
 
 You probably need
 ```
@@ -135,7 +132,7 @@ sudo apt install -y libxkbcommon-dev
 ```
 Proceed similar to the steps above, also providing the location of Qt to cmake, adapt locations to your system
 ```
-cmake .. -D CMAKE_PREFIX_PATH=~/Qt/6.8.0/gcc_64:/usr/local/cuda BUILD_GUI=on
+cmake .. -D CMAKE_PREFIX_PATH=~/Qt/6.8.0/gcc_64:/usr/local/cuda -D GUI=1
 cmake --build .
 ```
 Upon successfull completion you will find the executables which should execute right away
@@ -143,7 +140,6 @@ Upon successfull completion you will find the executables which should execute r
 cuvistaCli/cuvista
 cuvistaGui/cuvistaGui
 ```
-
 
 ## Future Ideas
 - Improve performance and robustness of stabilization - very likely mutually exclusive goals

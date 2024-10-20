@@ -71,10 +71,6 @@ if (CMAKE_SYSTEM_NAME MATCHES Windows)
 endif()
 #-----------------------------------
 
-if (NOT DEFINED BUILD_GUI)
-    set(BUILD_GUI on)
-endif()
-
 #main stuff
 add_subdirectory(Common)
 add_subdirectory(Matrix)
@@ -82,20 +78,17 @@ add_subdirectory(CudaStuff)
 add_subdirectory(AvxStuff)
 add_subdirectory(Deshaker)
 add_subdirectory(cuvistaCli)
-if (BUILD_GUI MATCHES on)
-    message("Building Gui...")
+if (GUI MATCHES 1)
+    message("Including Gui Build...")
     add_subdirectory(cuvistaGui)
 else()
-    message("Skipping Gui...")
+    message("Skipping Gui Build...")
 endif()
 
 #compiler options
-target_compile_options(CudaStuff PRIVATE $<$<COMPILE_LANGUAGE:CUDA>: -rdc=true -fmad=false>)
-
 if (CMAKE_CXX_COMPILER_ID MATCHES MSVC)
     target_compile_options(AvxStuff PRIVATE /MP /arch:AVX512)
     target_compile_options(Deshaker PRIVATE /MP)
-    target_compile_options(cuvista PRIVATE /MP)
     target_link_options(cuvista PRIVATE /NODEFAULTLIB:libcmt.lib)
     if (TARGET cuvistaGui) 
         target_compile_options(cuvistaGui PRIVATE /MP)
