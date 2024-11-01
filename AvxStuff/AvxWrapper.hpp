@@ -66,14 +66,11 @@ public:
 	V16f broadcast(int i) { return _mm512_permutexvar_ps(_mm512_set1_epi32(i), a); }
 
 	float operator [] (size_t i) const { return at(i); }
-	float& operator [] (size_t i) { return at(i); }
 
 #ifdef _MSC_VER
 	float at(size_t i) const { return a.m512_f32[i]; }
-	float& at(size_t i) { return a.m512_f32[i]; }
 #else
 	float at(size_t i) const { return a[i]; }
-	float& at(size_t i) { return a[i]; }
 #endif
 
 	friend std::ostream& operator << (std::ostream& os, const V16f& vec) {
@@ -151,14 +148,11 @@ public:
 	V8f broadcast(int i) { return _mm256_permutexvar_ps(_mm256_set1_epi32(i), a); }
 
 	float operator [] (size_t i) const { return at(i); }
-	float& operator [] (size_t i) { return at(i); }
 
 #ifdef _MSC_VER
 	float at(size_t i) const { return a.m256_f32[i]; }
-	float& at(size_t i) { return a.m256_f32[i]; }
 #else
 	float at(size_t i) const { return a[i]; }
-	float& at(size_t i) { return a[i]; }
 #endif
 
 	friend std::ostream& operator << (std::ostream& os, const V8f& vec) {
@@ -234,14 +228,11 @@ public:
 	V4f broadcast(int i) { return _mm_permutevar_ps(a, _mm_set1_epi32(i)); }
 
 	float operator [] (size_t i) const { return at(i); }
-	float& operator [] (size_t i) { return at(i); }
 
 #ifdef _MSC_VER
 	float at(size_t i) const { return a.m128_f32[i]; }
-	float& at(size_t i) { return a.m128_f32[i]; }
 #else
 	float at(size_t i) const { return a[i]; }
-	float& at(size_t i) { return a[i]; }
 #endif
 
 	friend std::ostream& operator << (std::ostream& os, const V4f& vec) {
@@ -321,14 +312,11 @@ public:
 	V8d broadcast(int i) { return _mm512_permutexvar_pd(_mm512_set1_epi64(i), a); }
 
 	double operator [] (size_t i) const { return at(i); }
-	double& operator [] (size_t i) { return at(i); }
 
 #ifdef _MSC_VER
 	double at(size_t i) const { return a.m512d_f64[i]; }
-	double& at(size_t i) { return a.m512d_f64[i]; }
 #else
 	double at(size_t i) const { return a[i]; }
-	double& at(size_t i) { return a[i]; }
 #endif
 
 	friend std::ostream& operator << (std::ostream& os, const V8d& vec) {

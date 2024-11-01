@@ -30,16 +30,16 @@ public:
     PlayerWidget(QWidget* parent);
     ~PlayerWidget();
 
-    void initializeGL() override;
-    void paintGL() override;
-    void resizeGL(int w, int h) override;
-
 public slots:
     void open(int h, int w, int stride, QImage imageWorking);
     void upload(int64_t frameIndex, ImageRGBA image);
     void playNextFrame(int64_t frameIndex);
 
 private:
+    void initializeGL() override;
+    void paintGL() override;
+    void resizeGL(int w, int h) override;
+
     GLuint fbo = 0;
     GLuint textures[2] = {0, 0};
     int texHeight = 32;

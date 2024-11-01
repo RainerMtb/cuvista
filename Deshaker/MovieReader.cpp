@@ -31,17 +31,23 @@ std::future<void> MovieReader::readAsync(ImageYuv& inputFrame) {
     return std::async(std::launch::async, [&] { read(inputFrame); });
 }
 
-std::optional<int64_t> MovieReader::ptsForFrameMillis(int64_t frameIndex) {
+std::optional<int64_t> MovieReader::ptsForFrameAsMillis(int64_t frameIndex) {
     auto fcn = [&] (const VideoPacketContext& vpc) { return vpc.readIndex == frameIndex; };
     auto result = std::find_if(packetList.cbegin(), packetList.cend(), fcn);
-    if (result != packetList.end()) return result->bestTimestamp * 1000 * videoStream->time_base.num / videoStream->time_base.den;
-    else return std::nullopt;
+    if (result != packetList.end()) {
+        return result->bestTimestamp * 1000 * videoStream->time_base.num / videoStream->time_base.den;
+    } else {
+        return std::nullopt;
+    }
 }
 
-std::optional<std::string> MovieReader::ptsForFrameString(int64_t frameIndex) {
-    auto millis = ptsForFrameMillis(frameIndex);
-    if (millis.has_value()) return timeString(millis.value());
-    else return std::nullopt;
+std::optional<std::string> MovieReader::ptsForFrameAsString(int64_t frameIndex) {
+    auto millis = ptsForFrameAsMillis(frameIndex);
+    if (millis.has_value()) {
+        return timeString(millis.value());
+    } else {
+        return std::nullopt;
+    }
 }
 
 
@@ -102,7 +108,7 @@ void FFmpegFormatReader::openInput(AVFormatContext* fmt, const char* source) {
         }
 
         //store every stream found in input
-        inputStreams.emplace_back(stream); //????????????
+        inputStreams.emplace_back(stream);
     }
     //continue only when there is a video stream to decode
     if (videoStream == nullptr || av_codec == nullptr)
@@ -129,7 +135,7 @@ void FFmpegFormatReader::openInput(AVFormatContext* fmt, const char* source) {
         throw AVException("could not allocate AVPacket");
 
     //set values in InputContext object
-    avformatDuration = av_format_ctx->duration;
+    videoDuration = videoStream->duration;
     fpsNum = videoStream->avg_frame_rate.num;
     fpsDen = videoStream->avg_frame_rate.den;
     timeBaseNum = videoStream->time_base.num;
@@ -192,6 +198,11 @@ void FFmpegReader::read(ImageYuv& frame) {
                     lst.pop_front();
                     siz = std::accumulate(lst.begin(), lst.end(), 0, fcn);
                 }
+
+            } else if (sh == StreamHandling::STREAM_DECODE) {
+                std::list<AVPacket*>& lst = inputStreams[sidx].packets;
+                AVPacket* pktcopy = av_packet_clone(av_packet);
+                lst.push_back(pktcopy);
             }
 
         } else { //nothing left in input format, terminate the process, dump frames from decoder buffer
@@ -231,7 +242,8 @@ void FFmpegReader::read(ImageYuv& frame) {
         sws_scale(sws_scaler_ctx, av_frame->data, av_frame->linesize, 0, av_frame->height, frame_buffer, linesizes);
 
         //store parameters for writer
-        packetList.emplace_back(frameIndex, av_frame->pts, av_frame->pkt_dts, av_frame->duration, av_frame->best_effort_timestamp);
+        int64_t timestamp = av_frame->best_effort_timestamp - videoStream->start_time;
+        packetList.emplace_back(frameIndex, av_frame->pts, av_frame->pkt_dts, av_frame->duration, timestamp);
 
         //in some cases pts values are not in proper sequence, but frames decoded by ffmpeg are indeed in correct order
         //in that case just reorder pts values -- bug in ffmpeg

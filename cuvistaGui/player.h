@@ -20,28 +20,49 @@
 
 #include <QMainWindow>
 #include <QString>
-#include <QAtomicInt>
-#include "ui_player.h"
+#include <QAudioSink>
 
+#include "ui_player.h"
 #include "MovieWriter.hpp"
 #include "ProgressDisplay.hpp"
 #include "FrameExecutor.hpp"
+#include "AudioDecoder.hpp"
+
+class AudioPlayer : public AudioDecoder, public QIODevice {
+
+private:
+    int mChunkSize = 16384;
+
+public:
+    qint64 readData(char* data, qint64 maxSize) override;
+    qint64 writeData(const char* data, qint64 maxSize) override;
+    bool isSequential() const override;
+    qint64 bytesAvailable() const override;
+    qint64 size() const override;
+
+    int getSampleRate() const;
+};
 
 //player window
 class Player : public QMainWindow {
     Q_OBJECT
 
+private:
+    Ui::playerWindow ui;
+    QAudioSink* audioSink = nullptr;
+
 public:
     volatile bool isPaused = false;
 
     Player(QWidget* parent);
-    void open(int h, int w, int stride, QImage imageWorking);
+    void open(int h, int w, int stride, QImage imageWorking, StreamContext* scptr, double audioBufferSecs);
     void playNextFrame(int64_t idx);
 
-    void closeEvent(QCloseEvent* event) override;
+    void decodeAudio();
+    void setAudioLimit(std::optional<int64_t> millis);
+    void stopAudio();
 
-private:
-    Ui::playerWindow ui;
+    void closeEvent(QCloseEvent* event) override;
 
 signals:
     void cancel();
@@ -61,11 +82,15 @@ class PlayerWriter : public NullWriter {
 private:
     Player* mPlayer;
     ImageRGBA mOutput;
-    std::chrono::time_point<std::chrono::steady_clock> mNextDts;
     QImage mImageWorking;
+    StreamContext* mAudioStreamCtx;
+    std::chrono::time_point<std::chrono::steady_clock> mNextPts;
+    std::optional<int64_t> mFrameTimeMillis;
+    AudioPlayer mAudioPlayer;
 
 public:
-    PlayerWriter(MainData& data, MovieReader& reader, Player* player, QImage imageWorking);
+    PlayerWriter(MainData& data, MovieReader& reader, Player* player, QImage imageWorking, StreamContext* audioStreamCtx);
+    ~PlayerWriter();
 
     void open(EncodingOption videoCodec) override;
     void prepareOutput(FrameExecutor& executor) override;

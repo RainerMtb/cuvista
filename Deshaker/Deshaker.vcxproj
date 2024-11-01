@@ -56,8 +56,7 @@
     <ClCompile>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)AvxStuff;$(SolutionDir)Common;$(SolutionDir)Matrix;$(SolutionDir)CudaStuff;$(CUDA_PATH)\include;$(FFMPEG_PATH)\include;$(SolutionDir)include\CL;$(SolutionDir)include\nvenc;$(SolutionDir)include;$(SolutionDir)nvapi</AdditionalIncludeDirectories>
-      <WarningLevel>Level3</WarningLevel>
+      <AdditionalIncludeDirectories>$(FFMPEG_PATH)\include;$(SolutionDir)AvxStuff;$(SolutionDir)Common;$(SolutionDir)Matrix;$(SolutionDir)CudaStuff;$(SolutionDir)include\nvenc;$(SolutionDir)nvapi;$(SolutionDir)OpenCL-CLHPP\include;$(SolutionDir)OpenCL-Headers;$(SolutionDir)include;$(CUDA_PATH)\include</AdditionalIncludeDirectories>
       <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
       <IntrinsicFunctions>false</IntrinsicFunctions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -72,11 +71,10 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)AvxStuff;$(SolutionDir)Common;$(SolutionDir)Matrix;$(SolutionDir)CudaStuff;$(CUDA_PATH)\include;$(FFMPEG_PATH)\include;$(SolutionDir)include\CL;$(SolutionDir)include\nvenc;$(SolutionDir)include;$(SolutionDir)nvapi</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(FFMPEG_PATH)\include;$(SolutionDir)AvxStuff;$(SolutionDir)Common;$(SolutionDir)Matrix;$(SolutionDir)CudaStuff;$(SolutionDir)include\nvenc;$(SolutionDir)nvapi;$(SolutionDir)OpenCL-CLHPP\include;$(SolutionDir)OpenCL-Headers;$(SolutionDir)include;$(CUDA_PATH)\include</AdditionalIncludeDirectories>
       <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
       <IntrinsicFunctions>false</IntrinsicFunctions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -92,6 +90,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="AffineTransform.cpp" />
+    <ClCompile Include="AudioDecoder.cpp" />
     <ClCompile Include="clFunctions.cpp" />
     <ClCompile Include="clMain.cpp" />
     <ClCompile Include="clTest.cpp" />
@@ -126,6 +125,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AffineTransform.hpp" />
+    <ClInclude Include="AudioDecoder.hpp" />
     <ClInclude Include="AVException.hpp" />
     <ClInclude Include="clFunctions.hpp" />
     <ClInclude Include="clHeaders.hpp" />

@@ -33,6 +33,25 @@ void ffmpeg_log_error(int errnum, const char* msg) {
     errorLogger.logError(av_make_error(errnum, msg));
 }
 
+static constexpr FFmpegVersions ffmpeg_build_versions = { 
+    LIBAVUTIL_VERSION_INT, 
+    LIBAVCODEC_VERSION_INT, 
+    LIBAVFORMAT_VERSION_INT, 
+    LIBSWSCALE_VERSION_INT, 
+    LIBSWRESAMPLE_VERSION_INT 
+};
+
+bool ffmpeg_check_versions() {
+    FFmpegVersions ffmpeg_runtime_versions = {
+        avutil_version(),
+        avcodec_version(),
+        avformat_version(),
+        swscale_version(),
+        swresample_version()
+    };
+    return ffmpeg_build_versions == ffmpeg_runtime_versions;
+}
+
 void ffmpeg_log(void* avclass, int level, const char* fmt, va_list args) {
     if (level <= AV_LOG_ERROR) {
         const size_t ffmpeg_bufsiz = 256;
@@ -81,4 +100,26 @@ StreamContext::~StreamContext() {
         av_packet_free(&packet);
     }
     packets.clear();
+
+    if (audioInCtx) {
+        avcodec_free_context(&audioInCtx);
+    }
+    if (audioOutCtx) {
+        avcodec_free_context(&audioOutCtx);
+    }
+    if (outpkt) {
+        av_packet_free(&outpkt);
+    }
+    if (frameIn) {
+        av_frame_free(&frameIn);
+    }
+    if (frameOut) {
+        av_frame_free(&frameOut);
+    }
+    if (resampleCtx) {
+        swr_free(&resampleCtx);
+    }
+    if (fifo) {
+        av_audio_fifo_free(fifo);
+    }
 }

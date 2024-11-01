@@ -27,13 +27,13 @@ StreamInfo ReaderStats::streamInfo(AVStream* stream) const {
     std::string tstr;
     if (stream->duration != AV_NOPTS_VALUE)
         tstr = timeString(stream->duration * stream->time_base.num * 1000 / stream->time_base.den);
-    else if (avformatDuration != AV_NOPTS_VALUE)
-        tstr = timeString(avformatDuration * stream->time_base.num / stream->time_base.den);
+    else if (videoDuration != AV_NOPTS_VALUE)
+        tstr = timeString(videoDuration * stream->time_base.num / stream->time_base.den);
     else
         tstr = "unknown";
 
     AVCodecParameters* param = stream->codecpar;
-    return { av_get_media_type_string(param->codec_type), avcodec_get_name(param->codec_id), tstr };
+    return { av_get_media_type_string(param->codec_type), avcodec_get_name(param->codec_id), tstr, param->codec_type };
 }
 
 StreamInfo ReaderStats::videoStreamInfo() const {

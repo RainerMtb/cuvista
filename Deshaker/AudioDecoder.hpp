@@ -18,36 +18,30 @@
 
 #pragma once
 
+#include <optional>
+#include <mutex>
+
 #include "FFmpegUtil.hpp"
 
+class AudioDecoder {
 
-class ReaderStats {
+protected:
+	std::mutex mMutex;
+	std::vector<uint8_t> mBuffer;
+	StreamContext* mStreamCtx = nullptr;
+
+	int64_t mBytesPerSample = 0;
+	int64_t mBufferLimit = 0;
+	int64_t mPlayerLimit = 0;
+
+	size_t mWriteIndex = 0;
+	int64_t mSamplesWritten = 0;
+
+	int64_t mReadIndex = 0;
+	int64_t mSamplesRead = 0;
+
 public:
-	int h = 0, w = 0;
-	int fpsNum = -1, fpsDen = -1;
-	int64_t timeBaseNum = -1, timeBaseDen = -1;
-	int64_t videoDuration = -1;
-	std::string_view sourceName;
-
-	int64_t frameIndex = -1;
-	int64_t frameCount = -1;
-	bool endOfInput = true;
-
-	AVStream* videoStream = nullptr;
-
-	double fps() const;
-	StreamInfo videoStreamInfo() const;
-	StreamInfo streamInfo(AVStream* stream) const;
-};
-
-
-class WriterStats {
-public:
-	int64_t frameIndex = 0;
-	int frameEncoded = 0;
-	int64_t encodedBytesTotal = 0;
-	int64_t outputBytesWritten = 0;
-
-	int64_t encodedDts = 0;
-	int64_t encodedPts = 0;
+	void openFFmpeg(StreamContext* sc, double audioBufferSecs);
+	void decodePackets();
+	void setAudioLimit(std::optional<int64_t> millis);
 };

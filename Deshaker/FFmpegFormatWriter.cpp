@@ -179,49 +179,6 @@ void FFmpegFormatWriter::open(EncodingOption videoCodec, const std::string& sour
     }
 }
 
-//close ffmpeg format
-FFmpegFormatWriter::~FFmpegFormatWriter() {
-    if (fmt_ctx != nullptr && headerWritten) {
-        int result = av_write_trailer(fmt_ctx);
-        if (result < 0)
-            errorLogger.logError(av_make_error(result, "error writing trailer"));
-    }
-
-    if (fmt_ctx != nullptr && fmt_ctx->pb != nullptr && headerWritten) {
-        int result = avio_close(fmt_ctx->pb);
-        if (result < 0)
-            errorLogger.logError(av_make_error(result, "error closing output"));
-    }
-
-    for (StreamContext& sc : mReader.inputStreams) {
-        if (sc.audioInCtx) {
-            avcodec_free_context(&sc.audioInCtx);
-        }
-        if (sc.audioOutCtx) {
-            avcodec_free_context(&sc.audioOutCtx);
-        }
-        if (sc.outpkt) {
-            av_packet_free(&sc.outpkt);
-        }
-        if (sc.frameIn) {
-            av_frame_free(&sc.frameIn);
-        }
-        if (sc.frameOut) {
-            av_frame_free(&sc.frameOut);
-        }
-        if (sc.resampleCtx) {
-            swr_free(&sc.resampleCtx);
-        }
-        if (sc.fifo) {
-            av_audio_fifo_free(sc.fifo);
-        }
-    }
-
-    av_packet_free(&videoPacket);
-    avformat_free_context(fmt_ctx);
-}
-
-
 //----------------------------------
 //-------- write packets
 //----------------------------------
@@ -281,8 +238,7 @@ void FFmpegFormatWriter::transcodeAudio(AVPacket* pkt, StreamContext& sc, bool t
                 if (bufsiz < 0)
                     ffmpeg_log_error(retval, "cannot allocate samples");
 
-                const uint8_t** ptrs = (const uint8_t**) sc.frameIn->extended_data;
-                sampleCount = swr_convert(sc.resampleCtx, samplesArray, sampleCount, ptrs, sc.frameIn->nb_samples);
+                sampleCount = swr_convert(sc.resampleCtx, samplesArray, sampleCount, sc.frameIn->extended_data, sc.frameIn->nb_samples);
                 if (sampleCount < 0)
                     ffmpeg_log_error(sampleCount, "cannot convert samples");
 
@@ -427,8 +383,28 @@ void FFmpegFormatWriter::writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsI
     //write packet to output
     writePacket(pkt);
     encodedBytesTotal += encodedBytes;
-    outputBytesWritten = encodedBytesTotal; //fmt_ctx->pb->bytes_written does not include everything
+    outputBytesWritten = avio_tell(fmt_ctx->pb);
 
     //advance encoded counter
     this->frameEncoded++;
+}
+
+//close ffmpeg format
+FFmpegFormatWriter::~FFmpegFormatWriter() {
+    if (fmt_ctx != nullptr && headerWritten) {
+        int result = av_write_trailer(fmt_ctx);
+        if (result < 0) {
+            errorLogger.logError(av_make_error(result, "error writing trailer"));
+        }
+        outputBytesWritten = avio_tell(fmt_ctx->pb);
+    }
+
+    if (fmt_ctx != nullptr && fmt_ctx->pb != nullptr && headerWritten) {
+        int result = avio_close(fmt_ctx->pb);
+        if (result < 0) {
+            errorLogger.logError(av_make_error(result, "error closing output"));
+        }
+    }
+    av_packet_free(&videoPacket);
+    avformat_free_context(fmt_ctx);
 }

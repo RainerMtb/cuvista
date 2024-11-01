@@ -42,8 +42,8 @@ public:
 	virtual void rewind() {}
 	virtual void seek(double fraction) {}
 
-	std::optional<std::string> ptsForFrameString(int64_t frameIndex);
-	std::optional<int64_t> ptsForFrameMillis(int64_t frameIndex);
+	std::optional<std::string> ptsForFrameAsString(int64_t frameIndex);
+	std::optional<int64_t> ptsForFrameAsMillis(int64_t frameIndex);
 
 protected:
 	int sideDataMaxSize = 20 * 1024 * 1024;

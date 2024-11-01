@@ -44,10 +44,6 @@ bool PointResult::operator == (const PointResult& other) const {
 	return equals(other, 0.0);
 }
 
-bool PointResult::operator != (const PointResult& other) const {
-	return !(*this == other);
-}
-
 std::ostream& operator << (std::ostream& out, const PointResult& res) {
 	out << "idx=" << res.idx << ", ix0=" << res.ix0 << ", iy0=" << res.iy0 << ", u=" << res.u << ", v=" << res.v;
 	return out;

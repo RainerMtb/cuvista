@@ -18,6 +18,7 @@
 
 #include <QDebug>
 #include <cassert>
+
 #include "PlayerWidget.h"
 
 /*

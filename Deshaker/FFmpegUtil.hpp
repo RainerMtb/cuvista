@@ -21,6 +21,7 @@
 #include <vector>
 #include <string>
 #include <list>
+#include <map>
 
 extern "C" {
 #include <libavcodec/avcodec.h>
@@ -32,18 +33,35 @@ extern "C" {
 #include <libavutil/audio_fifo.h>
 }
 
+struct FFmpegVersions {
+	unsigned int avutil, avcodec, avformat, swscale, swresample;
+
+	auto operator <=> (const FFmpegVersions&) const = default;
+};
+
+
 //what to do with any input stream
 enum class StreamHandling {
 	STREAM_IGNORE,
 	STREAM_STABILIZE,
 	STREAM_COPY,
 	STREAM_TRANSCODE,
+	STREAM_DECODE,
+};
+
+inline std::map<StreamHandling, std::string> streamHandlerMap = {
+	{StreamHandling::STREAM_COPY, "copy"},
+	{StreamHandling::STREAM_IGNORE, "ignore"},
+	{StreamHandling::STREAM_STABILIZE, "stabilize"},
+	{StreamHandling::STREAM_TRANSCODE, "transcode"},
+	{StreamHandling::STREAM_DECODE, "decode"},
 };
 
 struct StreamInfo {
 	std::string streamType;
 	std::string codec;
 	std::string durationString;
+	AVMediaType mediaType;
 };
 
 //structure per stream in input file
@@ -93,3 +111,5 @@ std::string av_make_error(int errnum, const char* msg = "");
 void ffmpeg_log_error(int errnum, const char* msg = "");
 
 void ffmpeg_log(void* avclass, int level, const char* fmt, va_list args);
+
+bool ffmpeg_check_versions();

@@ -80,13 +80,13 @@ void ProgressGui::update(bool force) {
 		uint64_t idx = frame.mReader.frameIndex - 1;
 		mExecutor.getInput(idx, mInput);
 		QImage im(mInput.data(), mInput.w, mInput.h, QImage::Format_RGBX8888);
-		mProgressWindow->sigUpdateInput(im, QString::fromStdString(frame.ptsForFrameString(idx)));
+		mProgressWindow->sigUpdateInput(im, QString::fromStdString(frame.ptsForFrameAsString(idx)));
 	}
 	if (imageDue && frame.mWriter.frameIndex > 0 && mProgressWindow->isVisible()) {
 		mTimePoint = timePointNow;
 		uint64_t idx = frame.mWriter.frameIndex - 1;
 		mExecutor.getWarped(idx, mOutput);
 		QImage im(mOutput.data(), mOutput.w, mOutput.h, QImage::Format_RGBX8888);
-		mProgressWindow->sigUpdateOutput(im, QString::fromStdString(frame.ptsForFrameString(idx)));
+		mProgressWindow->sigUpdateOutput(im, QString::fromStdString(frame.ptsForFrameAsString(idx)));
 	}
 }

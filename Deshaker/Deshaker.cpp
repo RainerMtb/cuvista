@@ -19,6 +19,7 @@
 #include "Deshaker.hpp"
 #include "CudaWriter.hpp"
 #include "MovieReader.hpp"
+#include "MovieWriter.hpp"
 #include "MovieFrame.hpp"
 #include "DummyFrame.hpp"
 #include "ProgressDisplayConsole.hpp"

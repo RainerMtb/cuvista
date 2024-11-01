@@ -33,11 +33,11 @@
     <Import Project="$(QtMsBuild)\qt_defaults.props" />
   </ImportGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'" Label="QtSettings">
-    <QtModules>core;gui;widgets;opengl;openglwidgets</QtModules>
+    <QtModules>core;gui;widgets;opengl;openglwidgets;multimedia</QtModules>
     <QtBuildConfig>debug</QtBuildConfig>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'" Label="QtSettings">
-    <QtModules>core;gui;widgets;opengl;openglwidgets</QtModules>
+    <QtModules>core;gui;widgets;opengl;openglwidgets;multimedia</QtModules>
     <QtBuildConfig>release</QtBuildConfig>
     <QtDeploy>true</QtDeploy>
     <QtDeployDir>$(SolutionDir)bin\$(Platform)\Deploy</QtDeployDir>

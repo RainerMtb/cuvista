@@ -87,6 +87,8 @@ endif()
 
 #compiler options
 if (CMAKE_CXX_COMPILER_ID MATCHES MSVC)
+    target_compile_options(Common PRIVATE /MP)
+    target_compile_options(Matrix PRIVATE /MP)
     target_compile_options(AvxStuff PRIVATE /MP /arch:AVX512)
     target_compile_options(Deshaker PRIVATE /MP)
     target_link_options(cuvista PRIVATE /NODEFAULTLIB:libcmt.lib)

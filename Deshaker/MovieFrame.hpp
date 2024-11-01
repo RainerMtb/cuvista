@@ -71,7 +71,7 @@ public:
 	virtual const AffineTransform& getTransform() const final;
 
 	// play time for given frame
-	std::string ptsForFrameString(int64_t frameIndex);
+	std::string ptsForFrameAsString(int64_t frameIndex);
 
 	//run loop in subclass
 	virtual void runLoop(std::shared_ptr<ProgressBase> progress, UserInput& input, AuxWriters& auxWriters, std::shared_ptr<FrameExecutor> executor) {}

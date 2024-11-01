@@ -448,6 +448,11 @@ void MainData::validate(const MovieReader& reader) {
 
 	if (zCount < limits.levelsMin || zCount > limits.levelsMax) throw AVException("invalid pyramid levels:" + std::to_string(pyramidLevels));
 	if (ir < limits.irMin || ir > limits.irMax) throw AVException("invalid integration radius:" + std::to_string(ir));
+
+	//check ffmpeg versions
+	//if (ffmpeg_check_versions() == false) {
+	//	throw AVException("different version of ffmpeg was used at buildtime");
+	//}
 }
 
 //show info about input and output
@@ -456,12 +461,6 @@ void MainData::showIntro(const std::string& deviceName, const MovieReader& reade
 	*console << "FILE IN: " << fileIn << std::endl;
 
 	//streams in input
-	const std::map<StreamHandling, std::string> handlerMap = {
-		{StreamHandling::STREAM_COPY, "copy"},
-		{StreamHandling::STREAM_IGNORE, "ignore"},
-		{StreamHandling::STREAM_STABILIZE, "stabilize"},
-		{StreamHandling::STREAM_TRANSCODE, "transcode"},
-	};
 	for (size_t i = 0; i < reader.inputStreams.size(); i++) {
 		const StreamContext& sc = reader.inputStreams[i];
 		StreamInfo info = reader.streamInfo(sc.inputStream);
@@ -469,7 +468,7 @@ void MainData::showIntro(const std::string& deviceName, const MovieReader& reade
 			<< ": type: " << info.streamType
 			<< ", codec: " << info.codec
 			<< ", duration: " << info.durationString
-			<< " --> " << handlerMap.at(sc.handling)
+			<< " --> " << streamHandlerMap.at(sc.handling)
 			<< std::endl;
 	}
 
@@ -515,8 +514,12 @@ std::ostream& MainData::showDeviceInfo(std::ostream& os) const {
 
 	//ffmpeg
 	os << std::endl << "FFMPEG:" << std::endl;
-	os << "libavformat identifier: " << LIBAVFORMAT_IDENT << std::endl;
+	os << "libavutil identifier:  " << LIBAVUTIL_IDENT << std::endl;
 	os << "libavcodec identifier:  " << LIBAVCODEC_IDENT << std::endl;
+	os << "libavformat identifier: " << LIBAVFORMAT_IDENT << std::endl;
+	os << "libswscale identifier: " << LIBSWSCALE_IDENT << std::endl;
+	os << "libswresample identifier: " << LIBSWRESAMPLE_IDENT << std::endl;
+	if (ffmpeg_check_versions() == false) os << "warning: different version of ffmpeg was used at buildtime" << std::endl;
 
 	//display nvidia info
 	os << std::endl;

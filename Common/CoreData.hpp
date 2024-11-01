@@ -71,7 +71,7 @@ struct CoreData {
 	BackgroundMode bgmode = BackgroundMode::BLEND;
 
 	int radius = -1;			//number of frames before and after used for smoothing
-	double radsec = 0.5;		//radius in senconds
+	double radsec = 0.5;		//radius in seconds
 	int bufferCount = -1;		//number of frames to read before starting to average out trajectory
 
 	double zoomMin = 1.05;		        //min additional zoom
@@ -122,8 +122,6 @@ public:
 	bool equals(const PointResult& other, double tol = 0.0) const;
 
 	bool operator == (const PointResult& other) const;
-
-	bool operator != (const PointResult& other) const;
 
 	friend std::ostream& operator << (std::ostream& out, const PointResult& res);
 };

@@ -10,8 +10,9 @@
                 "${workspaceFolder}/cuvistaGui",
                 "${workspaceFolder}/Deshaker",
                 "${workspaceFolder}/include/**",
+                "${workspaceFolder}/OpenCL-CLHPP/include",
+                "${workspaceFolder}/OpenCL-Headers",
                 "${workspaceFolder}/Matrix",
-                "${workspaceFolder}/nvapi/**",
                 "/usr/local/cuda/include",
                 "/home/rainer/Qt/6.7.2/gcc_64/include/**"
             ],
@@ -22,7 +23,17 @@
         {
             "name": "Windows",
             "includePath": [
-                "${workspaceFolder}/**",
+                "${workspaceFolder}/AvxStuff",
+                "${workspaceFolder}/Common",
+                "${workspaceFolder}/CudaStuff",
+                "${workspaceFolder}/cuvistaCli",
+                "${workspaceFolder}/cuvistaGui",
+                "${workspaceFolder}/Deshaker",
+                "${workspaceFolder}/include/**",
+                "${workspaceFolder}/Matrix",
+                "${workspaceFolder}/nvapi/**",  
+                "${workspaceFolder}/OpenCL-CLHPP/include",
+                "${workspaceFolder}/OpenCL-Headers",
                 "${FFMPEG_PATH}/include/",
                 "${CUDA_PATH}/include"
             ],

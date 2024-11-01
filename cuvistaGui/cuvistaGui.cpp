@@ -16,8 +16,6 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
-#include "cuvistaGui.h"
-
 #include <QDebug>
 #include <QStandardPaths>
 #include <QMessageBox>
@@ -26,12 +24,17 @@
 #include <QDesktopServices>
 #include <QScrollBar>
 
+#include "cuvistaGui.h"
 #include "MessagePrinterGui.h"
 #include "SelfTest.hpp"
 #include "UserInputGui.hpp"
 #include "MovieFrame.hpp"
 #include "progress.h"
 #include "CudaWriter.hpp"
+
+template <class... Args> QString qformat(std::format_string<Args...> fmt, Args&&... args) {
+    return QString::fromStdString(std::format(fmt, std::forward<Args>(args)...));
+}
 
 cuvistaGui::cuvistaGui(QWidget *parent) : 
     QMainWindow(parent) 
@@ -42,10 +45,10 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     mMovieDir = QStandardPaths::locate(QStandardPaths::MoviesLocation, QString(), QStandardPaths::LocateDirectory);
     mInputDir = mMovieDir;
     mOutputDir = mMovieDir;
-    QString version = QString("Version ") + QString::fromStdString(CUVISTA_VERSION);
-    ui.labelVersion->setText(version);
+    ui.labelVersion->setText(qformat("Version {}", CUVISTA_VERSION));
 
     mData.console = &mData.nullStream;
+    mData.printHeader = false;
     mData.probeCuda();
     mData.probeOpenCl();
     mData.collectDeviceInfo(); 
@@ -62,8 +65,7 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
         std::vector<EncodingOption>& options = mData.deviceList[index]->encodingOptions;
         for (EncodingOption e : options) {
             QVariant qv = QVariant::fromValue(e);
-            std::string str = std::format("{} - {}", mData.mapDeviceToString[e.device], mData.mapCodecToString[e.codec]);
-            QString qs = QString::fromStdString(str);
+            QString qs = qformat("{} - {}", mData.mapDeviceToString[e.device], mData.mapCodecToString[e.codec]);
 
             ui.comboEncoding->addItem(qs, qv);
         }
@@ -168,6 +170,7 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
 
 //open and read new input file
 void cuvistaGui::setInputFile(const QString& filePath) {
+    ui.comboAudioTrack->clear();
     try {
         mReader.close();
         errorLogger.clearErrors();
@@ -193,9 +196,21 @@ void cuvistaGui::setInputFile(const QString& filePath) {
         statusBar()->showMessage({});
         StreamInfo info = mReader.videoStreamInfo();
         std::string frameCount = mReader.frameCount == 0 ? "unknown" : std::to_string(mReader.frameCount);
-        std::string str = std::format("video: {} x {} px @{:.3f} fps ({}:{})\ncodec: {}, duration: {}, frames: {}",
+        QString qstr = qformat("video: {} x {} px @{:.3f} fps ({}:{})\ncodec: {}, duration: {}, frames: {}",
             mReader.w, mReader.h, mReader.fps(), mReader.fpsNum, mReader.fpsDen, info.codec, info.durationString, frameCount);
-        ui.texInput->setPlainText(QString::fromStdString(str));
+        ui.texInput->setPlainText(qstr);
+
+        //audio tracks
+        for (StreamContext& sc : mReader.inputStreams) {
+            StreamInfo si = mReader.streamInfo(sc.inputStream);
+            if (si.mediaType == AVMEDIA_TYPE_AUDIO) {
+                QString qstr = qformat("Track {}: {}", sc.inputStream->index, si.codec);
+                ui.comboAudioTrack->addItem(qstr, QVariant::fromValue(&sc));
+            }
+        }
+        bool hasAudio = ui.comboAudioTrack->count() > 0;
+        ui.chkPlayAudio->setEnabled(hasAudio);
+        ui.chkPlayAudio->setChecked(hasAudio);
 
     } catch (const AVException& ex) {
         ui.imageInput->setImage(mErrorImage);
@@ -285,6 +300,11 @@ void cuvistaGui::stabilize() {
     mData.validate(mReader);
     //reset input handler
     mInputHandler.reset();
+    //audio track to play
+    StreamContext* scptr = 
+        (ui.chkPlayAudio->isChecked() && ui.comboAudioTrack->count() > 0) ?
+        ui.comboAudioTrack->currentData().value<StreamContext*>() : 
+        nullptr;
 
     //select writer
     if (ui.chkStack->isChecked())
@@ -294,7 +314,7 @@ void cuvistaGui::stabilize() {
     else if (ui.chkSequence->isChecked() && ui.comboImageType->currentData().value<OutputType>() == OutputType::SEQUENCE_JPG)
         mWriter = std::make_shared<JpegImageWriter>(mData, mReader);
     else if (ui.chkPlayer->isChecked())
-        mWriter = std::make_shared<PlayerWriter>(mData, mReader, mPlayerWindow, mWorkingImage);
+        mWriter = std::make_shared<PlayerWriter>(mData, mReader, mPlayerWindow, mWorkingImage, scptr);
     else if (ui.chkEncode->isChecked() && mData.requestedEncoding.device == EncodingDevice::NVENC)
         mWriter = std::make_shared<CudaFFmpegWriter>(mData, mReader);
     else if (ui.chkEncode->isChecked())

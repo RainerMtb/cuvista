@@ -46,8 +46,8 @@ MovieFrame::MovieFrame(MainData& data, MovieReader& reader, MovieWriter& writer)
 	}
 }
 
-std::string MovieFrame::ptsForFrameString(int64_t frameIndex) {
-	return mReader.ptsForFrameString(frameIndex).value_or("");
+std::string MovieFrame::ptsForFrameAsString(int64_t frameIndex) {
+	return mReader.ptsForFrameAsString(frameIndex).value_or("");
 }
 
 //shutdown
