@@ -40,7 +40,7 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     QMainWindow(parent) 
 {
     ui.setupUi(this);
-    mPlayerWindow = new Player(this);
+    mPlayerWindow = new PlayerWindow(this);
     mProgressWindow = new ProgressWindow(this);
     mMovieDir = QStandardPaths::locate(QStandardPaths::MoviesLocation, QString(), QStandardPaths::LocateDirectory);
     mInputDir = mMovieDir;
@@ -134,9 +134,7 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     connect(mProgressWindow, &ProgressWindow::sigUpdateOutput, mProgressWindow, &ProgressWindow::updateOutput);
 
     //player window
-    connect(mPlayerWindow, &Player::sigProgress, mPlayerWindow, &Player::progress);
-    connect(mPlayerWindow, &Player::sigUpload, mPlayerWindow, &Player::upload);
-    connect(mPlayerWindow, &Player::cancel, &mInputHandler, &UserInputGui::cancel);
+    connect(mPlayerWindow, &PlayerWindow::cancel, &mInputHandler, &UserInputGui::cancel);
 
     //set window to minimal size
     resize(minimumSize());
@@ -301,10 +299,10 @@ void cuvistaGui::stabilize() {
     //reset input handler
     mInputHandler.reset();
     //audio track to play
-    StreamContext* scptr = 
-        (ui.chkPlayAudio->isChecked() && ui.comboAudioTrack->count() > 0) ?
-        ui.comboAudioTrack->currentData().value<StreamContext*>() : 
-        nullptr;
+    int audioStreamIndex = -1;
+    if (ui.chkPlayAudio->isChecked() && ui.comboAudioTrack->count() > 0) {
+        audioStreamIndex = ui.comboAudioTrack->currentData().value<StreamContext*>()->inputStream->index;
+    }
 
     //select writer
     if (ui.chkStack->isChecked())
@@ -314,7 +312,7 @@ void cuvistaGui::stabilize() {
     else if (ui.chkSequence->isChecked() && ui.comboImageType->currentData().value<OutputType>() == OutputType::SEQUENCE_JPG)
         mWriter = std::make_shared<JpegImageWriter>(mData, mReader);
     else if (ui.chkPlayer->isChecked())
-        mWriter = std::make_shared<PlayerWriter>(mData, mReader, mPlayerWindow, mWorkingImage, scptr);
+        mWriter = std::make_shared<PlayerWriter>(mData, mReader, mPlayerWindow, mWorkingImage, audioStreamIndex);
     else if (ui.chkEncode->isChecked() && mData.requestedEncoding.device == EncodingDevice::NVENC)
         mWriter = std::make_shared<CudaFFmpegWriter>(mData, mReader);
     else if (ui.chkEncode->isChecked())

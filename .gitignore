@@ -356,7 +356,9 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Folders
 build/
 buildWin/
-/bin_inter
-/deploy
+bin_inter/
+bin/

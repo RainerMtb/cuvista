@@ -26,15 +26,24 @@ class ImageRGBA;
 
 
 //image from CoreMat
-class ImageYuvMat : public im::ImageMatShared<float> {
+class ImageYuvMatFloat : public im::ImageMatShared<float> {
 
 public:
-	ImageYuvMat(int h, int w, int stride, float* y, float* u, float* v) :
+	ImageYuvMatFloat(int h, int w, int stride, float* y, float* u, float* v) :
 		ImageMatShared(h, w, stride, y, u, v) {}
 
 	ImagePPM& toPPM(ImagePPM& dest, ThreadPoolBase& pool = defaultPool) const;
 
 	ImageRGBA& toRGBA(ImageRGBA& dest, ThreadPoolBase& pool = defaultPool) const;
+};
+
+
+//image from 8bit data
+class ImageYuvMat8 : public im::ImageMatShared<uint8_t> {
+
+public:
+	ImageYuvMat8(int h, int w, int stride, uint8_t* y, uint8_t* u, uint8_t* v) :
+		ImageMatShared(h, w, stride, y, u, v) {}
 };
 
 

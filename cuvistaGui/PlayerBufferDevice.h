@@ -18,30 +18,20 @@
 
 #pragma once
 
-#include <optional>
-#include <mutex>
+#include <QIODevice>
 
-#include "FFmpegUtil.hpp"
-
-class AudioDecoder {
-
-protected:
-	std::mutex mMutex;
-	std::vector<uint8_t> mBuffer;
-	StreamContext* mStreamCtx = nullptr;
-
-	int64_t mBytesPerSample = 0;
-	int64_t mBufferLimit = 0;
-	int64_t mPlayerLimit = 0;
-
-	size_t mWriteIndex = 0;
-	int64_t mSamplesWritten = 0;
-
-	int64_t mReadIndex = 0;
-	int64_t mSamplesRead = 0;
+ //buffer to be written by ffmpeg and read by QMediaPlayer
+class PlayerBufferDevice : public QIODevice {
 
 public:
-	void openFFmpeg(StreamContext* sc, double audioBufferSecs);
-	void decodePackets();
-	void setAudioLimit(std::optional<int64_t> millis);
+    PlayerBufferDevice(size_t bufferSize);
+
+    int bufferPos = 0;
+    std::vector<char> bufferData;
+
+    qint64 readData(char* data, qint64 maxSize) override;
+    qint64 writeData(const char* data, qint64 maxSize) override;
+    bool isSequential() const override;
+    qint64 bytesAvailable() const override;
+    qint64 size() const override;
 };

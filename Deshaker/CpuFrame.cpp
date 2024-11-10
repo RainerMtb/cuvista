@@ -283,7 +283,7 @@ void CpuFrame::outputData(int64_t frameIndex, const Affine2D& trf) {
 	mOutput.index = frameIndex;
 }
 
-void CpuFrame::getOutput(int64_t frameIndex, ImageYuv& image) {
+void CpuFrame::getOutput(int64_t frameIndex, ImageYuvData& image) {
 	assert(frameIndex == mOutput.index && "invalid frame index");
 	mOutput.copyTo(image, mPool);
 }
@@ -300,7 +300,7 @@ void CpuFrame::getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cud
 }
 
 void CpuFrame::getWarped(int64_t frameIndex, ImageRGBA& image) {
-	ImageYuvMat(mData.h, mData.w, mData.w, mBuffer[0].data(), mBuffer[1].data(), mBuffer[2].data()).toRGBA(image, mPool);
+	ImageYuvMatFloat(mData.h, mData.w, mData.w, mBuffer[0].data(), mBuffer[1].data(), mBuffer[2].data()).toRGBA(image, mPool);
 }
 
 Matf CpuFrame::getTransformedOutput() const {

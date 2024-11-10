@@ -105,6 +105,26 @@ template <class T> const T* im::ImageBase<T>::plane(size_t idx) const {
 	return addr(idx, 0, 0);
 }
 
+template <class T> int im::ImageBase<T>::planes() const {
+	return numPlanes;
+}
+
+template <class T> int im::ImageBase<T>::height() const {
+	return h;
+}
+
+template <class T> int im::ImageBase<T>::width() const {
+	return w;
+}
+
+template <class T> int im::ImageBase<T>::strideInBytes() const {
+	return stride * sizeof(T);
+}
+
+template <class T> void im::ImageBase<T>::setIndex(int64_t frameIndex) {
+	index = frameIndex;
+}
+
 //access one pixel on plane idx and row / col
 template <class T> T& im::ImageBase<T>::at(size_t idx, size_t r, size_t c) {
 	return *addr(idx, r, c);
@@ -182,10 +202,10 @@ template <class T> void im::ImageBase<T>::yuvToRgb(ImageBase<unsigned char>& des
 	pool.addAndWait(func, 0, h);
 }
 
-template <class T> void im::ImageBase<T>::copyTo(ImageBase<T>& dest, size_t r0, size_t c0, 
+template <class T> void im::ImageBase<T>::copyTo(ImageData<T>& dest, size_t r0, size_t c0, 
 	std::vector<int> srcPlanes, std::vector<int> destPlanes, ThreadPoolBase& pool) const {
 
-	assert(w <= dest.w && h <= dest.h && numPlanes == dest.numPlanes && "dimensions mismatch");
+	assert(w <= dest.width() && h <= dest.height() && numPlanes == dest.planes() && "dimensions mismatch");
 	auto func = [&] (size_t i) {
 		for (size_t r = 0; r < h; r++) {
 			const T* ptr = addr(srcPlanes[i], r, 0);
@@ -193,22 +213,22 @@ template <class T> void im::ImageBase<T>::copyTo(ImageBase<T>& dest, size_t r0, 
 		}
 	};
 	pool.addAndWait(func, 0, numPlanes);
-	dest.index = index;
+	dest.setIndex(index);
 }
 
-template <class T> void im::ImageBase<T>::copyTo(ImageBase<T>& dest, std::vector<int> srcPlanes, std::vector<int> destPlanes, ThreadPoolBase& pool) const {
+template <class T> void im::ImageBase<T>::copyTo(ImageData<T>& dest, std::vector<int> srcPlanes, std::vector<int> destPlanes, ThreadPoolBase& pool) const {
 	copyTo(dest, 0, 0, srcPlanes, destPlanes, pool);
 }
 
-template <class T> void im::ImageBase<T>::copyTo(ImageBase<T>& dest, ThreadPoolBase& pool) const {
-	assert(w == dest.w && h == dest.h && numPlanes == dest.numPlanes && "dimensions mismatch");
+template <class T> void im::ImageBase<T>::copyTo(ImageData<T>& dest, ThreadPoolBase& pool) const {
+	assert(w == dest.width() && h == dest.height() && numPlanes == dest.planes() && "dimensions mismatch");
 	auto func = [&] (size_t i) {
 		for (size_t r = 0; r < h; r++) {
 			std::copy(addr(i, r, 0), addr(i, r, 0) + w, dest.addr(i, r, 0));
 		}
 	};
 	pool.addAndWait(func, 0, numPlanes);
-	dest.index = index;
+	dest.setIndex(index);
 }
 
 

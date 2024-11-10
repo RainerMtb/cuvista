@@ -46,7 +46,7 @@ std::stringstream& ProgressDisplayConsole::buildMessage() {
 	if (frame.mWriter.frameIndex > 0)
 		outBuffer << ", frames out " << frame.mWriter.frameIndex;
 	if (frame.mWriter.outputBytesWritten > 0)
-		outBuffer << ", written " << util::byteSizeToString(frame.mWriter.outputBytesWritten);
+		outBuffer << ", output written " << util::byteSizeToString(frame.mWriter.outputBytesWritten);
 	return outBuffer;
 }
 
@@ -112,7 +112,7 @@ void ProgressDisplayDetailed::update(bool force) {
 
 	//input stats
 	if (frame.mReader.frameIndex != lastReadFrame && frame.mReader.endOfInput == false) {
-		VideoPacketContext stats = frame.mReader.packetList.back();
+		VideoPacketContext stats = frame.mReader.videoPacketList.back();
 		strings.push_back(std::format("read idx={}, dts={}, pts={}, duration={}", frame.mReader.frameIndex, stats.dts, stats.pts, stats.duration));
 		lastReadFrame = frame.mReader.frameIndex;
 	}

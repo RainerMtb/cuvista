@@ -19,77 +19,80 @@
 #pragma once
 
 #include <QMainWindow>
-#include <QString>
-#include <QAudioSink>
+#include <QMediaPlayer>
+#include <vector>
 
 #include "ui_player.h"
 #include "MovieWriter.hpp"
 #include "ProgressDisplay.hpp"
 #include "FrameExecutor.hpp"
-#include "AudioDecoder.hpp"
-
-class AudioPlayer : public AudioDecoder, public QIODevice {
-
-private:
-    int mChunkSize = 16384;
-
-public:
-    qint64 readData(char* data, qint64 maxSize) override;
-    qint64 writeData(const char* data, qint64 maxSize) override;
-    bool isSequential() const override;
-    qint64 bytesAvailable() const override;
-    qint64 size() const override;
-
-    int getSampleRate() const;
-};
+#include "PlayerBufferDevice.h"
 
 //player window
-class Player : public QMainWindow {
+class PlayerWindow : public QMainWindow {
     Q_OBJECT
 
 private:
     Ui::playerWindow ui;
-    QAudioSink* audioSink = nullptr;
 
 public:
     volatile bool isPaused = false;
 
-    Player(QWidget* parent);
-    void open(int h, int w, int stride, QImage imageWorking, StreamContext* scptr, double audioBufferSecs);
-    void playNextFrame(int64_t idx);
-
-    void decodeAudio();
-    void setAudioLimit(std::optional<int64_t> millis);
-    void stopAudio();
+    PlayerWindow(QWidget* parent);
+    QVideoWidget* videoWidget();
 
     void closeEvent(QCloseEvent* event) override;
 
 signals:
     void cancel();
-    void sigProgress(QString str, QString status);
-    void sigUpload(int64_t frameIndex, ImageRGBA image);
 
 public slots:
     void progress(QString str, QString status);
-    void upload(int64_t frameIndex, ImageRGBA image);
     void pause();
     void play();
 };
 
-//writer
-class PlayerWriter : public NullWriter {
+//Image using ffmpeg frame buffer
+class ImageYuvFFmpeg : public ImageData<uint8_t> {
 
 private:
-    Player* mPlayer;
-    ImageRGBA mOutput;
-    QImage mImageWorking;
-    StreamContext* mAudioStreamCtx;
-    std::chrono::time_point<std::chrono::steady_clock> mNextPts;
-    std::optional<int64_t> mFrameTimeMillis;
-    AudioPlayer mAudioPlayer;
+    AVFrame* av_frame;
 
 public:
-    PlayerWriter(MainData& data, MovieReader& reader, Player* player, QImage imageWorking, StreamContext* audioStreamCtx);
+    int64_t index = 0;
+
+    ImageYuvFFmpeg(AVFrame* av_frame = nullptr);
+
+    uint8_t* addr(size_t idx, size_t r, size_t c) override;
+    const uint8_t* addr(size_t idx, size_t r, size_t c) const override;
+    uint8_t* plane(size_t idx) override;
+    const uint8_t* plane(size_t idx) const override;
+    int planes() const override;
+    int height() const override;
+    int width() const override;
+    int strideInBytes() const override;
+    void setIndex(int64_t frameIndex) override;
+    bool saveAsBMP(const std::string& filename, uint8_t scale = 1) const override;
+};
+
+//writer
+class PlayerWriter : public QObject, public FFmpegWriter {
+    Q_OBJECT
+
+private:
+    ImageYuvFFmpeg mImageFrame;
+    PlayerWindow* mPlayer;
+    QImage mImageWorking;
+    QMediaPlayer mMediaPlayer;
+    int mAudioStreamIndex;
+    unsigned char* mBuffer = nullptr;
+    AVIOContext* m_av_avio = nullptr;
+    PlayerBufferDevice mBufferDevice;
+
+    static int writeBuffer(void* opaque, const uint8_t* buf, int bufsiz);
+
+public:
+    PlayerWriter(MainData& data, MovieReader& reader, PlayerWindow* player, QImage imageWorking, int audioStreamCtx);
     ~PlayerWriter();
 
     void open(EncodingOption videoCodec) override;
@@ -103,10 +106,10 @@ public:
 class PlayerProgress : public ProgressDisplay {
 
 private:
-    Player* mPlayer;
+    PlayerWindow* mPlayer;
 
 public:
-    PlayerProgress(MainData& data, MovieFrame& frame, Player* player) :
+    PlayerProgress(MainData& data, MovieFrame& frame, PlayerWindow* player) :
         ProgressDisplay(frame, 0),
         mPlayer { player } {}
 

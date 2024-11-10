@@ -19,6 +19,7 @@
 #include <filesystem>
 #include "MovieWriter.hpp"
 #include "MovieFrame.hpp"
+#include "MovieReader.hpp"
 
 
 void AuxWriters::writeAll(const FrameExecutor& executor) {
@@ -234,10 +235,6 @@ void AuxTransformsWriter::write(const FrameExecutor& executor) {
 // Optical Flow Video
 //-----------------------------------------------------------------------------------
 
-void OpticalFlowWriter::open() {
-	open(mData.flowFile);
-}
-
 void OpticalFlowWriter::vectorToColor(double dx, double dy, unsigned char* r, unsigned char* g, unsigned char* b) {
 	const double f = 20.0;
 	double hue = std::atan2(dy, dx) / std::numbers::pi * 180.0 + 180.0;
@@ -245,34 +242,34 @@ void OpticalFlowWriter::vectorToColor(double dx, double dy, unsigned char* r, un
 	im::hsv_to_rgb(hue, 1.0, val, r, g, b);
 }
 
-void OpticalFlowWriter::open(const std::string& sourceName) {
+void OpticalFlowWriter::open() {
+	open(mData.flowFile, AV_PIX_FMT_YUV420P);
+}
+
+void OpticalFlowWriter::open(const std::string& sourceName, AVPixelFormat pixfmt) {
 	//simplified ffmpeg video setup
 	av_log_set_callback(ffmpeg_log);
 
-	const AVCodec* codec = avcodec_find_encoder(AV_CODEC_ID_H264);
-	if (!codec)
-		throw AVException("Could not find encoder");
-
-	codec_ctx = avcodec_alloc_context3(codec);
-	if (!codec_ctx)
-		throw AVException("Could not allocate encoder context");
-
-	//setup output file
+	//setup output context
 	int result = avformat_alloc_output_context2(&fmt_ctx, NULL, NULL, sourceName.c_str());
 	if (result < 0)
 		throw AVException(av_make_error(result));
 
-	videoStream = avformat_new_stream(fmt_ctx, NULL);
-	if (!videoStream)
-		throw AVException("could not create stream");
+	result = avio_open(&fmt_ctx->pb, fmt_ctx->url, AVIO_FLAG_WRITE);
+	if (result < 0)
+		throw AVException("error opening file '" + mData.fileOut + "'");
 
-	codec_ctx->width = mData.w;
-	codec_ctx->height = mData.h;
-	codec_ctx->pix_fmt = pixfmt;
-	codec_ctx->time_base = timeBase;
-	codec_ctx->gop_size = GOP_SIZE;
+	for (StreamContext& sc : mReader.inputStreams) {
+		if (sc.inputStream->index == mReader.videoStream->index) {
+			sc.handling = StreamHandling::STREAM_STABILIZE;
+			sc.outputStream = videoStream = newStream(fmt_ctx, sc.inputStream);
 
-	FFmpegWriter::openEncoder(codec, sourceName);
+		} else {
+			sc.handling = StreamHandling::STREAM_IGNORE;
+		}
+	}
+
+	FFmpegWriter::open(AV_CODEC_ID_H264, pixfmt, mData.h, mData.w, mData.cpupitch);
 
 	//setup scaler to accept RGB
 	sws_scaler_ctx = sws_getContext(mData.w, mData.h, AV_PIX_FMT_RGBA, mData.w, mData.h, pixfmt, SWS_BILINEAR, NULL, NULL, NULL);
@@ -280,6 +277,10 @@ void OpticalFlowWriter::open(const std::string& sourceName) {
 		throw AVException("Could not get scaler context");
 
 	//setup legend image showing flow colors
+	legendScale = std::max(1, std::min(mData.w, mData.h) / 512);
+	legendSize = legendSizeBase * legendScale;
+	legend = ImageRGBA(legendSize, legendSize);
+
 	double r = legendSize / 2.0;
 	for (int y = 0; y < legendSize; y++) {
 		double dy = r - y;
@@ -343,13 +344,18 @@ void OpticalFlowWriter::writeAVFrame(AVFrame* av_frame) {
 			ffmpeg_log_error(result, "error encoding flow #2");
 
 		} else {
-			av_packet_rescale_ts(videoPacket, timeBase, videoStream->time_base);
+			av_packet_rescale_ts(videoPacket, codec_ctx->time_base, videoStream->time_base);
 			result = av_interleaved_write_frame(fmt_ctx, videoPacket);
 			if (result < 0) {
 				errorLogger.logError(av_make_error(result, "error writing flow packet"));
 			}
+
+			encodedBytesTotal += videoPacket->size;
 		}
 	}
+
+	outputBytesWritten = avio_tell(fmt_ctx->pb);
+	frameEncoded++;
 }
 
 void OpticalFlowWriter::write(const FrameExecutor& executor) {
@@ -360,10 +366,11 @@ void OpticalFlowWriter::write(const FrameExecutor& executor) {
 	legend.copyTo(imageInterpolated, 0ull + mData.h - 10 - legendSize, 10);
 	int tx = 10 + legendSize / 2;
 	int ty = 0ull + mData.h - 10 - legendSize / 2;
-	imageInterpolated.writeText(std::to_string(frameIndex), tx, ty, 1, 1, im::TextAlign::MIDDLE_CENTER, im::ColorRGBA::WHITE, im::ColorRGBA::BLACK);
+	imageInterpolated.writeText(std::to_string(frameIndex), tx, ty, legendScale, legendScale, 
+		im::TextAlign::MIDDLE_CENTER, im::ColorRGBA::WHITE, im::ColorRGBA::BLACK);
 
 	//encode rgba image
-	uint8_t* src[] = { imageInterpolated.data(), nullptr, nullptr, nullptr};
+	uint8_t* src[] = { imageInterpolated.data(), nullptr, nullptr, nullptr };
 	int strides[] = { imageInterpolated.stride, 0, 0, 0 };
 	int sliceHeight = sws_scale(sws_scaler_ctx, src, strides, 0, imageInterpolated.h, av_frame->data, av_frame->linesize);
 

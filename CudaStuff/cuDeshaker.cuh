@@ -133,7 +133,7 @@ public:
 	void computeStart(int64_t frameIndex, std::vector<PointResult>& results) override;
 	void computeTerminate(int64_t frameIndex, std::vector<PointResult>& results) override;
 	void cudaOutputData(int64_t frameIndex, const AffineCore& trf);
-	void getOutput(int64_t frameIndex, ImageYuv& image) override;
+	void getOutput(int64_t frameIndex, ImageYuvData& image) override;
 	void getOutput(int64_t frameIndex, ImageRGBA& image) override;
 	void getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) override;
 	void cudaGetTransformedOutput(float* data) const;

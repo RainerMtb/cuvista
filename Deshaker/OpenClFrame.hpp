@@ -24,5 +24,4 @@ class OpenClFrame : public OpenClExecutor {
 
 public:
 	OpenClFrame(CudaData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool);
-
 };

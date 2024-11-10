@@ -30,151 +30,167 @@ AVStream* FFmpegFormatWriter::newStream(AVFormatContext* fmt_ctx, AVStream* inSt
 }
 
 //setup output format
-void FFmpegFormatWriter::open(EncodingOption videoCodec, const std::string& sourceName, int queueSize) {
-
-    //av_log_set_level(AV_LOG_ERROR);
-    //custom callback to log ffmpeg errors
+void FFmpegFormatWriter::open(AVCodecID codecId, const std::string& sourceName, int queueSize) {
     av_log_set_callback(ffmpeg_log);
 
-    for (int i = 0; i < queueSize - 1; i++) {
-        encodingQueue.push_back(std::async([] {}));
-    }
-
-    //setup output file
+    //setup output context
     int result = avformat_alloc_output_context2(&fmt_ctx, NULL, NULL, sourceName.c_str());
     if (result < 0)
         throw AVException(av_make_error(result));
 
+    //set default stream handling
+    for (StreamContext& sc : mReader.inputStreams) {
+        if (sc.inputStream->index == mReader.videoStream->index) {
+            sc.handling = StreamHandling::STREAM_STABILIZE;
+
+        } else {
+            int codecSupported = avformat_query_codec(fmt_ctx->oformat, sc.inputStream->codecpar->codec_id, FF_COMPLIANCE_STRICT);
+            //codecSupported = false; //force transcode for debugging <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+            if (codecSupported == 1) {
+                sc.handling = StreamHandling::STREAM_COPY;
+
+            } else if (sc.inputStream->codecpar->codec_type == AVMEDIA_TYPE_AUDIO) {
+                sc.handling = StreamHandling::STREAM_TRANSCODE;
+
+            } else {
+                sc.handling = StreamHandling::STREAM_IGNORE;
+            }
+        }
+    }
+
+    //saturate encoding buffer
+    for (int i = 0; i < queueSize - 1; i++) {
+        encodingQueue.push_back(std::async([] {}));
+    }
+
+    open(codecId);
+
+    result = avio_open(&fmt_ctx->pb, fmt_ctx->url, AVIO_FLAG_WRITE);
+    if (result < 0)
+        throw AVException("error opening file '" + mData.fileOut + "'");
+}
+
+void FFmpegFormatWriter::open(AVCodecID codecId) {
+    //av_log_set_level(AV_LOG_ERROR);
+    //custom callback to log ffmpeg errors
+    av_log_set_callback(ffmpeg_log);
+
     //setup streams
-    AVStream* videoIn = mReader.videoStream;
     for (StreamContext& sc : mReader.inputStreams) {
         AVStream* inStream = sc.inputStream;
 
-        if (inStream->index == videoIn->index) {
-            AVCodecID codec = codecMap[videoCodec.codec];
-            int codecSupported = avformat_query_codec(fmt_ctx->oformat, codec, FF_COMPLIANCE_STRICT);
+        if (sc.handling == StreamHandling::STREAM_STABILIZE) {
+            int codecSupported = avformat_query_codec(fmt_ctx->oformat, codecId, FF_COMPLIANCE_STRICT);
             if (codecSupported == 1) {
-                videoStream = newStream(fmt_ctx, inStream);
-                sc.outputStream = videoStream;
-                sc.handling = StreamHandling::STREAM_STABILIZE;
+                sc.outputStream = videoStream = newStream(fmt_ctx, inStream);
 
             } else {
                 throw AVException(std::format("cannot write codec '{}' to output", avcodec_get_name(inStream->codecpar->codec_id)));
             }
             
-        } else {
-            int codecSupported = avformat_query_codec(fmt_ctx->oformat, inStream->codecpar->codec_id, FF_COMPLIANCE_STRICT);
-            //codecSupported = false; //force transcode for debugging <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-            if (codecSupported == 1) {
-                sc.outputStream = newStream(fmt_ctx, inStream);
-                sc.handling = StreamHandling::STREAM_COPY;
+        } else if (sc.handling == StreamHandling::STREAM_COPY) {
+            sc.outputStream = newStream(fmt_ctx, inStream);
 
-                int retval = avcodec_parameters_copy(sc.outputStream->codecpar, inStream->codecpar);
-                if (retval < 0)
-                    throw AVException("cannot copy context for stream");
+            int retval = avcodec_parameters_copy(sc.outputStream->codecpar, inStream->codecpar);
+            if (retval < 0)
+                throw AVException("cannot copy context for stream");
 
-                //https://ffmpeg.org/doxygen/trunk/remuxing_8c-example.html
-                //setting tag to 0 seems to avoid "Tag xxxx incompatible with output codec id as shown in ffmpeg example
-                sc.outputStream->codecpar->codec_tag = 0;
+            //setting tag to 0 seems to avoid "Tag xxxx incompatible with output codec id as shown in ffmpeg example
+            //https://ffmpeg.org/doxygen/trunk/remuxing_8c-example.html
+            sc.outputStream->codecpar->codec_tag = 0;
 
-            } else if (inStream->codecpar->codec_type == AVMEDIA_TYPE_AUDIO) {
-                sc.outputStream = newStream(fmt_ctx, inStream);
-                sc.handling = StreamHandling::STREAM_TRANSCODE;
+        } else if (sc.handling == StreamHandling::STREAM_TRANSCODE) {
+            sc.outputStream = newStream(fmt_ctx, inStream);
 
-                //set up audio transcoding
-                //open reader
-                sc.audioInCodec = avcodec_find_decoder(inStream->codecpar->codec_id);
-                if (!sc.audioInCodec)
-                    throw AVException(std::format("cannot find audio decoder for '{}'", avcodec_get_name(inStream->codecpar->codec_id)));
-                sc.audioInCtx = avcodec_alloc_context3(sc.audioInCodec);
-                if (!sc.audioInCtx)
-                    throw AVException("cannot allocate audio decoder context");
-                int retval = avcodec_parameters_to_context(sc.audioInCtx, inStream->codecpar);
-                if (retval < 0)
-                    throw AVException(av_make_error(retval, "cannot copy audio parameters to input context"));
-                retval = avcodec_open2(sc.audioInCtx, sc.audioInCodec, NULL);
-                if (retval < 0)
-                    throw AVException(av_make_error(retval, "cannot open audio decoder"));
-                sc.audioInCtx->time_base = inStream->time_base;
+            //set up audio transcoding
+            //open reader
+            sc.audioInCodec = avcodec_find_decoder(inStream->codecpar->codec_id);
+            if (!sc.audioInCodec)
+                throw AVException(std::format("cannot find audio decoder for '{}'", avcodec_get_name(inStream->codecpar->codec_id)));
+            sc.audioInCtx = avcodec_alloc_context3(sc.audioInCodec);
+            if (!sc.audioInCtx)
+                throw AVException("cannot allocate audio decoder context");
+            int retval = avcodec_parameters_to_context(sc.audioInCtx, inStream->codecpar);
+            if (retval < 0)
+                throw AVException(av_make_error(retval, "cannot copy audio parameters to input context"));
+            retval = avcodec_open2(sc.audioInCtx, sc.audioInCodec, NULL);
+            if (retval < 0)
+                throw AVException(av_make_error(retval, "cannot open audio decoder"));
+            sc.audioInCtx->time_base = inStream->time_base;
 
-                //open writer
-                //AVCodecID id = inStream->codecpar->codec_id;
-                AVCodecID id = fmt_ctx->oformat->audio_codec; //default codec for output format
-                sc.audioOutCodec = avcodec_find_encoder(id);
-                if (!sc.audioOutCodec)
-                    throw AVException(std::format("cannot find audio encoder for '{}'", avcodec_get_name(id)));
-                sc.audioOutCtx = avcodec_alloc_context3(sc.audioOutCodec);
-                if (!sc.audioOutCtx)
-                    throw AVException("cannot allocate audio encoder context");
-                retval = av_channel_layout_copy(&sc.audioOutCtx->ch_layout, &sc.audioInCtx->ch_layout);
-                if (retval < 0)
-                    throw AVException("cannot copy audio channel layout");
-                sc.audioOutCtx->sample_rate = sc.audioInCtx->sample_rate;
-                sc.audioOutCtx->sample_fmt = sc.audioOutCodec->sample_fmts[0]; //deprecated
-                //const AVSampleFormat* sampleFmts = nullptr;
-                //int nFmts;
-                //avcodec_get_supported_config(sc.audioOutCtx, sc.audioOutCodec, AV_CODEC_CONFIG_SAMPLE_FORMAT, 0, (const void**) &sampleFmts, &nFmts);
-                //sc.audioOutCtx->sample_fmt = (sampleFmts)[0];
-                sc.audioOutCtx->bit_rate = 48000LL * sc.audioOutCtx->ch_layout.nb_channels;
+            //open writer
+            //AVCodecID id = inStream->codecpar->codec_id;
+            AVCodecID id = fmt_ctx->oformat->audio_codec; //default codec for output format
+            sc.audioOutCodec = avcodec_find_encoder(id);
+            if (!sc.audioOutCodec)
+                throw AVException(std::format("cannot find audio encoder for '{}'", avcodec_get_name(id)));
+            sc.audioOutCtx = avcodec_alloc_context3(sc.audioOutCodec);
+            if (!sc.audioOutCtx)
+                throw AVException("cannot allocate audio encoder context");
+            retval = av_channel_layout_copy(&sc.audioOutCtx->ch_layout, &sc.audioInCtx->ch_layout);
+            if (retval < 0)
+                throw AVException("cannot copy audio channel layout");
+            sc.audioOutCtx->sample_rate = sc.audioInCtx->sample_rate;
+            sc.audioOutCtx->sample_fmt = sc.audioOutCodec->sample_fmts[0]; //deprecated
+            //const AVSampleFormat* sampleFmts = nullptr;
+            //int nFmts;
+            //avcodec_get_supported_config(sc.audioOutCtx, sc.audioOutCodec, AV_CODEC_CONFIG_SAMPLE_FORMAT, 0, (const void**) &sampleFmts, &nFmts);
+            //sc.audioOutCtx->sample_fmt = (sampleFmts)[0];
 
-                if (fmt_ctx->oformat->flags & AVFMT_GLOBALHEADER)
-                    sc.audioOutCtx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+            if (fmt_ctx->oformat->flags & AVFMT_GLOBALHEADER)
+                sc.audioOutCtx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
 
-                retval = avcodec_open2(sc.audioOutCtx, sc.audioOutCodec, NULL);
-                if (retval < 0)
-                    throw AVException("cannot open audio encoder");
+            retval = avcodec_open2(sc.audioOutCtx, sc.audioOutCodec, NULL);
+            if (retval < 0)
+                throw AVException("cannot open audio encoder");
 
-                //stream timebase
-                sc.outputStream->time_base.den = sc.audioOutCtx->sample_rate;
-                sc.outputStream->time_base.num = 1;
+            //stream timebase
+            sc.outputStream->time_base.den = sc.audioOutCtx->sample_rate;
+            sc.outputStream->time_base.num = 1;
 
-                retval = avcodec_parameters_from_context(sc.outputStream->codecpar, sc.audioOutCtx);
-                if (retval < 0)
-                    throw AVException("cannot copy audio parameters to output stream");
+            retval = avcodec_parameters_from_context(sc.outputStream->codecpar, sc.audioOutCtx);
+            if (retval < 0)
+                throw AVException("cannot copy audio parameters to output stream");
 
-                //allocate packet
-                sc.outpkt = av_packet_alloc();
-                if (!sc.outpkt)
-                    throw AVException("cannot allocate audio packet");
+            //allocate packet
+            sc.outpkt = av_packet_alloc();
+            if (!sc.outpkt)
+                throw AVException("cannot allocate audio packet");
 
-                //allocate input frame
-                sc.frameIn = av_frame_alloc();
-                if (!sc.frameIn)
-                    throw AVException("cannot allocate audio input frame");
+            //allocate input frame
+            sc.frameIn = av_frame_alloc();
+            if (!sc.frameIn)
+                throw AVException("cannot allocate audio input frame");
 
-                //allocate output frame
-                sc.frameOut = av_frame_alloc();
-                if (!sc.frameOut)
-                    throw AVException("cannot allocate audio output frame");
-                retval = av_channel_layout_copy(&sc.frameOut->ch_layout, &sc.audioOutCtx->ch_layout);
-                if (retval < 0)
-                    throw AVException("cannot copy channel layout");
-                sc.frameOut->format = sc.audioOutCtx->sample_fmt;
-                sc.frameOut->nb_samples = sc.audioOutCtx->frame_size;
-                retval = av_frame_get_buffer(sc.frameOut, 0);
-                if (retval < 0)
-                    throw AVException(av_make_error(retval, "cannot allocate audio frame buffers"));
+            //allocate output frame
+            sc.frameOut = av_frame_alloc();
+            if (!sc.frameOut)
+                throw AVException("cannot allocate audio output frame");
+            retval = av_channel_layout_copy(&sc.frameOut->ch_layout, &sc.audioOutCtx->ch_layout);
+            if (retval < 0)
+                throw AVException("cannot copy channel layout");
+            sc.frameOut->format = sc.audioOutCtx->sample_fmt;
+            sc.frameOut->nb_samples = sc.audioOutCtx->frame_size;
+            retval = av_frame_get_buffer(sc.frameOut, 0);
+            if (retval < 0)
+                throw AVException(av_make_error(retval, "cannot allocate audio frame buffers"));
 
-                //resampler
-                retval = swr_alloc_set_opts2(&sc.resampleCtx, 
-                    &sc.audioOutCtx->ch_layout, sc.audioOutCtx->sample_fmt, sc.audioOutCtx->sample_rate,
-                    &sc.audioInCtx->ch_layout, sc.audioInCtx->sample_fmt, sc.audioInCtx->sample_rate, 
-                    0, NULL);
-                if (retval < 0)
-                    throw AVException("cannot set audio resampler options");
-                retval = swr_init(sc.resampleCtx);
-                if (retval < 0)
-                    throw AVException(av_make_error(retval, "cannot init audio resampler"));
+            //resampler
+            retval = swr_alloc_set_opts2(&sc.resampleCtx, 
+                &sc.audioOutCtx->ch_layout, sc.audioOutCtx->sample_fmt, sc.audioOutCtx->sample_rate,
+                &sc.audioInCtx->ch_layout, sc.audioInCtx->sample_fmt, sc.audioInCtx->sample_rate, 
+                0, NULL);
+            if (retval < 0)
+                throw AVException("cannot set audio resampler options");
+            retval = swr_init(sc.resampleCtx);
+            if (retval < 0)
+                throw AVException(av_make_error(retval, "cannot init audio resampler"));
 
-                //sample buffer
-                int n = std::max(sc.audioInCtx->frame_size, sc.audioOutCtx->frame_size) * 2;
-                sc.fifo = av_audio_fifo_alloc(sc.audioOutCtx->sample_fmt, sc.audioOutCtx->ch_layout.nb_channels, n);
-                if (!sc.fifo)
-                    throw AVException("cannot allocate fifo");
-
-            } else {
-                sc.handling = StreamHandling::STREAM_IGNORE;
-            }
+            //sample buffer
+            int n = std::max(sc.audioInCtx->frame_size, sc.audioOutCtx->frame_size) * 2;
+            sc.fifo = av_audio_fifo_alloc(sc.audioOutCtx->sample_fmt, sc.audioOutCtx->ch_layout.nb_channels, n);
+            if (!sc.fifo)
+                throw AVException("cannot allocate fifo");
         }
     }
 }
@@ -314,7 +330,7 @@ void FFmpegFormatWriter::writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsI
     //STEP 1: looking at input stream
     //set pts and dts with respect to input timebase
     auto compareFunc = [&] (const VideoPacketContext& ctx) { return ctx.readIndex == ptsIdx; }; //sometimes wrong, check for increasing pts values
-    auto vpc = std::find_if(mReader.packetList.cbegin(), mReader.packetList.cend(), compareFunc);
+    auto vpc = std::find_if(mReader.videoPacketList.cbegin(), mReader.videoPacketList.cend(), compareFunc);
     encodedFrame = *vpc; //store for debugging
 
     int64_t pts = vpc->pts - videoInputStream->start_time;
@@ -333,28 +349,27 @@ void FFmpegFormatWriter::writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsI
     av_packet_rescale_ts(pkt, videoInputStream->time_base, videoStream->time_base);
 
     //process secondary streams
-    double dtsTime = 1.0 * pkt->dts * videoStream->time_base.num / videoStream->time_base.den;
+    //write packets from other streams that were read before this video frame
     for (StreamContext& sc : mReader.inputStreams) {
         for (auto it = sc.packets.begin(); it != sc.packets.end(); ) {
-            AVPacket* sidePacket = *it;
-            int comp = av_compare_ts(sidePacket->dts, sc.inputStream->time_base, vpc->dts, videoInputStream->time_base);
-            if (comp < 0 || terminate) {
+            SidePacket& sidePacket = *it;
+            if (sidePacket.frameIndex <= frameEncoded || terminate) {
                 if (sc.handling == StreamHandling::STREAM_COPY) { //copy packet directly to output stream
                     //rescale audio packet
                     AVRational& tbin = sc.inputStream->time_base;
                     AVRational& tbout = sc.outputStream->time_base;
-                    int64_t ts = sidePacket->pts - sc.inputStream->start_time;
-                    sidePacket->pts = av_rescale_delta(tbin, ts, tbin, (int) sidePacket->duration, &sc.lastPts, tbout);
-                    sidePacket->dts = sidePacket->pts;
-                    sidePacket->duration = 0;
-                    writePacket(sidePacket);
+                    AVPacket* avpkt = sidePacket.packet;
+                    int64_t ts = avpkt->pts - sc.inputStream->start_time;
+                    avpkt->pts = av_rescale_delta(tbin, ts, tbin, (int) avpkt->duration, &sc.lastPts, tbout);
+                    avpkt->dts = avpkt->pts;
+                    avpkt->duration = 0;
+                    writePacket(avpkt);
 
                 } else if (sc.handling == StreamHandling::STREAM_TRANSCODE) { //transcode audio
-                    transcodeAudio(sidePacket, sc, false);
+                    transcodeAudio(sidePacket.packet, sc, false);
                 }
 
                 //remove packet from buffer
-                av_packet_free(&sidePacket);
                 it = sc.packets.erase(it);
 
             } else {
@@ -371,7 +386,7 @@ void FFmpegFormatWriter::writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsI
     //testFile.write(reinterpret_cast<char*>(videoPacket->data), videoPacket->size);
 
     //delete from input list
-    mReader.packetList.erase(vpc);
+    mReader.videoPacketList.erase(vpc);
 
     //store stats
     int encodedBytes = pkt->size;
@@ -391,19 +406,12 @@ void FFmpegFormatWriter::writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsI
 
 //close ffmpeg format
 FFmpegFormatWriter::~FFmpegFormatWriter() {
-    if (fmt_ctx != nullptr && headerWritten) {
+    if (fmt_ctx != nullptr && isHeaderWritten) {
         int result = av_write_trailer(fmt_ctx);
         if (result < 0) {
             errorLogger.logError(av_make_error(result, "error writing trailer"));
         }
         outputBytesWritten = avio_tell(fmt_ctx->pb);
-    }
-
-    if (fmt_ctx != nullptr && fmt_ctx->pb != nullptr && headerWritten) {
-        int result = avio_close(fmt_ctx->pb);
-        if (result < 0) {
-            errorLogger.logError(av_make_error(result, "error closing output"));
-        }
     }
     av_packet_free(&videoPacket);
     avformat_free_context(fmt_ctx);

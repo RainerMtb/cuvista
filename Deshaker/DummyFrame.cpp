@@ -42,7 +42,7 @@ void DummyFrame::outputData(int64_t frameIndex, const Affine2D& trf) {
 	size_t idx = frameIndex % mFrames.size();
 }
 
-void DummyFrame::getOutput(int64_t frameIndex, ImageYuv& image) {
+void DummyFrame::getOutput(int64_t frameIndex, ImageYuvData& image) {
 	size_t idx = frameIndex % mFrames.size();
 	mFrames[idx].copyTo(image, mPool);
 }

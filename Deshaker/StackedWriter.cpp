@@ -20,7 +20,7 @@
 #include "MovieFrame.hpp"
 
 void StackedWriter::open(EncodingOption videoCodec) {
-	FFmpegWriter::open(videoCodec, mData.h, mWidthTotal, mWidthTotal, mData.fileOut);
+	FFmpegWriter::open(videoCodec, AV_PIX_FMT_YUV420P, mData.h, mWidthTotal, mWidthTotal, mData.fileOut);
 
 	im::ColorYuv bgcol = mData.bgcol_rgb.toYuv();
 	for (int z = 0; z < 3; z++) {

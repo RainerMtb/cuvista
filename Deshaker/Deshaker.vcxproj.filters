@@ -125,9 +125,6 @@
     <ClCompile Include="OpenClFrame.cpp">
       <Filter>Frame</Filter>
     </ClCompile>
-    <ClCompile Include="AudioDecoder.cpp">
-      <Filter>Reader</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MovieReader.hpp">
@@ -243,9 +240,6 @@
     </ClInclude>
     <ClInclude Include="OpenClFrame.hpp">
       <Filter>Frame</Filter>
-    </ClInclude>
-    <ClInclude Include="AudioDecoder.hpp">
-      <Filter>Reader</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -39,3 +39,7 @@ StreamInfo ReaderStats::streamInfo(AVStream* stream) const {
 StreamInfo ReaderStats::videoStreamInfo() const {
     return streamInfo(videoStream);
 }
+
+AVRational ReaderStats::videoTimeBase() const {
+    return { (int) timeBaseNum, (int) timeBaseDen };
+}

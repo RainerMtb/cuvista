@@ -391,13 +391,19 @@ void OpenClExecutor::outputData(int64_t frameIndex, const Affine2D& trf) {
 	}
 }
 
-void OpenClExecutor::getOutput(int64_t frameIndex, ImageYuv& image) {
+void OpenClExecutor::getOutput(int64_t frameIndex, ImageYuvData& image) {
 	try {
 		//convert to YUV444 for output
 		scale_32f8u_3(clData.out[4], clData.yuvOut, mData.cpupitch, clData);
+		
 		//copy to cpu memory
-		clData.queue.enqueueReadBuffer(clData.yuvOut, CL_TRUE, 0, 3ull * mData.cpupitch * mData.h, image.data());
-		image.index = frameIndex;
+		Size2 region(image.strideInBytes(), mData.h);
+		for (int i = 0; i < 3; i++) {
+			clData.queue.enqueueReadBufferRect(clData.yuvOut, CL_TRUE, Size2(0, mData.h * i), Size2(), region, mData.cpupitch, 0, 0, 0, image.addr(i, 0, 0));
+		}
+
+		//forward image index
+		image.setIndex(frameIndex);
 
 	} catch (const Error& err) {
 		errorLogger.logError("OpenCL output error: ", err.what());

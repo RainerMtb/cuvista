@@ -95,10 +95,16 @@ std::string timeString(int64_t millis) {
     return timeString;
 }
 
+SidePacket::SidePacket(int64_t frameIndex, const AVPacket* packet) {
+    this->frameIndex = frameIndex;
+    this->packet = av_packet_clone(packet);
+}
+
+SidePacket::~SidePacket() {
+    av_packet_free(&packet);
+}
+
 StreamContext::~StreamContext() {
-    for (AVPacket* packet : packets) {
-        av_packet_free(&packet);
-    }
     packets.clear();
 
     if (audioInCtx) {

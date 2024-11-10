@@ -21,12 +21,12 @@
 #include <format>
 
 
-ImagePPM& ImageYuvMat::toPPM(ImagePPM& dest, ThreadPoolBase& pool) const {
+ImagePPM& ImageYuvMatFloat::toPPM(ImagePPM& dest, ThreadPoolBase& pool) const {
 	yuvToRgb(dest, { 0, 1, 2 }, pool);
 	return dest;
 }
 
-ImageRGBA& ImageYuvMat::toRGBA(ImageRGBA& dest, ThreadPoolBase& pool) const {
+ImageRGBA& ImageYuvMatFloat::toRGBA(ImageRGBA& dest, ThreadPoolBase& pool) const {
 	dest.setValues(3, 0xFF);
 	yuvToRgb(dest, { 0, 1, 2 }, pool);
 	return dest;

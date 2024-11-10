@@ -53,7 +53,7 @@ public:
 	//prepare data for output to writer
 	virtual void outputData(int64_t frameIndex, const Affine2D& trf) = 0;
 	//prepare data for encoding on cpu
-	virtual void getOutput(int64_t frameIndex, ImageYuv& image) = 0;
+	virtual void getOutput(int64_t frameIndex, ImageYuvData& image) = 0;
 	//prepare data for encoding on cpu
 	virtual void getOutput(int64_t frameIndex, ImageRGBA& image) = 0;
 	//prepare data for encoding on cuda

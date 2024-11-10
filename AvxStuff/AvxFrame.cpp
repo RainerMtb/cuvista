@@ -99,9 +99,9 @@ void AvxFrame::outputData(int64_t frameIndex, const Affine2D& trf) {
 	}
 }
 
-void AvxFrame::getOutput(int64_t frameIndex, ImageYuv& image) {
+void AvxFrame::getOutput(int64_t frameIndex, ImageYuvData& image) {
 	write(image);
-	image.index = frameIndex;
+	image.setIndex(frameIndex);
 }
 
 void AvxFrame::getOutput(int64_t frameIndex, ImageRGBA& image) {
@@ -552,7 +552,7 @@ void AvxFrame::unsharp(const AvxMatf& warped, AvxMatf& gauss, float unsharp, Avx
 	mPool.wait();
 }
 
-void AvxFrame::write(ImageYuv& dest) {
+void AvxFrame::write(ImageYuvData& dest) {
 	for (int z = 0; z < 3; z++) {
 		for (int r = 0; r < mData.h; r++) {
 			for (int c = 0; c < mData.w; c += 16) {

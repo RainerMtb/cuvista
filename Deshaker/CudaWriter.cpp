@@ -29,7 +29,7 @@ std::map<GUID, AVCodecID> guidToCodecMap = {
     { NV_ENC_CODEC_HEVC_GUID, AV_CODEC_ID_HEVC },
 };
 
-std::map<Codec, GUID> guidMap = {
+std::map<Codec, GUID> codecToGuidMap = {
     { Codec::H264, NV_ENC_CODEC_H264_GUID },
     { Codec::H265, NV_ENC_CODEC_HEVC_GUID },
 };
@@ -50,14 +50,15 @@ void CudaFFmpegWriter::open(EncodingOption videoCodec) {
     else dic = &mData.cudaInfo.devices[0];
 
     if (videoCodec.codec == Codec::AUTO) videoCodec.codec = dic->encodingOptions[0].codec;
-    GUID guid = guidMap[videoCodec.codec];
+    GUID guid = codecToGuidMap[videoCodec.codec];
     nvenc = dic->nvenc;
 
     //open ffmpeg output format
-    FFmpegFormatWriter::open(videoCodec, mData.fileOut, 4);
+    AVCodecID id = codecMap[videoCodec.codec];
+    FFmpegFormatWriter::open(id, mData.fileOut, 4);
 
     //setup nvenc class
-    nvenc->createEncoder(mReader.w, mReader.h, mReader.fpsNum, mReader.fpsDen, GOP_SIZE, mData.crf, guid);
+    nvenc->createEncoder(mReader.w, mReader.h, mReader.fpsNum, mReader.fpsDen, gopSize, mData.crf, guid);
 
     //setup codec parameters for ffmpeg format output
     AVCodecParameters* params = videoStream->codecpar;
@@ -67,12 +68,8 @@ void CudaFFmpegWriter::open(EncodingOption videoCodec) {
     params->height = mData.h;
     params->extradata_size = nvenc->mExtradataSize;
     params->extradata = (uint8_t*) av_mallocz(0ull + nvenc->mExtradataSize + AV_INPUT_BUFFER_PADDING_SIZE);
-    memcpy(params->extradata, nvenc->mExtradata.data(), nvenc->mExtradataSize);
+    std::memcpy(params->extradata, nvenc->mExtradata.data(), nvenc->mExtradataSize);
 
-    result = avio_open(&fmt_ctx->pb, fmt_ctx->url, AVIO_FLAG_WRITE);
-    if (result < 0)
-        throw AVException("error opening file '" + mData.fileOut + "'");
-    
     result = avformat_init_output(fmt_ctx, NULL);
     if (result < 0)
         throw AVException(av_make_error(result, "error initializing output"));
@@ -81,7 +78,7 @@ void CudaFFmpegWriter::open(EncodingOption videoCodec) {
     if (result < 0)
         throw AVException(av_make_error(result, "error writing file header"));
     else
-        this->headerWritten = true; //set for proper closing
+        this->isHeaderWritten = true; //set for proper closing
 
     videoPacket = av_packet_alloc();
     if (!videoPacket)

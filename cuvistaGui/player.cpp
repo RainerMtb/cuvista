@@ -19,6 +19,10 @@
 #include <QDebug>
 #include <QCloseEvent>
 #include <QMediaDevices>
+#include <QAudioDevice>
+#include <QAudioOutput>
+#include <QVideoFrameFormat>
+#include <QVideoFrameInput>
 #include <algorithm>
 
 #include "player.h"
@@ -26,146 +30,40 @@
 #include "MovieReader.hpp"
 #include "Image2.hpp"
 
-//-------------------------------------------------
-//------------- Audio Player ----------------------
-//-------------------------------------------------
-
-qint64 AudioPlayer::readData(char* data, qint64 maxSize) {
-    //read samples tread safe
-    std::unique_lock<std::mutex> lock(mMutex);
-    int64_t sampleSizes[] = {
-        mChunkSize / mBytesPerSample,
-        maxSize / mBytesPerSample,
-        mSamplesWritten - mSamplesRead,
-        mPlayerLimit - mSamplesRead
-    };
-    int64_t samples = *std::min_element(sampleSizes, sampleSizes + 4);
-    int64_t samplesBytes = samples * mBytesPerSample;
-    int64_t bufferFreeSize = mBufferLimit - mReadIndex;
-    if (samples > bufferFreeSize) {
-        int64_t firstPart = bufferFreeSize * mBytesPerSample;
-        memcpy(data, mBuffer.data() + mReadIndex * mBytesPerSample, firstPart);
-        memcpy(data + firstPart, mBuffer.data(), samplesBytes - firstPart);
-        mReadIndex = samples - bufferFreeSize;
-
-    } else {
-        memcpy(data, mBuffer.data() + mReadIndex * mBytesPerSample, samplesBytes);
-        mReadIndex += samples;
-    }
-    mSamplesRead += samples;
-    qDebug() << "--require " << maxSize << " got " << samplesBytes;
-    //for (int i = samplesBytes; i < mChunkSize; i++) data[i] = 0;
-    return mChunkSize;
-}
-
-qint64 AudioPlayer::writeData(const char* data, qint64 maxSize) {
-    return 0;
-}
-
-bool AudioPlayer::isSequential() const {
-    return true;
-}
-
-qint64 AudioPlayer::bytesAvailable() const {
-    //return mChunkSize + QIODevice::bytesAvailable();
-    return mChunkSize;
-}
-
-qint64 AudioPlayer::size() const {
-    return mBuffer.size();
-}
-
-int AudioPlayer::getSampleRate() const {
-    return mStreamCtx->audioInCtx->sample_rate;
-}
-
 
 //-------------------------------------------------
 //------------- Player Window ---------------------
 //-------------------------------------------------
 
-Player::Player(QWidget* parent) :
+PlayerWindow::PlayerWindow(QWidget* parent) :
     QMainWindow(parent) 
 {
     ui.setupUi(this);
     setWindowModality(Qt::ApplicationModal);
-    connect(ui.btnPause, &QPushButton::clicked, this, &Player::pause);
-    connect(ui.btnPlay, &QPushButton::clicked, this, &Player::play);
+    connect(ui.btnPause, &QPushButton::clicked, this, &PlayerWindow::pause);
+    connect(ui.btnPlay, &QPushButton::clicked, this, &PlayerWindow::play);
 }
 
-void Player::open(int h, int w, int stride, QImage imageWorking, StreamContext* scptr, double audioBufferSecs) {
-    if (scptr) {
-        //init ffmpeg decoder
-        audioPlayer.openFFmpeg(scptr, audioBufferSecs);
-
-        //start audio player
-        QAudioFormat format;
-        format.setSampleFormat(QAudioFormat::Float);
-        format.setSampleRate(audioPlayer.getSampleRate());
-        format.setChannelConfig(QAudioFormat::ChannelConfigStereo);
-        //qDebug() << "audio format: " << format;
-
-        QAudioDevice device = QMediaDevices::defaultAudioOutput();
-        if (device.isFormatSupported(format)) {
-            audioSink = new QAudioSink(format);
-            //auto fcn = [] (QtAudio::State state) { qDebug() << "--state change: " << state; };
-            //connect(audioSink, &QAudioSink::stateChanged, this, fcn);
-
-            audioPlayer.open(QIODevice::ReadOnly);
-            audioSink->start(&audioPlayer);
-        }
-    }
-
-    //placeholder frame
-    QImage scaledToFit = imageWorking.scaled(w, h, Qt::KeepAspectRatio);
-    int x = (scaledToFit.width() - w) / 2;
-    int y = (scaledToFit.height() - h) / 2;
-
-    //start video player
-    ui.player->open(h, w, stride, scaledToFit.copy(x, y, w, h));
-    ui.lblStatus->setText("Buffering...");
+QVideoWidget* PlayerWindow::videoWidget() {
+    return ui.videoWidget;
 }
 
-void Player::decodeAudio() {
-    audioPlayer.decodePackets();
-}
-
-void Player::setAudioLimit(std::optional<int64_t> millis) {
-    audioPlayer.setAudioLimit(millis);
-}
-
-void Player::upload(int64_t frameIndex, ImageRGBA image) {
-    ui.player->upload(frameIndex, image);
-}
-
-void Player::playNextFrame(int64_t idx) {
-    ui.player->playNextFrame(idx);
-}
-
-void Player::progress(QString str, QString status) {
+void PlayerWindow::progress(QString str, QString status) {
     ui.lblFrame->setText(str);
     ui.lblStatus->setText(status);
 }
 
-void Player::pause() {
+void PlayerWindow::pause() {
     isPaused = true;
     ui.lblStatus->setText("Pausing...");
 }
 
-void Player::play() {
+void PlayerWindow::play() {
     isPaused = false;
     ui.lblStatus->setText("Playing...");
 }
 
-void Player::stopAudio() {
-    if (audioSink) {
-        audioSink->stop();
-        delete audioSink;
-        audioSink = nullptr;
-    }
-}
-
-void Player::closeEvent(QCloseEvent* event) {
+void PlayerWindow::closeEvent(QCloseEvent* event) {
     cancel();
     isPaused = false;
 
@@ -173,52 +71,142 @@ void Player::closeEvent(QCloseEvent* event) {
     event->ignore();
 }
 
+
+//-------------------------------------------------
+//------------- Image FFmpeg Buffer ---------------
+//-------------------------------------------------
+
+ImageYuvFFmpeg::ImageYuvFFmpeg(AVFrame* av_frame) :
+    av_frame { av_frame } {}
+
+uint8_t* ImageYuvFFmpeg::addr(size_t idx, size_t r, size_t c) {
+    return av_frame->data[idx] + r * av_frame->linesize[idx] + c;
+}
+
+const uint8_t* ImageYuvFFmpeg::addr(size_t idx, size_t r, size_t c) const {
+    return av_frame->data[idx] + r * av_frame->linesize[idx] + c;
+}
+
+uint8_t* ImageYuvFFmpeg::plane(size_t idx) {
+    return av_frame->data[idx];
+}
+
+const uint8_t* ImageYuvFFmpeg::plane(size_t idx) const {
+    return av_frame->data[idx];
+}
+
+int ImageYuvFFmpeg::strideInBytes() const {
+    assert(av_frame->linesize[0] == av_frame->linesize[1] && av_frame->linesize[0] == av_frame->linesize[2]);
+    return av_frame->linesize[0];
+}
+
+int ImageYuvFFmpeg::height() const {
+    return av_frame->height;
+}
+
+int ImageYuvFFmpeg::width() const {
+    return av_frame->width;
+}
+
+int ImageYuvFFmpeg::planes() const {
+    return 3;
+}
+
+void ImageYuvFFmpeg::setIndex(int64_t frameIndex) {
+    index = frameIndex;
+}
+
+bool ImageYuvFFmpeg::saveAsBMP(const std::string& filename, uint8_t scale) const {
+    int h = height();
+    int w = width();
+    Matc y = Matc::fromRowData(h, w, strideInBytes(), plane(0));
+    Matc u = Matc::fromRowData(h, w, strideInBytes(), plane(1));
+    Matc v = Matc::fromRowData(h, w, strideInBytes(), plane(2));
+    return ImageYuvMat8(h, w, w, y.data(), u.data(), v.data()).saveAsBMP(filename, scale);
+}
+
 //-------------------------------------------------
 //------------- Writer Class ----------------------
 //-------------------------------------------------
 
-PlayerWriter::PlayerWriter(MainData& data, MovieReader& reader, Player* player, QImage imageWorking, StreamContext* audioStreamCtx) :
-    NullWriter(data, reader),
+PlayerWriter::PlayerWriter(MainData& data, MovieReader& reader, PlayerWindow* player, QImage imageWorking, int audioStreamIndex) :
+    FFmpegWriter(data, reader, 0),
+    QObject(nullptr),
     mPlayer { player },
-    mOutput(mData.h, mData.w),
-    mNextPts {},
     mImageWorking { imageWorking },
-    mAudioStreamCtx { audioStreamCtx } {}
+    mAudioStreamIndex { audioStreamIndex },
+    mBufferDevice(2ull * data.w * data.h * data.radius) {}
+
+int PlayerWriter::writeBuffer(void* opaque, const uint8_t* buf, int bufsiz) {
+    PlayerWriter* ptr = static_cast<PlayerWriter*>(opaque);
+
+    //qDebug() << ">>writing" << bufsiz;
+    //static std::ofstream outfile("f:/file.dat", std::ios::binary);
+    //outfile.write(reinterpret_cast<const char*>(buf), bufsiz);
+    return bufsiz;
+}
 
 void PlayerWriter::open(EncodingOption videoCodec) {
+    av_log_set_callback(ffmpeg_log);
+    int result;
+    
+    //setup output format
+    const AVOutputFormat* ofmt = av_guess_format("asf", NULL, NULL);
+    result = avformat_alloc_output_context2(&fmt_ctx, ofmt, NULL, NULL);
+    if (result < 0)
+        throw AVException(av_make_error(result));
+
+    //io context for memory buffer
+    int bufsiz = 16 * 1024;
+    mBuffer = (unsigned char*) av_malloc(bufsiz);
+    m_av_avio = avio_alloc_context(mBuffer, bufsiz, 1, this, nullptr, &PlayerWriter::writeBuffer, nullptr);
+    m_av_avio->seekable = 0;
+    fmt_ctx->pb = m_av_avio;
+    fmt_ctx->flags |= AVFMT_FLAG_CUSTOM_IO;
+
+    for (StreamContext& sc : mReader.inputStreams) {
+        if (sc.inputStream->index == mReader.videoStream->index) {
+            sc.handling = StreamHandling::STREAM_STABILIZE;
+
+        } else if (sc.inputStream->index == mAudioStreamIndex) {
+            int codecSupported = avformat_query_codec(fmt_ctx->oformat, sc.inputStream->codecpar->codec_id, FF_COMPLIANCE_STRICT);
+            if (codecSupported == 1) {
+                sc.handling = StreamHandling::STREAM_COPY;
+            }
+
+        } else {
+            sc.handling = StreamHandling::STREAM_IGNORE;
+        }
+    }
+
+    //open ffmpeg
+    AVCodecID id = AV_CODEC_ID_FFVHUFF;
+    FFmpegFormatWriter::open(id);
+    FFmpegWriter::open(id, AV_PIX_FMT_YUV444P, mData.h, mData.w, mData.cpupitch);
+
+    //yuv image refering to ffmpeg frame buffer
+    mImageFrame = ImageYuvFFmpeg(av_frame);
+
     mPlayer->show();
-    mPlayer->open(mOutput.h, mOutput.w, mOutput.stride, mImageWorking, mAudioStreamCtx, mData.radsec * 8);
-    mFrameTimeMillis = mReader.ptsForFrameAsMillis(frameIndex);
+    mMediaPlayer.setVideoOutput(mPlayer->videoWidget());
+
+    //mediaPlayer.setAudioOutput(&mAudioOutput);
+    //mediaPlayer.setSourceDevice(&playerDevice);
+    //mediaPlayer.play();
+
+    imageBuffer.emplace_back(mData.h, mData.w, mData.cpupitch);
 }
 
-//load image data from MovieFrame
 //this runs on a background thread
 void PlayerWriter::prepareOutput(FrameExecutor& executor) {
-    int64_t idx = frameIndex;
-    executor.getOutput(idx, mOutput);
-    mPlayer->sigUpload(idx, mOutput); //upload is done on Main Thread
-    mPlayer->decodeAudio();
+    executor.getOutput(frameIndex, mImageFrame);
 }
 
-//wait until presentation time has arrived and show video frame
 void PlayerWriter::write(const FrameExecutor& executor) {
-    //presentation time for next frame
-    auto timePoint = mReader.ptsForFrameAsMillis(frameIndex + 1);
-    int64_t delta = mFrameTimeMillis.has_value() && timePoint.has_value() ? (*timePoint - *mFrameTimeMillis) : 0;
-    std::swap(mFrameTimeMillis, timePoint);
-
-    //check time and player state
-    auto tnow = std::chrono::steady_clock::now();
-    while (tnow < mNextPts || mPlayer->isPaused) {
-        tnow = std::chrono::steady_clock::now();
-    }
-    mPlayer->playNextFrame(frameIndex);
-    mPlayer->setAudioLimit(mFrameTimeMillis);
-
-    //set next presentation time
-    mNextPts = tnow + std::chrono::milliseconds(delta);
+    av_frame->pts = mImageFrame.index;
+    sendFFmpegFrame(av_frame);
+    writeFFmpegPacket(av_frame);
     frameIndex++;
-    frameEncoded++;
 }
 
 //close video player
@@ -228,17 +216,15 @@ bool PlayerWriter::flush() {
     return false; 
 }
 
+//terminate encoding
 bool PlayerWriter::startFlushing() { 
-    return true; 
+    sendFFmpegFrame(nullptr);
+    writeFFmpegPacket(nullptr);
+    return true;
 }
 
 PlayerWriter::~PlayerWriter() {
-    mPlayer->stopAudio();
-    //upload black image data to textures
-    mOutput.setValues({ 0, 0, 0, 255 });
-    mPlayer->sigUpload(0, mOutput);
-    mPlayer->sigUpload(1, mOutput);
-    mPlayer->playNextFrame(0);
+    avio_context_free(&m_av_avio);
 }
 
 
@@ -259,6 +245,4 @@ void PlayerProgress::update(bool force) {
     if (mPlayer->isPaused) status = "Pausing...";
     else if (idx < 0) status = "Buffering...";
     else if (frame.mWriter.frameIndex == frame.mReader.frameIndex) status = "Ending...";
-
-    mPlayer->sigProgress(str, status);
 }

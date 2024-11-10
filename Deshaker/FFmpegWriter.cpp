@@ -16,21 +16,41 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
+#include <filesystem>
 #include "MovieReader.hpp"
 #include "MovieWriter.hpp"
 #include "MovieFrame.hpp"
 #include "Util.hpp"
-#include <filesystem>
 
 
-//set up ffmpeg encoder
-void FFmpegWriter::open(EncodingOption videoCodec) {
-    open(videoCodec, mData.h, mData.w, mData.cpupitch, mData.fileOut);
-}
-
-
-void FFmpegWriter::openEncoder(const AVCodec* codec, const std::string& sourceName) {
+void FFmpegWriter::open(AVCodecID codecId, AVPixelFormat pixfmt, int h, int w, int stride) {
     int result = 0;
+
+    //find and open codec
+    const AVCodec* codec = avcodec_find_encoder(codecId);
+    //const AVCodec* codec = avcodec_find_encoder_by_name("libsvtav1");
+    if (!codec)
+        throw AVException("Could not find encoder");
+
+    codec_ctx = avcodec_alloc_context3(codec);
+    if (!codec_ctx)
+        throw AVException("Could not allocate encoder context");
+
+    codec_ctx->codec_type = AVMEDIA_TYPE_VIDEO;
+    codec_ctx->width = w;
+    codec_ctx->height = h;
+    codec_ctx->pix_fmt = pixfmt;
+    codec_ctx->framerate = { mReader.fpsNum, mReader.fpsDen };
+    codec_ctx->time_base = { mReader.fpsDen, mReader.fpsNum };
+    codec_ctx->gop_size = gopSize;
+    codec_ctx->max_b_frames = 4;
+    //av_opt_set(codec_ctx->priv_data, "preset", "slow", 0);
+    av_opt_set(codec_ctx->priv_data, "profile", "main", 0);
+    av_opt_set(codec_ctx->priv_data, "x265-params", "log-level=error", 0);
+    if (mData.crf) av_opt_set(codec_ctx->priv_data, "crf", std::to_string(mData.crf.value()).c_str(), 0);
+
+    if (fmt_ctx->oformat->flags & AVFMT_GLOBALHEADER)
+        codec_ctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
 
     //open encoder
     result = avcodec_open2(codec_ctx, codec, NULL);
@@ -41,15 +61,15 @@ void FFmpegWriter::openEncoder(const AVCodec* codec, const std::string& sourceNa
     if (result < 0)
         throw AVException(av_make_error(result, "error setting codec parameters"));
 
-    result = avio_open(&fmt_ctx->pb, fmt_ctx->url, AVIO_FLAG_WRITE);
+    result = avformat_init_output(fmt_ctx, NULL);
     if (result < 0)
-        throw AVException(std::string("error opening file '") + sourceName + "'");
+        throw AVException(av_make_error(result, "error initializing output"));
 
     result = avformat_write_header(fmt_ctx, NULL);
     if (result < 0)
         throw AVException(av_make_error(result, "error writing file header"));
     else
-        this->headerWritten = true; //store info for proper closing
+        this->isHeaderWritten = true; //store info for proper closing
 
     //av_dump_format(fmt_ctx, 0, fmt_ctx->url, 1);
 
@@ -76,38 +96,19 @@ void FFmpegWriter::openEncoder(const AVCodec* codec, const std::string& sourceNa
 }
 
 
+//normal entry point for opening Writer
+void FFmpegWriter::open(EncodingOption videoCodec) {
+    open(videoCodec, AV_PIX_FMT_YUV420P, mData.h, mData.w, mData.cpupitch, mData.fileOut);
+}
+
+
 //set up ffmpeg encoder
-void FFmpegWriter::open(EncodingOption videoCodec, int h, int w, int stride, const std::string& sourceName) {
-    AVCodecID id = codecMap[videoCodec.codec];
-    const AVCodec* codec = avcodec_find_encoder(id);
-    //const AVCodec* codec = avcodec_find_encoder_by_name("libsvtav1");
-    if (!codec) 
-        throw AVException("Could not find encoder");
-
-    codec_ctx = avcodec_alloc_context3(codec);
-    if (!codec_ctx) 
-        throw AVException("Could not allocate encoder context");
-
+void FFmpegWriter::open(EncodingOption videoCodec, AVPixelFormat pixfmt, int h, int w, int stride, const std::string& sourceName) {
     //open container format
-    FFmpegFormatWriter::open(videoCodec, sourceName, imageBufferSize);
+    AVCodecID id = codecMap[videoCodec.codec];
+    FFmpegFormatWriter::open(id, sourceName, imageBufferSize);
 
-    codec_ctx->codec_type = AVMEDIA_TYPE_VIDEO;
-    codec_ctx->width = w;
-    codec_ctx->height = h;
-    codec_ctx->pix_fmt = pixfmt;
-    codec_ctx->framerate = { mReader.fpsNum, mReader.fpsDen };
-    codec_ctx->time_base = { (int) mReader.timeBaseNum, (int) mReader.timeBaseDen };
-    codec_ctx->gop_size = GOP_SIZE;
-    codec_ctx->max_b_frames = 4;
-    //av_opt_set(codec_ctx->priv_data, "preset", "slow", 0);
-    av_opt_set(codec_ctx->priv_data, "profile", "main", 0);
-    av_opt_set(codec_ctx->priv_data, "x265-params", "log-level=error", 0);
-    if (mData.crf) av_opt_set(codec_ctx->priv_data, "crf", std::to_string(mData.crf.value()).c_str(), 0);
-
-    if (fmt_ctx->oformat->flags & AVFMT_GLOBALHEADER)
-        codec_ctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
-
-    openEncoder(codec, sourceName);
+    open(id, pixfmt, h, w, stride);
 
     sws_scaler_ctx = sws_getContext(w, h, AV_PIX_FMT_YUV444P, w, h, pixfmt, SWS_BILINEAR, NULL, NULL, NULL);
     if (!sws_scaler_ctx) 

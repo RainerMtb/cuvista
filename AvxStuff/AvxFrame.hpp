@@ -40,7 +40,7 @@ public:
 	void computeStart(int64_t frameIndex, std::vector<PointResult>& results) override;
 	void computeTerminate(int64_t frameIndex, std::vector<PointResult>& results) override;
 	void outputData(int64_t frameIndex, const Affine2D& trf) override;
-	void getOutput(int64_t frameIndex, ImageYuv& image) override;
+	void getOutput(int64_t frameIndex, ImageYuvData& image) override;
 	void getOutput(int64_t frameIndex, ImageRGBA& image) override;
 	void getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) override;
 	Matf getTransformedOutput() const override;
@@ -65,7 +65,7 @@ private:
 	};
 
 	void unsharp(const AvxMatf& warped, AvxMatf& gauss, float unsharp, AvxMatf& out);
-	void write(ImageYuv& dest);
+	void write(ImageYuvData& dest);
 	void write(std::span<unsigned char> nv12, int cudaPitch);
 	void downsample(const float* srcptr, int h, int w, int stride, float* destptr, int destStride);
 	void filter(const AvxMatf& src, int r0, int h, int w, AvxMatf& dest, std::span<V16f> ks);

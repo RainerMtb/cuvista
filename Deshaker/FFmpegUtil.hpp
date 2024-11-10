@@ -42,6 +42,7 @@ struct FFmpegVersions {
 
 //what to do with any input stream
 enum class StreamHandling {
+	STREAM_UNKNOWN,
 	STREAM_IGNORE,
 	STREAM_STABILIZE,
 	STREAM_COPY,
@@ -64,12 +65,21 @@ struct StreamInfo {
 	AVMediaType mediaType;
 };
 
+class SidePacket {
+public:
+	int64_t frameIndex;
+	AVPacket* packet;
+
+	SidePacket(int64_t frameIndex, const AVPacket* packet);
+	~SidePacket();
+};
+
 //structure per stream in input file
 struct StreamContext {
 	AVStream* inputStream = nullptr;
 	AVStream* outputStream = nullptr;
-	StreamHandling handling;
-	std::list<AVPacket*> packets;
+	StreamHandling handling = StreamHandling::STREAM_IGNORE;
+	std::list<SidePacket> packets;
 	int64_t packetsWritten;
 
 	AVCodecContext* audioInCtx = nullptr;

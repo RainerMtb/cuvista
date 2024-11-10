@@ -21,6 +21,22 @@
 #include "ImageUtil.hpp"
 #include "ThreadPoolBase.h"
 
+template <class T> class ImageData {
+public:
+	virtual T* addr(size_t idx, size_t r, size_t c) = 0;
+	virtual const T* addr(size_t idx, size_t r, size_t c) const = 0;
+	virtual T* plane(size_t idx) = 0;
+	virtual const T* plane(size_t idx) const = 0;
+	virtual int planes() const = 0;
+	virtual int height() const = 0;
+	virtual int width() const = 0;
+	virtual int strideInBytes() const = 0;
+	virtual void setIndex(int64_t frameIndex) = 0;
+	virtual bool saveAsBMP(const std::string& filename, T scale = 1) const = 0;
+};
+
+using ImageYuvData = ImageData<unsigned char>;
+
 namespace im {
 
 	enum class TextAlign {
@@ -35,7 +51,7 @@ namespace im {
 		BOTTOM_RIGHT,
 	};
 
-	template <class T> class ImageBase {
+	template <class T> class ImageBase : public ImageData<T> {
 
 	public:
 		int64_t index = -1;
@@ -57,7 +73,7 @@ namespace im {
 
 		void yuvToRgb(ImageBase<unsigned char>& dest, std::vector<int> planes, ThreadPoolBase& pool = defaultPool) const;
 
-		void copyTo(ImageBase<T>& dest, size_t r0, size_t c0, std::vector<int> srcPlanes, std::vector<int> destPlanes, ThreadPoolBase& pool = defaultPool) const;
+		void copyTo(ImageData<T>& dest, size_t r0, size_t c0, std::vector<int> srcPlanes, std::vector<int> destPlanes, ThreadPoolBase& pool = defaultPool) const;
 
 	public:
 		ImageBase(int h, int w, int stride, int numPlanes);
@@ -69,9 +85,9 @@ namespace im {
 
 		virtual ~ImageBase() = default;
 
-		virtual T* addr(size_t idx, size_t r, size_t c);
+		T* addr(size_t idx, size_t r, size_t c) override;
 
-		virtual const T* addr(size_t idx, size_t r, size_t c) const;
+		const T* addr(size_t idx, size_t r, size_t c) const override;
 
 		virtual size_t size() const;
 
@@ -79,9 +95,19 @@ namespace im {
 
 		virtual uint64_t crc() const;
 
-		T* plane(size_t idx);
+		T* plane(size_t idx) override;
 
-		const T* plane(size_t idx) const;
+		const T* plane(size_t idx) const override;
+
+		int planes() const override;
+
+		int height() const override;
+
+		int width() const override;
+
+		int strideInBytes() const override;
+
+		void setIndex(int64_t frameIndex) override;
 
 		//access one pixel on plane idx and row / col
 		T& at(size_t idx, size_t r, size_t c);
@@ -115,9 +141,9 @@ namespace im {
 
 		void drawDot(double cx, double cy, double rx, double ry, ColorBase<T> color);
 
-		void copyTo(ImageBase<T>& dest, std::vector<int> srcPlanes, std::vector<int> destPlanes, ThreadPoolBase& pool = defaultPool) const;
+		void copyTo(ImageData<T>& dest, std::vector<int> srcPlanes, std::vector<int> destPlanes, ThreadPoolBase& pool = defaultPool) const;
 
-		void copyTo(ImageBase<T>& dest, ThreadPoolBase& pool = defaultPool) const;
+		void copyTo(ImageData<T>& dest, ThreadPoolBase& pool = defaultPool) const;
 
 		T sample(size_t plane, double x, double y) const;
 

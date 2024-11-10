@@ -484,10 +484,12 @@ void CudaExecutor::cudaOutputData(int64_t frameIndex, const AffineCore& trf) {
 	//writeText(std::to_string(frameIdx), 10, 10, 2, 3, bufferFrames[18], mData);
 }
 
-void CudaExecutor::getOutput(int64_t frameIndex, ImageYuv& image) {
+void CudaExecutor::getOutput(int64_t frameIndex, ImageYuvData& image) {
 	cu::outputHost(out.final, mData.strideFloat4N, d_yuvOut, mData.strideChar, mData.w, mData.h, cs[1]);
-	cu::copy_32f_3(d_yuvOut, mData.strideChar, image.data(), image.stride, mData.w, mData.h * 3, cs[1]);
-	image.index = frameIndex;
+	for (int planeSize = mData.strideChar * mData.h, i = 0; i < 3; i++) {
+		cu::copy_32f_3(d_yuvOut + i * planeSize, mData.strideChar, image.addr(i, 0, 0), image.strideInBytes(), mData.w, mData.h, cs[1]);
+	}
+	image.setIndex(frameIndex);
 	handleStatus(cudaStreamSynchronize(cs[1]), "error @output #90");
 	handleStatus(cudaGetLastError(), "error @output #91");
 }

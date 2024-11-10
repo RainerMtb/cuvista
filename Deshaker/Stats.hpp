@@ -38,13 +38,14 @@ public:
 	double fps() const;
 	StreamInfo videoStreamInfo() const;
 	StreamInfo streamInfo(AVStream* stream) const;
+	AVRational videoTimeBase() const;
 };
 
 
 class WriterStats {
 public:
 	int64_t frameIndex = 0;
-	int frameEncoded = 0;
+	int64_t frameEncoded = 0;
 	int64_t encodedBytesTotal = 0;
 	int64_t outputBytesWritten = 0;
 

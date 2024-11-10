@@ -29,7 +29,7 @@
 class MovieReader : public ReaderStats {
 
 public:
-	std::list<VideoPacketContext> packetList;
+	std::list<VideoPacketContext> videoPacketList;
 	std::vector<StreamContext> inputStreams;
 	bool storePackets = true;
 

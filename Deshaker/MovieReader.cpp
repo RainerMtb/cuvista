@@ -33,8 +33,8 @@ std::future<void> MovieReader::readAsync(ImageYuv& inputFrame) {
 
 std::optional<int64_t> MovieReader::ptsForFrameAsMillis(int64_t frameIndex) {
     auto fcn = [&] (const VideoPacketContext& vpc) { return vpc.readIndex == frameIndex; };
-    auto result = std::find_if(packetList.cbegin(), packetList.cend(), fcn);
-    if (result != packetList.end()) {
+    auto result = std::find_if(videoPacketList.cbegin(), videoPacketList.cend(), fcn);
+    if (result != videoPacketList.end()) {
         return result->bestTimestamp * 1000 * videoStream->time_base.num / videoStream->time_base.den;
     } else {
         return std::nullopt;
@@ -184,25 +184,18 @@ void FFmpegReader::read(ImageYuv& frame) {
             } else if (storePackets == false) {
                 //do not store any secondary packets
 
-            } else if (sh == StreamHandling::STREAM_COPY || sh == StreamHandling::STREAM_TRANSCODE) {
-                std::list<AVPacket*>& lst = inputStreams[sidx].packets;
+            } else if (sh == StreamHandling::STREAM_COPY || sh == StreamHandling::STREAM_TRANSCODE || sh == StreamHandling::STREAM_DECODE) {
+                std::list<SidePacket>& lst = inputStreams[sidx].packets;
                 //we should store a packet from a secondary stream for processing
-                AVPacket* pktcopy = av_packet_clone(av_packet);
-                lst.push_back(pktcopy);
+                lst.emplace_back(frameIndex, av_packet);
 
                 //limiting packets in memory
-                auto fcn = [] (int sum, AVPacket* ptr) { return sum + ptr->size; };
+                auto fcn = [] (int sum, const SidePacket& pkt) { return sum + pkt.packet->size; };
                 int siz = std::accumulate(lst.begin(), lst.end(), 0, fcn);
                 while (siz > sideDataMaxSize) {
-                    av_packet_free(&lst.front());
                     lst.pop_front();
                     siz = std::accumulate(lst.begin(), lst.end(), 0, fcn);
                 }
-
-            } else if (sh == StreamHandling::STREAM_DECODE) {
-                std::list<AVPacket*>& lst = inputStreams[sidx].packets;
-                AVPacket* pktcopy = av_packet_clone(av_packet);
-                lst.push_back(pktcopy);
             }
 
         } else { //nothing left in input format, terminate the process, dump frames from decoder buffer
@@ -243,13 +236,13 @@ void FFmpegReader::read(ImageYuv& frame) {
 
         //store parameters for writer
         int64_t timestamp = av_frame->best_effort_timestamp - videoStream->start_time;
-        packetList.emplace_back(frameIndex, av_frame->pts, av_frame->pkt_dts, av_frame->duration, timestamp);
+        videoPacketList.emplace_back(frameIndex, av_frame->pts, av_frame->pkt_dts, av_frame->duration, timestamp);
 
         //in some cases pts values are not in proper sequence, but frames decoded by ffmpeg are indeed in correct order
         //in that case just reorder pts values -- bug in ffmpeg
-        auto it = packetList.end();
+        auto it = videoPacketList.end();
         it--;
-        while (it != packetList.begin() && it->pts < std::prev(it)->pts) {
+        while (it != videoPacketList.begin() && it->pts < std::prev(it)->pts) {
             std::swap(it->pts, std::prev(it)->pts);
             it--;
         }
@@ -274,9 +267,8 @@ void FFmpegReader::rewind() {
     seek(0.0);
     frameIndex = -1;
     endOfInput = true;
-    packetList.clear();
+    videoPacketList.clear();
     for (StreamContext& s : inputStreams) {
-        for (AVPacket* pkt : s.packets) av_packet_free(&pkt);
         s.packets.clear();
         s.packetsWritten = 0;
         s.lastPts = 0;
@@ -294,7 +286,7 @@ void FFmpegReader::close() {
 
     videoStream = nullptr;
     sws_scaler_ctx = nullptr;
-    packetList.clear();
+    videoPacketList.clear();
     inputStreams.clear();
 }
 
@@ -317,6 +309,7 @@ void MemoryFFmpegReader::open(const std::string& source) {
     av_avio = avio_alloc_context(mBuffer, bufsiz, 0, this, &MemoryFFmpegReader::readBuffer, nullptr, &MemoryFFmpegReader::seekBuffer);
     av_fmt = avformat_alloc_context();
     av_fmt->pb = av_avio;
+    av_fmt->flags |= AVFMT_FLAG_CUSTOM_IO;
 
     openInput(av_fmt, "");
 }

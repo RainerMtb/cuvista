@@ -170,28 +170,28 @@ protected:
 		{ Codec::AUTO, AV_CODEC_ID_H264 },
 	};
 
-	uint32_t GOP_SIZE = 30; //interval of key frames
-	std::list<std::future<void>> encodingQueue;
+	uint32_t gopSize = 15; //interval of key frames
 	ThreadPool encoderPool = ThreadPool(1);
+	std::list<std::future<void>> encodingQueue; //queue for encoder thread
 
 	AVFormatContext* fmt_ctx = nullptr;
 	AVStream* videoStream = nullptr;
 	AVPacket* videoPacket = nullptr;
-	bool headerWritten = false;
+	bool isHeaderWritten = false;
 
 	FFmpegFormatWriter(MainData& data, MovieReader& reader) :
 		NullWriter(data, reader) {}
 
 	~FFmpegFormatWriter() override;
-	void open(EncodingOption videoCodec, const std::string& sourceName, int queueSize);
+	void open(AVCodecID codecId, const std::string& sourceName, int queueSize);
+	void open(AVCodecID codecId);
 	int writePacket(AVPacket* packet);
 	void writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsIdx, bool terminate);
 	void transcodeAudio(AVPacket* pkt, StreamContext& sc, bool terminate);
+	AVStream* newStream(AVFormatContext* fmt_ctx, AVStream* inStream);
 
 private:
 	VideoPacketContext encodedFrame = {};
-
-	AVStream* newStream(AVFormatContext* fmt_ctx, AVStream* inStream);
 };
 
 
@@ -203,15 +203,14 @@ protected:
 	std::vector<ImageYuv> imageBuffer;
 	AVFrame* av_frame = nullptr;
 
-	AVPixelFormat pixfmt = AV_PIX_FMT_YUV420P;
 	AVCodecContext* codec_ctx = nullptr;
 	SwsContext* sws_scaler_ctx = nullptr;
 
 	int sendFFmpegFrame(AVFrame* frame);
 	int writeFFmpegPacket(AVFrame* av_frame);
 
-	void openEncoder(const AVCodec* codec, const std::string& sourceName);
-	void open(EncodingOption videoCodec, int h, int w, int stride, const std::string& sourceName);
+	void open(AVCodecID codecId, AVPixelFormat pixfmt, int h, int w, int stride);
+	void open(EncodingOption videoCodec, AVPixelFormat pixfmt, int h, int w, int stride, const std::string& sourceName);
 	void write(int bufferIndex);
 
 	FFmpegWriter(MainData& data, MovieReader& reader, int writeBufferSize) :
@@ -315,14 +314,17 @@ public:
 //optical flow video
 class OpticalFlowWriter : public FFmpegWriter, public AuxiliaryWriter {
 
+private:
+	int legendSizeBase = 64;
+	int legendScale = 1;
+
 protected:
-	int legendSize = 64;
-	ImageRGBA legend = ImageRGBA(legendSize, legendSize);
+	int legendSize;
+	ImageRGBA legend;
 	ImageRGBA imageInterpolated;
 	ImageRGBplanar imageResults;
-	AVRational timeBase = { 1, 10 };
 
-	void open(const std::string& sourceName);
+	void open(const std::string& sourceName, AVPixelFormat pixfmt);
 	void writeFlow(const MovieFrame& frame);
 	void writeAVFrame(AVFrame* av_frame);
 	void vectorToColor(double dx, double dy, unsigned char* r, unsigned char* g, unsigned char* b);
