@@ -37,7 +37,7 @@
     <QtBuildConfig>debug</QtBuildConfig>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'" Label="QtSettings">
-    <QtModules>core;gui;widgets;opengl;openglwidgets;multimedia</QtModules>
+    <QtModules>core;gui;widgets;multimedia;multimediawidgets</QtModules>
     <QtBuildConfig>release</QtBuildConfig>
     <QtDeploy>true</QtDeploy>
     <QtDeployDir>$(SolutionDir)bin\$(Platform)\Deploy</QtDeployDir>
@@ -133,7 +133,6 @@ copy $(FFMPEG_PATH)\bin\*.dll $(SolutionDir)bin\$(Platform)\Deploy</Command>
     <ClCompile Include="ImageLabel.cpp" />
     <ClCompile Include="MessagePrinterGui.cpp" />
     <ClCompile Include="player.cpp" />
-    <ClCompile Include="PlayerBufferDevice.cpp" />
     <ClCompile Include="PlayerWidget.cpp" />
     <ClCompile Include="progress.cpp" />
     <ClCompile Include="UserInputGui.cpp" />
@@ -168,7 +167,6 @@ copy $(FFMPEG_PATH)\bin\*.dll $(SolutionDir)bin\$(Platform)\Deploy</Command>
     <QtMoc Include="Eula.h" />
     <QtMoc Include="ClickLabel.h" />
     <QtMoc Include="player.h" />
-    <ClInclude Include="PlayerBufferDevice.h" />
     <ClInclude Include="PlayerWidget.h" />
     <QtMoc Include="UserInputGui.hpp" />
   </ItemGroup>

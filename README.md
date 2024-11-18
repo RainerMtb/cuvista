@@ -46,7 +46,7 @@ cd build
 ```
 prepare the locations of Cuda and FFMPEG and provide them to cmake. Better use forward slashes ```/``` to separate folders. Adapt locations to your system:
 ```
-cmake .. -D CMAKE_PREFIX_PATH=C:/CUDA/version -D FFMPEG_PATH=C:/ffmpeg
+cmake .. -D CMAKE_PREFIX_PATH=C:/CUDA/version -D FFMPEG_PATH=C:/ffmpeg --fresh
 cmake --build . --config Release
 ```
 Upon successfull completion you will get the file
@@ -63,7 +63,7 @@ This will put together the libraries for ffmpeg and the executable in the subfol
 In addition to the Core Dependencies above get Qt https://www.qt.io/download-qt-installer, only the essential packages are required  
 Provide the location of Qt to cmake via the ```CMAKE_PREFIX_PATH``` and proceed similar to the steps above. Adapt locations to your system:
 ```
-cmake .. -D CMAKE_PREFIX_PATH=C:/Qt/6.8.0/msvc2022_64;C:/CUDA/version -D FFMPEG_PATH=C:/ffmpeg -D GUI=1
+cmake .. -D CMAKE_PREFIX_PATH=C:/Qt/6.8.0/msvc2022_64;C:/CUDA/version -D FFMPEG_PATH=C:/ffmpeg -D GUI=1 --fresh
 cmake --build . --config Release
 ```
 Upon successfull completion you will get
@@ -114,7 +114,7 @@ cd build
 ```
 Adapt the location of cuda to your system and execute the build process
 ```
-cmake .. -D CMAKE_PREFIX_PATH=/usr/local/cuda
+cmake .. -D CMAKE_PREFIX_PATH=/usr/local/cuda --fresh
 cmake --build .
 ```
 Upon successfull completion you will find the executable which should execute right away
@@ -123,16 +123,20 @@ cuvistaCli/cuvista
 ```
 
 ### Including the GUI executable in the build
-In addition to the Core Libraries above get Qt https://www.qt.io/download-qt-installer, only the essential packages are required.  
-You might want to ```wget``` the installer from https://download.qt.io/official_releases/online_installers/
-
+In addition to the Core Libraries above get Qt, see https://www.qt.io/download-qt-installer. 
+To get the necessary components on the command line
+```
+wget https://download.qt.io/official_releases/online_installers/qt-unified-linux-x64-online.run
+chmod +x qt-unified-linux-x64-online.run
+/qt-unified-linux-x64-online.run install qt.qt6.680.linux_gcc_64 qt.qt6.680.addons.qtmultimedia
+```
 You probably need
 ```
 sudo apt install -y libxkbcommon-dev
 ```
 Proceed similar to the steps above, also providing the location of Qt to cmake, adapt locations to your system
 ```
-cmake .. -D CMAKE_PREFIX_PATH=~/Qt/6.8.0/gcc_64:/usr/local/cuda -D GUI=1
+cmake .. -D CMAKE_PREFIX_PATH=~/Qt/6.8.0/gcc_64:/usr/local/cuda -D GUI=1 --fresh
 cmake --build .
 ```
 Upon successfull completion you will find the executables which should execute right away

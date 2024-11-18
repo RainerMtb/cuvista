@@ -71,7 +71,7 @@ namespace im {
 
 		void plot4(double cx, double cy, double dx, double dy, double a, ColorBase<T> color);
 
-		void yuvToRgb(ImageBase<unsigned char>& dest, std::vector<int> planes, ThreadPoolBase& pool = defaultPool) const;
+		void yuvToRgb(ImageData<unsigned char>& dest, std::vector<int> planes, ThreadPoolBase& pool = defaultPool) const;
 
 		void copyTo(ImageData<T>& dest, size_t r0, size_t c0, std::vector<int> srcPlanes, std::vector<int> destPlanes, ThreadPoolBase& pool = defaultPool) const;
 

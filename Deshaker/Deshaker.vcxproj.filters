@@ -125,6 +125,9 @@
     <ClCompile Include="OpenClFrame.cpp">
       <Filter>Frame</Filter>
     </ClCompile>
+    <ClCompile Include="ImageYuvFFmpeg.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MovieReader.hpp">
@@ -240,6 +243,9 @@
     </ClInclude>
     <ClInclude Include="OpenClFrame.hpp">
       <Filter>Frame</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageYuvFFmpeg.hpp">
+      <Filter>Util</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

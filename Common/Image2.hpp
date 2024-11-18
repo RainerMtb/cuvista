@@ -39,10 +39,10 @@ public:
 
 
 //image from 8bit data
-class ImageYuvMat8 : public im::ImageMatShared<uint8_t> {
+class ImageMatYuv8 : public im::ImageMatShared<uint8_t> {
 
 public:
-	ImageYuvMat8(int h, int w, int stride, uint8_t* y, uint8_t* u, uint8_t* v) :
+	ImageMatYuv8(int h, int w, int stride, uint8_t* y, uint8_t* u, uint8_t* v) :
 		ImageMatShared(h, w, stride, y, u, v) {}
 };
 
@@ -69,10 +69,10 @@ public:
 		ImagePacked(h, w, stride, 4, data, h * stride) {}
 
 	ImageRGBA(int h, int w, int stride) :
-		ImagePacked(h, w, 4 * stride, 4, 4 * h * stride) {}
+		ImagePacked(h, w, stride, 4, h * stride) {}
 
 	ImageRGBA(int h, int w) :
-		ImageRGBA(h, w, w) {}
+		ImageRGBA(h, w, 4 * w) {}
 
 	ImageRGBA() :
 		ImageRGBA(0, 0) {}

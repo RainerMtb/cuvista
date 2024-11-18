@@ -96,6 +96,7 @@
     <ClCompile Include="CudaFrame.cpp" />
     <ClCompile Include="DummyFrame.cpp" />
     <ClCompile Include="FrameResult.cpp" />
+    <ClCompile Include="ImageYuvFFmpeg.cpp" />
     <ClCompile Include="MainData.cpp" />
     <ClCompile Include="MatrixInverter.cpp" />
     <ClCompile Include="OpenClFrame.cpp" />
@@ -139,6 +140,7 @@
     <ClInclude Include="DummyFrame.hpp" />
     <ClInclude Include="FFmpegUtil.hpp" />
     <ClInclude Include="FrameResult.hpp" />
+    <ClInclude Include="ImageYuvFFmpeg.hpp" />
     <ClInclude Include="KeyboardInput.hpp" />
     <ClInclude Include="DeshakerHelpText.hpp" />
     <ClInclude Include="MainData.hpp" />

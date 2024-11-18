@@ -36,14 +36,17 @@ public:
 	virtual ~MovieReader() = default;
 
 	virtual void open(const std::string& source) = 0;
+	virtual void start() {}
 	virtual void read(ImageYuv& inputFrame) = 0;
 	virtual std::future<void> readAsync(ImageYuv& inputFrame);
 	virtual void close() {}
 	virtual void rewind() {}
 	virtual void seek(double fraction) {}
+	virtual int openAudioDecoder(int streamIndex) { return -1; }
 
 	std::optional<std::string> ptsForFrameAsString(int64_t frameIndex);
 	std::optional<int64_t> ptsForFrameAsMillis(int64_t frameIndex);
+	double ptsForFrame(int64_t frameIndex);
 
 protected:
 	int sideDataMaxSize = 20 * 1024 * 1024;
@@ -61,10 +64,15 @@ public:
 class FFmpegFormatReader : public MovieReader {
 
 protected:
+	bool isFormatOpen = false;
+	bool isStoredPacket = false;
 	AVFormatContext* av_format_ctx = nullptr;
 	AVCodecContext* av_codec_ctx = nullptr;
 	AVFrame* av_frame = nullptr;
 	AVPacket* av_packet = nullptr;
+
+	void close() override;
+	~FFmpegFormatReader() override;
 
 	void openInput(AVFormatContext* fmt, const char* source);
 };
@@ -74,8 +82,8 @@ protected:
 class FFmpegReader : public FFmpegFormatReader {
 
 private:
-	AVFormatContext* av_fmt = nullptr;
 	SwsContext* sws_scaler_ctx = nullptr;
+	AVSampleFormat decodingSampleFormat = AV_SAMPLE_FMT_FLT;
 
 public:
 	~FFmpegReader() override;
@@ -84,6 +92,8 @@ public:
 	void read(ImageYuv& frame) override;
 	void close() override;
 	void rewind() override;
+	int openAudioDecoder(int streamIndex) override;
+
 	void seek(double fraction);
 };
 

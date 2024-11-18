@@ -70,9 +70,6 @@
     <ClCompile Include="MessagePrinterGui.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="PlayerBufferDevice.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="ImageLabel.h">
@@ -110,9 +107,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PlayerWidget.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="PlayerBufferDevice.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -134,6 +134,7 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     connect(mProgressWindow, &ProgressWindow::sigUpdateOutput, mProgressWindow, &ProgressWindow::updateOutput);
 
     //player window
+    connect(mPlayerWindow, &PlayerWindow::sigProgress, mPlayerWindow, &PlayerWindow::progress);
     connect(mPlayerWindow, &PlayerWindow::cancel, &mInputHandler, &UserInputGui::cancel);
 
     //set window to minimal size

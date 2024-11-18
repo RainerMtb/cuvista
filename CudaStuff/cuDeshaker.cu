@@ -484,7 +484,7 @@ void CudaExecutor::cudaOutputData(int64_t frameIndex, const AffineCore& trf) {
 	//writeText(std::to_string(frameIdx), 10, 10, 2, 3, bufferFrames[18], mData);
 }
 
-void CudaExecutor::getOutput(int64_t frameIndex, ImageYuvData& image) {
+void CudaExecutor::getOutputYuv(int64_t frameIndex, ImageYuvData& image) {
 	cu::outputHost(out.final, mData.strideFloat4N, d_yuvOut, mData.strideChar, mData.w, mData.h, cs[1]);
 	for (int planeSize = mData.strideChar * mData.h, i = 0; i < 3; i++) {
 		cu::copy_32f_3(d_yuvOut + i * planeSize, mData.strideChar, image.addr(i, 0, 0), image.strideInBytes(), mData.w, mData.h, cs[1]);
@@ -494,10 +494,10 @@ void CudaExecutor::getOutput(int64_t frameIndex, ImageYuvData& image) {
 	handleStatus(cudaGetLastError(), "error @output #91");
 }
 
-void CudaExecutor::getOutput(int64_t frameIndex, ImageRGBA& image) {
+void CudaExecutor::getOutputRgba(int64_t frameIndex, ImageRGBA& image) {
 	cu::yuv_to_rgba(out.final, mData.strideFloat4N, d_rgba, -1, mData.w, mData.h, cs[1]);
-	handleStatus(cudaMemcpyAsync(image.data(), d_rgba, 4ull * mData.w * mData.h, cudaMemcpyDefault, cs[1]), "error @output #94");
-	image.index = frameIndex;
+	handleStatus(cudaMemcpyAsync(image.plane(0), d_rgba, 4ull * mData.w * mData.h, cudaMemcpyDefault, cs[1]), "error @output #94");
+	image.setIndex(frameIndex);
 	handleStatus(cudaStreamSynchronize(cs[1]), "error @output #92");
 	handleStatus(cudaGetLastError(), "error @output #93");
 }
@@ -541,12 +541,12 @@ void CudaExecutor::getInput(int64_t frameIndex, ImageRGBA& image) const {
 	assert(frameIndizes[fridx] == frameIndex && "invalid frame in buffer");
 	unsigned char* yuvSrc = d_yuvData + fridx * 3ull * mData.h * mData.strideChar;
 	cu::yuv_to_rgba(yuvSrc, mData.strideChar, d_rgba, -1, mData.w, mData.h);
-	handleStatus(cudaMemcpy(image.data(), d_rgba, 4ull * mData.w * mData.h, cudaMemcpyDefault), "error @progress input");
+	handleStatus(cudaMemcpy(image.plane(0), d_rgba, 4ull * mData.w * mData.h, cudaMemcpyDefault), "error @progress input");
 }
 
 void CudaExecutor::getWarped(int64_t frameIndex, ImageRGBA& image) {
 	cu::yuv_to_rgba(out.warped, mData.strideFloat4N, d_rgba, -1, mData.w, mData.h);
-	handleStatus(cudaMemcpy(image.data(), d_rgba, 4ull * mData.w * mData.h, cudaMemcpyDefault), "error @progress output");
+	handleStatus(cudaMemcpy(image.plane(0), d_rgba, 4ull * mData.w * mData.h, cudaMemcpyDefault), "error @progress output");
 }
 
 

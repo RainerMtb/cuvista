@@ -14,7 +14,7 @@
                 "${workspaceFolder}/OpenCL-Headers",
                 "${workspaceFolder}/Matrix",
                 "/usr/local/cuda/include",
-                "/home/rainer/Qt/6.7.2/gcc_64/include/**"
+                "/home/rainer/Qt/6.8.0/gcc_64/include/**"
             ],
             "defines": [],
             "cStandard": "c17",
@@ -31,7 +31,7 @@
                 "${workspaceFolder}/Deshaker",
                 "${workspaceFolder}/include/**",
                 "${workspaceFolder}/Matrix",
-                "${workspaceFolder}/nvapi/**",  
+                "${workspaceFolder}/nvapi/**",
                 "${workspaceFolder}/OpenCL-CLHPP/include",
                 "${workspaceFolder}/OpenCL-Headers",
                 "${FFMPEG_PATH}/include/",

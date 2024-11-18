@@ -169,7 +169,8 @@ ImageRGBA& ImageYuv::toRGBA(ImageRGBA& dest, ThreadPoolBase& pool) const {
 
 ImageRGBA ImageYuv::toRGBA() const {
 	ImageRGBA out(h, w);
-	return toRGBA(out);
+	toRGBA(out);
+	return out;
 }
 
 

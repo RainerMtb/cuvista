@@ -29,7 +29,7 @@ void StackedWriter::open(EncodingOption videoCodec) {
 }
 
 void StackedWriter::prepareOutput(FrameExecutor& executor) {
-	executor.getOutput(frameIndex, mOutputFrame);
+	executor.getOutputYuv(frameIndex, mOutputFrame);
 }
 
 void StackedWriter::write(const FrameExecutor& executor) {

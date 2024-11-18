@@ -42,6 +42,7 @@ public:
 	virtual ~MovieWriter() = default;
 	virtual void open(EncodingOption videoCodec) {}
 	virtual void open() {}
+	virtual void start() {}
 	virtual void prepareOutput(FrameExecutor& executor) {}
 	virtual void write(const FrameExecutor& executor) { frameIndex++; }
 	virtual bool startFlushing() { return false; }
@@ -175,6 +176,7 @@ protected:
 	std::list<std::future<void>> encodingQueue; //queue for encoder thread
 
 	AVFormatContext* fmt_ctx = nullptr;
+	AVIOContext* av_avio = nullptr;
 	AVStream* videoStream = nullptr;
 	AVPacket* videoPacket = nullptr;
 	bool isHeaderWritten = false;
@@ -319,7 +321,7 @@ private:
 	int legendScale = 1;
 
 protected:
-	int legendSize;
+	int legendSize = 0;
 	ImageRGBA legend;
 	ImageRGBA imageInterpolated;
 	ImageRGBplanar imageResults;
@@ -332,8 +334,8 @@ protected:
 public:
 	OpticalFlowWriter(MainData& data, MovieReader& reader) :
 		FFmpegWriter(data, reader, 1),
-		imageResults(data.iyCount, data.ixCount),
-		imageInterpolated(data.h, data.w) {}
+		imageInterpolated(data.h, data.w),
+		imageResults(data.iyCount, data.ixCount) {}
 
 	void open() override;
 	void write(const FrameExecutor& executor) override;

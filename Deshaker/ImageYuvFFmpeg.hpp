@@ -18,20 +18,28 @@
 
 #pragma once
 
-#include <QIODevice>
+#include "FFmpegUtil.hpp"
+#include "Image2.hpp"
 
- //buffer to be written by ffmpeg and read by QMediaPlayer
-class PlayerBufferDevice : public QIODevice {
+//Image using ffmpeg frame buffer
+class ImageYuvFFmpeg : public ImageData<uint8_t> {
+
+private:
+    AVFrame* av_frame;
 
 public:
-    PlayerBufferDevice(size_t bufferSize);
+    int64_t index = 0;
 
-    int bufferPos = 0;
-    std::vector<char> bufferData;
+    ImageYuvFFmpeg(AVFrame* av_frame = nullptr);
 
-    qint64 readData(char* data, qint64 maxSize) override;
-    qint64 writeData(const char* data, qint64 maxSize) override;
-    bool isSequential() const override;
-    qint64 bytesAvailable() const override;
-    qint64 size() const override;
+    uint8_t* addr(size_t idx, size_t r, size_t c) override;
+    const uint8_t* addr(size_t idx, size_t r, size_t c) const override;
+    uint8_t* plane(size_t idx) override;
+    const uint8_t* plane(size_t idx) const override;
+    int planes() const override;
+    int height() const override;
+    int width() const override;
+    int strideInBytes() const override;
+    void setIndex(int64_t frameIndex) override;
+    bool saveAsBMP(const std::string& filename, uint8_t scale = 1) const override;
 };

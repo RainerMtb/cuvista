@@ -19,6 +19,7 @@
 #include "FFmpegUtil.hpp"
 #include "ErrorLogger.hpp"
 #include <format>
+#include <numeric>
 
 
 std::string av_make_error(int errnum, const char* msg) {
@@ -95,13 +96,22 @@ std::string timeString(int64_t millis) {
     return timeString;
 }
 
+SidePacket::SidePacket(int64_t frameIndex, double pts) {
+    this->frameIndex = frameIndex;
+    this->packet = nullptr;
+    this->pts = pts;
+}
+
 SidePacket::SidePacket(int64_t frameIndex, const AVPacket* packet) {
     this->frameIndex = frameIndex;
     this->packet = av_packet_clone(packet);
+    this->pts = std::numeric_limits<double>::quiet_NaN();
 }
 
 SidePacket::~SidePacket() {
-    av_packet_free(&packet);
+    if (packet) {
+        av_packet_free(&packet);
+    }
 }
 
 StreamContext::~StreamContext() {

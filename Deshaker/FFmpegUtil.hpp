@@ -69,7 +69,10 @@ class SidePacket {
 public:
 	int64_t frameIndex;
 	AVPacket* packet;
+	std::vector<uint8_t> audioData;
+	double pts;
 
+	SidePacket(int64_t frameIndex, double pts);
 	SidePacket(int64_t frameIndex, const AVPacket* packet);
 	~SidePacket();
 };

@@ -283,12 +283,12 @@ void CpuFrame::outputData(int64_t frameIndex, const Affine2D& trf) {
 	mOutput.index = frameIndex;
 }
 
-void CpuFrame::getOutput(int64_t frameIndex, ImageYuvData& image) {
+void CpuFrame::getOutputYuv(int64_t frameIndex, ImageYuvData& image) {
 	assert(frameIndex == mOutput.index && "invalid frame index");
 	mOutput.copyTo(image, mPool);
 }
 
-void CpuFrame::getOutput(int64_t frameIndex, ImageRGBA& image) {
+void CpuFrame::getOutputRgba(int64_t frameIndex, ImageRGBA& image) {
 	mOutput.toRGBA(image, mPool);
 }
 

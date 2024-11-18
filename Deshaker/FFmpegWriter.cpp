@@ -123,7 +123,7 @@ void FFmpegWriter::open(EncodingOption videoCodec, AVPixelFormat pixfmt, int h, 
 
 void FFmpegWriter::prepareOutput(FrameExecutor& executor) {
     int64_t idx = frameIndex % imageBufferSize;
-    executor.getOutput(frameIndex, imageBuffer[idx]);
+    executor.getOutputYuv(frameIndex, imageBuffer[idx]);
 }
 
 

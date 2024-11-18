@@ -192,8 +192,8 @@ template <class T> void im::ImageBase<T>::setValues(const ColorBase<T>& color) {
 	}
 }
 
-template <class T> void im::ImageBase<T>::yuvToRgb(ImageBase<unsigned char>& dest, std::vector<int> planes, ThreadPoolBase& pool) const {
-	assert(w == dest.w && h == dest.h && "dimensions mismatch");
+template <class T> void im::ImageBase<T>::yuvToRgb(ImageData<unsigned char>& dest, std::vector<int> planes, ThreadPoolBase& pool) const {
+	assert(w == dest.width() && h == dest.height() && numPlanes <= dest.planes() && "dimensions mismatch");
 	auto func = [&] (size_t r) {
 		for (int c = 0; c < w; c++) {
 			yuv_to_rgb(at(0, r, c), at(1, r, c), at(2, r, c), dest.addr(planes[0], r, c), dest.addr(planes[1], r, c), dest.addr(planes[2], r, c));

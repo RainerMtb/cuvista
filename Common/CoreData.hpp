@@ -76,7 +76,7 @@ struct CoreData {
 
 	double zoomMin = 1.05;		        //min additional zoom
 	double zoomMax = 1.15;              //max additioanl zoom
-	double zoomFallbackTotal = 0.025;   //fallback rate for dynamic zoom, to be divided by frame radius
+	double zoomFallbackTotal = 0.01;    //fallback rate for dynamic zoom, to be divided by frame radius
 	double zoomFallback = 0.0;          //fallback rate for dynamic zoom
 
 	int cpuThreads = 1;         //cpu threads to use in cpu-compute and computing transform parameters, leave room for other things

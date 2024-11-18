@@ -21,12 +21,14 @@
 #include <filesystem>
 
 AVStream* FFmpegFormatWriter::newStream(AVFormatContext* fmt_ctx, AVStream* inStream) {
-    AVStream* st = avformat_new_stream(fmt_ctx, NULL); //docs say AVCodec parameter is not used
-    if (!st)
+    AVStream* stream = avformat_new_stream(fmt_ctx, NULL); //docs say AVCodec parameter is not used
+    if (!stream)
         throw AVException("could not create stream");
 
-    st->time_base = inStream->time_base;
-    return st;
+    stream->time_base = inStream->time_base;
+    stream->start_time = 0;
+    stream->duration = inStream->duration;
+    return stream;
 }
 
 //setup output format
@@ -254,7 +256,8 @@ void FFmpegFormatWriter::transcodeAudio(AVPacket* pkt, StreamContext& sc, bool t
                 if (bufsiz < 0)
                     ffmpeg_log_error(retval, "cannot allocate samples");
 
-                sampleCount = swr_convert(sc.resampleCtx, samplesArray, sampleCount, sc.frameIn->extended_data, sc.frameIn->nb_samples);
+                const uint8_t** indata = (const uint8_t**) (sc.frameIn->extended_data);
+                sampleCount = swr_convert(sc.resampleCtx, samplesArray, sampleCount, indata, sc.frameIn->nb_samples);
                 if (sampleCount < 0)
                     ffmpeg_log_error(sampleCount, "cannot convert samples");
 
@@ -406,13 +409,20 @@ void FFmpegFormatWriter::writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsI
 
 //close ffmpeg format
 FFmpegFormatWriter::~FFmpegFormatWriter() {
-    if (fmt_ctx != nullptr && isHeaderWritten) {
+    if (fmt_ctx && isHeaderWritten) {
         int result = av_write_trailer(fmt_ctx);
         if (result < 0) {
             errorLogger.logError(av_make_error(result, "error writing trailer"));
         }
         outputBytesWritten = avio_tell(fmt_ctx->pb);
     }
-    av_packet_free(&videoPacket);
-    avformat_free_context(fmt_ctx);
+    if (av_avio) {
+        avio_context_free(&av_avio);
+    }
+    if (videoPacket) {
+        av_packet_free(&videoPacket);
+    }
+    if (fmt_ctx) {
+        avformat_free_context(fmt_ctx);
+    }
 }

@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include <cstring>
 #include <chrono>
 #include <string>
 #include <vector>

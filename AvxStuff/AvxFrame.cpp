@@ -99,14 +99,14 @@ void AvxFrame::outputData(int64_t frameIndex, const Affine2D& trf) {
 	}
 }
 
-void AvxFrame::getOutput(int64_t frameIndex, ImageYuvData& image) {
+void AvxFrame::getOutputYuv(int64_t frameIndex, ImageYuvData& image) {
 	write(image);
 	image.setIndex(frameIndex);
 }
 
-void AvxFrame::getOutput(int64_t frameIndex, ImageRGBA& image) {
+void AvxFrame::getOutputRgba(int64_t frameIndex, ImageRGBA& image) {
 	yuvToRgba(mOutput[0].data(), mOutput[1].data(), mOutput[2].data(), mData.h, mData.w, pitch, image);
-	image.index = frameIndex;
+	image.setIndex(frameIndex);
 }
 
 void AvxFrame::getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) {

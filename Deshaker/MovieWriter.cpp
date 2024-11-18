@@ -29,7 +29,7 @@ void AuxWriters::writeAll(const FrameExecutor& executor) {
 }
 
 void BaseWriter::prepareOutput(FrameExecutor& executor) {
-	executor.getOutput(frameIndex, outputFrame);
+	executor.getOutputYuv(frameIndex, outputFrame);
 }
 
 void BaseWriter::write(const FrameExecutor& executor) {
@@ -68,7 +68,7 @@ std::string ImageWriter::makeFilename(const std::string& extension) const {
 
 void BmpImageWriter::prepareOutput(FrameExecutor& executor) {
 	worker.join();
-	executor.getOutput(frameIndex, image);
+	executor.getOutputRgba(frameIndex, image);
 }
 
 void BmpImageWriter::write(const FrameExecutor& executor) {

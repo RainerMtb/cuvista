@@ -19,14 +19,15 @@
 #pragma once
 
 #include <QMainWindow>
-#include <QMediaPlayer>
-#include <vector>
+#include <QVideoFrame>
+#include <QAudioSink>
+#include <QIODevice>
 
 #include "ui_player.h"
 #include "MovieWriter.hpp"
 #include "ProgressDisplay.hpp"
 #include "FrameExecutor.hpp"
-#include "PlayerBufferDevice.h"
+
 
 //player window
 class PlayerWindow : public QMainWindow {
@@ -39,12 +40,14 @@ public:
     volatile bool isPaused = false;
 
     PlayerWindow(QWidget* parent);
-    QVideoWidget* videoWidget();
-
+    void open(const QVideoFrame& videoFrame);
     void closeEvent(QCloseEvent* event) override;
 
 signals:
     void cancel();
+    void sigProgress(QString str, QString status);
+    void sigUpdate(const QVideoFrame& frame);
+    void sigVolume(int volume);
 
 public slots:
     void progress(QString str, QString status);
@@ -52,44 +55,19 @@ public slots:
     void play();
 };
 
-//Image using ffmpeg frame buffer
-class ImageYuvFFmpeg : public ImageData<uint8_t> {
-
-private:
-    AVFrame* av_frame;
-
-public:
-    int64_t index = 0;
-
-    ImageYuvFFmpeg(AVFrame* av_frame = nullptr);
-
-    uint8_t* addr(size_t idx, size_t r, size_t c) override;
-    const uint8_t* addr(size_t idx, size_t r, size_t c) const override;
-    uint8_t* plane(size_t idx) override;
-    const uint8_t* plane(size_t idx) const override;
-    int planes() const override;
-    int height() const override;
-    int width() const override;
-    int strideInBytes() const override;
-    void setIndex(int64_t frameIndex) override;
-    bool saveAsBMP(const std::string& filename, uint8_t scale = 1) const override;
-};
 
 //writer
-class PlayerWriter : public QObject, public FFmpegWriter {
+class PlayerWriter : public QObject, public NullWriter {
     Q_OBJECT
 
 private:
-    ImageYuvFFmpeg mImageFrame;
     PlayerWindow* mPlayer;
     QImage mImageWorking;
-    QMediaPlayer mMediaPlayer;
     int mAudioStreamIndex;
-    unsigned char* mBuffer = nullptr;
-    AVIOContext* m_av_avio = nullptr;
-    PlayerBufferDevice mBufferDevice;
-
-    static int writeBuffer(void* opaque, const uint8_t* buf, int bufsiz);
+    QVideoFrame mVideoFrame;
+    QAudioSink* mAudioSink;
+    QIODevice* mAudioDevice;
+    std::chrono::time_point<std::chrono::steady_clock> mNextPts;
 
 public:
     PlayerWriter(MainData& data, MovieReader& reader, PlayerWindow* player, QImage imageWorking, int audioStreamCtx);
@@ -100,7 +78,15 @@ public:
     void write(const FrameExecutor& executor) override;
     bool startFlushing() override;
     bool flush() override;
+
+public slots:
+    void playAudio(QByteArray bytes);
+    void setVolume(int volume);
+
+signals:
+    void sigPlayAudio(QByteArray bytes);
 };
+
 
 //progress handler
 class PlayerProgress : public ProgressDisplay {

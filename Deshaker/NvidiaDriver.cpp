@@ -77,6 +77,7 @@ NvidiaDriverInfo probeNvidiaDriver() {
 	char version[siz];
 	status = nvmlSystemGetDriverVersion(version, siz);
 	if (status != NVML_SUCCESS) warning = "error getting nvidia driver version";
+	versionString = version;
 
 	nvmlShutdown();
 	return { versionString, warning };
