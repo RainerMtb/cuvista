@@ -60,9 +60,9 @@ private:
     QFileInfo mFileInput;
     QFileInfo mFileOutput;
 
-    QThread* mThread = QThread::create([] {});
     PlayerWindow* mPlayerWindow;
     ProgressWindow* mProgressWindow;
+    QThread* mThread;
     std::shared_ptr<MovieWriter> mWriter;
     std::shared_ptr<MovieFrame> mFrame;
     std::shared_ptr<FrameExecutor> mExecutor;

@@ -36,8 +36,6 @@ public:
 	AVStream* videoStream = nullptr;
 
 	double fps() const;
-	StreamInfo videoStreamInfo() const;
-	StreamInfo streamInfo(AVStream* stream) const;
 	AVRational videoTimeBase() const;
 };
 

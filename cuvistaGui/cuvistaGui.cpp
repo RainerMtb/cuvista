@@ -137,8 +137,8 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     connect(mPlayerWindow, &PlayerWindow::sigProgress, mPlayerWindow, &PlayerWindow::progress);
     connect(mPlayerWindow, &PlayerWindow::cancel, &mInputHandler, &UserInputGui::cancel);
 
-    //set window to minimal size
-    resize(minimumSize());
+    //set default main window size
+    resize(600, 650);
 
     //load files from command line argument
     //preset input file
@@ -193,20 +193,24 @@ void cuvistaGui::setInputFile(const QString& filePath) {
         mInputReady = true;
         updateInputImage();
         statusBar()->showMessage({});
-        StreamInfo info = mReader.videoStreamInfo();
-        std::string frameCount = mReader.frameCount == 0 ? "unknown" : std::to_string(mReader.frameCount);
-        QString qstr = qformat("video: {} x {} px @{:.3f} fps ({}:{})\ncodec: {}, duration: {}, frames: {}",
-            mReader.w, mReader.h, mReader.fps(), mReader.fpsNum, mReader.fpsDen, info.codec, info.durationString, frameCount);
-        ui.texInput->setPlainText(qstr);
 
-        //audio tracks
+        //info about streams
+        std::string str;
         for (StreamContext& sc : mReader.inputStreams) {
-            StreamInfo si = mReader.streamInfo(sc.inputStream);
-            if (si.mediaType == AVMEDIA_TYPE_AUDIO) {
-                QString qstr = qformat("Track {}: {}", sc.inputStream->index, si.codec);
+            StreamInfo info = sc.inputStreamInfo();
+            str += std::format("stream {}\ntype: {}, codec: {}, duration: {}\n", 
+                sc.inputStream->index, info.streamType, info.codec, info.durationString);
+            if (sc.inputStream->index == mReader.videoStream->index) {
+                std::string frameCount = mReader.frameCount == 0 ? "unknown" : std::to_string(mReader.frameCount);
+                str += std::format("video {} x {} px @{:.3f} fps ({}:{})\nvideo frames: {}\n",
+                    mReader.w, mReader.h, mReader.fps(), mReader.fpsNum, mReader.fpsDen, frameCount);
+            }
+            if (info.mediaType == AVMEDIA_TYPE_AUDIO) {
+                QString qstr = qformat("Track {}: {}", sc.inputStream->index, info.codec);
                 ui.comboAudioTrack->addItem(qstr, QVariant::fromValue(&sc));
             }
         }
+        ui.texInput->setPlainText(QString::fromStdString(str).trimmed());
         bool hasAudio = ui.comboAudioTrack->count() > 0;
         ui.chkPlayAudio->setEnabled(hasAudio);
         ui.chkPlayAudio->setChecked(hasAudio);
@@ -347,6 +351,8 @@ void cuvistaGui::stabilize() {
     auto fcn = [&] {
         //no secondary writers
         AuxWriters writers;
+        //init writer on executor thread
+        mWriter->start();
         //run loop
         mFrame->runLoop(mProgress, mInputHandler, writers, mExecutor);
     };
@@ -371,6 +377,7 @@ void cuvistaGui::done() {
     mExecutor.reset();
     mFrame.reset();
     mProgress.reset();
+    mThread->deleteLater();
 
     //emit signals to report result back to main thread
     if (errorLogger.hasError())
@@ -379,9 +386,6 @@ void cuvistaGui::done() {
         doneCancel("Operation was cancelled");
     else
         doneSuccess(mData.fileOut, std::format(" written in {:.1f} min at {:.1f} fps", secs / 60.0, fps));
-
-    //delete stabilizer thread
-    mThread->deleteLater();
 }
 
 void cuvistaGui::doneSuccess(const std::string& fileString, const std::string& str) {

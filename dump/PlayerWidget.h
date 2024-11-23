@@ -16,12 +16,34 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
-#include "Stats.hpp"
+#pragma once
 
-double ReaderStats::fps() const {
-    return 1.0 * fpsNum / fpsDen;
-}
+#include <QOpenGLWidget>
+#include <QOpenGLFunctions_4_5_Core>
+#include "Image2.hpp"
 
-AVRational ReaderStats::videoTimeBase() const {
-    return { (int) timeBaseNum, (int) timeBaseDen };
-}
+//player widget
+class PlayerWidget : public QOpenGLWidget, protected QOpenGLFunctions_4_5_Core {
+    Q_OBJECT
+
+public:
+    PlayerWidget(QWidget* parent);
+    ~PlayerWidget();
+
+    void initializeGL() override;
+    void paintGL() override;
+    void resizeGL(int w, int h) override;
+
+public slots:
+    void open(int h, int w, int stride, QImage imageWorking);
+    void upload(int64_t frameIndex, ImageRGBA image);
+    void playNextFrame(int64_t frameIndex);
+
+private:
+    GLuint fbo = 0;
+    GLuint textures[2] = {0, 0};
+    int texHeight = 32;
+    int texWidth = 32;
+
+    int64_t currentFrameIndex = 0;
+};

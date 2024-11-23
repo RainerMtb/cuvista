@@ -139,3 +139,16 @@ StreamContext::~StreamContext() {
         av_audio_fifo_free(fifo);
     }
 }
+
+StreamInfo StreamContext::inputStreamInfo() const {
+    std::string tstr;
+    if (inputStream->duration != AV_NOPTS_VALUE)
+        tstr = timeString(inputStream->duration * inputStream->time_base.num * 1000 / inputStream->time_base.den);
+    else if (inputStreamTagDuration.empty() == false)
+        tstr = inputStreamTagDuration;
+    else
+        tstr = "unknown";
+
+    AVCodecParameters* param = inputStream->codecpar;
+    return { av_get_media_type_string(param->codec_type), avcodec_get_name(param->codec_id), tstr, param->codec_type };
+}

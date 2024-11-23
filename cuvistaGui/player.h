@@ -22,6 +22,7 @@
 #include <QVideoFrame>
 #include <QAudioSink>
 #include <QIODevice>
+#include <QThread>
 
 #include "ui_player.h"
 #include "MovieWriter.hpp"
@@ -37,11 +38,12 @@ private:
     Ui::playerWindow ui;
 
 public:
-    volatile bool isPaused = false;
+    QAtomicInt isPaused;
 
     PlayerWindow(QWidget* parent);
     void open(const QVideoFrame& videoFrame);
     void closeEvent(QCloseEvent* event) override;
+    int getAudioVolume();
 
 signals:
     void cancel();
@@ -64,9 +66,12 @@ private:
     PlayerWindow* mPlayer;
     QImage mImageWorking;
     int mAudioStreamIndex;
+    bool mPlayAudio;
+    QAudioFormat mAudioFormat;
     QVideoFrame mVideoFrame;
+    QAudioDevice mAudioDevice;
     QAudioSink* mAudioSink;
-    QIODevice* mAudioDevice;
+    QIODevice* mAudioIODevice;
     std::chrono::time_point<std::chrono::steady_clock> mNextPts;
 
 public:
@@ -74,17 +79,14 @@ public:
     ~PlayerWriter();
 
     void open(EncodingOption videoCodec) override;
+    void start() override;
     void prepareOutput(FrameExecutor& executor) override;
     void write(const FrameExecutor& executor) override;
     bool startFlushing() override;
     bool flush() override;
 
 public slots:
-    void playAudio(QByteArray bytes);
     void setVolume(int volume);
-
-signals:
-    void sigPlayAudio(QByteArray bytes);
 };
 
 

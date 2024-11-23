@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>600</width>
-    <height>850</height>
+    <width>648</width>
+    <height>827</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -32,6 +32,12 @@
    <layout class="QVBoxLayout" name="verticalLayout_2">
     <item>
      <widget class="QGroupBox" name="grpInput">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+        <horstretch>0</horstretch>
+        <verstretch>1</verstretch>
+       </sizepolicy>
+      </property>
       <property name="title">
        <string/>
       </property>
@@ -125,23 +131,17 @@
         <layout class="QHBoxLayout" name="horizontalLayout_3">
          <item>
           <widget class="QPlainTextEdit" name="texInput">
-           <property name="enabled">
-            <bool>true</bool>
-           </property>
            <property name="sizePolicy">
-            <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
-             <horstretch>0</horstretch>
+            <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
+             <horstretch>1</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
            </property>
            <property name="minimumSize">
             <size>
              <width>300</width>
-             <height>100</height>
+             <height>150</height>
             </size>
-           </property>
-           <property name="focusPolicy">
-            <enum>Qt::FocusPolicy::NoFocus</enum>
            </property>
            <property name="acceptDrops">
             <bool>false</bool>
@@ -154,15 +154,15 @@
          <item>
           <widget class="ImageLabel" name="imageInput">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
-             <horstretch>0</horstretch>
+            <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
+             <horstretch>1</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
            </property>
            <property name="minimumSize">
             <size>
-             <width>150</width>
-             <height>100</height>
+             <width>300</width>
+             <height>150</height>
             </size>
            </property>
            <property name="styleSheet">
@@ -186,6 +186,12 @@
     </item>
     <item>
      <widget class="QGroupBox" name="grpSettings">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
       <property name="title">
        <string>Settings</string>
       </property>
@@ -515,6 +521,12 @@
     </item>
     <item>
      <widget class="QGroupBox" name="grpOutput">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
       <property name="title">
        <string>Output</string>
       </property>
@@ -953,7 +965,7 @@
  </resources>
  <connections/>
  <buttongroups>
-  <buttongroup name="buttonGroupBackground"/>
   <buttongroup name="buttonGroupOutput"/>
+  <buttongroup name="buttonGroupBackground"/>
  </buttongroups>
 </ui>

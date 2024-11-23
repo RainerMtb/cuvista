@@ -17,8 +17,11 @@
  */
 
 #include "ImageLabel.h"
+#include <QDebug>
 
-ImageLabel::ImageLabel(QWidget* parent) : QLabel(parent) {
+ImageLabel::ImageLabel(QWidget* parent) : 
+    QLabel(parent) 
+{
     pm = QPixmap(100, 100);
     pm.fill(Qt::transparent);
 }

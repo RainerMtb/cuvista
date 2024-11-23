@@ -136,7 +136,7 @@ void FFmpegFormatReader::openInput(AVFormatContext* fmt, const char* source) {
 
     // Open the file using libavformat
     err = avformat_open_input(&av_format_ctx, source, NULL, NULL);
-    isFormatOpen = err == 0;
+    isFormatOpen = (err == 0);
     if (err < 0) 
         throw AVException(av_make_error(err, "could not open input video file"));
 
@@ -158,8 +158,14 @@ void FFmpegFormatReader::openInput(AVFormatContext* fmt, const char* source) {
             }
         }
 
+        std::string tagDuration = "";
+        const AVDictionaryEntry* entry = av_dict_get(stream->metadata, "DURATION", NULL, 0);
+        if (entry != nullptr) {
+            tagDuration = entry->value;
+        }
+        
         //store every stream found in input
-        inputStreams.emplace_back(stream);
+        inputStreams.emplace_back(stream, tagDuration);
     }
     //continue only when there is a video stream to decode
     if (videoStream == nullptr || av_codec == nullptr)
@@ -303,14 +309,14 @@ void FFmpegReader::read(ImageYuv& frame) {
                     //no sample rate conversion makes conversion functions simpler
                     int sampleCount = swr_get_out_samples(sc.resampleCtx, sc.frameIn->nb_samples);
                     int byteCount = sampleCount * bytesPerSample * 2; //two output channels in packed format
-                    std::vector<uint8_t> decodedSamples(byteCount);
+                    sidePacket.audioData.resize(byteCount);
                     if (sampleCount > 0) {
-                        uint8_t* dest[AV_NUM_DATA_POINTERS] = { decodedSamples.data() }; //must be an array of values
+                        uint8_t* dest[AV_NUM_DATA_POINTERS] = { sidePacket.audioData.data() }; //must be an array of values
                         const uint8_t** indata = (const uint8_t**) (sc.frameIn->data);
                         int converted = swr_convert(sc.resampleCtx, dest, sampleCount, indata, sc.frameIn->nb_samples);
                         if (converted > 0) {
                             byteCount = converted * bytesPerSample * 2;
-                            std::copy(decodedSamples.cbegin(), decodedSamples.cbegin() + byteCount, std::back_inserter(sidePacket.audioData));
+                            sidePacket.audioData.resize(byteCount);
                         }
                     }
                 }
@@ -424,7 +430,7 @@ void MemoryFFmpegReader::open(const std::string& source) {
     int bufsiz = 4 * 1024;
     mBuffer = (unsigned char*) av_malloc(bufsiz);
     av_avio = avio_alloc_context(mBuffer, bufsiz, 0, this, &MemoryFFmpegReader::readBuffer, nullptr, &MemoryFFmpegReader::seekBuffer);
-    av_fmt = avformat_alloc_context();
+    AVFormatContext* av_fmt = avformat_alloc_context();
     av_fmt->pb = av_avio;
     av_fmt->flags |= AVFMT_FLAG_CUSTOM_IO;
 
@@ -471,7 +477,5 @@ int64_t MemoryFFmpegReader::seekBuffer(void* opaque, int64_t offset, int whence)
 }
 
 MemoryFFmpegReader::~MemoryFFmpegReader() {
-    avformat_close_input(&av_fmt);
-    avformat_free_context(av_fmt);
     avio_context_free(&av_avio); //seems to also free the buffer
 }

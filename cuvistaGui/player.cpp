@@ -21,7 +21,6 @@
 #include <QMediaDevices>
 #include <QAudioDevice>
 #include <QVideoSink>
-#include <QThread>
 #include <algorithm>
 
 #include "player.h"
@@ -34,7 +33,7 @@
 //-------------------------------------------------
 
 PlayerWindow::PlayerWindow(QWidget* parent) :
-    QMainWindow(parent) 
+    QMainWindow(parent)
 {
     ui.setupUi(this);
     setWindowModality(Qt::ApplicationModal);
@@ -45,7 +44,6 @@ PlayerWindow::PlayerWindow(QWidget* parent) :
 }
 
 void PlayerWindow::open(const QVideoFrame& videoFrame) {
-    ui.sliderVolume->valueChanged(ui.sliderVolume->value());
     ui.videoWidget->videoSink()->setVideoFrame(videoFrame);
     ui.lblStatus->setText("Buffering...");
 }
@@ -73,6 +71,10 @@ void PlayerWindow::closeEvent(QCloseEvent* event) {
     event->ignore();
 }
 
+int PlayerWindow::getAudioVolume() {
+    return ui.sliderVolume->value();
+}
+
 
 //-------------------------------------------------
 //------------- Writer Class ----------------------
@@ -83,8 +85,9 @@ PlayerWriter::PlayerWriter(MainData& data, MovieReader& reader, PlayerWindow* pl
     mPlayer { player },
     mImageWorking { imageWorking },
     mAudioStreamIndex { audioStreamIndex },
+    mPlayAudio { false },
     mAudioSink { nullptr },
-    mAudioDevice { nullptr } {}
+    mAudioIODevice { nullptr } {}
 
 //---- on gui thread
 void PlayerWriter::open(EncodingOption videoCodec) {
@@ -102,21 +105,14 @@ void PlayerWriter::open(EncodingOption videoCodec) {
 
         } else if (sc.inputStream->index == mAudioStreamIndex) {
             int sampleRate = mReader.openAudioDecoder(mAudioStreamIndex);
-            QAudioFormat fmt;
-            fmt.setSampleRate(sampleRate);
-            fmt.setChannelCount(2);
-            fmt.setSampleFormat(QAudioFormat::Float);
-            QAudioDevice device(QMediaDevices::defaultAudioOutput());
-            if (device.isFormatSupported(fmt)) {
-                mAudioSink = new QAudioSink(fmt, this);
-                mAudioDevice = mAudioSink->start();
+            mAudioFormat.setSampleRate(sampleRate);
+            mAudioFormat.setChannelCount(2);
+            mAudioFormat.setSampleFormat(QAudioFormat::Float);
+            mAudioDevice = QMediaDevices::defaultAudioOutput();
+            if (mAudioDevice.isFormatSupported(mAudioFormat)) {
                 sc.handling = StreamHandling::STREAM_DECODE;
-
-                //auto fcnState = [] (QtAudio::State state) { qDebug() << "--- state:" << state; };
-                //connect(sink, &QAudioSink::stateChanged, this, fcnState);
-
-                connect(this, &PlayerWriter::sigPlayAudio, this, &PlayerWriter::playAudio);
                 connect(mPlayer, &PlayerWindow::sigVolume, this, &PlayerWriter::setVolume);
+                mPlayAudio = true;
             }
 
         } else {
@@ -130,13 +126,17 @@ void PlayerWriter::open(EncodingOption videoCodec) {
 }
 
 //---- on gui thread
-void PlayerWriter::playAudio(QByteArray bytes) {
-    mAudioDevice->write(bytes);
-}
-
-//---- on gui thread
 void PlayerWriter::setVolume(int volume) {
     mAudioSink->setVolume(volume / 100.0);
+}
+
+//---- on frame executor thread
+void PlayerWriter::start() {
+    if (mAudioStreamIndex != -1) {
+        mAudioSink = new QAudioSink(mAudioDevice, mAudioFormat);
+        mAudioSink->setVolume(mPlayer->getAudioVolume() / 100.0);
+        mAudioIODevice = mAudioSink->start();
+    }
 }
 
 //---- on frame executor thread
@@ -169,13 +169,12 @@ void PlayerWriter::write(const FrameExecutor& executor) {
     mPlayer->sigUpdate(mVideoFrame);
 
     //play audio
-    if (mAudioStreamIndex != -1 && mAudioSink != nullptr && mAudioDevice != nullptr) {
+    if (mAudioStreamIndex != -1 && mAudioSink != nullptr && mAudioIODevice != nullptr) {
         StreamContext& sc = mReader.inputStreams[mAudioStreamIndex];
         double videoPts = t1.value_or(0.0) / 1000.0;
         for (auto it = sc.packets.begin(); it != sc.packets.end() && it->pts < videoPts + 0.25; ) {
-            QByteArray audioBytes(reinterpret_cast<char*>(it->audioData.data()), it->audioData.size());
+            mAudioIODevice->write(reinterpret_cast<char*>(it->audioData.data()), it->audioData.size());
             it = sc.packets.erase(it);
-            sigPlayAudio(audioBytes);
         }
     }
 
@@ -187,6 +186,10 @@ void PlayerWriter::write(const FrameExecutor& executor) {
 
 //---- on frame executor thread
 bool PlayerWriter::startFlushing() {
+    if (mAudioSink != nullptr) {
+        mAudioSink->stop();
+        mAudioSink->deleteLater();
+    }
     return true;
 }
 
@@ -197,11 +200,7 @@ bool PlayerWriter::flush() {
     return false;
 }
 
-PlayerWriter::~PlayerWriter() {
-    if (mAudioSink != nullptr) {
-        mAudioSink->stop();
-    }
-}
+PlayerWriter::~PlayerWriter() {}
 
 
 //-------------------------------------------------

@@ -463,7 +463,7 @@ void MainData::showIntro(const std::string& deviceName, const MovieReader& reade
 	//streams in input
 	for (size_t i = 0; i < reader.inputStreams.size(); i++) {
 		const StreamContext& sc = reader.inputStreams[i];
-		StreamInfo info = reader.streamInfo(sc.inputStream);
+		StreamInfo info = sc.inputStreamInfo();
 		*console << "  Stream " << i
 			<< ": type: " << info.streamType
 			<< ", codec: " << info.codec

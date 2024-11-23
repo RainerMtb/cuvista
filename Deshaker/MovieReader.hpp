@@ -102,7 +102,6 @@ public:
 class MemoryFFmpegReader : public FFmpegReader {
 
 private:
-	AVFormatContext* av_fmt = nullptr;
 	AVIOContext* av_avio = nullptr;
 	unsigned char* mBuffer = nullptr;
 

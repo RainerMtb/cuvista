@@ -80,7 +80,9 @@ public:
 //structure per stream in input file
 struct StreamContext {
 	AVStream* inputStream = nullptr;
+	std::string inputStreamTagDuration;
 	AVStream* outputStream = nullptr;
+
 	StreamHandling handling = StreamHandling::STREAM_IGNORE;
 	std::list<SidePacket> packets;
 	int64_t packetsWritten;
@@ -96,6 +98,8 @@ struct StreamContext {
 	int64_t pts = 0;
 	SwrContext* resampleCtx = nullptr;
 	AVAudioFifo* fifo = nullptr;
+
+	StreamInfo inputStreamInfo() const;
 
 	~StreamContext();
 };
