@@ -11,4 +11,7 @@
     <ClInclude Include="AvxUtil.hpp" />
     <ClInclude Include="AvxWrapper.hpp" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="CMakeLists.txt" />
+  </ItemGroup>
 </Project>

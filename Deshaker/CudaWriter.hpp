@@ -21,7 +21,7 @@
 #include "MovieWriter.hpp"
 
 struct NvPacket;
-class NvEncoder; //do not fully include NvEncoder.hpp here
+class NvEncoder;
 
 class CudaFFmpegWriter : public FFmpegFormatWriter {
 

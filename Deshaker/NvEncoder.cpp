@@ -16,9 +16,13 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
-#include "NvEncoder.hpp"
 #include "Util.hpp"
 #include "DeviceInfo.hpp"
+
+#if defined(BUILD_CUDA) && BUILD_CUDA == 0
+#else
+
+#include "NvEncoder.hpp"
 
 static std::strong_ordering compareGuid(const GUID& g1, const GUID& g2) {
 	auto t1 = std::tie(g1.Data1, g1.Data2, g1.Data3, g1.Data4[0], g1.Data4[1], g1.Data4[2], g1.Data4[3]);
@@ -344,3 +348,5 @@ void NvEncoder::destroyEncoder() {
 
 	//cuCtxDestroy_v2(cuctx); //do not destroy while cuda is still executing
 }
+
+#endif

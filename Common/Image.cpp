@@ -187,7 +187,7 @@ template <class T> void im::ImageBase<T>::setValues(int plane, T colorValue) {
 }
 
 template <class T> void im::ImageBase<T>::setValues(const ColorBase<T>& color) {
-	for (int z = 0; z < color.colors.size(); z++) {
+	for (int z = 0; z < numPlanes; z++) {
 		setValues(z, color.colors[z]);
 	}
 }

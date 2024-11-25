@@ -21,6 +21,9 @@
     <ClInclude Include="AvxUtil.hpp" />
     <ClInclude Include="AvxWrapper.hpp" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="CMakeLists.txt" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>

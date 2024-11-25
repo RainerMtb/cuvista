@@ -90,10 +90,13 @@ public:
 	std::shared_ptr<FrameExecutor> create(MainData& data, MovieFrame& frame) override;
 
 	friend std::ostream& operator << (std::ostream& os, const DeviceInfoCuda& info);
+
+	bool operator < (const DeviceInfoCuda& other) const;
 };
 
 //info about cuda devices
-struct CudaInfo {
+class CudaInfo {
+public:
 	std::vector<DeviceInfoCuda> devices;
 
 	std::string nvidiaDriverVersion = "";
@@ -112,6 +115,8 @@ struct CudaInfo {
 	std::string driverToString() const;
 	std::string nvencApiToString() const;
 	std::string nvencDriverToString() const;
+
+	void probeCuda();
 };
 
 //Null Device

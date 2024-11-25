@@ -26,7 +26,6 @@ public:
 	int h = 0, w = 0;
 	int fpsNum = -1, fpsDen = -1;
 	int64_t timeBaseNum = -1, timeBaseDen = -1;
-	int64_t videoDuration = -1;
 	std::string_view sourceName;
 
 	int64_t frameIndex = -1;

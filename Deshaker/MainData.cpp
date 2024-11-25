@@ -20,13 +20,12 @@
 #include "DeviceInfo.hpp"
 #include "DeshakerHelpText.hpp"
 #include "KeyboardInput.hpp"
-#include "NvidiaDriver.hpp"
 #include "MovieReader.hpp"
 #include "MovieWriter.hpp"
 #include "CudaFrame.hpp"
+#include "NvidiaDriver.hpp"
 #include "OpenClFrame.hpp"
 #include "SelfTest.hpp"
-#include "NvEncoder.hpp"
 
 #include <algorithm>
 #include <regex>
@@ -205,6 +204,7 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 
 		} else if (args.nextArg("info")) {
 			showHeader();
+			*console << std::endl;
 			showDeviceInfo(*console);
 			MessagePrinterConsole mpc(console);
 			runSelfTest(mpc, deviceList);
@@ -314,10 +314,7 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 
 void MainData::collectDeviceInfo() {
 	//sort cuda devices by compute
-	auto less = [] (const DeviceInfoCuda& a, const DeviceInfoCuda& b) {
-		return a.props->major == b.props->major ? a.props->minor < b.props->minor : a.props->major < b.props->major;
-	};
-	std::sort(cudaInfo.devices.begin(), cudaInfo.devices.end(), less);
+	std::sort(cudaInfo.devices.begin(), cudaInfo.devices.end());
 
 	//cpu encoders
 	std::vector<EncodingOption> cpuEncoders = {
@@ -608,35 +605,7 @@ bool MainData::Parameters::nextArg(std::string&& param, std::string& nextParam) 
 }
 
 void MainData::probeCuda() {
-	//check Nvidia Driver
-	NvidiaDriverInfo driverInfo = probeNvidiaDriver();
-	cudaInfo.nvidiaDriverVersion = driverInfo.version;
-	cudaInfo.warning = driverInfo.warning;
-
-	//check present cuda devices
-	CudaProbeResult res = cudaProbeRuntime();
-	cudaInfo.cudaDriverVersion = res.driverVersion;
-	cudaInfo.cudaRuntimeVersion = res.runtimeVersion;
-
-	for (int i = 0; i < res.props.size(); i++) {
-		cudaDeviceProp& prop = res.props[i];
-
-		//create device info struct
-		DeviceInfoCuda cuda(DeviceType::CUDA, prop.sharedMemPerBlock / sizeof(float));
-		cuda.props = std::make_shared<cudaDeviceProp>(prop);
-		cuda.cudaIndex = i;
-
-		//check encoder
-		cuda.nvenc = std::make_shared<NvEncoder>(i);
-		cuda.nvenc->probeEncoding(&cudaInfo.nvencVersionApi, &cudaInfo.nvencVersionDriver);
-
-		if (cudaInfo.nvencVersionDriver >= cudaInfo.nvencVersionApi) {
-			//check supported codecs
-			cuda.nvenc->probeSupportedCodecs(cuda);
-		}
-
-		cudaInfo.devices.push_back(cuda);
-	}
+	cudaInfo.probeCuda();
 }
 
 size_t MainData::deviceCountCuda() const {

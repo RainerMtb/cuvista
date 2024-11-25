@@ -33,7 +33,7 @@
 class AvxFrame : public FrameExecutor {
 
 public:
-	AvxFrame(CudaData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool);
+	AvxFrame(CoreData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool);
 
 	void inputData(int64_t frameIndex, const ImageYuv& inputFrame) override;
 	void createPyramid(int64_t frameIndex) override ;

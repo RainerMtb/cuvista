@@ -80,7 +80,7 @@ public:
 //structure per stream in input file
 struct StreamContext {
 	AVStream* inputStream = nullptr;
-	std::string inputStreamTagDuration;
+	int64_t durationMillis = -1;
 	AVStream* outputStream = nullptr;
 
 	StreamHandling handling = StreamHandling::STREAM_IGNORE;

@@ -24,4 +24,7 @@
     <ClInclude Include="FrameExecutor.hpp" />
     <ClInclude Include="AffineCore.hpp" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="CMakeLists.txt" />
+  </ItemGroup>
 </Project>

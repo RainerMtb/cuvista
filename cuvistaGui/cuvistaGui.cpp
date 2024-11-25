@@ -198,7 +198,7 @@ void cuvistaGui::setInputFile(const QString& filePath) {
         std::string str;
         for (StreamContext& sc : mReader.inputStreams) {
             StreamInfo info = sc.inputStreamInfo();
-            str += std::format("stream {}\ntype: {}, codec: {}, duration: {}\n", 
+            str += std::format("- stream {}\ntype: {}, codec: {}, duration: {}\n", 
                 sc.inputStream->index, info.streamType, info.codec, info.durationString);
             if (sc.inputStream->index == mReader.videoStream->index) {
                 std::string frameCount = mReader.frameCount == 0 ? "unknown" : std::to_string(mReader.frameCount);

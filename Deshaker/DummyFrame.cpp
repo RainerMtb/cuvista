@@ -17,9 +17,9 @@
  */
 
 #include "DummyFrame.hpp"
-#include "CudaFrame.hpp"
 #include "MainData.hpp"
 #include "MovieFrame.hpp"
+#include "cuInterface.cuh"
 
 DummyFrame::DummyFrame(MainData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool) :
 	FrameExecutor(data, deviceInfo, frame, pool),

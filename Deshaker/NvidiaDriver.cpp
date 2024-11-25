@@ -21,7 +21,14 @@
 #include <iostream>
 
 //get nvidia driver version
-#if defined(_WIN64)
+
+#if defined(BUILD_CUDA) && BUILD_CUDA == 0
+
+NvidiaDriverInfo probeNvidiaDriver() { 
+	return { "", "" }; 
+}
+
+#elif defined(_WIN64)
 
 //nvapi only works on windows
 extern "C" {
@@ -58,7 +65,7 @@ NvidiaDriverInfo probeNvidiaDriver() {
 	return { versionString, warning };
 }
 
-#else
+#elif defined(__linux__)
 
 //on linux use nvml.h, NVIDIA Management Library
 extern "C" {
@@ -67,7 +74,6 @@ extern "C" {
 
 NvidiaDriverInfo probeNvidiaDriver() {
 	//nvidia-smi --query-gpu=driver_version --format=csv,noheader
-	std::string versionString = "";
 	std::string warning = "";
 	nvmlReturn_t status;
 	status = nvmlInit_v2();
@@ -77,10 +83,15 @@ NvidiaDriverInfo probeNvidiaDriver() {
 	char version[siz];
 	status = nvmlSystemGetDriverVersion(version, siz);
 	if (status != NVML_SUCCESS) warning = "error getting nvidia driver version";
-	versionString = version;
 
 	nvmlShutdown();
-	return { versionString, warning };
+	return { version, warning };
+}
+
+#else
+
+NvidiaDriverInfo probeNvidiaDriver() {
+	return { "", "" };
 }
 
 #endif

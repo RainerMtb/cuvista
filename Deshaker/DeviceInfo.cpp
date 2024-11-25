@@ -24,6 +24,8 @@
 #include "DummyFrame.hpp"
 #include "MainData.hpp"
 #include "MovieFrame.hpp"
+#include "CudaInterface.hpp"
+#include "NvidiaDriver.hpp"
 
 #include <thread>
 #include <format>
@@ -91,8 +93,6 @@ std::ostream& operator << (std::ostream& os, const DeviceInfoOpenCl& info) {
 	return os;
 }
 
-
-//CUDA Info
 std::ostream& operator << (std::ostream& os, const DeviceInfoCuda& info) {
 	os << "Device Name:          " << info.props->name << std::endl;
 	os << "Compute Version:      " << info.props->major << "." << info.props->minor << std::endl;
@@ -106,6 +106,42 @@ std::ostream& operator << (std::ostream& os, const DeviceInfoCuda& info) {
 
 std::string DeviceInfoCuda::getName() const {
 	return std::format("Cuda, {}, Compute {}.{}", props->name, props->major, props->minor);
+}
+
+bool DeviceInfoCuda::operator < (const DeviceInfoCuda& other) const {
+	return props->major == other.props->major ? props->minor < other.props->minor : props->major < other.props->major;
+}
+
+void CudaInfo::probeCuda() {
+	//check Nvidia Driver
+	NvidiaDriverInfo driverInfo = probeNvidiaDriver();
+	nvidiaDriverVersion = driverInfo.version;
+	warning = driverInfo.warning;
+
+	//check present cuda devices
+	CudaProbeResult res = cudaProbeRuntime();
+	cudaDriverVersion = res.driverVersion;
+	cudaRuntimeVersion = res.runtimeVersion;
+
+	for (int i = 0; i < res.props.size(); i++) {
+		cudaDeviceProp& prop = res.props[i];
+
+		//create device info struct
+		DeviceInfoCuda cuda(DeviceType::CUDA, prop.sharedMemPerBlock / sizeof(float));
+		cuda.props = std::make_shared<cudaDeviceProp>(prop);
+		cuda.cudaIndex = i;
+
+		//check encoder
+		cuda.nvenc = std::make_shared<NvEncoder>(i);
+		cuda.nvenc->probeEncoding(&nvencVersionApi, &nvencVersionDriver);
+
+		if (nvencVersionDriver >= nvencVersionApi) {
+			//check supported codecs
+			cuda.nvenc->probeSupportedCodecs(cuda);
+		}
+
+		devices.push_back(cuda);
+	}
 }
 
 std::string DeviceInfoCuda::getNameShort() const {
@@ -134,6 +170,7 @@ std::string CudaInfo::nvencDriverToString() const {
 }
 
 
+//Null Device
 std::string DeviceInfoNull::getName() const {
 	return "";
 }

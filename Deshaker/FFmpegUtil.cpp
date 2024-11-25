@@ -144,8 +144,8 @@ StreamInfo StreamContext::inputStreamInfo() const {
     std::string tstr;
     if (inputStream->duration != AV_NOPTS_VALUE)
         tstr = timeString(inputStream->duration * inputStream->time_base.num * 1000 / inputStream->time_base.den);
-    else if (inputStreamTagDuration.empty() == false)
-        tstr = inputStreamTagDuration;
+    else if (durationMillis != -1)
+        tstr = timeString(durationMillis);
     else
         tstr = "unknown";
 

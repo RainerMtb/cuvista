@@ -26,17 +26,16 @@
 template <class T> class Mat;
 class MovieFrame;
 class Affine2D;
-struct CudaData;
 
 class FrameExecutor {
 
 public:
-	CudaData& mData;
+	CoreData& mData;
 	DeviceInfoBase& mDeviceInfo;
 	MovieFrame& mFrame;
 	ThreadPoolBase& mPool;
 
-	FrameExecutor(CudaData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool) :
+	FrameExecutor(CoreData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool) :
 		mData { data },
 		mDeviceInfo { deviceInfo },
 		mFrame { frame },

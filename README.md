@@ -128,7 +128,7 @@ To get the necessary components on the command line
 ```
 wget https://download.qt.io/official_releases/online_installers/qt-unified-linux-x64-online.run
 chmod +x qt-unified-linux-x64-online.run
-/qt-unified-linux-x64-online.run install qt.qt6.680.linux_gcc_64 qt.qt6.680.addons.qtmultimedia
+./qt-unified-linux-x64-online.run install qt.qt6.680.linux_gcc_64 qt.qt6.680.addons.qtmultimedia
 ```
 You probably need
 ```

@@ -25,7 +25,7 @@
 #include "SelfTest.hpp"
 #include "Util.hpp"
 #include "Version.hpp"
-#include "CudaData.cuh"
+#include "CoreData.hpp"
 #include "DeviceInfo.hpp"
 
 class MovieReader;
@@ -60,7 +60,7 @@ enum class DecideYNA {
 	ASK,
 };
 
-class MainData : public CudaData {
+class MainData : public CoreData {
 
 private:
 	std::map<std::string, std::vector<unsigned char>> colorMap = {

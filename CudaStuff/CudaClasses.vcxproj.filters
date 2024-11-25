@@ -15,8 +15,12 @@
     <ClInclude Include="CudaData.cuh" />
     <ClInclude Include="cuTest.cuh" />
     <ClInclude Include="cuUtil.cuh" />
+    <ClInclude Include="cuInterface.cuh" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CudaClasses.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="CMakeLists.txt" />
   </ItemGroup>
 </Project>

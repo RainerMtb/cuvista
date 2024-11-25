@@ -113,6 +113,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="CudaData.cuh" />
+    <ClInclude Include="cuInterface.cuh" />
     <ClInclude Include="cuNPP.cuh" />
     <ClInclude Include="cuTest.cuh" />
     <ClInclude Include="cuUtil.cuh" />
@@ -129,6 +130,9 @@
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CudaClasses.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="CMakeLists.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

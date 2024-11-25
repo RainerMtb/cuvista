@@ -40,7 +40,7 @@ __constant__ double eta0[] = { 0, 0, 1, 0, 0, 1 };
 //forward declaration to prevent underline
 template<class T> __device__ T tex2D(cudaTextureObject_t tex, float x, float y);
 
-extern __constant__ CudaData d_core;
+extern __constant__ CoreData d_core;
 
 //compute value for sd matrix directly
 __device__ inline double sdf(int r, int c1, int c2, int y0, int x0, cudaTextureObject_t tex) {

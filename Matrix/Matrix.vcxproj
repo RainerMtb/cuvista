@@ -29,6 +29,9 @@
     <ClCompile Include="Affine2D.cpp" />
     <ClCompile Include="CoreMat.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="CMakeLists.txt" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>

@@ -16,13 +16,30 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
-#include "CudaWriter.hpp"
 #include "MovieFrame.hpp"
 #include "MovieReader.hpp"
-#include "NvEncoder.hpp"
 #include "Util.hpp"
 #include "ThreadPool.hpp"
 #include "DeviceInfo.hpp"
+#include "CudaWriter.hpp"
+#include "CudaInterface.hpp"
+
+#if defined(BUILD_CUDA) && BUILD_CUDA == 0
+
+CudaFFmpegWriter::CudaFFmpegWriter(MainData& data, MovieReader& reader) : FFmpegFormatWriter(data, reader) {}
+CudaFFmpegWriter::~CudaFFmpegWriter() {}
+
+void CudaFFmpegWriter::writePacketToFile(const NvPacket& nvpkt, bool terminate) {}
+void CudaFFmpegWriter::writePacketsToFile(std::list<NvPacket> nvpkts, bool terminate) {}
+void CudaFFmpegWriter::encodePackets() {}
+
+void CudaFFmpegWriter::open(EncodingOption videoCodec) {}
+void CudaFFmpegWriter::prepareOutput(FrameExecutor& executor) {}
+void CudaFFmpegWriter::write(const FrameExecutor& executor) {}
+bool CudaFFmpegWriter::startFlushing() { return false; }
+bool CudaFFmpegWriter::flush() { return false; }
+
+#else
 
 std::map<GUID, AVCodecID> guidToCodecMap = {
     { NV_ENC_CODEC_H264_GUID, AV_CODEC_ID_H264 },
@@ -154,3 +171,5 @@ bool CudaFFmpegWriter::flush() {
 CudaFFmpegWriter::~CudaFFmpegWriter() {
     nvenc->destroyEncoder();
 }
+
+#endif

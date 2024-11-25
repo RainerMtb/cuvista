@@ -18,7 +18,7 @@
 
 #include "OpenClFrame.hpp"
 
-OpenClFrame::OpenClFrame(CudaData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool) :
+OpenClFrame::OpenClFrame(CoreData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool) :
 	OpenClExecutor(data, deviceInfo, frame, pool) 
 {
 	init();

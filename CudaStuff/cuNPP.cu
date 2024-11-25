@@ -22,7 +22,7 @@
 #include <chrono>
 #include <iostream>
 
-extern __constant__ CudaData d_core;
+extern __constant__ CoreData d_core;
 
 struct KernelContext {
 	cudaTextureObject_t texture;

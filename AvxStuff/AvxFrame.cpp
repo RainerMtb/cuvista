@@ -18,9 +18,9 @@
 
 #include "AvxFrame.hpp"
 #include "AvxUtil.hpp"
-#include "cuDeshaker.cuh"
+#include "cuInterface.cuh"
 
-AvxFrame::AvxFrame(CudaData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool) :
+AvxFrame::AvxFrame(CoreData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool) :
 	FrameExecutor(data, deviceInfo, frame, pool),
 	walign { 32 },
 	pitch { align(data.w, walign) } 

@@ -22,6 +22,7 @@
 
 #include <fstream>
 #include <numeric>
+#include <regex>
 
 
 //----------------------------------
@@ -147,8 +148,20 @@ void FFmpegFormatReader::openInput(AVFormatContext* fmt, const char* source) {
 
     //search streams
     const AVCodec* av_codec = nullptr;
+    int64_t frameCountEstimate = 0;
     for (size_t i = 0; i < av_format_ctx->nb_streams; i++) {
         AVStream* stream = av_format_ctx->streams[i];
+
+        int64_t millis = -1;
+        const AVDictionaryEntry* entry = av_dict_get(stream->metadata, "DURATION", NULL, 0);
+        if (entry != nullptr) {
+            std::string str = entry->value;
+            std::regex pattern("(\\d+):(\\d+):(\\d+)[\\.,](\\d{3})\\d*");
+            std::smatch matcher;
+            if (std::regex_match(str, matcher, pattern)) {
+                millis = std::stoll(matcher[1]) * 3'600'000 + std::stoll(matcher[2]) * 60'000 + std::stoll(matcher[3]) * 1000 + std::stoll(matcher[4]);
+            }
+        }
 
         if (videoStream == nullptr && stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
             //store first video stream
@@ -156,16 +169,15 @@ void FFmpegFormatReader::openInput(AVFormatContext* fmt, const char* source) {
             if (av_codec) {
                 videoStream = stream;
             }
-        }
-
-        std::string tagDuration = "";
-        const AVDictionaryEntry* entry = av_dict_get(stream->metadata, "DURATION", NULL, 0);
-        if (entry != nullptr) {
-            tagDuration = entry->value;
+            //calculate frame count on duration tag
+            if (millis != -1) {
+                AVRational rate = stream->avg_frame_rate;
+                frameCountEstimate = rate.num * millis / rate.den / 1000;
+            }
         }
         
         //store every stream found in input
-        inputStreams.emplace_back(stream, tagDuration);
+        inputStreams.emplace_back(stream, millis);
     }
     //continue only when there is a video stream to decode
     if (videoStream == nullptr || av_codec == nullptr)
@@ -192,7 +204,6 @@ void FFmpegFormatReader::openInput(AVFormatContext* fmt, const char* source) {
         throw AVException("could not allocate AVPacket");
 
     //set values in InputContext object
-    videoDuration = videoStream->duration;
     fpsNum = videoStream->avg_frame_rate.num;
     fpsDen = videoStream->avg_frame_rate.den;
     timeBaseNum = videoStream->time_base.num;
@@ -200,7 +211,20 @@ void FFmpegFormatReader::openInput(AVFormatContext* fmt, const char* source) {
     h = av_codec_ctx->height;
     w = av_codec_ctx->width;
     sourceName = source;
-    frameCount = videoStream->nb_frames;
+
+    //find the best number for frame count
+    if (videoStream->nb_frames > 0) {
+        frameCount = videoStream->nb_frames;
+
+    } else if (videoStream->duration > 0) {
+        frameCount = videoStream->duration * fpsNum * timeBaseNum / fpsDen / timeBaseDen;
+
+    } else if (frameCountEstimate > 0) {
+        frameCount = frameCountEstimate;
+
+    } else {
+        frameCount = 0;
+    }
     //av_dump_format(av_format_ctx, av_stream->index, av_format_ctx->url, 0); //uses av_log
 }
 

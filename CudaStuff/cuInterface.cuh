@@ -18,17 +18,15 @@
 
 #pragma once
 
-#include "cuUtil.cuh"
-#include "CoreData.hpp"
-#include "Image2.hpp"
+#if defined(BUILD_CUDA) && BUILD_CUDA == 0
 
-struct CudaProbeResult {
-	int runtimeVersion;
-	int driverVersion;
-	std::vector<cudaDeviceProp> props;
-};
+//replace cuda stuff with empty shell when cuda is not included in build
+inline void encodeNvData(const std::vector<unsigned char>& nv12, unsigned char* nvencPtr) {};
+inline void getNvData(std::vector<unsigned char>& nv12, unsigned char* cudaNv12ptr) {};
 
-struct DebugData {
-	std::vector<double> debugData;
-	ImageBGR kernelTimings;
-};
+#else
+
+//include cuda stuff
+#include "cuDeshaker.cuh"
+
+#endif

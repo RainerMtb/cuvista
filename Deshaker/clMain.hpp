@@ -34,7 +34,7 @@ private:
 	cl::Data clData;
 
 public:
-	OpenClExecutor(CudaData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool);
+	OpenClExecutor(CoreData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool);
 
 	void init();
 	void inputData(int64_t frameIndex, const ImageYuv& inputFrame) override;

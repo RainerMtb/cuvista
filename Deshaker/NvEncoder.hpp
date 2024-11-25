@@ -18,17 +18,16 @@
 
 #pragma once
 
-#include "AVException.hpp"
-#include "nvEncodeAPI.h"
-#include <cuda.h>
-
-#undef min
-#undef max
-
 #include <vector>
 #include <list>
 #include <map>
 #include <optional>
+#include "AVException.hpp"
+
+#include "nvEncodeAPI.h"
+#include <cuda.h>
+#undef min
+#undef max
 
 bool operator < (const GUID& g1, const GUID& g2);
 bool operator == (const GUID& g1, const GUID& g2);

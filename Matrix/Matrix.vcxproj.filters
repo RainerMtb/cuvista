@@ -24,4 +24,7 @@
     <ClCompile Include="CoreMat.cpp" />
     <ClCompile Include="Affine2D.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="CMakeLists.txt" />
+  </ItemGroup>
 </Project>

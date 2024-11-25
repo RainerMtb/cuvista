@@ -247,6 +247,9 @@
     <ClInclude Include="ImageYuvFFmpeg.hpp">
       <Filter>Util</Filter>
     </ClInclude>
+    <ClInclude Include="CudaInterface.hpp">
+      <Filter>Main</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="CMakeLists.txt" />

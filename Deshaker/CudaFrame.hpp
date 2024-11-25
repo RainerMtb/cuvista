@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include "cuDeshaker.cuh"
+#include "CudaInterface.hpp"
 
 class CudaFrame : public CudaExecutor {
 
@@ -29,5 +29,3 @@ public:
 	Mat<float> getPyramid(int64_t frameIndex) const override;
 	Mat<float> getTransformedOutput() const override;
 };
-
-void encodeNvData(const std::vector<unsigned char>& nv12, unsigned char* nvencPtr);

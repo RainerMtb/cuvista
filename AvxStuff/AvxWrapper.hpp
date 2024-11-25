@@ -56,14 +56,14 @@ public:
 	V16f operator -= (V16f other) { a = _mm512_sub_ps(a, other.a); return *this; }
 	V16f operator *= (V16f other) { a = _mm512_mul_ps(a, other.a); return *this; }
 	V16f operator /= (V16f other) { a = _mm512_div_ps(a, other.a); return *this; }
-	V16f add(V16f other) { return _mm512_add_ps(a, other.a); }
-	V16f sub(V16f other) { return _mm512_sub_ps(a, other.a); }
-	V16f mul(V16f other) { return _mm512_mul_ps(a, other.a); }
-	V16f div(V16f other) { return _mm512_div_ps(a, other.a); }
+	V16f add(V16f other) const { return _mm512_add_ps(a, other.a); }
+	V16f sub(V16f other) const { return _mm512_sub_ps(a, other.a); }
+	V16f mul(V16f other) const { return _mm512_mul_ps(a, other.a); }
+	V16f div(V16f other) const { return _mm512_div_ps(a, other.a); }
 
 	template <int i> V16f rot() { return _mm512_castsi512_ps(_mm512_alignr_epi32(_mm512_castps_si512(a), _mm512_castps_si512(a), i)); }
 
-	V16f broadcast(int i) { return _mm512_permutexvar_ps(_mm512_set1_epi32(i), a); }
+	V16f broadcast(int i) const { return _mm512_permutexvar_ps(_mm512_set1_epi32(i), a); }
 
 	float operator [] (size_t i) const { return at(i); }
 
@@ -138,14 +138,14 @@ public:
 	V8f operator -= (V8f other) { a = _mm256_sub_ps(a, other.a); return *this; }
 	V8f operator *= (V8f other) { a = _mm256_mul_ps(a, other.a); return *this; }
 	V8f operator /= (V8f other) { a = _mm256_div_ps(a, other.a); return *this; }
-	V8f add(V8f other) { return _mm256_add_ps(a, other.a); }
-	V8f sub(V8f other) { return _mm256_sub_ps(a, other.a); }
-	V8f mul(V8f other) { return _mm256_mul_ps(a, other.a); }
-	V8f div(V8f other) { return _mm256_div_ps(a, other.a); }
+	V8f add(V8f other) const { return _mm256_add_ps(a, other.a); }
+	V8f sub(V8f other) const { return _mm256_sub_ps(a, other.a); }
+	V8f mul(V8f other) const { return _mm256_mul_ps(a, other.a); }
+	V8f div(V8f other) const { return _mm256_div_ps(a, other.a); }
 
 	template <int i> V8f rot() { return _mm256_castsi256_ps(_mm256_alignr_epi32(_mm256_castps_si256(a), _mm256_castps_si256(a), i)); }
 
-	V8f broadcast(int i) { return _mm256_permutexvar_ps(_mm256_set1_epi32(i), a); }
+	V8f broadcast(int i) const { return _mm256_permutexvar_ps(_mm256_set1_epi32(i), a); }
 
 	float operator [] (size_t i) const { return at(i); }
 
@@ -218,14 +218,14 @@ public:
 	V4f operator -= (V4f other) { a = _mm_sub_ps(a, other.a); return *this; }
 	V4f operator *= (V4f other) { a = _mm_mul_ps(a, other.a); return *this; }
 	V4f operator /= (V4f other) { a = _mm_div_ps(a, other.a); return *this; }
-	V4f add(V4f other) { return _mm_add_ps(a, other.a); }
-	V4f sub(V4f other) { return _mm_sub_ps(a, other.a); }
-	V4f mul(V4f other) { return _mm_mul_ps(a, other.a); }
-	V4f div(V4f other) { return _mm_div_ps(a, other.a); }
+	V4f add(V4f other) const { return _mm_add_ps(a, other.a); }
+	V4f sub(V4f other) const { return _mm_sub_ps(a, other.a); }
+	V4f mul(V4f other) const { return _mm_mul_ps(a, other.a); }
+	V4f div(V4f other) const { return _mm_div_ps(a, other.a); }
 
 	template <int i> V4f rot() { return _mm_castsi128_ps(_mm_alignr_epi32(_mm_castps_si128(a), _mm_castps_si128(a), i)); }
 
-	V4f broadcast(int i) { return _mm_permutevar_ps(a, _mm_set1_epi32(i)); }
+	V4f broadcast(int i) const { return _mm_permutevar_ps(a, _mm_set1_epi32(i)); }
 
 	float operator [] (size_t i) const { return at(i); }
 
@@ -302,14 +302,14 @@ public:
 	V8d operator -= (V8d other) { a = _mm512_sub_pd(a, other.a); return *this; }
 	V8d operator *= (V8d other) { a = _mm512_mul_pd(a, other.a); return *this; }
 	V8d operator /= (V8d other) { a = _mm512_div_pd(a, other.a); return *this; }
-	V8d add(V8d other) { return _mm512_add_pd(a, other.a); }
-	V8d sub(V8d other) { return _mm512_sub_pd(a, other.a); }
-	V8d mul(V8d other) { return _mm512_mul_pd(a, other.a); }
-	V8d div(V8d other) { return _mm512_div_pd(a, other.a); }
+	V8d add(V8d other) const { return _mm512_add_pd(a, other.a); }
+	V8d sub(V8d other) const { return _mm512_sub_pd(a, other.a); }
+	V8d mul(V8d other) const { return _mm512_mul_pd(a, other.a); }
+	V8d div(V8d other) const { return _mm512_div_pd(a, other.a); }
 
 	template <int i> V8d rot() { return _mm512_castsi512_pd(_mm512_alignr_epi64(_mm512_castpd_si512(a), _mm512_castpd_si512(a), i)); }
 
-	V8d broadcast(int i) { return _mm512_permutexvar_pd(_mm512_set1_epi64(i), a); }
+	V8d broadcast(int i) const { return _mm512_permutexvar_pd(_mm512_set1_epi64(i), a); }
 
 	double operator [] (size_t i) const { return at(i); }
 

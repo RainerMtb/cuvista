@@ -17,11 +17,11 @@
  */
 
 #include "CpuFrame.hpp"
-#include "CudaFrame.hpp"
 #include "MovieFrame.hpp"
 #include "SubMat.hpp"
 #include "MatrixInverter.hpp"
 #include "Util.hpp"
+#include "cuInterface.cuh"
 
 //constructor
 CpuFrame::CpuFrame(MainData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool) :
