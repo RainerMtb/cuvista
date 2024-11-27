@@ -422,11 +422,15 @@ void cuvistaGui::showInfo() {
 
     InfoDialog msgBox(this);
     msgBox.setWindowTitle(QString("Cuvista Info"));
-    QString author = "Copyright (c) 2024 Rainer Bitschi <a href='mailto:cuvista@a1.net'>Email: cuvista@a1.net</a>";
-    QString license = "License GNU GPLv3+: GNU GPL version 3 or later";
-    QString version = QString::fromStdString(CUVISTA_VERSION);
+    QString headerText = qformat(
+        "CUVISTA - Cuda Video Stabilizer, Version {}<br>"
+        "Copyright (c) 2024 Rainer Bitschi <a href='mailto:cuvista@a1.net'>Email: cuvista@a1.net</a><br>"
+        "License GNU GPLv3+: GNU GPL version 3 or later<br>"
+        "Gui compiled with Qt {}, running on version {}",
+        CUVISTA_VERSION, QT_VERSION_STR, qVersion());
+
     QLabel* header = new QLabel(&msgBox);
-    header->setText(QString("CUVISTA - Cuda Video Stabilizer, Version %1<br>%2<br>%3").arg(version).arg(author).arg(license));
+    header->setText(headerText);
     header->setTextFormat(Qt::RichText);
 
     std::stringstream ss;

@@ -184,7 +184,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(SolutionDir)lib\$(Platform);$(SolutionDir)bin\$(Platform)\$(Configuration);$(SolutionDir)nvapi\amd64;$(CUDA_PATH)\lib\$(Platform);$(FFMPEG_PATH)\lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>AvxStuff.lib;Common.lib;cpu_features.lib;OpenCl.lib;CudaStuff.lib;Matrix.lib;Deshaker.lib;cudart_static.lib;nvencodeapi.lib;cuda.lib;avcodec.lib;avformat.lib;avutil.lib;swscale.lib;swresample.lib;ws2_32.lib;nvapi64.lib</AdditionalDependencies>
+      <AdditionalDependencies>AvxStuff.lib;Common.lib;cpu_features.lib;OpenCl.lib;CudaStuff.lib;Matrix.lib;Deshaker.lib;cudart_static.lib;nvencodeapi.lib;cuda.lib;avcodec.lib;avformat.lib;avutil.lib;swscale.lib;swresample.lib;ws2_32.lib;Ole32.lib</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>libcmt.lib; msvcrt.lib; libcmtd.lib</IgnoreSpecificDefaultLibraries>
       <DelayLoadDLLs>nvcuda.dll;OpenCL.dll;nvEncodeAPI64.dll</DelayLoadDLLs>
     </Link>
@@ -206,7 +206,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(SolutionDir)lib\$(Platform);$(SolutionDir)bin\$(Platform)\$(Configuration);$(SolutionDir)nvapi\amd64;$(CUDA_PATH)\lib\$(Platform);$(FFMPEG_PATH)\lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>AvxStuff.lib;Common.lib;cpu_features.lib;OpenCl.lib;CudaStuff.lib;Matrix.lib;Deshaker.lib;cudart_static.lib;nvencodeapi.lib;cuda.lib;avcodec.lib;avformat.lib;avutil.lib;swscale.lib;swresample.lib;ws2_32.lib;nvapi64.lib</AdditionalDependencies>
+      <AdditionalDependencies>AvxStuff.lib;Common.lib;cpu_features.lib;OpenCl.lib;CudaStuff.lib;Matrix.lib;Deshaker.lib;cudart_static.lib;nvencodeapi.lib;cuda.lib;avcodec.lib;avformat.lib;avutil.lib;swscale.lib;swresample.lib;ws2_32.lib;Ole32.lib</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>libcmt.lib</IgnoreSpecificDefaultLibraries>
       <DelayLoadDLLs>nvcuda.dll;OpenCL.dll;nvEncodeAPI64.dll</DelayLoadDLLs>
     </Link>

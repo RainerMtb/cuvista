@@ -19,7 +19,7 @@
 #pragma once
 
 #include "AffineTransform.hpp"
-#include "CudaData.cuh"
+#include "cuDeshaker.cuh"
 #include "MovieWriter.hpp"
 #include "MovieReader.hpp"
 

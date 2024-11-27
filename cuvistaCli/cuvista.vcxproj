@@ -58,7 +58,7 @@
       <WarningLevel>Level3</WarningLevel>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)Common;$(SolutionDir)Deshaker;$(SolutionDir)Matrix;$(SolutionDir)CudaStuff;$(SolutionDir)include;$(SolutionDir)nvapi;$(FFMPEG_PATH)\include;$(SolutionDir)include\CL</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Common;$(SolutionDir)Deshaker;$(SolutionDir)Matrix;$(SolutionDir)CudaStuff;$(SolutionDir)include;$(SolutionDir)include\CL;$(FFMPEG_PATH)\include</AdditionalIncludeDirectories>
       <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
       <IntrinsicFunctions>false</IntrinsicFunctions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -68,7 +68,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(SolutionDir)lib\$(Platform);$(SolutionDir)bin\$(Platform)\$(Configuration);$(CUDA_PATH)\lib\$(Platform);$(SolutionDir)nvapi\amd64;$(FFMPEG_PATH)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>AvxStuff.lib;Common.lib;cpu_features.lib;OpenCL.lib;Matrix.lib;Deshaker.lib;CudaStuff.lib;cudart_static.lib;cuda.lib;nvencodeapi.lib;avcodec.lib;avformat.lib;avutil.lib;swscale.lib;swresample.lib;ws2_32.lib;nvapi64.lib;DelayImp.lib</AdditionalDependencies>
+      <AdditionalDependencies>AvxStuff.lib;Common.lib;cpu_features.lib;OpenCL.lib;Matrix.lib;Deshaker.lib;CudaStuff.lib;cudart_static.lib;cuda.lib;nvencodeapi.lib;avcodec.lib;avformat.lib;avutil.lib;swscale.lib;swresample.lib;ws2_32.lib;DelayImp.lib;Ole32.lib</AdditionalDependencies>
       <DelayLoadDLLs>nvcuda.dll;nvEncodeAPI64.dll;OpenCL.dll</DelayLoadDLLs>
       <IgnoreSpecificDefaultLibraries>libcmt.lib; msvcrt.lib; libcmtd.lib</IgnoreSpecificDefaultLibraries>
     </Link>
@@ -79,7 +79,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)Common;$(SolutionDir)Deshaker;$(SolutionDir)Matrix;$(SolutionDir)CudaStuff;$(SolutionDir)include;$(SolutionDir)nvapi;$(FFMPEG_PATH)\include;$(SolutionDir)include\CL</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Common;$(SolutionDir)Deshaker;$(SolutionDir)Matrix;$(SolutionDir)CudaStuff;$(SolutionDir)include;$(SolutionDir)include\CL;$(FFMPEG_PATH)\include</AdditionalIncludeDirectories>
       <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <IntrinsicFunctions>false</IntrinsicFunctions>
@@ -90,7 +90,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>AvxStuff.lib;Common.lib;cpu_features.lib;OpenCL.lib;Matrix.lib;Deshaker.lib;CudaStuff.lib;cudart_static.lib;cuda.lib;nvencodeapi.lib;avcodec.lib;avformat.lib;avutil.lib;swscale.lib;swresample.lib;ws2_32.lib;nvapi64.lib;DelayImp.lib</AdditionalDependencies>
+      <AdditionalDependencies>AvxStuff.lib;Common.lib;cpu_features.lib;OpenCL.lib;Matrix.lib;Deshaker.lib;CudaStuff.lib;cudart_static.lib;cuda.lib;nvencodeapi.lib;avcodec.lib;avformat.lib;avutil.lib;swscale.lib;swresample.lib;ws2_32.lib;DelayImp.lib;Ole32.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(SolutionDir)lib\$(Platform);$(SolutionDir)bin\$(Platform)\$(Configuration);$(CUDA_PATH)\lib\$(Platform);$(SolutionDir)nvapi\amd64;$(FFMPEG_PATH)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <DelayLoadDLLs>nvcuda.dll;nvEncodeAPI64.dll;OpenCL.dll</DelayLoadDLLs>
       <IgnoreSpecificDefaultLibraries>libcmt.lib</IgnoreSpecificDefaultLibraries>

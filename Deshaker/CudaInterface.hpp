@@ -23,20 +23,10 @@
 
 //dummy code to replace cuda stuff
 #include "MovieFrame.hpp"
-#include "FrameExecutor.hpp"
 #include "Mat.hpp"
-#include "AffineCore.hpp"
+#include "cuDeshaker.cuh"
 
-struct cudaDeviceProp {
-	char name[256];
-	int major;
-	int minor;
-	int clockRate;
-	size_t totalGlobalMem;
-	int multiProcessorCount;
-	int maxTexture2D[2];
-	size_t sharedMemPerBlock;
-};
+struct NvPacket {};
 
 class NvEncoder {
 public:
@@ -45,45 +35,9 @@ public:
 	void probeSupportedCodecs(DeviceInfoCuda& deviceInfoCuda);
 };
 
-struct NvPacket {};
-
-class CudaExecutor : public FrameExecutor {
-public:
-	CudaExecutor(CoreData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool) :
-		FrameExecutor(data, deviceInfo, frame, pool) {}
-
-	void inputData(int64_t frameIndex, const ImageYuv& inputFrame) override {}
-	void createPyramid(int64_t frameIndex) override {};
-	void computeStart(int64_t frameIndex, std::vector<PointResult>& results) override {}
-	void computeTerminate(int64_t frameIndex, std::vector<PointResult>& results) override {}
-	void getOutputYuv(int64_t frameIndex, ImageYuvData& image) override {}
-	void getOutputRgba(int64_t frameIndex, ImageRGBA& image) override {}
-	void getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) override {}
-	void getInput(int64_t frameIndex, ImageYuv& image) const override {}
-	void getInput(int64_t frameIndex, ImageRGBA& image) const override {}
-	void getWarped(int64_t frameIndex, ImageRGBA& image) override {}
-	void outputData(int64_t frameIndex, const Affine2D& trf) override {}
-	Matf getPyramid(int64_t frameIndex) const override { return Matf(); }
-	Matf getTransformedOutput() const override { return Matf(); }
-
-	void cudaInit(CoreData& core, int devIdx, const cudaDeviceProp& prop, ImageYuv& yuvFrame) {}
-	void cudaOutputData(int64_t frameIndex, const AffineCore& trf) {}
-	void cudaGetTransformedOutput(float* data) const {}
-	void cudaGetPyramid(int64_t frameIndex, float* data) const {}
-};
-
-struct CudaProbeResult {
-	int runtimeVersion;
-	int driverVersion;
-	std::vector<cudaDeviceProp> props;
-};
-
-inline CudaProbeResult cudaProbeRuntime() { return { 0, 0 }; }
-
 #else
 
-//include cuda stuff
-#include "cuDeshaker.cuh"
 #include "NvEncoder.hpp"
+#include "cuDeshaker.cuh"
 
 #endif

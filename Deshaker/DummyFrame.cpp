@@ -19,7 +19,7 @@
 #include "DummyFrame.hpp"
 #include "MainData.hpp"
 #include "MovieFrame.hpp"
-#include "cuInterface.cuh"
+#include "cuDeshaker.cuh"
 
 DummyFrame::DummyFrame(MainData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool) :
 	FrameExecutor(data, deviceInfo, frame, pool),

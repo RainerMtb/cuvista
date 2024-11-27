@@ -17,7 +17,7 @@
  */
 
 #include "cuNPP.cuh"
-#include "CudaData.cuh"
+#include "cuDeshaker.cuh"
 
 #include <chrono>
 #include <iostream>

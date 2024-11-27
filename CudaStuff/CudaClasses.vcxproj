@@ -112,8 +112,6 @@
     </CudaLink>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="CudaData.cuh" />
-    <ClInclude Include="cuInterface.cuh" />
     <ClInclude Include="cuNPP.cuh" />
     <ClInclude Include="cuTest.cuh" />
     <ClInclude Include="cuUtil.cuh" />

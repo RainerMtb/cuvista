@@ -12,7 +12,7 @@ set(CORE_LIBS
 )
 
 # check if cuda is available
-if (CUDA MATCHES 0)
+if (BUILD_CUDA MATCHES 0)
     message(NOTICE "Cuda was deselected, Skipping Cuda Build...")
 else()
     include(CheckLanguage)
@@ -21,25 +21,25 @@ else()
         set(CMAKE_CUDA_STANDARD 17)
         set(CMAKE_CUDA_STANDARD_REQUIRED True)
         set(CMAKE_CUDA_ARCHITECTURES all)
-        set(CUDA 1)
+        set(BUILD_CUDA 1)
         enable_language(CUDA)
         message(NOTICE "Cuda was found, Including Cuda Build...") 
         list(APPEND CORE_LIBS cuda)
     else()
+        set(BUILD_CUDA 0)
         message(NOTICE "Cuda was not found, Skipping Cuda Build...") 
-        set(CUDA 0)
     endif()
 endif()
 
-# cuda libraries
-if (CUDA MATCHES 1 AND CMAKE_SYSTEM_NAME MATCHES Linux)
+# include cuda libraries for platform
+if (BUILD_CUDA MATCHES 1 AND CMAKE_SYSTEM_NAME MATCHES Linux)
     list(APPEND CORE_LIBS
         nvcuvid
         nvidia-encode
         nvidia-ml
     )
 endif()
-if (CUDA MATCHES 1 AND CMAKE_SYSTEM_NAME MATCHES Windows)
+if (BUILD_CUDA MATCHES 1 AND CMAKE_SYSTEM_NAME MATCHES Windows)
     list(APPEND CORE_LIBS
         nvapi64
         nvcuvid
@@ -76,13 +76,14 @@ endif()
 if (CMAKE_SYSTEM_NAME MATCHES Windows)
     message(NOTICE "Looking for ffmpeg components in folder ${FFMPEG_PATH}...")
     #check one exemplary shared ffmpeg file, assume others will be there
-    find_library(ffmpegLIB avcodec.lib REQUIRED HINTS "${FFMPEG_PATH}/lib")
-    find_path(ffmpegH avcodec.h REQUIRED HINTS "${FFMPEG_PATH}/include/libavcodec")
-    find_program(ffmpegDLL avcodec-61.dll REQUIRED HINTS "${FFMPEG_PATH}/bin")
+    find_library(ffmpegLIB avcodec.lib REQUIRED NO_DEFAULT_PATH HINTS "${FFMPEG_PATH}/lib")
+    find_path(ffmpegH avcodec.h REQUIRED NO_DEFAULT_PATH HINTS "${FFMPEG_PATH}/include/libavcodec")
+    find_program(ffmpegDLL avcodec-61.dll REQUIRED NO_DEFAULT_PATH HINTS "${FFMPEG_PATH}/bin")
 
     link_directories("${PROJECT_SOURCE_DIR}/nvapi/amd64")
     link_directories("${PROJECT_SOURCE_DIR}/lib/x64")
     link_directories("${FFMPEG_PATH}/lib")
+
 
     include_directories("${PROJECT_SOURCE_DIR}/include")
     include_directories("${PROJECT_SOURCE_DIR}/nvapi")
@@ -110,34 +111,50 @@ add_subdirectory(AvxStuff)
 add_subdirectory(Deshaker)
 add_subdirectory(cuvistaCli)
 
-# building GUI
-if (GUI MATCHES 1)
-    message("Including Gui Build...")
-    add_subdirectory(cuvistaGui)
+
+# check if Qt6 is available and add gui subdirectory
+if (BUILD_GUI MATCHES 0)
+    message(NOTICE "Gui was deselected, Skipping Gui Build...")
 else()
-    message("Skipping Gui Build...")
+    find_package(Qt6 QUIET COMPONENTS Core Gui Widgets Multimedia MultimediaWidgets)
+    if (Qt6_FOUND)
+        set(BUILD_GUI 1)
+        message(NOTICE "Qt6 was found, Including Gui Build...")
+        add_subdirectory(cuvistaGui)
+    else()
+        set(BUILD_GUI 0)
+        message(NOTICE "Qt6 was not found, Skipping Gui Build...")
+    endif()
 endif()
 
-# compiler options ----------------------------------------
+
+# setting compiler specific options ----------------------------------------
 if (CMAKE_CXX_COMPILER_ID MATCHES MSVC)
     target_compile_options(Common PRIVATE /MP)
     target_compile_options(Matrix PRIVATE /MP)
-    target_compile_options(AvxStuff PRIVATE -D BUILD_CUDA=${CUDA} /MP /arch:AVX512)
-    target_compile_options(Deshaker PRIVATE -D BUILD_CUDA=${CUDA} /MP)
+    target_compile_options(AvxStuff PRIVATE -D BUILD_CUDA=${BUILD_CUDA} /MP /arch:AVX512)
+    target_compile_options(Deshaker PRIVATE -D BUILD_CUDA=${BUILD_CUDA} /MP)
     target_link_options(cuvista PRIVATE /NODEFAULTLIB:libcmt.lib)
-    if (TARGET cuvistaGui) 
-        target_compile_options(cuvistaGui PRIVATE -D BUILD_CUDA=${CUDA} /MP)
-        target_link_options(cuvistaGui PRIVATE /NODEFAULTLIB:libcmt.lib) 
-    endif()
+endif()
+if (CMAKE_CXX_COMPILER_ID MATCHES MSVC AND TARGET cuvistaGui)
+    target_compile_options(cuvistaGui PRIVATE /MP)
+    target_link_options(cuvistaGui PRIVATE /NODEFAULTLIB:libcmt.lib) 
 endif()
 
 if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
     target_compile_options(Common PRIVATE -ffp-contract=off)
     target_compile_options(Matrix PRIVATE -ffp-contract=off)
-    target_compile_options(AvxStuff PRIVATE -D BUILD_CUDA=${CUDA} -ffp-contract=off -mavx512f -mavx512vl -mavx512bw -mavx512dq)
-    target_compile_options(Deshaker PRIVATE -D BUILD_CUDA=${CUDA} -ffp-contract=off)
+    target_compile_options(AvxStuff PRIVATE -D BUILD_CUDA=${BUILD_CUDA} -ffp-contract=off -mavx512f -mavx512vl -mavx512bw -mavx512dq)
+    target_compile_options(Deshaker PRIVATE -D BUILD_CUDA=${BUILD_CUDA} -ffp-contract=off)
     target_compile_options(cuvista PRIVATE -ffp-contract=off)
-    if (TARGET cuvistaGui) 
-        target_compile_options(cuvistaGui PRIVATE -ffp-contract=off) 
-    endif()
 endif()
+if (CMAKE_CXX_COMPILER_ID MATCHES GNU AND TARGET cuvistaGui)
+    target_compile_options(cuvistaGui PRIVATE -ffp-contract=off)
+endif()
+
+
+# copy ffmpeg dll files to install dir
+install(DIRECTORY "${FFMPEG_PATH}/bin"
+    DESTINATION "${CMAKE_INSTALL_PREFIX}"
+    FILES_MATCHING PATTERN "*.dll"
+)

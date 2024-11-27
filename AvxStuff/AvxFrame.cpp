@@ -18,7 +18,7 @@
 
 #include "AvxFrame.hpp"
 #include "AvxUtil.hpp"
-#include "cuInterface.cuh"
+#include "cuDeshaker.cuh"
 
 AvxFrame::AvxFrame(CoreData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool) :
 	FrameExecutor(data, deviceInfo, frame, pool),

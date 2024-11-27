@@ -17,76 +17,93 @@
  */
 
 #include "NvidiaDriver.hpp"
-#include "AVException.hpp"
-#include <iostream>
 
-//get nvidia driver version
-
-#if defined(BUILD_CUDA) && BUILD_CUDA == 0
-
-NvidiaDriverInfo probeNvidiaDriver() { 
-	return { "", "" }; 
-}
-
-#elif defined(_WIN64)
-
-//nvapi only works on windows
-extern "C" {
-#include "nvapi.h"
-}
-
-NvidiaDriverInfo probeNvidiaDriver() {
-	NvAPI_Status status = NVAPI_OK;
-	NvAPI_ShortString str;
-	std::string versionString = "";
-	std::string warning = "";
-
-	status = NvAPI_Initialize();
-	if (status == NVAPI_LIBRARY_NOT_FOUND) {
-		//in this case NvAPI_GetErrorMessage() will only return an empty string
-
-	} else if (status != NVAPI_OK) {
-		NvAPI_GetErrorMessage(status, str);
-		warning = "error initializing nvapi: " + std::string(str);
-
-	} else {
-		NvU32 version = 0;
-		NvAPI_ShortString branch;
-		status = NvAPI_SYS_GetDriverAndBranchVersion(&version, branch);
-		if (status != NVAPI_OK) {
-			NvAPI_GetErrorMessage(status, str);
-			warning = "error getting driver version: " + std::string(str);
-
-		} else {
-			//we have valid nvidia driver
-			versionString = std::to_string(version / 100) + "." + std::to_string(version % 100);
-		}
-	}
-	return { versionString, warning };
-}
-
-#elif defined(__linux__)
-
-//on linux use nvml.h, NVIDIA Management Library
 extern "C" {
 #include "nvml.h"
 }
 
-NvidiaDriverInfo probeNvidiaDriver() {
-	//nvidia-smi --query-gpu=driver_version --format=csv,noheader
+// get nvidia driver version
+// dynamically load nvml https://docs.nvidia.com/deploy/nvml-api/nvml-api-reference.html#nvml-api-reference
+
+typedef nvmlReturn_t (*ptr_nvmlInit_v2)(void);
+typedef nvmlReturn_t (*ptr_nvmlSystemGetDriverVersion)(char* version, unsigned int length);
+typedef nvmlReturn_t (*ptr_nvmlShutdown)(void);
+
+
+static NvidiaDriverInfo probe(ptr_nvmlInit_v2 nvInit, ptr_nvmlSystemGetDriverVersion nvVersion, ptr_nvmlShutdown nvShutdown) {
+	if (nvInit == nullptr || nvVersion == nullptr || nvShutdown == nullptr) {
+		return { "", "error getting nvml functions" };
+	}
 	std::string warning = "";
 	nvmlReturn_t status;
-	status = nvmlInit_v2();
-	if (status != NVML_SUCCESS) warning = "error loading nvml";
+
+	status = nvInit();
+	if (status != NVML_SUCCESS) warning = "error initializing nvml";
 
 	const int siz = NVML_SYSTEM_DRIVER_VERSION_BUFFER_SIZE;
 	char version[siz];
-	status = nvmlSystemGetDriverVersion(version, siz);
+	status = nvVersion(version, siz);
 	if (status != NVML_SUCCESS) warning = "error getting nvidia driver version";
 
-	nvmlShutdown();
+	nvShutdown();
 	return { version, warning };
 }
+
+//-------------- Windows -------------
+
+#if defined(_WIN64)
+
+#include <ShlObj.h>
+#include <filesystem>
+
+using fpath = std::filesystem::path;
+
+NvidiaDriverInfo probeNvidiaDriver() {
+	PWSTR folderPath;
+	HMODULE nvml = NULL;
+	HRESULT result;
+	
+	//first folder to search
+	result = SHGetKnownFolderPath(FOLDERID_ProgramFilesX64, 0, NULL, &folderPath);
+	if (result == S_OK) {
+		fpath nvmlPath = fpath(folderPath) / "NVIDIA Corporation" / "NVSMI" / "nvml.dll";
+		nvml = LoadLibraryA(nvmlPath.string().c_str());
+	}
+	CoTaskMemFree(folderPath);
+
+	//second folder to search
+	if (nvml == NULL) {
+		result = SHGetKnownFolderPath(FOLDERID_System, 0, NULL, &folderPath);
+		if (result == S_OK) {
+			fpath nvmlPath = fpath(folderPath) / "nvml.dll";
+			nvml = LoadLibraryA(nvmlPath.string().c_str());
+		}
+		CoTaskMemFree(folderPath);
+	}
+
+	NvidiaDriverInfo info;
+	if (nvml != NULL) {
+		ptr_nvmlInit_v2 nvInit = (ptr_nvmlInit_v2) GetProcAddress(nvml, "nvmlInit_v2");
+		ptr_nvmlSystemGetDriverVersion nvVersion = (ptr_nvmlSystemGetDriverVersion) GetProcAddress(nvml, "nvmlSystemGetDriverVersion");
+		ptr_nvmlShutdown nvShutdown = (ptr_nvmlShutdown) GetProcAddress(nvml, "nvmlShutdown");
+		info = probe(nvInit, nvVersion, nvShutdown);
+		FreeLibrary(nvml);
+	}
+
+	return info;
+}
+
+//-------------- Linux -------------
+
+#elif defined(__linux__)
+
+NvidiaDriverInfo probeNvidiaDriver() {
+	//nvidia-smi --query-gpu=driver_version --format=csv,noheader
+	dlopen();
+	dlclose();
+}
+
+//-------------- Other Systems -------------
 
 #else
 

@@ -12,10 +12,8 @@
     <ClInclude Include="cuDecompose.cuh" />
     <ClInclude Include="cuDeshaker.cuh" />
     <ClInclude Include="cuNPP.cuh" />
-    <ClInclude Include="CudaData.cuh" />
     <ClInclude Include="cuTest.cuh" />
     <ClInclude Include="cuUtil.cuh" />
-    <ClInclude Include="cuInterface.cuh" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CudaClasses.rc" />

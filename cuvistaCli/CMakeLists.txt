@@ -14,7 +14,3 @@ target_link_libraries(cuvista PRIVATE
 install(TARGETS
     cuvista
 )
-install(DIRECTORY "${FFMPEG_PATH}/bin"
-    DESTINATION "${CMAKE_INSTALL_PREFIX}"
-    FILES_MATCHING PATTERN "*.dll"
-)
