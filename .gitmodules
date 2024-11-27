@@ -1,6 +1,3 @@
-[submodule "nvapi"]
-	path = nvapi
-	url = https://github.com/NVIDIA/nvapi.git
 [submodule "OpenCL-Headers"]
 	path = OpenCL-Headers
 	url = https://github.com/KhronosGroup/OpenCL-Headers.git
