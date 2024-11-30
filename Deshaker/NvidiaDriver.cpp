@@ -16,6 +16,7 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
+#include <iostream>
 #include "NvidiaDriver.hpp"
 
 extern "C" {
@@ -97,10 +98,26 @@ NvidiaDriverInfo probeNvidiaDriver() {
 
 #elif defined(__linux__)
 
+#include <dlfcn.h>
+
 NvidiaDriverInfo probeNvidiaDriver() {
 	//nvidia-smi --query-gpu=driver_version --format=csv,noheader
-	dlopen();
-	dlclose();
+
+	NvidiaDriverInfo info;
+	void* nvml = nullptr;
+	nvml = dlopen("libnvidia-ml.so", RTLD_NOW);
+	if (nvml == nullptr) nvml = dlopen("libnvidia-ml.so.1", RTLD_NOW);
+
+	if (nvml != nullptr) {
+		std::cout << "check" << std::endl;
+		ptr_nvmlInit_v2 nvInit = (ptr_nvmlInit_v2) dlsym(nvml, "nvmlInit_v2");
+		ptr_nvmlSystemGetDriverVersion nvVersion = (ptr_nvmlSystemGetDriverVersion) dlsym(nvml, "nvmlSystemGetDriverVersion");
+		ptr_nvmlShutdown nvShutdown = (ptr_nvmlShutdown) dlsym(nvml, "nvmlShutdown");
+		info = probe(nvInit, nvVersion, nvShutdown);
+		dlclose(nvml);
+	}
+
+	return info;
 }
 
 //-------------- Other Systems -------------

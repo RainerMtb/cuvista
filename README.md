@@ -19,111 +19,80 @@ For Cuda acceleration a device with Compute Version 5 or later is required. For 
 ## Typical Performance
 On a RTX 3060 graphics card a typical video in FullHD resolution (1920 x 1080) should be processed at around 100 frames per second, including decoding, stabilizing and encoding.
 
+## Limitations
+Stabilization works best with *natural video footage* like a camera mounted on a vehicle. It does not really work with sudden scene changes like a movie cut. Sudden changes in brightness can also throw off computations. In such cases even more shaking can be introduced.
+
 # Using CUVISTA
-For Windows you can get the latest version from the [Releases](https://github.com/RainerMtb/cuvista/releases) page. Just download, unzip and run either ```cuvista.exe``` on the command line or ```cuvistaGui.exe``` for a windowed user interface. 
+For Windows you can get the latest version from the [Releases](https://github.com/RainerMtb/cuvista/releases) page. Just download, unzip and run either ```cuvista.exe``` on the command line or ```cuvistaGui.exe``` for a graphical user interface. 
 
 Have a look at available options on the command line via ```cuvista -h``` or ```cuvista -help```, in the GUI version a subset of most important options is available.
 
 In a fresh Windows environment the the Microsoft Visual C/C++ Runtime Libraries might be missing, so when prompted with a message like ```MSVCP140.dll not found```, download and install the latest redistributable https://aka.ms/vs/17/release/vc_redist.x64.exe
 
-# Building CUVISTA
-To start, get the repository and submodules to your computer, then proceed below according to your system
 
+
+# Building CUVISTA
+
+## Building General Notes
+
+To start, get the repository and submodules to your computer
+```
+git clone --recursive https://github.com/RainerMtb/cuvista.git
+```
+This repo comes with a cmake script. As the most bare version only the command line executable is built without Cuda.
+
+The build script will look for Cuda and include Cuda when found. Tell cmake where to find Cuda via option ```-D CMAKE_PREFIX_PATH=path/to/cuda```. Explicitly disable Cuda in the build via option ```-D BUILD_CUDA=0```
+
+The build script will look for Qt6 and include the Gui executable when found. Tell cmake where to find Qt6 via option ```-D CMAKE_PREFIX_PATH=path/to/qt```. Explicitly disable building the gui via option ```-D BUILD_GUI=0```
 
 ## Building on Windows
 Tested on Windows 11
 
-### Core Dependencies
-Get Cuda https://developer.nvidia.com/cuda-downloads  
-Get ffmeg with shared libraries https://www.ffmpeg.org/download.html#build-windows  
 
-### Building the CLI executable
+### Dependencies
+Get ffmeg with shared libraries https://www.ffmpeg.org/download.html#build-windows  
+Optionally get Cuda https://developer.nvidia.com/cuda-downloads  
+Optionally get Qt6 https://www.qt.io/download-qt-installer, install at least the essentials and Qt Multimedia
+
+### Building the full experience
 In a command line window, starting from the project main directory, where this readme and the top level CMakeLists.txt is located, exectute the following commands.  
 It is recommended to build in a subdirectory:
 ```
 mkdir build
 cd build
 ```
-prepare the locations of Cuda and FFMPEG and provide them to cmake. Better use forward slashes ```/``` to separate folders. Adapt locations to your system:
+prepare the locations of Cuda, Qt and FFMPEG and provide them to cmake. Also see notes above. Better use forward slashes ```/``` to separate folders. Adapt locations to your system:
 ```
-cmake .. -D CMAKE_PREFIX_PATH=C:/CUDA/version -D FFMPEG_PATH=C:/ffmpeg --fresh
+cmake .. -D CMAKE_PREFIX_PATH=C:/CUDA/version;C:/Qt/6.8.0/msvc2022_64 -D FFMPEG_PATH=C:/ffmpeg --fresh
 cmake --build . --config Release
 ```
-Upon successfull completion you will get the file
+Upon successfull completion you will get the files
 ```
 cuvistaCli/Release/cuvista.exe
+cuvistaGui/Release/cuvistaGui.exe
 ```
 Optionally continue with:
 ```
 cmake --install . --config Release
 ```
-This will put together the libraries for ffmpeg and the executable in the subfolder ```install```
+This will put together the dependent libraries and the executables in the subfolder ```install```
 
-### Including the GUI executable in the build
-In addition to the Core Dependencies above get Qt https://www.qt.io/download-qt-installer, only the essential packages are required  
-Provide the location of Qt to cmake via the ```CMAKE_PREFIX_PATH``` and proceed similar to the steps above. Adapt locations to your system:
-```
-cmake .. -D CMAKE_PREFIX_PATH=C:/Qt/6.8.0/msvc2022_64;C:/CUDA/version -D FFMPEG_PATH=C:/ffmpeg -D GUI=1 --fresh
-cmake --build . --config Release
-```
-Upon successfull completion you will get
-```
-cuvistaCli/Release/cuvista.exe
-cuvistaGui/Release/cuvistaGui.exe
-```
-Optionally continue to pack everything together into the ```install``` subfolder with:
-```
-cmake --install . --config Release
-```
 
 ## Building on Linux
 Tested on Ubuntu 24.04
 
-### Core Dependencies
-Get Cuda https://developer.nvidia.com/cuda-downloads and follow instructions there  
-Execute commands in a Linux Terminal to download and install additional components if not already available on your system
+### Dependencies
 
-Cmake, the build tool:
-```
-sudo apt install -y cmake
-```
-FFmpeg shared libraries:
-```
-sudo apt install -y libavcodec-dev libavdevice-dev libavfilter-dev libavformat-dev libavutil-dev libswresample-dev libswscale-dev
-```
-Nvidia Video encoder - I wonder why ***that library*** carries the name ffmpeg...
+#### Cuda
+Optionally get Cuda https://developer.nvidia.com/cuda-downloads and follow instructions there  
+
+With Cuda you will also need Nvidia Video encoder - I wonder why ***that library*** carries the name ffmpeg...
 ```
 sudo apt install -y libffmpeg-nvenc-dev
 ```
-Google Cpu Features:
-```
-sudo apt install -y libcpu-features-dev
-```
-In case PkgConfig is missing:
-```
-sudo apt install -y pkg-config
-```
 
-### Building the CLI executable
-In a terminal session, starting from the project main directory, where this readme and the top level CMakeLists.txt is located
-
-It is recommended to build in a subdirectory:
-```
-mkdir build
-cd build
-```
-Adapt the location of cuda to your system and execute the build process
-```
-cmake .. -D CMAKE_PREFIX_PATH=/usr/local/cuda --fresh
-cmake --build .
-```
-Upon successfull completion you will find the executable which should execute right away
-```
-cuvistaCli/cuvista
-```
-
-### Including the GUI executable in the build
-In addition to the Core Libraries above get Qt, see https://www.qt.io/download-qt-installer. 
+#### Qt6
+Optionally get Qt6, see https://www.qt.io/download-qt-installer. 
 To get the necessary components on the command line
 ```
 wget https://download.qt.io/official_releases/online_installers/qt-unified-linux-x64-online.run
@@ -134,9 +103,38 @@ You probably need
 ```
 sudo apt install -y libxkbcommon-dev
 ```
-Proceed similar to the steps above, also providing the location of Qt to cmake, adapt locations to your system
+
+#### More Libraries
+Get additional components if not already available on your system
+
+Cmake, the build tool:
 ```
-cmake .. -D CMAKE_PREFIX_PATH=~/Qt/6.8.0/gcc_64:/usr/local/cuda -D GUI=1 --fresh
+sudo apt install -y cmake
+```
+FFmpeg shared libraries:
+```
+sudo apt install -y libavcodec-dev libavdevice-dev libavfilter-dev libavformat-dev libavutil-dev libswresample-dev libswscale-dev
+```
+Google Cpu Features:
+```
+sudo apt install -y libcpu-features-dev
+```
+In case PkgConfig is missing:
+```
+sudo apt install -y pkg-config
+```
+
+### Building the full experience
+In a terminal session, starting from the project main directory, where this readme and the top level CMakeLists.txt is located
+
+It is recommended to build in a subdirectory:
+```
+mkdir build
+cd build
+```
+Adapt the location of cuda and  Qt to your system and execute the build process. Also see notes above.
+```
+cmake .. -D CMAKE_PREFIX_PATH=~/Qt/6.8.0/gcc_64:/usr/local/cuda --fresh
 cmake --build .
 ```
 Upon successfull completion you will find the executables which should execute right away
@@ -145,13 +143,14 @@ cuvistaCli/cuvista
 cuvistaGui/cuvistaGui
 ```
 
+
 ## Future Ideas
 - Improve performance and robustness of stabilization - very likely mutually exclusive goals
 - Look into more advanced algorithms like 3D stabilization - but I currently lack information on the fundamental math of suchs approaches
 - Use this codebase to remove duplicate frames from videos
 - Possibly improve performace by using multiple GPUs - dont know if anyone would need that though
-- Thinks in the Gui
 
+ 
 ## Built and Tested on following Tools and versions
 - Windows 11 64bit
 - Ubuntu 24.04

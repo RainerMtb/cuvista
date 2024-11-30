@@ -36,12 +36,10 @@ if (BUILD_CUDA MATCHES 1 AND CMAKE_SYSTEM_NAME MATCHES Linux)
     list(APPEND CORE_LIBS
         nvcuvid
         nvidia-encode
-        nvidia-ml
     )
 endif()
 if (BUILD_CUDA MATCHES 1 AND CMAKE_SYSTEM_NAME MATCHES Windows)
     list(APPEND CORE_LIBS
-        nvapi64
         nvcuvid
         nvencodeapi
     )
@@ -80,13 +78,10 @@ if (CMAKE_SYSTEM_NAME MATCHES Windows)
     find_path(ffmpegH avcodec.h REQUIRED NO_DEFAULT_PATH HINTS "${FFMPEG_PATH}/include/libavcodec")
     find_program(ffmpegDLL avcodec-61.dll REQUIRED NO_DEFAULT_PATH HINTS "${FFMPEG_PATH}/bin")
 
-    link_directories("${PROJECT_SOURCE_DIR}/nvapi/amd64")
     link_directories("${PROJECT_SOURCE_DIR}/lib/x64")
     link_directories("${FFMPEG_PATH}/lib")
 
-
     include_directories("${PROJECT_SOURCE_DIR}/include")
-    include_directories("${PROJECT_SOURCE_DIR}/nvapi")
     include_directories("${FFMPEG_PATH}/include")
 
     list(APPEND CORE_LIBS

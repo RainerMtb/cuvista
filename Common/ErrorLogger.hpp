@@ -21,6 +21,7 @@
 #include <chrono>
 #include <vector>
 #include <mutex>
+#include <string>
 
 struct ErrorEntry {
 	std::chrono::time_point<std::chrono::system_clock> t;

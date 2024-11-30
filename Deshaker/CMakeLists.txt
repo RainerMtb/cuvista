@@ -8,7 +8,7 @@ target_include_directories(Deshaker PUBLIC "${PROJECT_SOURCE_DIR}/CudaStuff")
 target_include_directories(Deshaker PUBLIC "${PROJECT_SOURCE_DIR}/AvxStuff")
 target_include_directories(Deshaker PUBLIC "${PROJECT_SOURCE_DIR}/OpenCL-CLHPP/include")
 target_include_directories(Deshaker PUBLIC "${PROJECT_SOURCE_DIR}/OpenCL-Headers")
-target_include_directories(Deshaker PUBLIC "${PROJECT_SOURCE_DIR}/include/nvenc")
+target_include_directories(Deshaker PUBLIC "${PROJECT_SOURCE_DIR}/include")
 
 target_link_libraries(Deshaker PUBLIC Common)
 target_link_libraries(Deshaker PUBLIC Matrix)
