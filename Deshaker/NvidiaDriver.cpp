@@ -109,7 +109,6 @@ NvidiaDriverInfo probeNvidiaDriver() {
 	if (nvml == nullptr) nvml = dlopen("libnvidia-ml.so.1", RTLD_NOW);
 
 	if (nvml != nullptr) {
-		std::cout << "check" << std::endl;
 		ptr_nvmlInit_v2 nvInit = (ptr_nvmlInit_v2) dlsym(nvml, "nvmlInit_v2");
 		ptr_nvmlSystemGetDriverVersion nvVersion = (ptr_nvmlSystemGetDriverVersion) dlsym(nvml, "nvmlSystemGetDriverVersion");
 		ptr_nvmlShutdown nvShutdown = (ptr_nvmlShutdown) dlsym(nvml, "nvmlShutdown");
