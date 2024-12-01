@@ -99,9 +99,9 @@ wget https://download.qt.io/official_releases/online_installers/qt-unified-linux
 chmod +x qt-unified-linux-x64-online.run
 ./qt-unified-linux-x64-online.run install qt.qt6.680.linux_gcc_64 qt.qt6.680.addons.qtmultimedia
 ```
-You probably need
+You might also need
 ```
-sudo apt install -y libxkbcommon-dev
+sudo apt install -y libxkbcommon-dev libglu1-mesa-dev
 ```
 
 #### More Libraries
@@ -134,7 +134,8 @@ cd build
 ```
 Adapt the location of cuda and  Qt to your system and execute the build process. Also see notes above.
 ```
-cmake .. -D CMAKE_PREFIX_PATH=~/Qt/6.8.0/gcc_64:/usr/local/cuda --fresh
+export CMAKE_PREFIX_PATH=~/Qt/6.8.0/gcc_64:/usr/local/cuda
+cmake .. --fresh
 cmake --build .
 ```
 Upon successfull completion you will find the executables which should execute right away
