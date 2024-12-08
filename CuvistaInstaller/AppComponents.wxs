@@ -1,0 +1,114 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+	<Fragment>
+		<ComponentGroup Id="AppComponents" Directory="INSTALLFOLDER">
+			<!-- executables -->
+			<Component Id="cuvistaCli">
+				<File Source="$(var.cuvista.TargetPath)" />
+			</Component>
+			<Component Id="cuvistaGz">
+				<File Source="$(var.cuvistaGui.TargetPath)" />
+			</Component>
+			
+			<!-- Start Menu Shortcut -->
+			<Component Id="StartMenuShortcut">
+				<RegistryValue Id="RegShortcutStartMenu" Root="HKCU"
+						Key="SOFTWARE\RainerMtb\cuvista" Name="StartMenuShortcut" Value="1"
+						Type="integer" KeyPath="yes" />
+				<Shortcut Id="StartMenuShortcut" Target="[INSTALLFOLDER]cuvistaGui.exe"
+						Directory="ProgramMenuFolder" Name="Cuvista"
+						WorkingDirectory="INSTALLFOLDER" Advertise="no"/>
+			</Component>
+
+			<!-- Desktop Shortcut
+			<Component Id="DesktopShortcut">
+				<RegistryValue Id="RegShortcutDesktop" Root="HKCU"
+						Key="SOFTWARE\RainerMtb\cuvista" Name="DesktopShortcut" Value="1"
+						Type="integer" KeyPath="yes" />
+				<Shortcut Id="DesktopShortcut" Target="[INSTALLFOLDER]cuvistaGui.exe"
+						Directory="DesktopFolder" Name="Cuvista"
+						WorkingDirectory="INSTALLFOLDER" Advertise="no"/>
+			</Component>
+			-->
+		</ComponentGroup>
+
+		<?define DeployDir = "$(SolutionDir)bin\x64\Deploy" ?>
+		<ComponentGroup Id="FilesToCopy" Directory="INSTALLFOLDER">
+			<!-- files ffmpeg -->
+			<Component>
+				<File Source="$(DeployDir)\avcodec-61.dll" />
+			</Component>
+			<Component>
+				<File Source="$(DeployDir)\avformat-61.dll" />
+			</Component>
+			<Component>
+				<File Source="$(DeployDir)\avutil-59.dll" />
+			</Component>
+			<Component>
+				<File Source="$(DeployDir)\swresample-5.dll" />
+			</Component>
+			<Component>
+				<File Source="$(DeployDir)\swscale-8.dll" />
+			</Component>
+			
+			<!-- files -->
+			<Component>
+				<File Source="$(DeployDir)\opengl32sw.dll" />
+			</Component>
+			<Component>
+				<File Source="$(DeployDir)\D3Dcompiler_47.dll" />
+			</Component>
+
+			<!-- files Qt6 -->
+			<Component>
+				<File Source="$(DeployDir)\Qt6Core.dll" />
+			</Component>
+			<Component>
+				<File Source="$(DeployDir)\Qt6Gui.dll" />
+			</Component>
+			<Component>
+				<File Source="$(DeployDir)\Qt6Multimedia.dll" />
+			</Component>
+			<Component>
+				<File Source="$(DeployDir)\Qt6MultimediaWidgets.dll" />
+			</Component>
+			<Component>
+				<File Source="$(DeployDir)\Qt6Network.dll" />
+			</Component>
+			<Component>
+				<File Source="$(DeployDir)\Qt6Widgets.dll" />
+			</Component>
+
+			<!-- files Qt6 subfolders -->
+			<Component Subdirectory="generic">
+				<File Source="$(DeployDir)\generic\qtuiotouchplugin.dll" />
+			</Component>
+			<Component Subdirectory="multimedia">
+				<File Source="$(DeployDir)\multimedia\ffmpegmediaplugin.dll" />
+			</Component>
+			<Component Subdirectory="multimedia">
+				<File Source="$(DeployDir)\multimedia\windowsmediaplugin.dll" />
+			</Component>
+			<Component Subdirectory="networkinformation">
+				<File Source="$(DeployDir)\networkinformation\qnetworklistmanager.dll" />
+			</Component>
+			<Component Subdirectory="platforms">
+				<File Source="$(DeployDir)\platforms\qwindows.dll" />
+			</Component>
+			<Component Subdirectory="styles">
+				<File Source="$(DeployDir)\styles\qmodernwindowsstyle.dll" />
+			</Component>
+			<Component Subdirectory="tls">
+				<File Source="$(DeployDir)\tls\qcertonlybackend.dll" />
+			</Component>
+			<Component Subdirectory="tls">
+				<File Source="$(DeployDir)\tls\qopensslbackend.dll" />
+			</Component>
+			<Component Subdirectory="tls">
+				<File Source="$(DeployDir)\tls\qschannelbackend.dll" />
+			</Component>
+		</ComponentGroup>
+			
+	</Fragment>
+</Wix>
+
+<!-- 00000000-0000-0000-0000-000000000000 -->

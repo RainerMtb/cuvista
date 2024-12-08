@@ -5,33 +5,41 @@ project(cuvista LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-# holds the list of libraries
+# --------------------------------
+# start the list of libraries
 set(CORE_LIBS
     OpenCL 
     cpu_features
 )
 
-# check if cuda is available
+# --------------------------------
+# check for cuda
 if (BUILD_CUDA MATCHES 0)
     message(NOTICE "Cuda was deselected, Skipping Cuda Build...")
+elseif (BUILD_CUDA MATCHES 1)
+    message(NOTICE "Cuda was selected, Including Cuda Build...")
 else()
     include(CheckLanguage)
     check_language(CUDA)
     if(CMAKE_CUDA_COMPILER)
-        set(CMAKE_CUDA_STANDARD 17)
-        set(CMAKE_CUDA_STANDARD_REQUIRED True)
-        set(CMAKE_CUDA_ARCHITECTURES all)
         set(BUILD_CUDA 1)
-        enable_language(CUDA)
         message(NOTICE "Cuda was found, Including Cuda Build...") 
-        list(APPEND CORE_LIBS cuda)
     else()
         set(BUILD_CUDA 0)
         message(NOTICE "Cuda was not found, Skipping Cuda Build...") 
     endif()
 endif()
-
-# include cuda libraries for platform
+if (BUILD_CUDA MATCHES 1)
+    set(CMAKE_CUDA_STANDARD 17)
+    set(CMAKE_CUDA_STANDARD_REQUIRED True)
+    set(CMAKE_CUDA_ARCHITECTURES all)
+    enable_language(CUDA)
+    list(APPEND CORE_LIBS 
+        cuda
+    )
+endif()
+    
+# include cuda libraries for current platform
 if (BUILD_CUDA MATCHES 1 AND CMAKE_SYSTEM_NAME MATCHES Linux)
     list(APPEND CORE_LIBS
         nvcuvid
@@ -45,13 +53,15 @@ if (BUILD_CUDA MATCHES 1 AND CMAKE_SYSTEM_NAME MATCHES Windows)
     )
 endif()
 
-
+# --------------------------------
 # build release version
 set(CMAKE_BUILD_TYPE Release)
 set(CMAKE_CONFIGURATION_TYPES="Release;Debug")
 set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/install")
 
-# settings specific to Linux ------------------------------
+
+# --------------------------------
+# settings specific to Linux
 if (CMAKE_SYSTEM_NAME MATCHES Linux)
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(ffmpeg REQUIRED IMPORTED_TARGET
@@ -67,13 +77,17 @@ if (CMAKE_SYSTEM_NAME MATCHES Linux)
     list(APPEND CORE_LIBS 
         PkgConfig::ffmpeg
     )
+
+    # for wsl use libraries at C:\Windows\System32\lxss\lib
+    link_directories("/usr/lib/wsl/lib")
 endif()
 
 
-# settings specific to Windows ------------------------------
+# --------------------------------
+# settings specific to Windows
 if (CMAKE_SYSTEM_NAME MATCHES Windows)
     message(NOTICE "Looking for ffmpeg components in folder ${FFMPEG_PATH}...")
-    #check one exemplary shared ffmpeg file, assume others will be there
+    #check one exemplary shared ffmpeg file, assume others will be there as well
     find_library(ffmpegLIB avcodec.lib REQUIRED NO_DEFAULT_PATH HINTS "${FFMPEG_PATH}/lib")
     find_path(ffmpegH avcodec.h REQUIRED NO_DEFAULT_PATH HINTS "${FFMPEG_PATH}/include/libavcodec")
     find_program(ffmpegDLL avcodec-61.dll REQUIRED NO_DEFAULT_PATH HINTS "${FFMPEG_PATH}/bin")
@@ -96,7 +110,8 @@ if (CMAKE_SYSTEM_NAME MATCHES Windows)
 endif()
 
 
-# main stuff -----------------------------------------
+# --------------------------------
+# main stuff, declare targets
 add_subdirectory(OpenCL-Headers)
 add_subdirectory(OpenCL-ICD-Loader)
 add_subdirectory(Common)
@@ -123,11 +138,12 @@ else()
 endif()
 
 
-# setting compiler specific options ----------------------------------------
+# --------------------------------
+# setting compiler specific options
 if (CMAKE_CXX_COMPILER_ID MATCHES MSVC)
     target_compile_options(Common PRIVATE /MP)
     target_compile_options(Matrix PRIVATE /MP)
-    target_compile_options(AvxStuff PRIVATE -D BUILD_CUDA=${BUILD_CUDA} /MP /arch:AVX512)
+    target_compile_options(AvxStuff PRIVATE /MP /arch:AVX512)
     target_compile_options(Deshaker PRIVATE -D BUILD_CUDA=${BUILD_CUDA} /MP)
     target_link_options(cuvista PRIVATE /NODEFAULTLIB:libcmt.lib)
 endif()
@@ -139,7 +155,7 @@ endif()
 if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
     target_compile_options(Common PRIVATE -ffp-contract=off)
     target_compile_options(Matrix PRIVATE -ffp-contract=off)
-    target_compile_options(AvxStuff PRIVATE -D BUILD_CUDA=${BUILD_CUDA} -ffp-contract=off -mavx512f -mavx512vl -mavx512bw -mavx512dq)
+    target_compile_options(AvxStuff PRIVATE -ffp-contract=off -mavx512f -mavx512vl -mavx512bw -mavx512dq)
     target_compile_options(Deshaker PRIVATE -D BUILD_CUDA=${BUILD_CUDA} -ffp-contract=off)
     target_compile_options(cuvista PRIVATE -ffp-contract=off)
 endif()

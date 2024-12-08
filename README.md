@@ -39,11 +39,11 @@ To start, get the repository and submodules to your computer
 ```
 git clone --recursive https://github.com/RainerMtb/cuvista.git
 ```
-This repo comes with a cmake script. As the most bare version only the command line executable is built without Cuda.
+This repo comes with a cmake script. As the most bare version only the command line executable is built without Cuda support.
 
-The build script will look for Cuda and include Cuda when found. Tell cmake where to find Cuda via option ```-D CMAKE_PREFIX_PATH=path/to/cuda```. Explicitly disable Cuda in the build via option ```-D BUILD_CUDA=0```
+The build script will look for Cuda and include Cuda when found. Tell cmake where to find Cuda by setting ```CMAKE_PREFIX_PATH=path/to/cuda``` or via the system path. Explicitly disable Cuda in the build via option ```-D BUILD_CUDA=0```. Explicitly enable Cuda via ```-D BUILD_CUDA=1```, this way skipping the search process
 
-The build script will look for Qt6 and include the Gui executable when found. Tell cmake where to find Qt6 via option ```-D CMAKE_PREFIX_PATH=path/to/qt```. Explicitly disable building the gui via option ```-D BUILD_GUI=0```
+The build script will look for Qt6 and include the Gui executable when found. Tell cmake where to find Qt6 by setting ```CMAKE_PREFIX_PATH=path/to/qt``` or via the system path. Explicitly disable building the gui via option ```-D BUILD_GUI=0```
 
 ## Building on Windows
 Tested on Windows 11

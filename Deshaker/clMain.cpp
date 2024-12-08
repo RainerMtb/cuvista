@@ -32,7 +32,7 @@
 
 using namespace cl;
 
-static bool operator == (const cl::ImageFormat& a, const cl::ImageFormat& b) {
+static bool operator == (const ImageFormat& a, const ImageFormat& b) {
 	return a.image_channel_data_type == b.image_channel_data_type && a.image_channel_order == b.image_channel_order;
 }
 

@@ -26,6 +26,11 @@
 #include "UserInputConsole.hpp"
 
 int deshake(int argsCount, char** args) {
+	std::set_terminate([] {
+		std::cout << "error: std::terminate was called" << std::endl;
+		std::exit(-20);
+	});
+
 	//command line arguments for debugging
 	std::vector<std::string> argsInput(args, args + argsCount);
 	//std::vector<std::string> argsInput = { "-frames", "10", "-i", "d:/VideoTest/02.mp4", "-y", "-o", "c:/temp/im%04d.bmp"}; //debugging
