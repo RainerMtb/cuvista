@@ -261,11 +261,11 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 		} else if (args.nextArg("copyframes")) {
 			dummyFrame = true;
 
-		// } else if (args.nextArg("rand", next)) {
-		// 	if (std::stoi(next) == 1) rng = std::make_unique<RNG<PseudoRandomSource>>();
-		// 	else if (std::stoi(next) == 2) rng = std::make_unique<RNG<std::random_device>>();
-		// 	else if (std::stoi(next) == 3) rng = std::make_unique<RNG<std::default_random_engine>>();
-		// 	else throw AVException("invalid random generator selection: " + next);
+		 } else if (args.nextArg("rng", next)) {
+		 	if (std::stoi(next) == 1) sampler = std::make_shared<Sampler<PointResult, PseudoRandomSource>>();
+		 	else if (std::stoi(next) == 2) sampler = std::make_shared<Sampler<PointResult, std::random_device>>();
+		 	else if (std::stoi(next) == 3) sampler = std::make_shared<Sampler<PointResult, std::default_random_engine>>();
+		 	else throw AVException("invalid random generator selection: " + next);
 
 		} else if (args.nextArg("stack", next)) {
 			double val = std::stod(next);
@@ -292,22 +292,30 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 	}
 
 	//check output file presence and permissions
-	if (videoOutputType == OutputType::VIDEO_FILE) {
+	std::string fileOutCheck = fileOut;
+	if (videoOutputType == OutputType::SEQUENCE_BMP) {
+		fileOutCheck = ImageWriter::makeFilename(fileOut, 0, "bmp");
+	}
+	if (videoOutputType == OutputType::SEQUENCE_JPG) {
+		fileOutCheck = ImageWriter::makeFilename(fileOut, 0, "jpg");
+	}
+
+	if (videoOutputType == OutputType::VIDEO_FILE || videoOutputType == OutputType::SEQUENCE_BMP || videoOutputType == OutputType::SEQUENCE_JPG) {
+		auto path1 = std::filesystem::path(fileIn);
+		auto path2 = std::filesystem::path(fileOutCheck);
+		std::error_code ec;
+		if (std::filesystem::equivalent(path1, path2, ec)) {
+			throw AVException("cannot use the same file for input and output");
+		}
 		if (pass == DeshakerPass::COMBINED || pass == DeshakerPass::CONSECUTIVE) {
-			checkFileForWriting(fileOut, overwriteOutput);
+			checkFileForWriting(fileOutCheck, overwriteOutput);
 		}
 		if (pass == DeshakerPass::FIRST_PASS) {
 			checkFileForWriting(trajectoryFile, overwriteOutput);
 		}
 		if (pass == DeshakerPass::SECOND_PASS) {
 			if (trajectoryFile.empty()) throw AVException("trajectory file missing");
-			checkFileForWriting(fileOut, overwriteOutput);
-		}
-		auto path1 = std::filesystem::path(fileIn);
-		auto path2 = std::filesystem::path(fileOut);
-		std::error_code ec;
-		if (std::filesystem::equivalent(path1, path2, ec)) {
-			throw AVException("cannot use the same file for input and output");
+			checkFileForWriting(fileOutCheck, overwriteOutput);
 		}
 	}
 }

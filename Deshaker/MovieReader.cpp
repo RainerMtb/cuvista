@@ -63,10 +63,11 @@ std::optional<std::string> MovieReader::ptsForFrameAsString(int64_t frameIndex) 
 //-------- Placeholder Class -------
 //----------------------------------
 
-void NullReader::read(ImageYuv& frame) {
+bool NullReader::read(ImageYuv& frame) {
     frameIndex++;
-    endOfInput = false;
     frame.setValues(im::ColorYuv { 0, 0, 0 });
+    endOfInput = false;
+    return false;
 }
 
 
@@ -244,7 +245,7 @@ FFmpegFormatReader::~FFmpegFormatReader() {
 
 
 //read one frame from ffmpeg
-void FFmpegReader::read(ImageYuv& frame) {
+bool FFmpegReader::read(ImageYuv& frame) {
     //util::ConsoleTimer timer("read");
     frameIndex++;
     endOfInput = true;
@@ -403,16 +404,21 @@ void FFmpegReader::read(ImageYuv& frame) {
         //frame.writeText(std::to_string(frameIndex), 100, 100, 3, 3, ColorYuv::WHITE, ColorYuv::GRAY);
         // frame.saveAsColorBMP(std::format("f:/im{:03d}.bmp", frameIndex));
     }
+
+    return endOfInput == false;
 }
 
-void FFmpegReader::seek(double fraction) {
+bool FFmpegReader::seek(double fraction) {
     int64_t target = av_format_ctx->start_time + int64_t(av_format_ctx->duration * fraction);
+    int64_t min_ts = INT_MIN; //always use min_ts = INT_MIN
+    int64_t max_ts = INT_MAX;
 
-    int response = avformat_seek_file(av_format_ctx, -1, INT_MIN, target, target, 0); //always use min_ts = INT_MIN
+    int response = avformat_seek_file(av_format_ctx, -1, min_ts, target, max_ts, 0); 
     if (response < 0) {
         errorLogger.logError(av_make_error(response, "faild to seek in input"));
     }
     avcodec_flush_buffers(av_codec_ctx);
+    return response >= 0;
 }
 
 void FFmpegReader::rewind() {

@@ -18,7 +18,8 @@
 
 #pragma once
 
-#include <cstdint>
+#include <algorithm>
+#include <span>
 
 //simple not-random-at-all number generator
 class PseudoRandomSource {
@@ -79,4 +80,21 @@ private:
 
 };
 
-using RNG = PseudoRandomSource;
+
+template <class T> class SamplerBase {
+
+public:
+    virtual void sample(std::span<T> input, std::span<T> samples) = 0;
+};
+
+
+template <class T, class URBG> class Sampler : public SamplerBase<T> {
+
+private:
+    URBG urbg;
+
+public:
+    void sample(std::span<T> input, std::span<T> samples) override {
+        std::sample(input.begin(), input.end(), samples.begin(), samples.size(), urbg);
+    }
+};

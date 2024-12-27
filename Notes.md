@@ -17,38 +17,51 @@
 
 # Dependencies
 
-## Cpu Features
-https://github.com/google/cpu_features.git
-used to get name and vector features of Cpu
-build commands in repo readme do not work
-
-test executable
-```
-cmake -S. -Bbuild -DBUILD_TESTING=OFF -DCMAKE_BUILD_TYPE=Release
-cmake --build build --config Release -j --target ALL_BUILD
-.\build\Release\list_cpu_features
-```
-
-This will show CPU features of current device:
-To build library
-```
-cmake -B build -D BUILD_TESTING=OFF --install-prefix=f:\repos\cpu_features\install
-cmake --build build --config Release
-cmake --install build
-```
-
-## Nvidia NvApi
-https://github.com/NVIDIA/nvapi.git
-used only to get and show Nvidia Driver Version
-just clone, repo already comes with headers and .lib
-
 ## FFMPEG
 always used to decode video
 used to encode when not via nvenc
 get shared build from https://www.gyan.dev/ffmpeg/builds/
 or build with Media Auto Build https://github.com/m-ab-s/media-autobuild_suite
-but M-AB-S rarely ever succeeds, always some problem with some package
 
 # Misc Notes
 Cuda 11.8 is the highest version to support Compute 3.5
 Video Codec 11.0.10 is the highest encoder version to go along with it
+
+# Files To Deploy
+in program folder:
+```
+   avcodec-61.dll
+   avformat-61.dll
+   avutil-59.dll
+   D3Dcompiler_47.dll
+   opengl32sw.dll
+   Qt6Core.dll
+   Qt6Gui.dll
+   Qt6Multimedia.dll
+   Qt6MultimediaWidgets.dll
+   Qt6Network.dll
+   Qt6Widgets.dll
+   swresample-5.dll
+   swscale-8.dll
+   
+---generic
+       qtuiotouchplugin.dll
+       
+---multimedia
+       ffmpegmediaplugin.dll
+       windowsmediaplugin.dll
+       
+---networkinformation
+       qnetworklistmanager.dll
+       
+---platforms
+       qwindows.dll
+       
+---styles
+       qmodernwindowsstyle.dll
+       
+---tls
+        qcertonlybackend.dll
+        qopensslbackend.dll
+        qschannelbackend.dll
+```

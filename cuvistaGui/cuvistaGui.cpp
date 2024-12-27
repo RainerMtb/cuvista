@@ -183,7 +183,7 @@ void cuvistaGui::setInputFile(const QString& filePath) {
         }
 
         if (errorLogger.hasNoError() && mReader.endOfInput == false) {
-            mReader.seek(0.1); //try to seek to 10%
+            seek(0.1);
         }
 
         if (errorLogger.hasError()) {
@@ -191,7 +191,6 @@ void cuvistaGui::setInputFile(const QString& filePath) {
         }
 
         mInputReady = true;
-        updateInputImage();
         statusBar()->showMessage({});
 
         //info about streams
@@ -228,16 +227,14 @@ void cuvistaGui::setInputFile(const QString& filePath) {
 }
 
 void cuvistaGui::seek(double frac) {
-    if (mInputReady) {
-        mReader.seek(frac);
-        mReader.read(mInputYUV);
+    if (mReader.seek(frac) && mReader.read(mInputYUV)) {
         updateInputImage();
+        ui.inputPosition->setValue(frac * 100.0);
     }
 }
 
 void cuvistaGui::updateInputImage() {
-    if (mInputReady)
-        ui.imageInput->setImage(mInputYUV);
+    ui.imageInput->setImage(mInputYUV);
 }
 
 //-------------------------
@@ -270,6 +267,17 @@ void cuvistaGui::stabilize() {
         if (outFile.isEmpty()) {
             statusBar()->showMessage(mDefaultMessage);
             return;
+        }
+
+        //check for overwrite
+        std::string firstFile = ImageWriter::makeFilename(outFile.toStdString(), 0, ui.comboImageType->currentText().toLower().toStdString());
+        QString qstr = QString::fromStdString(firstFile);
+        if (QFile(qstr).exists() && ui.chkOverwrite->isChecked() == false) {
+            QString msgTitle = "Confirm File Overwrite";
+            QString msgText = QString("File %1 exists,\noverwrite this and subsequent files?").arg(qstr);
+            if (QMessageBox::warning(this, msgTitle, msgText, QMessageBox::Yes | QMessageBox::No) == QMessageBox::No) {
+                return;
+            }
         }
     }
 

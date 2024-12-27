@@ -23,7 +23,7 @@ On a RTX 3060 graphics card a typical video in FullHD resolution (1920 x 1080) s
 Stabilization works best with *natural video footage* like a camera mounted on a vehicle. It does not really work with sudden scene changes like a movie cut. Sudden changes in brightness can also throw off computations. In such cases even more shaking can be introduced.
 
 # Using CUVISTA
-For Windows you can get the latest version from the [Releases](https://github.com/RainerMtb/cuvista/releases) page. Just download, unzip and run either ```cuvista.exe``` on the command line or ```cuvistaGui.exe``` for a graphical user interface. 
+For Windows you can get the latest version from the [Releases](https://github.com/RainerMtb/cuvista/releases) page. Just download either the msi file to install, or the zip file to unzip and run either ```cuvista.exe``` on the command line or ```cuvistaGui.exe``` for a graphical user interface. 
 
 Have a look at available options on the command line via ```cuvista -h``` or ```cuvista -help```, in the GUI version a subset of most important options is available.
 
@@ -33,7 +33,7 @@ In a fresh Windows environment the the Microsoft Visual C/C++ Runtime Libraries 
 
 # Building CUVISTA
 
-## Building General Notes
+## General Notes
 
 To start, get the repository and submodules to your computer
 ```

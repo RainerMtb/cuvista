@@ -36,7 +36,7 @@ public:
 		w = 200;
 	}
 
-	void read(ImageYuv& frame) override {
+	bool read(ImageYuv& frame) override {
 		frameIndex++;
 		for (int64_t z = 0; z < 3; z++) {
 			int64_t base = this->frameIndex * 2 + z * 5 + 30;
@@ -50,6 +50,7 @@ public:
 		}
 		frame.index = this->frameIndex;
 		endOfInput = this->frameIndex == testFrameCount;
+		return endOfInput == false;
 	}
 };
 

@@ -240,3 +240,18 @@ void testZoom() {
 	double z = t.calcRequiredZoom(x, y, rad, 100, 50, data, 0);
 	std::cout << z << std::endl;
 }
+
+void testSampler() {
+	std::vector<int> data(10'000);
+	std::iota(data.begin(), data.end(), 0);
+	std::vector<int> samples(4);
+
+	//std::shared_ptr<SamplerBase<int>> sampler = std::make_shared<Sampler<int, std::random_device>>();
+	std::shared_ptr<SamplerBase<int>> sampler = std::make_shared<Sampler<int, PseudoRandomSource>>();
+
+	for (int i = 0; i < 3; i++) {
+		sampler->sample(data, samples);
+		for (int i = 0; i < samples.size(); i++) std::cout << samples[i] << " ";
+		std::cout << std::endl;
+	}
+}

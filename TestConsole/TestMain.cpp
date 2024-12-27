@@ -46,7 +46,8 @@ int main() {
 	//compareInv();
 	//similarTransform();
 
-	compareFramesPlatforms();
+	testSampler();
+	//compareFramesPlatforms();
 	//avxCompute();
 
 	//testZoom();

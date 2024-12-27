@@ -92,6 +92,7 @@ quality and performance settings:
 -cputhreads n   number of threads on the cpu to use for computations
                 default: based on hardware
 -crf n          constant rate factor used for encoding
+                lower value represents higher quality and bigger file size
                 default: encoder specific default value
 
 misc options:

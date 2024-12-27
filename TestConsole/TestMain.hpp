@@ -63,3 +63,4 @@ void compareInv();
 
 void avxCompute();
 void testZoom();
+void testSampler();

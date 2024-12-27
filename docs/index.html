@@ -67,10 +67,11 @@
             your videos by following the steps
             <ul>
                 <li>Click the link at the <a href=#top>top of this page</a> to download the latest version</li>
-                <li>Unzip the downloaded file to any folder on your PC</li>
-                <li>Doubleclick <span class="cuvista">cuvistaGui.exe</span> in the folder you created</li>
+                <li>Install the application</li>
+                <li>Find the entry for <span class="cuvista">cuvista</span> in the Windows Start Menu and start the application</li>
                 <li>Open any video file by clicking the camera button</li>
                 <li>Click Stabilize to process and save the new video</li>
+                <li>You may uninstall the application via the list of installed Windows Apps</li>
             </ul>
 
             <h2>Screenshots</h2>
@@ -85,16 +86,20 @@
                 <li><strong>Overwrite:</strong> When checked,
                     no confirmation dialog is displayed when overwriting an existing output file</li>
                 <li><strong>Device:</strong> Select the device to do the heavy computing. Prefer a cuda capable device</li>
-                <li><strong>Encoding:</strong> Select the device to do the video encoding. Can be different from the stabilization device</li>
                 <li><strong>Temporal Radius:</strong> How many frames before and after shall be considered to smooth movements.
                     Higher value will generally provide smoother output</li>
-                <li><strong>Zoom:</strong> Stabilization moves frames around, which reaveals the void at least on one side of the frame.
-                    Zooming into the video by some amount will hide this moving effect</li>
+                <li><strong>Zoom:</strong> Stabilization moves frames around the screen, which may reaveal blank areas.
+                    Zooming into the video can hide this moving effect. Set a minimum zoom value and optionally allow dynamic zoom up to a 
+                    certain maximum value to compensate for violent movements</li>
                 <li><strong>Background:</strong> Fill the void in the background either with a fixed color or preceding frames</li>
-                <li><strong>Stack:</strong> Put original and stabilized video side by side to display the stabilization result</li>
+                <li><strong>Encoding:</strong> Select the device and video format for encoding the output. Can be different from the stabilization device</li>
+                <li><strong>Side by Side:</strong> Put original and stabilized video side by side to check the stabilization result</li>
+                <li><strong>Image Sequence:</strong> Output a sequence of individual image files rather than a video file</li>
+                <li><strong>Live Playback:</strong> Play resulting video directly, do not produce an output file</li>
+                <li><strong>Limit Output:</strong> Stop producing output after given number of frames, useful for testing results</li>
             </ul>
-            If you want to watch how exactly each frame is moved around to compensate for the shakyness in the recording,
-            try to set zoom to -10 and background to some fixed color
+            If you want to watch how exactly each frame is moved around to compensate for the shakyness in the input footage,
+            try to setting zoom to -10 and background to some fixed color
 
             <h2>Command Line Version</h2>
             <p>There also is a command line version availabe which provides more advances options</p>
@@ -111,8 +116,7 @@
     <footer>
         <div class="main_margin">
             <p>This GitHub project is maintained by <a href="https://github.com/RainerMtb">RainerMtb</a></p>
-            <p>Theme for this page inspired by GitHub Pages Theme <a href="https://github.com/pages-themes/leap-day">Leap
-                    Day</a></p>
+            <p>Theme for this page inspired by GitHub Pages Theme <a href="https://github.com/pages-themes/leap-day">Leap Day</a></p>
             <p>Return to <a href=#top>top of page</a></p>
         </div>
     </footer>

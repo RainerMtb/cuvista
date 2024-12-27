@@ -37,11 +37,11 @@ public:
 
 	virtual void open(const std::string& source) = 0;
 	virtual void start() {}
-	virtual void read(ImageYuv& inputFrame) = 0;
+	virtual bool read(ImageYuv& inputFrame) = 0;
 	virtual std::future<void> readAsync(ImageYuv& inputFrame);
 	virtual void close() {}
 	virtual void rewind() {}
-	virtual void seek(double fraction) {}
+	virtual bool seek(double fraction) { return true; }
 	virtual int openAudioDecoder(int streamIndex) { return -1; }
 
 	std::optional<std::string> ptsForFrameAsString(int64_t frameIndex);
@@ -57,7 +57,7 @@ class NullReader : public MovieReader {
 
 public:
 	void open(const std::string& source) override {};
-	void read(ImageYuv& frame) override;
+	bool read(ImageYuv& frame) override;
 };
 
 
@@ -89,12 +89,12 @@ public:
 	~FFmpegReader() override;
 
 	void open(const std::string& source) override;
-	void read(ImageYuv& frame) override;
+	bool read(ImageYuv& frame) override;
 	void close() override;
 	void rewind() override;
 	int openAudioDecoder(int streamIndex) override;
 
-	void seek(double fraction);
+	bool seek(double fraction);
 };
 
 

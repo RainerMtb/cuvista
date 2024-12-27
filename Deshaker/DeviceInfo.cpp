@@ -32,7 +32,8 @@
 
 static cpu_features::X86Info cpuInfo = cpu_features::GetX86Info();
 
- //CPU Device Info
+
+ //CPU Device Info -----------------------------------
 std::string DeviceInfoCpu::getName() const {
 	return std::format("CPU, {}, {} threads", cpuInfo.brand_string, std::to_string(std::thread::hardware_concurrency()));
 }
@@ -50,7 +51,7 @@ cpu_features::X86Features DeviceInfoCpu::getCpuFeatures() const {
 }
 
 
-//Avx Device Info
+//Avx Device Info -----------------------------------
 std::string DeviceInfoAvx::getName() const {
 	return std::format("AVX 512, {}", cpuInfo.brand_string);
 }
@@ -64,7 +65,7 @@ std::shared_ptr<FrameExecutor> DeviceInfoAvx::create(MainData& data, MovieFrame&
 }
 
 
-//OPENCL Info
+//OPENCL Info -----------------------------------
 std::string DeviceInfoOpenCl::getName() const {
 	std::string name = device->getInfo<CL_DEVICE_NAME>();
 	std::string vendor = device->getInfo<CL_DEVICE_VENDOR>();
@@ -104,6 +105,8 @@ std::ostream& operator << (std::ostream& os, const DeviceInfoCuda& info) {
 	return os;
 }
 
+
+// Cuda Info -----------------------------------
 std::string DeviceInfoCuda::getName() const {
 	return std::format("Cuda, {}, Compute {}.{}", props->name, props->major, props->minor);
 }
@@ -170,7 +173,7 @@ std::string CudaInfo::nvencDriverToString() const {
 }
 
 
-//Null Device
+//Null Device -----------------------------------
 std::string DeviceInfoNull::getName() const {
 	return "";
 }

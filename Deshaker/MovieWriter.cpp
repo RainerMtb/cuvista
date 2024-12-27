@@ -96,14 +96,18 @@ void JpegImageWriter::open(EncodingOption videoCodec) {
 	ctx->codec_type = AVMEDIA_TYPE_VIDEO;
 	ctx->pix_fmt = AV_PIX_FMT_YUV444P;
 	ctx->color_range = AVCOL_RANGE_JPEG;
-	int ret = avcodec_open2(ctx, codec, NULL);
-	if (ret < 0)
-		throw AVException(av_make_error(ret, "cannot open mjpeg codec"));
+	ctx->flags |= AV_CODEC_FLAG_QSCALE;
+	ctx->global_quality = FF_QP2LAMBDA * mData.crf.value_or(4);
+	int retval;
+	retval = avcodec_open2(ctx, codec, NULL);
+	if (retval < 0)
+		throw AVException(av_make_error(retval, "cannot open mjpeg codec"));
 
 	av_frame = av_frame_alloc();
 	av_frame->format = ctx->pix_fmt;
 	av_frame->width = mData.w;
 	av_frame->height = mData.h;
+	av_frame->quality = ctx->global_quality; //quality must be set both to AVContext and AVFrame
 
 	av_frame->linesize[0] = outputFrame.stride;
 	av_frame->linesize[1] = outputFrame.stride;

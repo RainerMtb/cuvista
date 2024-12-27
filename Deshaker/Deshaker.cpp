@@ -33,7 +33,7 @@ int deshake(int argsCount, char** args) {
 
 	//command line arguments for debugging
 	std::vector<std::string> argsInput(args, args + argsCount);
-	//std::vector<std::string> argsInput = { "-frames", "10", "-i", "d:/VideoTest/02.mp4", "-y", "-o", "c:/temp/im%04d.bmp"}; //debugging
+	//std::vector<std::string> argsInput = { "-frames", "10", "-i", "d:/VideoTest/02.mp4", "-o", "c:/temp/im%04d.jpg", "-y"}; //debugging
 
 	//main program start
 	MainData data;
@@ -124,10 +124,12 @@ int deshake(int argsCount, char** args) {
 
 	} catch (const AVException& e) {
 		*data.console << "error: " << e.what() << std::endl;
+		if (errorLogger.hasError()) *data.console << "error: " << errorLogger.getErrorMessage() << std::endl;
 		return -2;
 
 	} catch (const std::invalid_argument& e) {
 		*data.console << "invalid value: " << e.what() << std::endl;
+		if (errorLogger.hasError()) *data.console << "error: " << errorLogger.getErrorMessage() << std::endl;
 		return -3;
 
 	} catch (...) {

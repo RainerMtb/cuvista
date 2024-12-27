@@ -52,7 +52,6 @@ public:
 	ImageYuv mBufferFrame;
 	Trajectory mTrajectory;
 	std::vector<PointResult> mResultPoints;
-	RNG rng;
 
 	//only constructor for Frame class
 	MovieFrame(MainData& data, MovieReader& reader, MovieWriter& writer);
