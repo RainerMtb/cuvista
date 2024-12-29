@@ -289,6 +289,7 @@ void CpuFrame::getOutputYuv(int64_t frameIndex, ImageYuvData& image) {
 }
 
 void CpuFrame::getOutputRgba(int64_t frameIndex, ImageRGBA& image) {
+	assert(frameIndex == mOutput.index && "invalid frame index");
 	mOutput.toRGBA(image, mPool);
 }
 
