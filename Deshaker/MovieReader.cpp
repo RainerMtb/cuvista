@@ -63,9 +63,20 @@ std::optional<std::string> MovieReader::ptsForFrameAsString(int64_t frameIndex) 
 //-------- Placeholder Class -------
 //----------------------------------
 
-bool NullReader::read(ImageYuv& frame) {
+bool NullReader::read(ImageYuv& inputFrame) {
     frameIndex++;
-    frame.setValues(im::ColorYuv { 0, 0, 0 });
+    inputFrame.setValues(im::ColorYuv { 0, 0, 0 });
+    endOfInput = false;
+    return false;
+}
+
+
+//----------------------------------
+//-------- Image Reader ------------
+//----------------------------------
+bool ImageReader::readImage(ImageYuv& inputFrame, const ImageYuv& sourceImage) {
+    frameIndex++;
+    sourceImage.copyTo(inputFrame);
     endOfInput = false;
     return false;
 }
@@ -245,7 +256,7 @@ FFmpegFormatReader::~FFmpegFormatReader() {
 
 
 //read one frame from ffmpeg
-bool FFmpegReader::read(ImageYuv& frame) {
+bool FFmpegReader::read(ImageYuv& inputFrame) {
     //util::ConsoleTimer timer("read");
     frameIndex++;
     endOfInput = true;
@@ -370,7 +381,7 @@ bool FFmpegReader::read(ImageYuv& frame) {
 
     if (endOfInput == false) {
         //convert to YUV444 data
-        frame.index = frameIndex;
+        inputFrame.index = frameIndex;
         int w = av_codec_ctx->width;
         int h = av_codec_ctx->height;
 
@@ -383,8 +394,8 @@ bool FFmpegReader::read(ImageYuv& frame) {
         }
 
         //scale image data
-        uint8_t* frame_buffer[] = { frame.plane(0), frame.plane(1), frame.plane(2), nullptr };
-        int linesizes[] = { frame.stride, frame.stride, frame.stride, 0 };
+        uint8_t* frame_buffer[] = { inputFrame.plane(0), inputFrame.plane(1), inputFrame.plane(2), nullptr };
+        int linesizes[] = { inputFrame.stride, inputFrame.stride, inputFrame.stride, 0 };
         sws_scale(sws_scaler_ctx, av_frame->data, av_frame->linesize, 0, av_frame->height, frame_buffer, linesizes);
 
         //store parameters for writer

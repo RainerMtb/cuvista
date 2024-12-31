@@ -441,7 +441,7 @@ void CudaExecutor::computeTerminate(int64_t frameIndex, std::vector<PointResult>
 	//translate to host structure
 	for (int i = 0; i < mData.resultCount; i++) {
 		const CudaPointResult& hr = h_results[i];
-		results[i] = { hr.idx, hr.ix0, hr.iy0, hr.xm, hr.ym, hr.xm - mData.w / 2, hr.ym - mData.h / 2, hr.u, hr.v, hr.result, hr.z };
+		results[i] = { hr.idx, hr.ix0, hr.iy0, hr.xm - mData.w / 2.0, hr.ym - mData.h / 2.0, hr.u, hr.v, hr.result, hr.z };
 	}
 
 	//shutdown

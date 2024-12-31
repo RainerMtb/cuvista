@@ -25,13 +25,13 @@
 
 class FrameResult {
 
-	using SamplerPtr = std::shared_ptr<SamplerBase<PointResult>>;
+	using SamplerPtr = std::shared_ptr<SamplerBase<PointContext>>;
 
 public:
 	FrameResult(MainData& data, ThreadPoolBase& threadPool);
 
 	//compute resulting transformation for this frame
-	void computeTransform(std::vector<PointResult>& results, ThreadPoolBase& threadPool, int64_t frameIndex, SamplerPtr rng);
+	void computeTransform(std::vector<PointResult>& results, ThreadPoolBase& threadPool, int64_t frameIndex, SamplerPtr sampler);
 
 	//get the last computed treansform
 	const AffineTransform& getTransform() const;
@@ -44,6 +44,8 @@ private:
 	std::unique_ptr<AffineSolver> mAffineSolver;
 	AffineTransform mBestTransform;
 	std::vector<PointContext> mConsList;
+	std::vector<PointContext> mPointsList;
 
 	double sqr(double value);
+	void drawTransforms(std::span<PointContext> pc, const std::string& filename);
 };

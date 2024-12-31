@@ -205,14 +205,14 @@ template <class T> void im::ImageBase<T>::yuvToRgb(ImageData<unsigned char>& des
 template <class T> void im::ImageBase<T>::copyTo(ImageData<T>& dest, size_t r0, size_t c0, 
 	std::vector<int> srcPlanes, std::vector<int> destPlanes, ThreadPoolBase& pool) const {
 
-	assert(w <= dest.width() && h <= dest.height() && numPlanes == dest.planes() && "dimensions mismatch");
+	assert(w <= dest.width() && h <= dest.height() && srcPlanes.size() == destPlanes.size() && "dimensions mismatch");
 	auto func = [&] (size_t i) {
 		for (size_t r = 0; r < h; r++) {
 			const T* ptr = addr(srcPlanes[i], r, 0);
 			std::copy(ptr, ptr + w, dest.addr(destPlanes[i], r + r0, c0));
 		}
 	};
-	pool.addAndWait(func, 0, numPlanes);
+	pool.addAndWait(func, 0, srcPlanes.size());
 	dest.setIndex(index);
 }
 

@@ -19,6 +19,9 @@
 
 #include "Image2.hpp"
 #include <format>
+#include <stdexcept>
+#include <cstring>
+#include <iostream>
 
 
 ImagePPM& ImageYuvMatFloat::toPPM(ImagePPM& dest, ThreadPoolBase& pool) const {
@@ -189,6 +192,75 @@ bool ImageBGR::saveAsColorBMP(const std::string& filename) const {
 		os.write(data.data(), data.size());
 	}
 	return os.good();
+}
+
+static int readBytes(const char* ptr, int byteCount) {
+	int out = 0;
+	for (int i = 0; i < byteCount; i++, ptr++) {
+		out |= uint8_t(*ptr) << i * 8;
+	}
+	return out;
+}
+
+ImageBGR ImageBGR::readFromBMP(const std::string& filename) {
+	ImageBGR image;
+	try {
+		//read all bytes from file
+		std::ifstream is(filename, std::ios::binary);
+		std::vector<char> data((std::istreambuf_iterator<char>(is)), (std::istreambuf_iterator<char>()));
+		is.close();
+		int fileSize = (int) data.size();
+
+		//analyse header
+		if (fileSize < 54) throw std::runtime_error("invalid file");
+		if (data[0] != 'B' || data[1] != 'M') throw std::runtime_error("not a bmp file");
+		int siz = readBytes(&data[2], 4);
+		if (siz != fileSize) throw std::runtime_error("invalid file size");
+
+		int dataOffset = readBytes(&data[10], 4);
+		int infoHeaderSize = readBytes(&data[14], 4);
+		if (infoHeaderSize != 40) throw std::runtime_error("only BITMAPINFOHEADER is supported");
+
+		int w = readBytes(&data[18], 4);
+		int height = readBytes(&data[22], 4);
+
+		int planes = readBytes(&data[26], 2);
+		if (planes != 1) throw std::runtime_error("number of planes must be 1");
+		int bits = readBytes(&data[28], 2);
+		if (bits != 24) throw std::runtime_error("only 24 bit images are supported");
+
+		int compression = readBytes(&data[30], 4);
+		if (compression != 0) throw std::runtime_error("only uncompressed images are supported");
+
+		//copy bytes to Image
+		int h = std::abs(height);
+		int stride = (siz - dataOffset) / h;
+		image = ImageBGR(h, w);
+
+		//when height is negative, rows are stored from top to bottom
+		char* ptr = data.data() + dataOffset;
+		if (height < 0) {
+			for (int r = 0; r < h; r++) std::memcpy(image.addr(0, r, 0), ptr + r * stride, 3ull * w);
+
+		} else {
+			for (int r = 0; r < h; r++) std::memcpy(image.addr(0, h - 1ull - r, 0), ptr + r * stride, 3ull * w);
+		}
+
+	} catch (const std::runtime_error& err) {
+		std::cout << err.what() << std::endl;
+	}
+
+	return image;
+}
+
+ImageYuv ImageBGR::toYUV() const {
+	ImageYuv out(h, w);
+	for (int r = 0; r < h; r++) {
+		for (int c = 0; c < w; c++) {
+			im::rgb_to_yuv(at(2, r, c), at(1, r, c), at(0, r, c), out.addr(0, r, c), out.addr(1, r, c), out.addr(2, r, c));
+		}
+	}
+	return out;
 }
 
 void ImageRGBA::copyTo(ImageRGBA& dest, size_t r0, size_t c0, ThreadPoolBase& pool) const {

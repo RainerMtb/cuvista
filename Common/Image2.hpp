@@ -148,6 +148,10 @@ public:
 		ImageBGR(0, 0) {}
 
 	bool saveAsColorBMP(const std::string& filename) const;
+
+	ImageYuv toYUV() const;
+
+	static ImageBGR readFromBMP(const std::string& filename);
 };
 
 

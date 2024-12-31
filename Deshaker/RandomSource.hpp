@@ -20,6 +20,7 @@
 
 #include <algorithm>
 #include <span>
+#include <cstdint>
 
 //simple not-random-at-all number generator
 class PseudoRandomSource {

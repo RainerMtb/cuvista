@@ -108,11 +108,12 @@ int deshake(int argsCount, char** args) {
 
 		//----------- create Frame Executor Class
 		if (data.dummyFrame) {
-			//skip stabilizing stuff to test decoding and encoding
-			executor = data.deviceInfoNull.create(data, *frame);
+			DeviceInfoBase& dib = data.deviceInfoNull;
+			executor = dib.create(data, *frame);
 
 		} else {
-			executor = data.deviceList[data.deviceSelected]->create(data, *frame);
+			DeviceInfoBase* dib = data.deviceList[data.deviceSelected];
+			executor = dib->create(data, *frame);
 		}
 
 	} catch (const SilentQuitException&) {

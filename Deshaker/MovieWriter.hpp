@@ -366,7 +366,6 @@ class ResultImageWriter : public MovieWriter, public AuxiliaryWriter {
 private:
 	ImageYuv yuv;
 	ImageBGR bgr;
-	void write(const AffineTransform& trf, const std::vector<PointResult>& res, int64_t idx, const ImageYuv& yuv, const std::string& fname);
 
 public:
 	ResultImageWriter(MainData& data) :
@@ -376,6 +375,8 @@ public:
 
 	virtual void open() override {}
 	virtual void write(const FrameExecutor& executor) override;
+
+	void writeImage(const AffineTransform& trf, std::span<PointResult> res, int64_t idx, const ImageYuv& yuv, const std::string& fname);
 };
 
 

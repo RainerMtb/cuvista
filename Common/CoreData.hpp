@@ -101,11 +101,11 @@ private:
 public:
 	int idx;        //absolute linear index of this point
 	int ix0, iy0;   //absolute index per dimension
-	int px, py;     //pixel coordinate of center point with respect to image top left
-	int x, y;       //pixel coordinate with respect to image center
+	double x, y;    //pixel coordinate with respect to image center
 	double u, v;    //calculated translation of center point
 	PointResultType result;
 	int z;
+	int direction;
 
 	double length;   //displacement vector length
 	double heading;  //heading of displacement vector
@@ -133,22 +133,16 @@ struct Point {
 struct PointContext {
 	PointResult* ptr;
 	double delta = 0.0;
-	double deltaAngleCos = 0.0;
-	double deltaAngle = 0.0;
-	double distanceEllipse = 0.0;
-	double tx = 0.0;
-	double ty = 0.0;
-	double confidence = 0.0;
-
 	double distance = 0.0;
 	double distanceRelative = 0.0;
+	double angle = 0.0;
 
 	PointContext(PointResult& pr) : ptr { &pr } {}
 	PointContext() : ptr { nullptr } {}
 };
 
 struct PointBase {
-	int x, y;
+	double x, y;
 	double u, v;
 
 	PointBase(const PointResult& pr) : x { pr.x }, y { pr.y }, u { pr.u }, v { pr.v } {}

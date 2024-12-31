@@ -211,11 +211,11 @@ void avx::computeSimilar(std::span<PointBase> points, Matd& M, Affine2D& affine)
 	size_t m = points.size() * 2;
 	Matd A = M.share(6, m + 8);
 
-	int dy = points[0].y;        //represents a2, needs to be smallest value
-	int dx = points[1].x;        //represents a3
-	long long int nn = 0;        //int could overflow
-	long long int s0 = 0;        //in docs s1
-	long long int s1 = 0;        //in docs s2
+	double dy = points[0].y;        //represents a2, needs to be smallest value
+	double dx = points[1].x;        //represents a3
+	double nn = 0;
+	double s0 = 0;   //in docs s1
+	double s1 = 0;   //in docs s2
 
 	double* p = A.addr(4, 0);
 	double* q = A.addr(5, 0);
@@ -223,14 +223,14 @@ void avx::computeSimilar(std::span<PointBase> points, Matd& M, Affine2D& affine)
 	//accumulate s0, s1, nn and adjust coords
 	for (size_t idx = 0, k = 0; idx < points.size(); idx++) {
 		PointBase& pb = points[idx];
-		int x = pb.x - dx;
+		double x = pb.x - dx;
 		p[k] = x;
 		s0 += x;
 		nn += x * x;
 		q[k] = pb.x + pb.u - dx;
 		k++;
 
-		int y = pb.y - dy;
+		double y = pb.y - dy;
 		p[k] = y;
 		s1 += y;
 		nn += y * y;

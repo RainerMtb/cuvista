@@ -350,7 +350,7 @@ void OpenClExecutor::computeTerminate(int64_t frameIndex, std::vector<PointResul
 		//convert from cl_PointResult to PointResult
 		for (size_t i = 0; i < results.size(); i++) {
 			cl_PointResult& pr = clData.cl_results[i];
-			results[i] = { pr.idx, pr.ix0, pr.iy0, pr.xm, pr.ym, pr.xm - mData.w / 2, pr.ym - mData.h / 2, pr.u, pr.v, PointResultType(pr.result), pr.z };
+			results[i] = { pr.idx, pr.ix0, pr.iy0, pr.xm - mData.w / 2.0, pr.ym - mData.h / 2.0, pr.u, pr.v, PointResultType(pr.result), pr.z };
 		}
 
 	} catch (const Error& err) {

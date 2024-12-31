@@ -83,7 +83,7 @@ BmpImageWriter::~BmpImageWriter() {
 }
 
 //-----------------------------------------------------------------------------------
-// JPG Images through ffmpeg
+// JPG Images via ffmpeg
 //-----------------------------------------------------------------------------------
 
 void JpegImageWriter::open(EncodingOption videoCodec) {
@@ -407,7 +407,7 @@ void ResultDetailsWriter::write(const std::vector<PointResult>& results, int64_t
 	//for better performace first write into buffer string
 	std::stringstream ss;
 	for (auto& item : results) {
-		ss << frameIndex << delimiter << item.ix0 << delimiter << item.iy0 << delimiter << item.px << delimiter << item.py << delimiter
+		ss << frameIndex << delimiter << item.ix0 << delimiter << item.iy0 << delimiter << item.x << delimiter << item.y << delimiter
 			<< item.u << delimiter << item.v << delimiter << item.resultValue() << std::endl;
 	}
 	//write buffer to file
@@ -424,16 +424,14 @@ void ResultDetailsWriter::write(const FrameExecutor& executor) {
 // Result Images
 //-----------------------------------------------------------------------------------
 
-void ResultImageWriter::write(const AffineTransform& trf, const std::vector<PointResult>& res, int64_t idx, const ImageYuv& yuv, const std::string& fname) {
+void ResultImageWriter::writeImage(const AffineTransform& trf, std::span<PointResult> res, int64_t idx, const ImageYuv& yuv, const std::string& fname) {
 	using namespace im;
 
-	//copy and scale Y plane to first color plane of bgr
-	yuv.scaleByTwo(0, bgr, 0);
-	//copy planes in bgr image making it grayscale bgr
-	for (int z = 1; z < 3; z++) {
+	//copy Y plane of YUV to all planes in bgr image making it grayscale bgr
+	for (int z = 0; z < 3; z++) {
 		for (int r = 0; r < bgr.h; r++) {
 			for (int c = 0; c < bgr.w; c++) {
-				bgr.at(z, r, c) = bgr.at(0, r, c);
+				bgr.at(z, r, c) = yuv.at(0, r, c);
 			}
 		}
 	}
@@ -442,12 +440,14 @@ void ResultImageWriter::write(const AffineTransform& trf, const std::vector<Poin
 	//draw blue lines first
 	for (const PointResult& pr : res) {
 		if (pr.isValid()) {
-			double x2 = pr.px + pr.u;
-			double y2 = pr.py + pr.v;
+			double px = pr.x + mData.w / 2.0;
+			double py = pr.y + mData.h / 2.0;
+			double x2 = px + pr.u;
+			double y2 = py + pr.v;
 
 			//blue line to computed transformation
 			auto [tx, ty] = trf.transform(pr.x, pr.y);
-			bgr.drawLine(pr.px, pr.py, tx + bgr.w / 2.0, ty + bgr.h / 2.0, ColorBgr::BLUE, 0.5);
+			bgr.drawLine(px, py, tx + bgr.w / 2.0, ty + bgr.h / 2.0, ColorBgr::BLUE, 0.5);
 		}
 	}
 
@@ -459,8 +459,10 @@ void ResultImageWriter::write(const AffineTransform& trf, const std::vector<Poin
 	for (const PointResult& pr : res) {
 		if (pr.isValid()) {
 			numValid++;
-			double x2 = pr.px + pr.u;
-			double y2 = pr.py + pr.v;
+			double px = pr.x + mData.w / 2.0;
+			double py = pr.y + mData.h / 2.0;
+			double x2 = px + pr.u;
+			double y2 = py + pr.v;
 
 			if (pr.isConsens) {
 				col = ColorBgr::GREEN;
@@ -469,7 +471,7 @@ void ResultImageWriter::write(const AffineTransform& trf, const std::vector<Poin
 			} else {
 				col = ColorBgr::RED;
 			}
-			bgr.drawLine(pr.px, pr.py, x2, y2, col);
+			bgr.drawLine(px, py, x2, y2, col);
 			bgr.drawDot(x2, y2, 1.25, 1.25, col);
 		}
 	}
@@ -493,6 +495,6 @@ void ResultImageWriter::write(const FrameExecutor& executor) {
 	//get input image from buffers
 	executor.getInput(frameIndex, yuv);
 	std::string fname = ImageWriter::makeFilename(mData.resultImageFile, frameIndex, "bmp");
-	write(executor.mFrame.getTransform(), executor.mFrame.mResultPoints, frameIndex, yuv, fname);
+	writeImage(executor.mFrame.getTransform(), executor.mFrame.mResultPoints, frameIndex, yuv, fname);
 	this->frameIndex++;
 }

@@ -130,7 +130,7 @@ public:
 		ThreadPool pool(4);
 		size_t siz = 20;
 		std::vector<AffineTransform> trfs(siz);
-		std::shared_ptr<SamplerBase<PointResult>> sampler = std::make_shared<Sampler<PointResult, PseudoRandomSource>>();
+		std::shared_ptr<SamplerBase<PointContext>> sampler = std::make_shared<Sampler<PointContext, PseudoRandomSource>>();
 
 		//compute transformation matrix multiple times
 		for (int i = 0; i < siz; i++) {
@@ -152,7 +152,7 @@ public:
 		std::vector<AffineTransform> trfs(siz);
 
 		//compute transformation matrix multiple times
-		std::shared_ptr<SamplerBase<PointResult>> sampler = std::make_shared<Sampler<PointResult, std::default_random_engine>>();
+		std::shared_ptr<SamplerBase<PointContext>> sampler = std::make_shared<Sampler<PointContext, std::default_random_engine>>();
 		for (int i = 0; i < siz; i++) {
 			FrameResult frameResult(dataCpu, pool);
 			frameResult.computeTransform(exCpu->mFrame.mResultPoints, pool, -1, sampler);

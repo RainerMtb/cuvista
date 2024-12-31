@@ -262,9 +262,9 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 			dummyFrame = true;
 
 		 } else if (args.nextArg("rng", next)) {
-		 	if (std::stoi(next) == 1) sampler = std::make_shared<Sampler<PointResult, PseudoRandomSource>>();
-		 	else if (std::stoi(next) == 2) sampler = std::make_shared<Sampler<PointResult, std::random_device>>();
-		 	else if (std::stoi(next) == 3) sampler = std::make_shared<Sampler<PointResult, std::default_random_engine>>();
+		 	if (std::stoi(next) == 1) sampler = std::make_shared<Sampler<PointContext, PseudoRandomSource>>();
+		 	else if (std::stoi(next) == 2) sampler = std::make_shared<Sampler<PointContext, std::random_device>>();
+		 	else if (std::stoi(next) == 3) sampler = std::make_shared<Sampler<PointContext, std::default_random_engine>>();
 		 	else throw AVException("invalid random generator selection: " + next);
 
 		} else if (args.nextArg("stack", next)) {

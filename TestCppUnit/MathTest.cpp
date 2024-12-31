@@ -37,8 +37,8 @@ public:
 
 	TEST_METHOD(transformSimilar) {
 		std::vector<PointResult> pr {
-			{ 0, 0, 0, 0, 0, 832, -232, -25.7400,  2.5287, PointResultType::SUCCESS_ABSOLUTE_ERR },
-			{ 1, 0, 0, 0, 0, 64,   -40, -24.2886,  0.0104, PointResultType::SUCCESS_ABSOLUTE_ERR }
+			{ 0, 0, 0, 832.0, -232.0, -25.7400,  2.5287, PointResultType::SUCCESS_ABSOLUTE_ERR },
+			{ 1, 0, 0,  64.0,  -40.0, -24.2886,  0.0104, PointResultType::SUCCESS_ABSOLUTE_ERR }
 		};
 
 		AffineSolverSimple ass(2);
@@ -49,9 +49,9 @@ public:
 
 	TEST_METHOD(transformAffine) {
 		std::vector<PointResult> pr {
-			{ 0, 0, 0, 0, 0, 832, -232, -25.7400,  2.5287, PointResultType::SUCCESS_ABSOLUTE_ERR },
-			{ 1, 0, 0, 0, 0, 64,   -40, -24.2886,  0.0104, PointResultType::SUCCESS_ABSOLUTE_ERR },
-			{ 2, 0, 0, 0, 0, 176,  104, -23.5065, -3.3990, PointResultType::SUCCESS_ABSOLUTE_ERR }
+			{ 0, 0, 0, 832.0, -232.0, -25.7400,  2.5287, PointResultType::SUCCESS_ABSOLUTE_ERR },
+			{ 1, 0, 0,  64.0,  -40.0, -24.2886,  0.0104, PointResultType::SUCCESS_ABSOLUTE_ERR },
+			{ 2, 0, 0, 176.0,  104.0, -23.5065, -3.3990, PointResultType::SUCCESS_ABSOLUTE_ERR }
 		};
 
 		AffineTransform tf;
@@ -66,28 +66,28 @@ public:
 		//point sets to test
 		std::vector<std::vector<PointResult>> pointSets = {
 			{
-			{ 0, 0, 0, 0, 0, -4,  2, 0.5, 0.4 },
-			{ 1, 0, 0, 0, 0,  1, -4, 0.5, 0.4 },
-			{ 2, 0, 0, 0, 0,  3,  4, 0.5, 0.4 },
-			{ 3, 0, 0, 0, 0,  2,  2, 0.5, 0.4 },
+			{ 0, 0, 0, -4,  2, 0.5, 0.4 },
+			{ 1, 0, 0,  1, -4, 0.5, 0.4 },
+			{ 2, 0, 0,  3,  4, 0.5, 0.4 },
+			{ 3, 0, 0,  2,  2, 0.5, 0.4 },
 			},
 			{
-			{ 0, 0, 0, 0, 0, 3, 3, 0.75, 0.3 },
-			{ 1, 0, 0, 0, 0, 4, 3, 0.75, 0.3 },
+			{ 0, 0, 0, 3, 3, 0.75, 0.3 },
+			{ 1, 0, 0, 4, 3, 0.75, 0.3 },
             },
 			{
-			{ 0, 0, 0, 0, 0, -1, -1, -0.5,  0.5 },
-			{ 1, 0, 0, 0, 0,  1,  1,  0.5, -0.5 },
+			{ 0, 0, 0, -1, -1, -0.5,  0.5 },
+			{ 1, 0, 0,  1,  1,  0.5, -0.5 },
 			},
 			{
-			{ 0, 0, 0, 0, 0, -2,  1, 1.5, -2.3 },
-			{ 1, 0, 0, 0, 0, -2,  3, 1.5, -2.3 },
-			{ 2, 0, 0, 0, 0, -2,  7, 1.5, -2.3 },
-			{ 3, 0, 0, 0, 0, -2, -4, 1.5, -2.3 },
+			{ 0, 0, 0, -2,  1, 1.5, -2.3 },
+			{ 1, 0, 0, -2,  3, 1.5, -2.3 },
+			{ 2, 0, 0, -2,  7, 1.5, -2.3 },
+			{ 3, 0, 0, -2, -4, 1.5, -2.3 },
 			},
 			{
-			{ 0, 0, 0, 0, 0, -2,  1, 15, -23 },
-			{ 1, 0, 0, 0, 0, -2,  3, 15, -23 },
+			{ 0, 0, 0, -2,  1, 15, -23 },
+			{ 1, 0, 0, -2,  3, 15, -23 },
 			},
 		};
 
@@ -128,11 +128,11 @@ public:
 				//generate points
 				std::vector<PointResult> points(siz);
 				for (int i = 0; i < siz; i++) {
-					int x = distrib(gen);
-					int y = distrib(gen);
+					double x = distrib(gen);
+					double y = distrib(gen);
 					double u = distrib(gen) / 50.0;
 					double v = distrib(gen) / 50.0;
-					points[i] = { i, 0, 0, 0, 0, x, y, u, v };
+					points[i] = { i, 0, 0, x, y, u, v };
 				}
 
 				//compute transforms
@@ -151,9 +151,9 @@ public:
 	}
 
 	TEST_METHOD(transformExpected) {
-		PointResult p1 = { 0, 0, 0, 0, 0, 4, 5, 1.0, 0.5 };
-		PointResult p2 = { 1, 0, 0, 0, 0, 6, 10, 1.0, 0.5 };
-		PointResult p3 = { 2, 0, 0, 0, 0, 8, 14, 1.0, 0.5 };
+		PointResult p1 = { 0, 0, 0, 4, 5, 1.0, 0.5 };
+		PointResult p2 = { 1, 0, 0, 6, 10, 1.0, 0.5 };
+		PointResult p3 = { 2, 0, 0, 8, 14, 1.0, 0.5 };
 
 		AffineSolverSimple ass(8);
 		AffineSolver& as = ass;

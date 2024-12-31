@@ -103,10 +103,10 @@ void runSelfTest(util::MessagePrinter& out, std::vector<DeviceInfoBase*> deviceL
 			crc.add(pr.idx);
 			crc.add(pr.ix0);
 			crc.add(pr.iy0);
-			crc.add(pr.px);
-			crc.add(pr.py);
 			crc.add(pr.x);
 			crc.add(pr.y);
+			crc.add(pr.u);
+			crc.add(pr.v);
 		}
 		if (crc.result() != crcResult) {
 			out.print("FAIL result ");

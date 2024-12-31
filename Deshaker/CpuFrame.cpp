@@ -76,19 +76,14 @@ void CpuFrame::createPyramid(int64_t frameIndex) {
 	float f = 1.0f / 255.0f;
 	Matf& y0 = frame.mY[0];
 	y0.setValues([&] (size_t r, size_t c) { return yuv.at(0, r, c) * f; }, mPool);
-	//y0.filter1D(k, y0, mFilterBuffer, mPool);
+
+	//filter first level of pyramid
+	y0.filter1D(filterKernels[0].k, filterKernels[0].siz, Matf::Direction::HORIZONTAL, mFilterBuffer, mPool);
+	mFilterBuffer.filter1D(filterKernels[0].k, filterKernels[0].siz, Matf::Direction::VERTICAL, y0, mPool);
 
 	//create pyramid levels below by downsampling level above
 	for (size_t z = 0; z < mData.zMax; z++) {
-		Matf& y = frame.mY[z];
-		//gauss filtering
-		Matf filterTemp = mFilterBuffer.share(y.rows(), y.cols());
-		Matf mat = mFilterResult.share(y.rows(), y.cols());
-		y.filter1D(filterKernels[0].k, filterKernels[0].siz, Matf::Direction::HORIZONTAL, filterTemp, mPool);
-		filterTemp.filter1D(filterKernels[0].k, filterKernels[0].siz, Matf::Direction::VERTICAL, mat, mPool);
-
-		//downsampling
-		auto func = [&] (size_t r, size_t c) { return mat.interp2(c * 2, r * 2, 0.5f, 0.5f); };
+		auto func = [&] (size_t r, size_t c) { return frame.mY[z].interp2(c * 2, r * 2, 0.5f, 0.5f); };
 		Matf& dest = frame.mY[z + 1];
 		dest.setArea(func, mPool);
 		//if (z == 0) std::printf("cpu %.14f\n", dest.at(100, 100));
@@ -100,11 +95,9 @@ void CpuFrame::createPyramid(int64_t frameIndex) {
 void CpuFrame::computeStart(int64_t frameIndex, std::vector<PointResult>& results) {}
 
 void CpuFrame::computeTerminate(int64_t frameIndex, std::vector<PointResult>& results) {
-	size_t pyrIdx = frameIndex % mPyr.size();
-	size_t pyrIdxPrev = (frameIndex - 1) % mPyr.size();
-	CpuPyramid& frame = mPyr[pyrIdx];
-	CpuPyramid& previous = mPyr[pyrIdxPrev];
-	assert(frame.frameIndex > 0 && frame.frameIndex == previous.frameIndex + 1 && "wrong frames to compute");
+	size_t idx0 = frameIndex % mPyr.size();
+	size_t idx1 = (frameIndex - 1) % mPyr.size();
+	assert(mPyr[idx0].frameIndex > 0 && mPyr[idx0].frameIndex == mPyr[idx1].frameIndex + 1 && "wrong frames to compute");
 	//Mat<double>::precision(16);
 
 	for (int threadIdx = 0; threadIdx < mData.cpuThreads; threadIdx++) mPool.add([&, threadIdx] {
@@ -121,13 +114,18 @@ void CpuFrame::computeTerminate(int64_t frameIndex, std::vector<PointResult>& re
 
 		for (int iy0 = threadIdx; iy0 < mData.iyCount; iy0 += mData.cpuThreads) {
 			for (int ix0 = 0; ix0 < mData.ixCount; ix0++) {
+				//pattern of forward and backwards pattern matching
+				int direction = (ix0 % 2) ^ (iy0 % 2);
+				CpuPyramid& pyr0 = mPyr[(frameIndex - direction) % mPyr.size()];
+				CpuPyramid& pyr1 = mPyr[(frameIndex - 1 + direction) % mPyr.size()];
+
 				//start with null transform
 				wp.setDiag(1.0);
 				dwp.setDiag(1.0);
 
-				// center of previous integration window
-				// one pixel padding around outside for delta
-				// changes per z level
+				// xm and ym are center of integration window
+				// one pixel padding around so delta can be computed without checking borders
+				// values are doubled as z level increases
 				int ym = iy0 + ir + 1;
 				int xm = ix0 + ir + 1;
 				PointResultType result = PointResultType::RUNNING;
@@ -135,7 +133,7 @@ void CpuFrame::computeTerminate(int64_t frameIndex, std::vector<PointResult>& re
 				double err = 0.0;
 
 				for (; z >= mData.zMin && result >= PointResultType::RUNNING; z--) {
-					Matf& Y = previous.mY[z];
+					Matf& Y = pyr1.mY[z];
 					SubMat<float> im = SubMat<float>::from(Y, 0ll + ym - ir, 0ll + xm - ir, iw, iw);
 
 					//affine transform
@@ -177,7 +175,7 @@ void CpuFrame::computeTerminate(int64_t frameIndex, std::vector<PointResult>& re
 							double y = (double) (r) - mData.ir;
 							double ix = xm + x * wp.at(0, 0) + y * wp.at(1, 0) + wp.at(0, 2);
 							double iy = ym + x * wp.at(0, 1) + y * wp.at(1, 1) + wp.at(1, 2);
-							return frame.mY[z].interp2(ix, iy).value_or(mData.dnan);
+							return pyr0.mY[z].interp2(ix, iy).value_or(mData.dnan);
 						}
 						);
 
@@ -237,7 +235,10 @@ void CpuFrame::computeTerminate(int64_t frameIndex, std::vector<PointResult>& re
 
 				//transformation for points with respect to center of image and level 0 of pyramid
 				int idx = iy0 * mData.ixCount + ix0;
-				results[idx] = { idx, ix0, iy0, xm, ym, xm - mData.w / 2, ym - mData.h / 2, u, v, result, zp };
+				double x0 = xm - mData.w / 2.0 + u * direction;
+				double y0 = ym - mData.h / 2.0 + v * direction;
+				double fdir = 1.0 - 2.0 * direction;
+				results[idx] = { idx, ix0, iy0, x0, y0, u * fdir, v * fdir, result, zp, direction };
 			}
 		}
 	});

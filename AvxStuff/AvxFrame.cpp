@@ -427,7 +427,7 @@ void AvxFrame::computeTerminate(int64_t frameIndex, std::vector<PointResult>& re
 
 				//transformation for points with respect to center of image and level 0 of pyramid
 				int idx = iy0 * mData.ixCount + ix0;
-				results[idx] = { idx, ix0, iy0, xm, ym, xm - mData.w / 2, ym - mData.h / 2, u, v, result, zp };
+				results[idx] = { idx, ix0, iy0, xm - mData.w / 2.0, ym - mData.h / 2.0, u, v, result, zp };
 			}
 		}
 	});

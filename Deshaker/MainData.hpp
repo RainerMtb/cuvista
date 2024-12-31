@@ -148,7 +148,7 @@ public:
 	DeviceInfoNull deviceInfoNull;
 	std::optional<int> cpuThreadsRequired = std::nullopt;
 
-	std::shared_ptr<SamplerBase<PointResult>> sampler = std::make_shared<Sampler<PointResult, PseudoRandomSource>>();
+	std::shared_ptr<SamplerBase<PointContext>> sampler = std::make_shared<Sampler<PointContext, PseudoRandomSource>>();
 
 	DeshakerPass pass = DeshakerPass::COMBINED;
 

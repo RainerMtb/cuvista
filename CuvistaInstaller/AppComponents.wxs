@@ -5,7 +5,7 @@
 			<Component Id="cuvistaCli">
 				<File Source="$(var.cuvista.TargetPath)" />
 			</Component>
-			<Component Id="cuvistaGz">
+			<Component Id="cuvistaGui">
 				<File Source="$(var.cuvistaGui.TargetPath)" />
 			</Component>
 			

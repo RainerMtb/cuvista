@@ -33,10 +33,13 @@ bool PointResult::equal(double a, double b, double tol) const {
 
 bool PointResult::equals(const PointResult& other, double tol) const {
 	bool checkType = result == other.result; //type of result
-	bool checkIndex = idx == other.idx && ix0 == other.ix0 && iy0 == other.iy0 && px == other.px && py == other.py && x == other.x && y == other.y;
+	bool checkIndex = idx == other.idx && ix0 == other.ix0 && iy0 == other.iy0;
+	bool checkX = equal(x, other.x, tol);
+	bool checkY = equal(y, other.y, tol);
 	bool checkU = equal(u, other.u, tol); //displacement in X
 	bool checkV = equal(v, other.v, tol); //displacement in Y
-	bool result = checkType && checkIndex && checkU && checkV;
+	bool checkDirection = direction == other.direction;
+	bool result = checkType && checkIndex && checkX && checkY && checkU && checkV && checkDirection;
 	return result;
 }
 
@@ -45,6 +48,6 @@ bool PointResult::operator == (const PointResult& other) const {
 }
 
 std::ostream& operator << (std::ostream& out, const PointResult& res) {
-	out << "idx=" << res.idx << ", ix0=" << res.ix0 << ", iy0=" << res.iy0 << ", u=" << res.u << ", v=" << res.v;
+	out << "idx=" << res.idx << ", ix0=" << res.ix0 << ", iy0=" << res.iy0 << ", u=" << res.u << ", v=" << res.v << ", dir=" << res.direction;
 	return out;
 }

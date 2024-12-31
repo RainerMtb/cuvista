@@ -57,7 +57,17 @@ class NullReader : public MovieReader {
 
 public:
 	void open(const std::string& source) override {};
-	bool read(ImageYuv& frame) override;
+	bool read(ImageYuv& inputFrame) override;
+};
+
+
+class ImageReader : public MovieReader {
+
+public:
+	void open(const std::string& source) override {};
+	bool read(ImageYuv& inputFrame) override { return false; };
+
+	bool readImage(ImageYuv& inputFrame, const ImageYuv& sourceImage);
 };
 
 
@@ -89,7 +99,7 @@ public:
 	~FFmpegReader() override;
 
 	void open(const std::string& source) override;
-	bool read(ImageYuv& frame) override;
+	bool read(ImageYuv& inputFrame) override;
 	void close() override;
 	void rewind() override;
 	int openAudioDecoder(int streamIndex) override;
