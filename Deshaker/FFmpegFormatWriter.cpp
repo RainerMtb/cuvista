@@ -211,7 +211,7 @@ int FFmpegFormatWriter::writePacket(AVPacket* packet) {
         sc.packetsWritten++;
 
     } else {
-        errorLogger.logError(av_make_error(result, "error writing packet"));
+        ffmpeg_log_error(result, "error writing packet", ErrorSource::WRITER);
     }
     return result;
 }
@@ -226,7 +226,7 @@ void FFmpegFormatWriter::transcodeAudio(AVPacket* pkt, StreamContext& sc, bool t
         //input packet was nullptr at least for the second time, ignore
 
     } else if (retval < 0) {
-        ffmpeg_log_error(retval, "cannot send audio packet to decoder");
+        ffmpeg_log_error(retval, "cannot send audio packet to decoder", ErrorSource::WRITER);
         return;
     }
 
@@ -254,20 +254,20 @@ void FFmpegFormatWriter::transcodeAudio(AVPacket* pkt, StreamContext& sc, bool t
                 int ch = sc.audioOutCtx->ch_layout.nb_channels;
                 int bufsiz = av_samples_alloc_array_and_samples(&samplesArray, &linesize, ch, sampleCount, sc.audioOutCtx->sample_fmt, 0);
                 if (bufsiz < 0)
-                    ffmpeg_log_error(retval, "cannot allocate samples");
+                    ffmpeg_log_error(retval, "cannot allocate samples", ErrorSource::WRITER);
 
                 const uint8_t** indata = (const uint8_t**) (sc.frameIn->extended_data);
                 sampleCount = swr_convert(sc.resampleCtx, samplesArray, sampleCount, indata, sc.frameIn->nb_samples);
                 if (sampleCount < 0)
-                    ffmpeg_log_error(sampleCount, "cannot convert samples");
+                    ffmpeg_log_error(sampleCount, "cannot convert samples", ErrorSource::WRITER);
 
                 retval = av_audio_fifo_realloc(sc.fifo, av_audio_fifo_size(sc.fifo) + sampleCount);
                 if (retval < 0)
-                    ffmpeg_log_error(retval, "cannot resize fifo");
+                    ffmpeg_log_error(retval, "cannot resize fifo", ErrorSource::WRITER);
 
                 retval = av_audio_fifo_write(sc.fifo, (void**) samplesArray, sampleCount);
                 if (retval != sampleCount)
-                    ffmpeg_log_error(retval, "cannot write to fifo");
+                    ffmpeg_log_error(retval, "cannot write to fifo", ErrorSource::WRITER);
 
                 if (samplesArray) av_freep(samplesArray);
                 av_freep(&samplesArray);
@@ -281,7 +281,7 @@ void FFmpegFormatWriter::transcodeAudio(AVPacket* pkt, StreamContext& sc, bool t
             AVFrame* av_frame = nullptr;
 
             if (sampleCount < 0) {
-                ffmpeg_log_error(retval, "cannot read from fifo");
+                ffmpeg_log_error(retval, "cannot read from fifo", ErrorSource::WRITER);
 
             } else if (sampleCount > 0) {
                 sc.frameOut->pts = sc.pts;
@@ -296,7 +296,7 @@ void FFmpegFormatWriter::transcodeAudio(AVPacket* pkt, StreamContext& sc, bool t
                 //flush signal was sent at least for the second time, ignore here
 
             } else if (retval < 0) {
-                ffmpeg_log_error(retval, "cannot send audio frame to encoder");
+                ffmpeg_log_error(retval, "cannot send audio frame to encoder", ErrorSource::WRITER);
             }
 
             retval = avcodec_receive_packet(sc.audioOutCtx, sc.outpkt);
@@ -308,7 +308,7 @@ void FFmpegFormatWriter::transcodeAudio(AVPacket* pkt, StreamContext& sc, bool t
                 break;
 
             } else if (retval < 0) {
-                ffmpeg_log_error(retval, "cannot receive audio packet from encodeer");
+                ffmpeg_log_error(retval, "cannot receive audio packet from encodeer", ErrorSource::WRITER);
 
             } else {
 				//write packet to output

@@ -22,9 +22,9 @@
 
 namespace im {
 
-	int alignValue(int numToRound, int base);
-
 	double sqr(double d);
+
+	int alignValue(int numToRound, int base);
 
 	void yuv_to_rgb(unsigned char y, unsigned char u, unsigned char v, unsigned char* r, unsigned char* g, unsigned char* b);
 
@@ -80,9 +80,16 @@ namespace im {
 	public:
 		static ColorBgr RED;
 		static ColorBgr GREEN;
+		static ColorBgr BLUE;
 		static ColorBgr WHITE;
 		static ColorBgr BLACK;
-		static ColorBgr BLUE;
+		static ColorBgr MAGENTA;
+		static ColorBgr CYAN;
+		static ColorBgr YELLOW;
+
+		unsigned char r() const { return colors[2]; }
+		unsigned char g() const { return colors[1]; }
+		unsigned char b() const { return colors[0]; }
 	};
 
 	class ColorRGBA : public ColorBase<unsigned char> {

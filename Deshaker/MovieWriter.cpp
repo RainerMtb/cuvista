@@ -123,18 +123,18 @@ void JpegImageWriter::write(const FrameExecutor& executor) {
 	av_frame->pts = this->frameIndex;
 	int result = avcodec_send_frame(ctx, av_frame);
 	if (result < 0)
-		errorLogger.logError(av_make_error(result, "error sending frame"));
+		errorLogger.logError(av_make_error(result, "error sending frame"), ErrorSource::WRITER);
 
 	result = avcodec_receive_packet(ctx, packet);
 	if (result < 0)
-		errorLogger.logError(av_make_error(result, "error receiving packet"));
+		errorLogger.logError(av_make_error(result, "error receiving packet"), ErrorSource::WRITER);
 
 	std::string fname = makeFilename("jpg");
 	std::ofstream file(fname, std::ios::binary);
 	if (file)
 		file.write(reinterpret_cast<char*>(packet->data), packet->size);
 	else
-		errorLogger.logError("error opening file '" + fname + "'");
+		errorLogger.logError("error opening file '" + fname + "'", ErrorSource::WRITER);
 
 	outputBytesWritten += packet->size;
 	av_packet_unref(packet);
@@ -174,7 +174,7 @@ std::map<int64_t, TransformValues> TransformsFile::readTransformMap(const std::s
 		std::string str = "    ";
 		file.get(str.data(), 5);
 		if (str != id) {
-			errorLogger.logError("transforms file '" + trajectoryFile + "' is not valid");
+			errorLogger.logError("transforms file '" + trajectoryFile + "' is not valid", ErrorSource::WRITER);
 
 		} else {
 			while (!file.eof()) {
@@ -191,7 +191,7 @@ std::map<int64_t, TransformValues> TransformsFile::readTransformMap(const std::s
 		}
 
 	} else {
-		errorLogger.logError("cannot open transforms file '" + trajectoryFile + "'");
+		errorLogger.logError("cannot open transforms file '" + trajectoryFile + "'", ErrorSource::WRITER);
 	}
 	return transformsMap;
 }
@@ -336,7 +336,7 @@ void OpticalFlowWriter::writeFlow(const MovieFrame& frame) {
 void OpticalFlowWriter::writeAVFrame(AVFrame* av_frame) {
 	int result = avcodec_send_frame(codec_ctx, av_frame);
 	if (result < 0)
-		ffmpeg_log_error(result, "error encoding flow #1");
+		ffmpeg_log_error(result, "error encoding flow #1", ErrorSource::WRITER);
 
 	while (result >= 0) {
 		result = avcodec_receive_packet(codec_ctx, videoPacket);
@@ -345,13 +345,13 @@ void OpticalFlowWriter::writeAVFrame(AVFrame* av_frame) {
 
 		} else if (result < 0) {
 			//report error, something wrong
-			ffmpeg_log_error(result, "error encoding flow #2");
+			ffmpeg_log_error(result, "error encoding flow #2", ErrorSource::WRITER);
 
 		} else {
 			av_packet_rescale_ts(videoPacket, codec_ctx->time_base, videoStream->time_base);
 			result = av_interleaved_write_frame(fmt_ctx, videoPacket);
 			if (result < 0) {
-				errorLogger.logError(av_make_error(result, "error writing flow packet"));
+				ffmpeg_log_error(result, "error writing flow packet", ErrorSource::WRITER);
 			}
 
 			encodedBytesTotal += videoPacket->size;
@@ -392,31 +392,41 @@ OpticalFlowWriter::~OpticalFlowWriter() {
 //-----------------------------------------------------------------------------------
 
 void  ResultDetailsWriter::open() {
-	file = std::ofstream(mData.resultsFile);
-	if (file.is_open()) {
-		file << "frameIdx" << delimiter << "ix0" << delimiter << "iy0"
-			<< delimiter << "px" << delimiter << "py" << delimiter << "u" << delimiter << "v"
-			<< delimiter << "isValid" << delimiter << "isConsens" << std::endl;
+	mFile = std::ofstream(mData.resultsFile);
+	if (mFile.is_open()) {
+		mFile << "frameIdx" << mDelim << "ix0" << mDelim << "iy0"
+			<< mDelim << "x" << mDelim << "y" << mDelim << "u" << mDelim << "v"
+			<< mDelim << "isValid" << mDelim << "isConsens" << mDelim << "direction" << std::endl;
 
 	} else {
 		throw AVException("cannot open file '" + mData.resultsFile + "'");
 	}
 }
 
-void ResultDetailsWriter::write(const std::vector<PointResult>& results, int64_t frameIndex) {
+void ResultDetailsWriter::write(std::span<PointResult> results, int64_t frameIndex) {
 	//for better performace first write into buffer string
 	std::stringstream ss;
 	for (auto& item : results) {
-		ss << frameIndex << delimiter << item.ix0 << delimiter << item.iy0 << delimiter << item.x << delimiter << item.y << delimiter
-			<< item.u << delimiter << item.v << delimiter << item.resultValue() << std::endl;
+		ss << frameIndex << mDelim << item.ix0 << mDelim << item.iy0 
+			<< mDelim << item.x << mDelim << item.y << mDelim << item.u << mDelim << item.v 
+			<< mDelim << item.resultValue() << mDelim << item.isConsens << mDelim << item.direction << std::endl;
 	}
 	//write buffer to file
-	file << ss.str();
+	mFile << ss.str();
 }
 
 void ResultDetailsWriter::write(const FrameExecutor& executor) {
 	write(executor.mFrame.mResultPoints, frameIndex);
 	this->frameIndex++;
+}
+
+void ResultDetailsWriter::write(std::span<PointResult> results, const std::string& filename) {
+	MainData data;
+	data.resultsFile = filename;
+
+	ResultDetailsWriter writer(data);
+	writer.open();
+	writer.write(results, 0);
 }
 
 
@@ -472,7 +482,7 @@ void ResultImageWriter::writeImage(const AffineTransform& trf, std::span<PointRe
 				col = ColorBgr::RED;
 			}
 			bgr.drawLine(px, py, x2, y2, col);
-			bgr.drawDot(x2, y2, 1.25, 1.25, col);
+			bgr.drawMarker(x2, y2, col, 1.4);
 		}
 	}
 

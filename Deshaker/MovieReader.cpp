@@ -284,7 +284,7 @@ bool FFmpegReader::read(ImageYuv& inputFrame) {
                     isStoredPacket = true;
 
                 } else if (response < 0) {
-                    errorLogger.logError(av_make_error(response, "failed to send packet"));
+                    ffmpeg_log_error(response, "failed to send packet", ErrorSource::READER);
                     break;
                 }
 
@@ -293,7 +293,7 @@ bool FFmpegReader::read(ImageYuv& inputFrame) {
                     continue;
 
                 } else if (response < 0) { //something wrong
-                    errorLogger.logError(av_make_error(response, "failed to receive frame"));
+                    ffmpeg_log_error(response, "failed to receive frame", ErrorSource::READER);
                     break;
 
                 } else { //we got a frame
@@ -325,7 +325,7 @@ bool FFmpegReader::read(ImageYuv& inputFrame) {
                     break;
 
                 } else if (response < 0) {
-                    ffmpeg_log_error(response, "cannot send audio packet to decoder");
+                    ffmpeg_log_error(response, "cannot send audio packet to decoder", ErrorSource::READER);
                     break;
                 }
 
@@ -338,7 +338,7 @@ bool FFmpegReader::read(ImageYuv& inputFrame) {
                         break;
 
                     else if (response < 0) {
-                        ffmpeg_log_error(response, "cannot receive audio packet from decoder");
+                        ffmpeg_log_error(response, "cannot receive audio packet from decoder", ErrorSource::READER);
                         break;
                     }
 
@@ -390,7 +390,7 @@ bool FFmpegReader::read(ImageYuv& inputFrame) {
             sws_scaler_ctx = sws_getContext(w, h, av_codec_ctx->pix_fmt, w, h, AV_PIX_FMT_YUV444P, SWS_BILINEAR, NULL, NULL, NULL);
         }
         if (!sws_scaler_ctx) {
-            errorLogger.logError("failed to initialize ffmpeg scaler");
+            ffmpeg_log_error(0, "failed to initialize ffmpeg scaler", ErrorSource::READER);
         }
 
         //scale image data
@@ -426,9 +426,15 @@ bool FFmpegReader::seek(double fraction) {
 
     int response = avformat_seek_file(av_format_ctx, -1, min_ts, target, max_ts, 0); 
     if (response < 0) {
-        errorLogger.logError(av_make_error(response, "faild to seek in input"));
+        ffmpeg_log_error(response, "faild to seek in input", ErrorSource::READER);
+
+    } else {
+        avcodec_flush_buffers(av_codec_ctx);
+    
+        //seeking may cause error messages??
+        errorLogger.clearErrors(ErrorSource::FFMPEG);
     }
-    avcodec_flush_buffers(av_codec_ctx);
+
     return response >= 0;
 }
 

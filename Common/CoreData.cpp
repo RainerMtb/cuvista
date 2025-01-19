@@ -51,3 +51,7 @@ std::ostream& operator << (std::ostream& out, const PointResult& res) {
 	out << "idx=" << res.idx << ", ix0=" << res.ix0 << ", iy0=" << res.iy0 << ", u=" << res.u << ", v=" << res.v << ", dir=" << res.direction;
 	return out;
 }
+
+bool PointContext::operator == (const PointContext& other) const {
+	return *this->ptr == *other.ptr;
+}

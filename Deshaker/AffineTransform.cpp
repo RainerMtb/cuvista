@@ -89,13 +89,13 @@ bool AffineTransform::computeAffine(std::vector<PointResult>& points) {
 }
 
 const AffineTransform& AffineSolver::computeSimilar(std::span<PointResult> points) {
-	std::vector<PointBase> baseVector(points.begin(), points.end());
-	return computeSimilar(baseVector);
+	std::vector<PointBase> vectorBase(points.begin(), points.end());
+	return computeSimilar(vectorBase);
 }
 
 const AffineTransform& AffineSolver::computeSimilar(std::span<PointContext> points) {
-	std::vector<PointBase> baseVector(points.begin(), points.end());
-	return computeSimilar(baseVector);
+	std::vector<PointBase> vectorBase(points.begin(), points.end());
+	return computeSimilar(vectorBase);
 }
 
 const AffineTransform& AffineSolverSimple::computeSimilar(std::span<PointBase> points) {
@@ -270,6 +270,6 @@ const AffineTransform& AffineSolverAvx::computeSimilar(std::span<PointBase> poin
 }
 
 std::ostream& operator << (std::ostream& os, const AffineTransform& trf) {
-	os << "trf: s=" << trf.scale() << ", r=" << trf.rot() << ", dx=" << trf.dX() << ", dy=" << trf.dY();
+	os << "trf: scale=" << trf.scale() << ", rotm=" << trf.rotMinutes() << ", dx=" << trf.dX() << ", dy=" << trf.dY();
 	return os;
 }

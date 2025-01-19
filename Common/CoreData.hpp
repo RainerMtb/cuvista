@@ -108,9 +108,6 @@ public:
 	int direction;
 
 	double length;   //displacement vector length
-	double heading;  //heading of displacement vector
-	double stretch;  //stretch factor for ellipse along major axis
-
 	bool isConsens;
 
 	//is valid when numeric stable result was found
@@ -126,19 +123,20 @@ public:
 	friend std::ostream& operator << (std::ostream& out, const PointResult& res);
 };
 
-struct Point {
-	double x, y;
-};
-
 struct PointContext {
 	PointResult* ptr;
 	double delta = 0.0;
 	double distance = 0.0;
 	double distanceRelative = 0.0;
 	double angle = 0.0;
+	double uu = 0.0;
+	double vv = 0.0;
+	int cluster = -1;
 
 	PointContext(PointResult& pr) : ptr { &pr } {}
 	PointContext() : ptr { nullptr } {}
+
+	bool operator == (const PointContext& other) const;
 };
 
 struct PointBase {

@@ -23,7 +23,10 @@
 #include <array>
 
 struct AffineCore;
-struct Point;
+
+struct Point {
+	double x, y;
+};
 
 class Affine2D : protected Mat<double> {
 

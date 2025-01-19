@@ -16,78 +16,65 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
-#include "FrameResult.hpp"
+#include "MovieWriter.hpp"
 #include "Util.hpp"
 
-class Bucket {
+// --------------------------------------
+// ------------ UTILS -------------------
+// --------------------------------------
 
-private:
-	size_t numel = 0;
-	double minVal, maxVal, bucketSize;
-	std::vector<std::vector<PointContext>> buckets;
-
-public:
-	Bucket(double minVal, double maxVal, int bucketCount) {
-		this->minVal = minVal;
-		this->maxVal = maxVal;
-		this->bucketSize = (maxVal - minVal) / bucketCount;
-		this->buckets.resize(bucketCount);
-	}
-
-	void add(const PointContext& pc, double value) {
-		double bucketIndex = (value - minVal) / bucketSize;
-		int idx = (int) bucketIndex;
-		if (idx == bucketIndex && bucketIndex > 0) idx--;
-		buckets[idx].push_back(pc);
-		numel++;
-	}
-
-	void sortBySize() {
-		std::sort(buckets.begin(), buckets.end(), [] (std::vector<PointContext>& v1, std::vector<PointContext>& v2) { return v1.size() > v2.size(); });
-	}
-
-	std::vector<PointContext> getTopPoints(double percentage) {
-		size_t requiredCount = (size_t) (numel * percentage);
-		std::vector<PointContext> out;
-		for (auto it = buckets.begin(); it != buckets.end() && out.size() < requiredCount; it++) {
-			size_t n = std::min(it->size(), requiredCount - out.size());
-			std::copy_n(it->begin(), n, std::back_inserter(out));
-		}
-		return out;
-	}
-};
-
-double FrameResult::sqr(double value) { 
+constexpr double FrameResult::sqr(double value) { 
 	return value * value; 
 }
 
-void FrameResult::drawTransforms(std::span<PointContext> pc, const std::string& filename) {
-	ImageBGR bgr(mData.h, mData.w);
+void FrameResult::writeResults(std::span<PointContext> pc, const std::string& filename) {
+	std::ofstream file(filename);
+	file << "idx;x;y;u;v;Type" << std::endl;
+
+	for (const PointContext& p : pc) {
+		const PointResult& pr = *p.ptr;
+		file << pr.idx << ";" << pr.x << ";" << pr.y << ";" << pr.u << ";" << pr.v << ";" << pr.resultValue() << std::endl;
+	}
+}
+
+void writeImage(std::span<PointContext> pc, const std::string& filename, int h, int w) {
+	ImageBGR bgr(h, w);
 	bgr.setValues({ 200, 230, 240 });
 
 	for (const PointContext& p : pc) {
 		PointResult& pr = *p.ptr;
-		double px = pr.x + mData.w / 2.0;
-		double py = pr.y + mData.h / 2.0;
+		double px = pr.x + w / 2.0;
+		double py = pr.y + h / 2.0;
 		double x2 = px + pr.u;
 		double y2 = py + pr.v;
 
 		im::ColorBgr col = im::ColorBgr::BLUE;
 		bgr.drawLine(px, py, x2, y2, col);
-		bgr.drawDot(x2, y2, 1.5, 1.5, col);
+		bgr.drawMarker(x2, y2, col, 1.4);
 	}
 
 	bgr.saveAsColorBMP(filename);
 }
 
+
+// --------------------------------------
+// ------------ MAIN --------------------
+// --------------------------------------
+
 FrameResult::FrameResult(MainData& data, ThreadPoolBase& threadPool) :
-	mData { data } 
+	mData { data }
 {
 	if (data.hasAvx512()) {
 		mAffineSolver = std::make_unique<AffineSolverAvx>(data.resultCount);
 	} else {
 		mAffineSolver = std::make_unique<AffineSolverFast>(threadPool, data.resultCount);
 	}
+
+	mConsList1.reserve(data.resultCount);
+	mConsList2.reserve(data.resultCount);
+	mList1.resize(data.resultCount);
+	mList2.resize(data.resultCount);
+	mList3.resize(data.resultCount);
 }
 
 const AffineTransform& FrameResult::getTransform() const {
@@ -106,6 +93,8 @@ void FrameResult::computeTransform(std::vector<PointResult>& results, ThreadPool
 	const int cConsLoopPercent = 95;		          //percentage of points for next loop 0..100
 	const double cConsensDistanceSqr = sqr(1.25);     //max offset for a point to be in the consensus set
 	const double cConsensDistRelative = 0.2;          //max offset normalized by length
+	const double cClusterFraction = 0.15;             
+
 	auto sortDist = [] (const PointContext& pc1, const PointContext& pc2) { return pc1.distance < pc2.distance; };
 	auto sortDelta = [] (const PointContext& pc1, const PointContext& pc2) { return pc1.delta < pc2.delta; };
 	auto sortRel = [] (const PointContext& pc1, const PointContext& pc2) { return pc1.distanceRelative < pc2.distanceRelative; };
@@ -113,136 +102,230 @@ void FrameResult::computeTransform(std::vector<PointResult>& results, ThreadPool
 	//util::ConsoleTimer ic("computeTransform");
 	mAffineSolver->reset();
 	mAffineSolver->frameIndex = frameIndex;
-	mConsList.clear();
+	mConsList1.clear();
 
 	//only valid points
 	for (PointResult& pr : results) {
 		pr.isConsens = false;
 		if (pr.isValid()) {
-			mConsList.emplace_back(pr);
+			mConsList1.emplace_back(pr);
 		}
 	}
-	size_t numValid = mConsList.size();
+	size_t numValid = mConsList1.size();
 
 	if (numValid > cMinConsensPoints) {
 		//calculate average displacement distance and cut off outsiders
 		double averageLength = 0.0;
-		for (PointContext& pc : mConsList) {
+		for (PointContext& pc : mConsList1) {
 			pc.ptr->length = std::sqrt(sqr(pc.ptr->u) + sqr(pc.ptr->v));
 			averageLength += pc.ptr->length;
 		}
 		averageLength /= numValid;
-		for (PointContext& pc : mConsList) {
+		for (PointContext& pc : mConsList1) {
 			//set delta value to deviation from average length
 			pc.delta = std::abs(pc.ptr->length - averageLength);
 		}
-		std::sort(mConsList.begin(), mConsList.end(), sortDelta);
-		mConsList.resize(numValid * cConsLoopPercent / 100);
-		mPointsList = mConsList;
+		std::sort(mConsList1.begin(), mConsList1.end(), sortDelta);
+		mConsList1.resize(numValid * cConsLoopPercent / 100);
+		mConsList2 = mConsList1;
+		AffineTransform trf1, trf2;
 
-		// STEP 1
-		size_t numCons = 0;
-		for (int i = 0; i < cConsLoopCount; i++) {
-			//average length of current points
-			averageLength = 0.0;
-			for (auto it = mConsList.begin(); it != mConsList.end(); it++) {
-				averageLength += it->ptr->length;
+		// STEP 1 traditional method
+		{
+			size_t numCons = 0;
+			for (int i = 0; i < cConsLoopCount; i++) {
+				//average length of current points
+				averageLength = 0.0;
+				for (auto it = mConsList1.begin(); it != mConsList1.end(); it++) {
+					averageLength += it->ptr->length;
+				}
+				averageLength /= mConsList1.size();
+
+				//transform for selected points
+				trf1 = mAffineSolver->computeSimilar(mConsList1);
+
+				size_t numConsAbsolute = 0;
+				size_t numConsRelative = 0;
+				//calculate error distance based on transform
+				for (auto it = mConsList1.begin(); it != mConsList1.end(); it++) {
+					PointResult& pr = *it->ptr;
+					auto [tx, ty] = mAffineSolver->transform(pr.x, pr.y);
+					it->distance = sqr(pr.x + pr.u - tx) + sqr(pr.y + pr.v - ty);
+					it->distanceRelative = it->distance / pr.length;
+
+					if (it->distance < cConsensDistanceSqr)
+						numConsAbsolute++;
+					else if (it->distanceRelative < cConsensDistRelative)
+						numConsRelative++;
+				}
+
+				//only then rely on relatives when there are many more than absolute ones
+				if (numConsAbsolute > 40 || numConsAbsolute * 10 > numConsRelative) {
+					numCons = numConsAbsolute;
+					std::sort(mConsList1.begin(), mConsList1.end(), sortDist);
+
+				} else {
+					//std::cout << data.status.frameInputIndex << " ABS " << numConsAbsolute << " REL " << numConsRelative << std::endl;
+					numCons = numConsRelative;
+					std::sort(mConsList1.begin(), mConsList1.end(), sortRel);
+				}
+
+				//stop if enough points are consens
+				size_t cutoff = mConsList1.size() * cConsLoopPercent / 100;
+				if (numCons > cutoff) {
+					break;
+
+				} else {
+					mConsList1.resize(cutoff);
+				}
 			}
-			averageLength /= mConsList.size();
-
-			//transform for selected points
-			mBestTransform = mAffineSolver->computeSimilar(mConsList);
-
-			size_t numConsAbsolute = 0;
-			size_t numConsRelative = 0;
-			//calculate error distance based on transform
-			for (auto it = mConsList.begin(); it != mConsList.end(); it++) {
-				PointResult& pr = *it->ptr;
-				auto [tx, ty] = mAffineSolver->transform(pr.x, pr.y);
-				it->distance = sqr(pr.x + pr.u - tx) + sqr(pr.y + pr.v - ty);
-				it->distanceRelative = it->distance / pr.length;
-
-				if (it->distance < cConsensDistanceSqr)
-					numConsAbsolute++;
-				else if (it->distanceRelative < cConsensDistRelative)
-					numConsRelative++;
-			}
-
-			//only then rely on relatives when there are many more than absolute ones
-			if (numConsAbsolute > 40 || numConsAbsolute * 10 > numConsRelative) {
-				numCons = numConsAbsolute;
-				std::sort(mConsList.begin(), mConsList.end(), sortDist);
-
-			} else {
-				//std::cout << data.status.frameInputIndex << " ABS " << numConsAbsolute << " REL " << numConsRelative << std::endl;
-				numCons = numConsRelative;
-				std::sort(mConsList.begin(), mConsList.end(), sortRel);
-			}
-
-			//stop if enough points are consens
-			size_t cutoff = mConsList.size() * cConsLoopPercent / 100;
-			if (numCons > cutoff) {
-				break;
-
-			} else {
-				mConsList.resize(cutoff);
-			}
+			mConsList1.resize(numCons);
 		}
-		mConsList.resize(numCons);
 
-		// STEP 2 try ransac on second list
 		/*
-		if (100.0 * numCons / numValid < 10.0) {
-			std::vector<PointContext> samples(3), bestList, consList;
-			int consCount = 0, bestCount = 0;
+		// STEP 2 histogram approach
+		{
+			auto maxFcn = [] (PointContext& pc1, PointContext& pc2) { return pc1.ptr->length < pc2.ptr->length; };
+			double maxLen = std::max_element(mConsList2.begin(), mConsList2.end(), maxFcn)->ptr->length;
 
-			for (int i = 0; i < cRansacIterations; i++) {
-				consList.clear();
-				consCount = 0;
-
-				sampler->sample(mConsListSecond, samples);
-				AffineTransform trf = mAffineSolver->computeSimilar(samples);
-				for (const PointContext& pc : mConsListSecond) {
-					const PointResult& pr = *pc.ptr;
-					auto [tx, ty] = trf.transform(pr.x, pr.y);
-					double dist = sqr(pr.x + pr.u - tx) + sqr(pr.y + pr.v - ty);
-					if (dist < cConsensDistanceSqr * 2) {
-						consList.push_back(pc);
-						consCount++;
-					}
-				}
-				if (consCount > bestCount) {
-					bestCount = consCount;
-					std::swap(bestList, consList);
-				}
+			Cluster clusterByLength(0.0, maxLen, 256);
+			Cluster clusterByAngle(-std::numbers::pi, std::numbers::pi, 256);
+			for (PointContext& pc : mConsList2) {
+				pc.distance = pc.ptr->length;
+				pc.angle = std::atan2(pc.ptr->v, pc.ptr->u);
+				clusterByLength.add(pc, pc.distance);
+				clusterByAngle.add(pc, pc.angle);
 			}
 
-			if (bestCount > numCons) {
-				mBestTransform = mAffineSolver->computeSimilar(bestList);
-				std::swap(bestList, mConsList);
+			auto fcnLess = [&] (const PointContext& pc1, const PointContext& pc2) { return pc1.ptr->idx < pc2.ptr->idx; };
+			clusterByLength.sortBySize();
+			auto iter1 = clusterByLength.getTopPoints(cClusterFraction, mList1.begin());
+			std::sort(mList1.begin(), iter1, fcnLess);
+			//writeImage({ mList1.begin(), iter1 }, "f:/x1.bmp", mData.h, mData.w);
+			//std::cout << clusterByLength << std::endl;
+
+			clusterByAngle.sortBySize();
+			auto iter2 = clusterByAngle.getTopPoints(cClusterFraction, mList2.begin());
+			std::sort(mList2.begin(), iter2, fcnLess);
+			//writeImage({ mList2.begin(), iter2 }, "f:/x2.bmp", mData.h, mData.w);
+
+			auto iter3 = std::set_intersection(mList1.begin(), iter1, mList2.begin(), iter2, mList3.begin(), fcnLess);
+			//writeImage({ mList3.begin(), iter3 }, "f:/x3.bmp", mData.h, mData.w);
+
+			trf2.reset();
+			std::span pointsCommon = { mList3.begin(), iter3 };
+			if (pointsCommon.size() >= 2) trf2 = mAffineSolver->computeSimilar(pointsCommon);
+
+			for (PointContext& pc : mConsList2) {
+				PointResult& pr = *pc.ptr;
+				auto [tx, ty] = mAffineSolver->transform(pr.x, pr.y);
+				pc.distance = sqr(pr.x + pr.u - tx) + sqr(pr.y + pr.v - ty);
+				pc.distanceRelative = pc.distance / pr.length;
 			}
+			auto fcnCheck = [&] (const PointContext& pc) { return pc.distance >= cConsensDistanceSqr || pc.distanceRelative >= cConsensDistRelative; };
+			std::erase_if(mConsList2, fcnCheck);
+			//writeImage({ mConsList2.begin(), mConsList2.end()}, "f:/x4.bmp", mData.h, mData.w);
 		}
 		*/
-
-		//histogram
-		auto maxFcn = [] (PointContext& pc1, PointContext& pc2) { return pc1.ptr->length < pc2.ptr->length; };
-		double maxLen = std::max_element(mPointsList.begin(), mPointsList.end(), maxFcn)->ptr->length;
 		
-		Bucket bucketByLength(0.0, maxLen, 256);
-		Bucket bucketByAngle(-std::numbers::pi, std::numbers::pi, 256);
-		for (PointContext& pc : mPointsList) {
-			pc.distance = pc.ptr->length;
-			pc.angle = std::atan2(pc.ptr->v, pc.ptr->u);
-			bucketByLength.add(pc, pc.distance);
-			bucketByAngle.add(pc, pc.angle);
-		}
-		bucketByLength.sortBySize();
-		bucketByAngle.sortBySize();
-		std::vector<PointContext> topByLengthCount = bucketByLength.getTopPoints(0.2);
-		std::vector<PointContext> topByAngleCount = bucketByAngle.getTopPoints(0.2);
-		drawTransforms(topByLengthCount, "f:/x1.bmp");
-		drawTransforms(topByAngleCount, "f:/x2.bmp");
 
-		for (PointContext& pc : mConsList) pc.ptr->isConsens = true;
+		//ResultDetailsWriter::write(results, "f:/results.txt");
+
+		// STEP 3 dbscan
+		{
+			int minPts = 10;
+			double eps = sqr(0.75);
+
+			size_t siz = mConsList2.size();
+			int m = std::max(mData.h, mData.w);
+			double mm = m * m;
+			auto f = [&] (double d) { return -0.125 * d * d / mm + 0.375 * d; };
+
+			//uu and vv
+			for (auto pc = mConsList2.begin(); pc != mConsList2.end(); pc++) {
+				pc->uu = f(pc->ptr->u);
+				pc->vv = f(pc->ptr->v);
+			}
+
+			//dbscan
+			//cluster -1: unvisited, -2: noise, >= 0: cluster index 
+			int clusterIdx = 0;
+			std::list<PointContext*> region1;
+
+			for (auto pc = mConsList2.begin(); pc != mConsList2.end(); pc++) {
+				if (pc->cluster == -1) {
+					region1.clear();
+
+					//build neighborhood
+					for (auto it = mConsList2.begin(); it != mConsList2.end(); it++) {
+						double dist = sqr(pc->uu - it->uu) + sqr(pc->vv - it->vv);
+						if (dist < eps) region1.push_back(&(*it));
+					}
+
+					if (region1.size() < minPts) {
+						pc->cluster = -2;
+
+					} else {
+						for (PointContext* pcptr : region1) {
+							if (pcptr->cluster < 0) {
+								pcptr->cluster = clusterIdx;
+
+								//build neighborhood
+								std::vector<PointContext*> region2;
+								for (auto it2 = mConsList2.begin(); it2 != mConsList2.end(); it2++) {
+									double dist2 = sqr(pcptr->uu - it2->uu) + sqr(pcptr->vv - it2->vv);
+									if (dist2 < eps) region2.push_back(&(*it2));
+								}
+
+								//expand region
+								if (region2.size() >= minPts) {
+									for (PointContext* p : region2) region1.push_back(p);
+								}
+							}
+						}
+
+						clusterIdx++;
+					}
+				}
+			}
+
+			//results
+			for (int i = 0; i < clusterIdx; i++) {
+				ptrdiff_t num = std::count_if(mConsList2.begin(), mConsList2.end(), [&] (const PointContext& pc) { return pc.cluster == i; });
+				std::cout << "cluster " << i << ": " << num << std::endl;
+
+				ImageBGR bgr(mData.h, mData.w);
+				bgr.setValues({ 200, 230, 240 });
+
+				for (const PointContext& p : mConsList2) {
+					if (p.cluster == i) {
+						PointResult& pr = *p.ptr;
+						double px = pr.x + mData.w / 2.0;
+						double py = pr.y + mData.h / 2.0;
+						double x2 = px + pr.u;
+						double y2 = py + pr.v;
+
+						im::ColorBgr col = im::ColorBgr::BLUE;
+						bgr.drawLine(px, py, x2, y2, col);
+						bgr.drawMarker(x2, y2, col, 1.4);
+					}
+				}
+
+				bgr.saveAsColorBMP("f:/clusters" + std::to_string(i) + ".bmp");
+			}
+		}
+
+		// pick best result
+		if (mConsList2.size() > mConsList1.size()) {
+			std::swap(mConsList1, mConsList2);
+			mBestTransform = trf2;
+
+		} else {
+			mBestTransform = trf1;
+		}
+
+		for (PointContext& pc : mConsList1) pc.ptr->isConsens = true;
+		std::exit(-1);
 	}
+	//std::cout << "frame " << frameIndex << ", " << mBestTransform << std::endl;
 }

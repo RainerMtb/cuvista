@@ -62,5 +62,5 @@ public:
 
 	MatIterator operator -- (int) { MatIterator temp = *this; i--; return temp; }
 
-	difference_type operator - (const MatIterator& other) const { return other.i - i; }
+	difference_type operator - (const MatIterator& other) const { return i - other.i; }
 };

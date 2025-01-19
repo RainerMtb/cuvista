@@ -64,3 +64,4 @@ void compareInv();
 void avxCompute();
 void testZoom();
 void testSampler();
+void createTransformImages();

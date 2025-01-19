@@ -147,7 +147,7 @@ void draw() {
 		double x1 = cx + len * std::cos(angle * std::numbers::pi / 180.0);
 		double y1 = cy + len * std::sin(angle * std::numbers::pi / 180.0);
 		bgr.drawLine(cx, cy, x1, y1, ColorBgr::BLUE);
-		bgr.drawDot(x1, y1, r, r, ColorBgr::RED);
+		bgr.drawMarker(x1, y1, ColorBgr::RED, r);
 	}
 
 	//dots at fractional pixel values
@@ -155,7 +155,7 @@ void draw() {
 		for (int k = 0; k < 5; k++) {
 			double x = 20 + 10.2 * i + 0.2 * k;
 			double y = 250 + 10.2 * k + 0.2 * i;
-			bgr.drawDot(x, y, 1.5, 1.5, ColorBgr::GREEN);
+			bgr.drawMarker(x, y, ColorBgr::GREEN, 1.5);
 		}
 	}
 

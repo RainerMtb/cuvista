@@ -350,6 +350,31 @@ public:
 		return file.good() ? mat : Mat<T>();
 	}
 
+	//read text file
+	//values must be separated by whitespaces
+	static Mat<T> fromTextFile(const std::string& filename) {
+		std::ifstream file(filename);
+		std::vector<T> numbers;
+		std::vector<size_t> dims;
+		for (std::string line; std::getline(file, line);) {
+			dims.push_back(0);
+			std::istringstream stream(line);
+			T value = 0;
+			while (stream.eof() == false && stream.fail() == false) {
+				stream >> value;
+				numbers.push_back(value);
+				dims[dims.size() - 1]++;
+			}
+		}
+
+		Mat<T> out;
+		if (dims.size() > 0 && dims[0] > 0 && std::all_of(dims.begin(), dims.end(), [&] (size_t i) { return i == dims[0]; })) {
+			out = Mat<T>::fromRowData(dims.size(), dims[0], numbers);
+		}
+
+		return out;
+	}
+
 	static Mat<T> eye(size_t size) {
 		return generate(size, size, [] (size_t r, size_t c) { return r == c ? (T) 1 : (T) 0; });
 	}

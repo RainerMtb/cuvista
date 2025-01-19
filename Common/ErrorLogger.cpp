@@ -28,16 +28,16 @@ bool ErrorLogger::hasError() {
 	return errorList.size() > 0;
 }
 
-void ErrorLogger::logError(const std::string& msg) {
+void ErrorLogger::logError(const std::string& msg, ErrorSource source) {
 	std::lock_guard<std::mutex> lock(mMutex);
-	errorList.push_back({ std::chrono::system_clock::now(), msg });
+	errorList.emplace_back(std::chrono::system_clock::now(), msg, source);
 }
 
-void ErrorLogger::logError(const char* title, const char* msg) {
+void ErrorLogger::logError(const char* title, const char* msg, ErrorSource source) {
 	logError(std::string(title) + std::string(msg));
 }
 
-void ErrorLogger::logError(const std::string& title, const std::string& msg) {
+void ErrorLogger::logError(const std::string& title, const std::string& msg, ErrorSource source) {
 	logError(title + msg);
 }
 
@@ -54,4 +54,9 @@ std::string ErrorLogger::getErrorMessage() {
 void ErrorLogger::clearErrors() {
 	std::lock_guard<std::mutex> lock(mMutex);
 	errorList.clear();
+}
+
+void ErrorLogger::clearErrors(ErrorSource source) {
+	std::lock_guard<std::mutex> lock(mMutex);
+	std::erase_if(errorList, [&] (const ErrorEntry& entry) { return entry.source == source; });
 }

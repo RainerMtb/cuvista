@@ -18,10 +18,9 @@
 
 #pragma once
 
-#include <vector>
-#include <string>
 #include <list>
 #include <map>
+#include "ErrorLogger.hpp"
 
 extern "C" {
 #include <libavcodec/avcodec.h>
@@ -121,12 +120,17 @@ struct Timings {
 	friend std::ostream& operator << (std::ostream& ostream, const Timings& t);
 };
 
+//convert millis into readable string hh:mm:ss.fff
 std::string timeString(int64_t millis);
 
+//generate error string from ffmpeg return codes
 std::string av_make_error(int errnum, const char* msg = "");
 
-void ffmpeg_log_error(int errnum, const char* msg = "");
+//log error from ffmpeg retunr codes
+void ffmpeg_log_error(int errnum, const char* msg, ErrorSource source);
 
+//callback from ffmpeg to report errors
 void ffmpeg_log(void* avclass, int level, const char* fmt, va_list args);
 
+//compare version strings at compiletime and runtime
 bool ffmpeg_check_versions();

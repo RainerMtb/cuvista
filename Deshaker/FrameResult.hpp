@@ -43,9 +43,10 @@ private:
 	const MainData& mData;
 	std::unique_ptr<AffineSolver> mAffineSolver;
 	AffineTransform mBestTransform;
-	std::vector<PointContext> mConsList;
-	std::vector<PointContext> mPointsList;
+	std::vector<PointContext> mConsList1, mConsList2;
 
-	double sqr(double value);
-	void drawTransforms(std::span<PointContext> pc, const std::string& filename);
+	std::vector<PointContext> mList1, mList2, mList3;
+
+	constexpr double sqr(double value);
+	void writeResults(std::span<PointContext> pc, const std::string& filename);
 };

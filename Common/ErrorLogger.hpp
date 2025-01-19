@@ -23,9 +23,17 @@
 #include <mutex>
 #include <string>
 
+enum class ErrorSource {
+	FFMPEG,
+	WRITER,
+	READER,
+	OTHER,
+};
+
 struct ErrorEntry {
 	std::chrono::time_point<std::chrono::system_clock> t;
 	std::string msg;
+	ErrorSource source;
 };
 
 class ErrorLogger {
@@ -37,17 +45,19 @@ public:
 
 	bool hasError();
 
-	void logError(const std::string& msg);
+	void logError(const std::string& msg, ErrorSource source = ErrorSource::OTHER);
 
-	void logError(const char* title, const char* msg);
+	void logError(const char* title, const char* msg, ErrorSource source = ErrorSource::OTHER);
 
-	void logError(const std::string& title, const std::string& msg);
+	void logError(const std::string& title, const std::string& msg, ErrorSource source = ErrorSource::OTHER);
 
 	std::vector<ErrorEntry> getErrors();
 
 	std::string getErrorMessage();
 
 	void clearErrors();
+
+	void clearErrors(ErrorSource source);
 };
 
 inline ErrorLogger errorLogger = {};

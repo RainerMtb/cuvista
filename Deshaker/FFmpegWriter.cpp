@@ -131,7 +131,7 @@ int FFmpegWriter::sendFFmpegFrame(AVFrame* av_frame) {
     //util::ConsoleTimer timer("send ffmpeg");
     int result = avcodec_send_frame(codec_ctx, av_frame);
     if (result < 0)
-        ffmpeg_log_error(result, "error encoding #1");
+        ffmpeg_log_error(result, "error encoding #1", ErrorSource::WRITER);
     return result;
 }
 
@@ -143,7 +143,7 @@ int FFmpegWriter::writeFFmpegPacket(AVFrame* av_frame) {
 
     } else if (result < 0) { 
         //report error, something wrong
-        ffmpeg_log_error(result, "error encoding #2");
+        ffmpeg_log_error(result, "error encoding #2", ErrorSource::WRITER);
 
     } else { 
         //write packet to output

@@ -18,7 +18,6 @@
 
 #pragma once
 
-#include <fstream>
 #include "MainData.hpp"
 #include "Trajectory.hpp"
 #include "Stats.hpp"
@@ -347,9 +346,10 @@ public:
 class ResultDetailsWriter : public MovieWriter, public AuxiliaryWriter {
 
 private:
-	std::string delimiter = ";";
-	std::ofstream file;
-	void write(const std::vector<PointResult>& results, int64_t frameIndex);
+	std::string mDelim = ";";
+	std::ofstream mFile;
+
+	void write(std::span<PointResult> results, int64_t frameIndex);
 
 public:
 	ResultDetailsWriter(MainData& data) :
@@ -357,6 +357,8 @@ public:
 
 	virtual void open() override;
 	virtual void write(const FrameExecutor& executor) override;
+
+	static void write(std::span<PointResult> results, const std::string& filename);
 };
 
 

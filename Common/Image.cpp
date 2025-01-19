@@ -436,7 +436,11 @@ template <class T> void im::ImageBase<T>::drawCircle(double cx, double cy, doubl
 	drawEllipse(cx, cy, r, r, color, fill);
 }
 
-template <class T> void im::ImageBase<T>::drawDot(double cx, double cy, double rx, double ry, ColorBase<T> color) {
+template <class T> void im::ImageBase<T>::drawMarker(double cx, double cy, ColorBase<T> color, double radius, MarkerType type) {
+	drawMarker(cx, cy, color, radius, radius, type);
+}
+
+template <class T> void im::ImageBase<T>::drawMarker(double cx, double cy, ColorBase<T> color, double rx, double ry, MarkerType type) {
 	const int steps = 8;
 	constexpr double ds = 1.0 / steps;
 	//align center to nearest fraction
@@ -446,12 +450,15 @@ template <class T> void im::ImageBase<T>::drawDot(double cx, double cy, double r
 	//collect subpixels that need to be drawn
 	std::map<int, int> alpha;
 
-	double rx2 = sqr(rx);
-	double ry2 = sqr(ry);
+	//marker types
+	std::function<double(double)> fy;
+	if (type == MarkerType::BOX) fy = [&] (double x) { return ry; };
+	if (type == MarkerType::DIAMOND) fy = [&] (double x) { return ry - ry / rx  * x; };
+	if (type == MarkerType::DOT) fy = [&] (double x) { return sqrt(sqr(ry) - sqr(x) * sqr(ry) / sqr(rx)); };
+
+	//collect subpixels
 	for (double x = ds / 2; x <= rx; x += ds) {
-		//y on the ellipse circumference
-		double ey = sqrt(ry2 - sqr(x) * ry2 / rx2);
-		for (double y = ds / 2; y <= ey; y += ds) {
+		for (double y = ds / 2; y <= fy(x); y += ds) {
 			//set subpixels 4 times around center
 			for (double px : { cx - x, cx + x}) {
 				for (double py : { cy - y, cy + y }) {

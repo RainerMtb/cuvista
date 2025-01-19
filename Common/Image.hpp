@@ -51,6 +51,12 @@ namespace im {
 		BOTTOM_RIGHT,
 	};
 
+	enum class MarkerType {
+		DOT,
+		BOX,
+		DIAMOND,
+	};
+
 	template <class T> class ImageBase : public ImageData<T> {
 
 	public:
@@ -139,7 +145,9 @@ namespace im {
 
 		void drawCircle(double cx, double cy, double r, ColorBase<T> color, bool fill = false);
 
-		void drawDot(double cx, double cy, double rx, double ry, ColorBase<T> color);
+		void drawMarker(double cx, double cy, ColorBase<T> color, double rx, double ry, MarkerType type);
+
+		void drawMarker(double cx, double cy, ColorBase<T> color, double radius = 1.5, MarkerType = MarkerType::DOT);
 
 		void copyTo(ImageData<T>& dest, std::vector<int> srcPlanes, std::vector<int> destPlanes, ThreadPoolBase& pool = defaultPool) const;
 

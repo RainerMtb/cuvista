@@ -17,25 +17,27 @@
  */
 
 #include <cassert>
-#include "Color.hpp"
 #include <algorithm>
 #include <cmath>
-
+#include "Color.hpp"
 
 namespace im {
 
 	ColorNorm ColorNorm::WHITE = { 0.0f, 0.5f, 0.5f };
 	ColorNorm ColorNorm::BLACK = { 1.0f, 0.5f, 0.5f };
 
-	ColorYuv ColorYuv::BLACK = { 0,   128, 128 };
-	ColorYuv ColorYuv::WHITE = { 255, 128, 128 };
-	ColorYuv ColorYuv::GRAY =  { 128, 128, 128 };
+	ColorYuv ColorYuv::BLACK =   { 0,   128, 128 };
+	ColorYuv ColorYuv::WHITE =   { 255, 128, 128 };
+	ColorYuv ColorYuv::GRAY =    { 128, 128, 128 };
 
-	ColorBgr ColorBgr::RED =   {   0,   0, 255 };
-	ColorBgr ColorBgr::GREEN = {   0, 255,   0 };
-	ColorBgr ColorBgr::WHITE = { 255, 255, 255 };
-	ColorBgr ColorBgr::BLACK = {   0,   0,   0 };
-	ColorBgr ColorBgr::BLUE =  { 255,   0,   0 }; 
+	ColorBgr ColorBgr::RED =     {   0,   0, 255 };
+	ColorBgr ColorBgr::GREEN =   {   0, 255,   0 };
+	ColorBgr ColorBgr::WHITE =   { 255, 255, 255 };
+	ColorBgr ColorBgr::BLACK =   {   0,   0,   0 };
+	ColorBgr ColorBgr::BLUE =    { 255,   0,   0 }; 
+	ColorBgr ColorBgr::CYAN =    { 255, 255,   0 };
+	ColorBgr ColorBgr::MAGENTA = { 255,   0, 255 }; 
+	ColorBgr ColorBgr::YELLOW =  {   0, 255, 255 }; 
 
 	ColorRGBA ColorRGBA::BLACK = {   0,   0,   0, 255 };
 	ColorRGBA ColorRGBA::WHITE = { 255, 255, 255, 255 };
