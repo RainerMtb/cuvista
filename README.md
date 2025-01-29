@@ -63,7 +63,7 @@ cd build
 ```
 prepare the locations of Cuda, Qt and FFMPEG and provide them to cmake. Also see notes above. Better use forward slashes ```/``` to separate folders. Adapt locations to your system:
 ```
-cmake .. -D CMAKE_PREFIX_PATH=C:/CUDA/version;C:/Qt/6.8.0/msvc2022_64 -D FFMPEG_PATH=C:/ffmpeg --fresh
+cmake .. -D CMAKE_PREFIX_PATH=C:/CUDA/version;C:/Qt/6.8.1/msvc2022_64 -D FFMPEG_PATH=C:/ffmpeg --fresh
 cmake --build . --config Release
 ```
 Upon successfull completion you will get the files
@@ -97,7 +97,7 @@ To get the necessary components on the command line
 ```
 wget https://download.qt.io/official_releases/online_installers/qt-unified-linux-x64-online.run
 chmod +x qt-unified-linux-x64-online.run
-./qt-unified-linux-x64-online.run install qt.qt6.680.linux_gcc_64 qt.qt6.680.addons.qtmultimedia
+./qt-unified-linux-x64-online.run install qt.qt6.681.linux_gcc_64 qt.qt6.681.addons.qtmultimedia
 ```
 You might also need
 ```
@@ -132,9 +132,9 @@ It is recommended to build in a subdirectory:
 mkdir build
 cd build
 ```
-Adapt the location of cuda and  Qt to your system and execute the build process. Also see notes above.
+Adapt the location of Cuda and  Qt to your system and execute the build process. Also see notes above.
 ```
-export CMAKE_PREFIX_PATH=~/Qt/6.8.0/gcc_64:/usr/local/cuda
+export CMAKE_PREFIX_PATH=~/Qt/6.8.1/gcc_64:/usr/local/cuda
 cmake .. --fresh
 cmake --build .
 ```
@@ -150,14 +150,15 @@ cuvistaGui/cuvistaGui
 - Look into more advanced algorithms like 3D stabilization - but I currently lack information on the fundamental math of suchs approaches
 - Use this codebase to remove duplicate frames from videos
 - Possibly improve performace by using multiple GPUs - dont know if anyone would need that though
+- Maybe porting to Mac and Apple Silicon
 
  
 ## Built and Tested on following Tools and versions
 - Windows 11 64bit
 - Ubuntu 24.04
 - Visual Studio 2022
-- Nvidia Cuda 12.6
+- Nvidia Cuda 12.8
 - Nvidia Video Codec SDK 12.2.72
 - FFmpeg 7.1
-- Qt 6.8.0
+- Qt 6.8.1
 - Cmake 3.28.3

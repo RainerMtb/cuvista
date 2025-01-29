@@ -570,7 +570,11 @@ public:
 		return buf.str();
 	}
 
-	void saveAsCSV(const std::string& filename, bool append = false, const std::string& delimiter = ";") const {
+	std::vector<T> toVector(Direction dir = Direction::HORIZONTAL) const {
+		return std::vector<T>(cbegin(dir), cend(dir));
+	}
+
+	void saveAsText(const std::string& filename, bool append = false, const std::string& delimiter = ";") const {
 		std::ios::openmode mode = append ? std::ios::app : std::ios::out;
 		std::ofstream file(filename, mode);
 		file << rows() << delimiter << cols() << std::endl;

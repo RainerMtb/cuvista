@@ -46,18 +46,19 @@ __constant char SUCCESS_ABSOLUTE_ERR = 1;
 __constant char SUCCESS_STABLE_ITER = 2;
 
 //result of one computed point in a frame
+//definition must match host code
 struct PointResult {
 	double u, v;
-	int idx, ix0, iy0;
 	int xm, ym;
+	int idx, ix0, iy0;
 	char result;
-	int z;
-	double err;
-    char computed;
+	int zp;
+	int direction;
+    char computed; //do not use bool
 };
 
 //core data in opencl structure
-//definition must be repeated in host code
+//definition must match host code
 struct KernelData {
 	double compMaxTol, deps, dmin, dmax, dnan;
 	int w, h, ir, iw, zMin, zMax, compMaxIter, pyramidRowCount;
@@ -68,10 +69,18 @@ __constant double wp0[] = { 1, 0, 0, 0, 1, 0, 0, 0, 1 };
 //initial values for eta
 __constant double eta0[] = { 0, 0, 1, 0, 0, 1 };
 
-__kernel void compute(long frameIndex, __read_only image2d_depth_t Yprev, __read_only image2d_depth_t Ycur, __global struct PointResult* results, 
-						__constant struct KernelData* d_core, __local double* shd, int rowStart) {
+//-------------------------------
+//------ compute kernel ---------
+//-------------------------------
+__kernel void compute(long frameIndex, __read_only image2d_array_depth_t Y, 
+			__global struct PointResult* results, __constant struct KernelData* d_core, 
+			__local double* shd, int rowStart) {
 	const int ix0 = get_group_id(0);
 	const int iy0 = get_group_id(1) + rowStart;
+	const int direction = (ix0 % 2) ^ (iy0 % 2);
+	const long idx0 = (frameIndex - direction) % get_image_array_size(Y);
+	const long idx1 = (frameIndex - direction + 1) % get_image_array_size(Y);
+
 	const int blockIndex = iy0 * get_num_groups(0) + ix0;
 	const int ci = get_local_id(1);
 	const int cols = get_local_size(1);
@@ -115,8 +124,8 @@ __kernel void compute(long frameIndex, __read_only image2d_depth_t Yprev, __read
 			for (int c = ci; c < iw; c += cols) {
 				int ix = xm - ir + r;
 				int iy = ym - ir + c + rowOffset;
-				double x = read_imagef(Yprev, (int2)(ix + 1, iy)) / 2 - read_imagef(Yprev, (int2)(ix - 1, iy)) / 2;
-				double y = read_imagef(Yprev, (int2)(ix, iy + 1)) / 2 - read_imagef(Yprev, (int2)(ix, iy - 1)) / 2;
+				double x = read_imagef(Y, (int4)(ix + 1, iy, idx1, 0)) / 2 - read_imagef(Y, (int4)(ix - 1, iy, idx1, 0)) / 2;
+				double y = read_imagef(Y, (int4)(ix, iy + 1, idx1, 0)) / 2 - read_imagef(Y, (int4)(ix, iy - 1, idx1, 0)) / 2;
 				int idx = r * iw + c;
 				sd[idx] = x;
 				idx += iw * iw;
@@ -173,16 +182,16 @@ __kernel void compute(long frameIndex, __read_only image2d_depth_t Yprev, __read
 						delta[c * iw + r] = d_core->dnan;
 
 					} else {
-						double im = read_imagef(Yprev, (int2)(xm - ir + c, rowOffset + ym + r - ir));
+						double im = read_imagef(Y, (int4)(xm - ir + c, rowOffset + ym + r - ir, idx1, 0));
 
 						double flx = floor(ix), fly = floor(iy);
 						double dx = ix - flx, dy = iy - fly;
 						int x0 = (int) flx, y0 = (int) fly;
 
-						double f00 = read_imagef(Ycur, (int2)(x0, rowOffset + y0));
-						double f01 = read_imagef(Ycur, (int2)(x0 + 1, rowOffset + y0));
-						double f10 = read_imagef(Ycur, (int2)(x0, rowOffset + y0 + 1));
-						double f11 = read_imagef(Ycur, (int2)(x0 + 1, rowOffset + y0 + 1));
+						double f00 = read_imagef(Y, (int4)(x0,     rowOffset + y0,     idx0, 0));
+						double f01 = read_imagef(Y, (int4)(x0 + 1, rowOffset + y0,     idx0, 0));
+						double f10 = read_imagef(Y, (int4)(x0,     rowOffset + y0 + 1, idx0, 0));
+						double f11 = read_imagef(Y, (int4)(x0 + 1, rowOffset + y0 + 1, idx0, 0));
 						double jm = (1.0 - dx) * (1.0 - dy) * f00 + (1.0 - dx) * dy * f10 + dx * (1.0 - dy) * f01 + dx * dy * f11;
 
 						delta[c * iw + r] = im - jm;
@@ -264,8 +273,8 @@ __kernel void compute(long frameIndex, __read_only image2d_depth_t Yprev, __read
 		results[blockIndex].u = u;
 		results[blockIndex].v = v;
 		results[blockIndex].result = result;
-		results[blockIndex].z = zp;
-		results[blockIndex].err = err;
+		results[blockIndex].zp = zp;
+		results[blockIndex].direction = direction;
 		results[blockIndex].computed = 1;
 	}
 }

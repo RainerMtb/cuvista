@@ -106,11 +106,11 @@ public:
 	int64_t timeStart; //nanos
 	int64_t timeStop;  //nanos
 	double u, v;
-	int idx, ix0, iy0;
 	int xm, ym;
+	int idx, ix0, iy0;
 	PointResultType result;
 	int z;
-	double err;
+	int direction;
 	bool computed;
 };
 
@@ -118,7 +118,7 @@ public:
 class ComputeTextures {
 
 public:
-	cudaTextureObject_t Ycur, Yprev;
+	cudaTextureObject_t Y[2];
 
 	__host__ void create(int64_t idx, int64_t idxPrev, const CoreData& core, float* pyrBase);
 
@@ -141,12 +141,12 @@ struct ComputeKernelParam {
 class CudaExecutor : public FrameExecutor {
 
 private:
-	unsigned char* d_yuvData;			     //continuous array of all pixel values in yuv format, allocated on device
-	unsigned char** d_yuvRows;			     //index into rows of pixels, allocated on device
-	unsigned char*** d_yuvPlanes;		     //index into Y-U-V planes of frames, allocated on device 
+	unsigned char* d_yuvData = nullptr;	     //continuous array of all pixel values in yuv format, allocated on device
+	unsigned char** d_yuvRows = nullptr;     //index into rows of pixels, allocated on device
+	unsigned char*** d_yuvPlanes = nullptr;  //index into Y-U-V planes of frames, allocated on device 
 
-	unsigned char* d_yuvOut;   //image data for encoding on host
-	unsigned char* d_rgba;     //image data for progress update
+	unsigned char* d_yuvOut = nullptr;       //image data for encoding on host
+	unsigned char* d_rgba = nullptr;         //image data for progress update
 
 	struct {
 		float4* data;
@@ -156,17 +156,17 @@ private:
 		float4* filterV;
 		float4* final;
 		float4* background;
-	} out;
+	} out = {};
 
-	float* d_bufferH;
-	float* d_bufferV;
+	float* d_bufferH = nullptr;
+	float* d_bufferV = nullptr;
 
-	float* d_pyrData;
-	float** d_pyrRows;
+	float* d_pyrData = nullptr;
+	float** d_pyrRows = nullptr;
 
 	//results from compute kernel
-	CudaPointResult* d_results;
-	CudaPointResult* h_results;
+	CudaPointResult* d_results = nullptr;
+	CudaPointResult* h_results = nullptr;
 
 	//init cuda streams
 	std::vector<cudaStream_t> cs;
@@ -178,10 +178,10 @@ private:
 	void* registeredMemPtr = nullptr;
 
 	//textures used in compute kernel
-	ComputeTextures compTex;
+	ComputeTextures computeTexture = {};
 
 	//signal to interrupt compute kernel
-	char* d_interrupt;
+	char* d_interrupt = nullptr;
 
 	//keep track of frames in the buffer
 	std::vector<int64_t> frameIndizes;

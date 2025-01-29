@@ -22,10 +22,6 @@
 
 namespace im {
 
-	double sqr(double d);
-
-	int alignValue(int numToRound, int base);
-
 	void yuv_to_rgb(unsigned char y, unsigned char u, unsigned char v, unsigned char* r, unsigned char* g, unsigned char* b);
 
 	void yuv_to_rgb(float y, float u, float v, unsigned char* r, unsigned char* g, unsigned char* b);
@@ -40,6 +36,9 @@ namespace im {
 	public:
 		std::array<T, 4> colors = { 0, 0, 0, 0 };
 		double alpha = 1.0;
+
+	protected:
+		void setColors(const std::string& webColor, std::array<int, 3> index);
 	};
 
 	class ColorNorm : public ColorBase<float> {
@@ -67,6 +66,8 @@ namespace im {
 
 	class ColorRgb : public ImageColor {
 	public:
+		static ColorRgb webColor(const std::string& webColor);
+
 		ColorYuv toYuv() const;
 
 		ColorNorm toNormalized() const;
@@ -86,6 +87,8 @@ namespace im {
 		static ColorBgr MAGENTA;
 		static ColorBgr CYAN;
 		static ColorBgr YELLOW;
+
+		static ColorBgr webColor(const std::string& webColor);
 
 		unsigned char r() const { return colors[2]; }
 		unsigned char g() const { return colors[1]; }

@@ -52,7 +52,7 @@ double MovieReader::ptsForFrame(int64_t frameIndex) {
 std::optional<std::string> MovieReader::ptsForFrameAsString(int64_t frameIndex) {
     auto millis = ptsForFrameAsMillis(frameIndex);
     if (millis.has_value()) {
-        return timeString(millis.value());
+        return util::millisToTimeString(millis.value());
     } else {
         return std::nullopt;
     }

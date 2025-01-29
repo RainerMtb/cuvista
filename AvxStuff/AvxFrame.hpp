@@ -80,6 +80,5 @@ private:
 	void yuvToRgba(const unsigned char* y, const unsigned char* u, const unsigned char* v, int h, int w, int stride, ImageRGBA& dest) const;
 	void yuvToRgba(const float* y, const float* u, const float* v, int h, int w, int stride, ImageRGBA& dest) const;
 
-	int align(int base, int alignment);
 	V8d sd(int c1, int c2, int y0, int x0, const AvxMatf& Y);
 };

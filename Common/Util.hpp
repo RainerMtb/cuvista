@@ -21,7 +21,6 @@
 #include <cstring>
 #include <chrono>
 #include <string>
-#include <vector>
 #include <span>
 #include <ostream>
 
@@ -47,6 +46,7 @@ namespace util {
     };
 
 
+    //output sent to this ostream will be suppressed
     class NullOutstream : public std::ostream {
 
     public:
@@ -57,6 +57,7 @@ namespace util {
     };
 
 
+    //interface to display text messages
     class MessagePrinter {
 
     public:
@@ -66,6 +67,7 @@ namespace util {
     };
 
 
+    //implementation of crc in 64bit
     class CRC64 {
 
     private:
@@ -80,14 +82,20 @@ namespace util {
         CRC64& addBytes(std::span<const unsigned char> data);
         CRC64& addBytes(const unsigned char* data, size_t size);
         uint64_t result() const;
+        friend std::ostream& operator << (std::ostream& os, const CRC64& crc);
     };
 
 
     //concat given strings by using delimiters
-    std::string concatStrings(std::vector<std::string>& strings, std::string_view delimiter, std::string_view prefix, std::string_view suffix);
+    std::string concatStrings(std::span<std::string_view> strings, std::string_view delimiter, std::string_view prefix, std::string_view suffix);
 
-    //convert a number of bytes into more readable magnitude kb, Mb
+    std::string concatStrings(std::span<std::string_view> strings);
+
+    //convert a number of bytes into more readable values, bytes / kb / Mb
     std::string byteSizeToString(int64_t bytes);
+
+    //convert millis into readable string hh:mm:ss.fff
+    std::string millisToTimeString(int64_t millis);
 
     //set timer start time
     void tickStart();
@@ -103,4 +111,15 @@ namespace util {
 
     //decode base64 string to bytes
     std::vector<unsigned char> base64_decode(const std::string& base64string);
+
+    //math stuff
+    double sqr(double value);
+
+    int alignValue(int numToAlign, int alignment);
+
+    double cosd(double angleDegrees);
+
+    double sind(double angleDegrees);
+
+    double tand(double angleDegrees);
 }

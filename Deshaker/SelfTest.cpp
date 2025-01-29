@@ -81,34 +81,34 @@ void runSelfTest(util::MessagePrinter& out, std::vector<DeviceInfoBase*> deviceL
 
 		//checks
 		bool check = true;
-		if (input.crc() != crcInput) {
+		if (uint64_t crc = input.crc(); crc != crcInput) {
 			out.print("FAIL input ");
 			check = false;
 		}
-		if (executor->getPyramid(0).crc() != crcPyramid) {
+		if (uint64_t crc = executor->getPyramid(0).crc(); crc != crcPyramid) {
 			out.print("FAIL pyramid ");
 			check = false;
 		}
-		if (executor->getTransformedOutput().crc() != crcTransformed) {
+		if (uint64_t crc = executor->getTransformedOutput().crc(); crc != crcTransformed) {
 			out.print("FAIL transformed ");
 			check = false;
 		}
-		if (writer.getOutputFrame().crc() != crcOutput) {
+		if (uint64_t crc = writer.getOutputFrame().crc(); crc != crcOutput) {
 			out.print("FAIL output ");
 			check = false;
 		}
-		util::CRC64 crc;
+		util::CRC64 crc64;
 		for (const PointResult& pr : frame.mResultPoints) {
-			crc.add(pr.result); 
-			crc.add(pr.idx);
-			crc.add(pr.ix0);
-			crc.add(pr.iy0);
-			crc.add(pr.x);
-			crc.add(pr.y);
-			crc.add(pr.u);
-			crc.add(pr.v);
+			crc64.add(pr.result); 
+			crc64.add(pr.idx);
+			crc64.add(pr.ix0);
+			crc64.add(pr.iy0);
+			crc64.add(pr.x);
+			crc64.add(pr.y);
+			crc64.add(pr.u);
+			crc64.add(pr.v);
 		}
-		if (crc.result() != crcResult) {
+		if (uint64_t crc = crc64.result(); crc != crcResult) {
 			out.print("FAIL result ");
 			check = false;
 		}

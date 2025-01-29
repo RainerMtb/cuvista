@@ -221,7 +221,7 @@ void analyzeFrames() {
 
 // read and transform distinct images
 void createTransformImages() {
-	for (int i = 7; i < 10; i++) {
+	for (int i = 0; i < 10; i++) {
 		std::string in1 = std::format("f:/pic/{:04}.bmp", i);
 		std::string in2 = std::format("f:/pic/{:04}.bmp", i + 1);
 		std::string out = std::format("f:/pic/out{:02}.bmp", i + 1);
@@ -253,7 +253,7 @@ void createTransformImages() {
 		//std::cout << "computing transform" << std::endl;
 		cpuframe.computeStart(reader.frameIndex, frame.mResultPoints);
 		cpuframe.computeTerminate(reader.frameIndex, frame.mResultPoints);
-		frame.computeTransform(reader.frameIndex);
+		frame.computeTransform(i + 1);
 		const AffineTransform& trf = frame.getTransform();
 
 		//std::cout << "writing result" << std::endl;

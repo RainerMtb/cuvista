@@ -176,11 +176,15 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 			//background color
 			auto it = colorMap.find(next); //some color literals
 			if (it == colorMap.end()) {
-				std::regex pattern("(\\d+):(\\d+):(\\d+)"); //rgb triplet
 				std::smatch matcher;
-				if (std::regex_match(next, matcher, pattern)) {
+				if (std::regex_match(next, matcher, std::regex("(\\d{1,3}):(\\d{1,3}):(\\d{1,3})$"))) {
 					for (int i = 0; i < 3; i++) {
-						bgcol_rgb.colors[i] = (unsigned char) std::stoi(matcher[i].str());
+						bgcol_rgb.colors[i] = (unsigned char) std::stoi(matcher[i + 1ull].str());
+					}
+
+				} else if (std::regex_match(next, matcher, std::regex("#([[:xdigit:]]{2})([[:xdigit:]]{2})([[:xdigit:]]{2})$"))) {
+					for (int i = 0; i < 3; i++) {
+						bgcol_rgb.colors[i] = (unsigned char) std::stoi(matcher[i + 1ull].str(), nullptr, 16);
 					}
 
 				} else {

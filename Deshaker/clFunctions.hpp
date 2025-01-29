@@ -31,14 +31,21 @@ namespace cl {
 		Size2() : Size2(0, 0) {}
 	};
 
+	class Size3 : public array<size_type, 3> {
+	public:
+		Size3(size_type x, size_type y, size_type z) : array<size_type, 3> { x, y, z } {}
+		Size3(int x, int y, int z) : Size3(size_type(x), size_type(y), size_type(z)) {}
+		Size3() : Size3(0, 0, 0) {}
+	};
+
 	//definition of results structure must be the same in device code
 	struct cl_PointResult {
 		cl_double u, v;
-		cl_int idx, ix0, iy0;
 		cl_int xm, ym;
+		cl_int idx, ix0, iy0;
 		cl_char result;
-		cl_int z;
-		cl_double err;
+		cl_int zp;
+		cl_int direction;
 		cl_char computed;
 	};
 
@@ -61,7 +68,7 @@ namespace cl {
 		//input yuv frames
 		std::vector<Image2D> yuv;
 		//pyramid images, one image for all levels
-		std::vector<Image2D> pyramid;
+		Image2DArray pyramid;
 		//buffers for filtering on pyramid creation
 		std::vector<BufferImages> buffer;
 

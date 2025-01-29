@@ -16,12 +16,13 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
-
-#include "Image2.hpp"
 #include <format>
 #include <stdexcept>
 #include <cstring>
 #include <iostream>
+
+#include "Image2.hpp"
+#include "Util.hpp"
 
 
 ImagePPM& ImageYuvMatFloat::toPPM(ImagePPM& dest, ThreadPoolBase& pool) const {
@@ -184,7 +185,7 @@ ImageRGBA ImageYuv::toRGBA() const {
 bool ImageBGR::saveAsColorBMP(const std::string& filename) const {
 	std::ofstream os(filename, std::ios::binary);
 	im::BmpColorHeader(w, h).writeHeader(os);
-	std::vector<char> data(im::alignValue(w * 3, 4));
+	std::vector<char> data(util::alignValue(w * 3, 4));
 
 	for (int r = h - 1; r >= 0; r--) {
 		const unsigned char* ptr = addr(0, r, 0);
@@ -279,7 +280,7 @@ void ImageRGBA::copyTo(ImageRGBA& dest, size_t r0, size_t c0, ThreadPoolBase& po
 bool ImageRGBA::saveAsColorBMP(const std::string& filename) const {
 	std::ofstream os(filename, std::ios::binary);
 	im::BmpColorHeader(w, h).writeHeader(os);
-	int stridedWidth = im::alignValue(w * 3, 4);
+	int stridedWidth = util::alignValue(w * 3, 4);
 	std::vector<char> imageRow(stridedWidth);
 
 	for (int r = h - 1; r >= 0; r--) {

@@ -23,7 +23,7 @@
 AvxFrame::AvxFrame(CoreData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool) :
 	FrameExecutor(data, deviceInfo, frame, pool),
 	walign { 32 },
-	pitch { align(data.w, walign) } 
+	pitch { util::alignValue(data.w, walign) } 
 {
 	assert(mDeviceInfo.type == DeviceType::AVX && "device type must be AVX here");
 	for (int i = 0; i < mData.bufferCount; i++) mYUV.emplace_back(mData.h, mData.w, mData.cpupitch);
@@ -34,14 +34,10 @@ AvxFrame::AvxFrame(CoreData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame
 	mWarped.push_back(AvxMatf(mData.h, pitch, mData.bgcol_yuv.colors[1]));
 	mWarped.push_back(AvxMatf(mData.h, pitch, mData.bgcol_yuv.colors[2]));
 
-	mFilterBuffer = AvxMatf(mData.w, align(mData.h, walign)); //transposed
+	mFilterBuffer = AvxMatf(mData.w, util::alignValue(mData.h, walign)); //transposed
 	mFilterResult = AvxMatf(mData.h, pitch);
 
 	mOutput.assign(3, AvxMatf(mData.h, pitch));
-}
-
-int AvxFrame::align(int base, int alignment) {
-	return (base + alignment - 1) / alignment * alignment;
 }
 
 
@@ -66,16 +62,17 @@ void AvxFrame::createPyramid(int64_t frameIndex) {
 	ImageYuv& yuv = mYUV[yuvIdx];
 	yuvToFloat(yuv, 0, Y);
 
-	//create pyramid levels below by downsampling level above
-	int r = 0;
+	//filter first level
 	int h = mData.h;
 	int w = mData.w;
+	filter(Y, 0, h, w, mFilterBuffer, filterKernels[0]);
+	filter(mFilterBuffer, 0, w, h, Y, filterKernels[0]);
+
+	//create pyramid levels below by downsampling level above
+	int r = 0;
 	for (size_t z = 1; z < mData.pyramidLevels; z++) {
-		filter(Y, r, h, w, mFilterBuffer, filterKernels[0]);
-		mFilterResult.fill(0.0f);
-		filter(mFilterBuffer, 0, w, h, mFilterResult, filterKernels[0]);
+		downsample(Y.row(r), h, w, Y.w(), Y.row(r + h), Y.w());
 		r += h;
-		downsample(mFilterResult.data(), h, w, mFilterResult.w(), Y.row(r), Y.w());
 		h /= 2;
 		w /= 2;
 		//if (z == 1) std::printf("avx %.14f\n", Y.at(r + 100, 100));
@@ -245,11 +242,9 @@ void AvxFrame::computeStart(int64_t frameIndex, std::vector<PointResult>& result
 
 void AvxFrame::computeTerminate(int64_t frameIndex, std::vector<PointResult>& results) {
 	//util::ConsoleTimer ct("avx compute");
-	size_t pyrIdx = frameIndex % mPyr.size();
-	size_t pyrIdxPrev = (frameIndex - 1) % mPyr.size();
-	AvxMatf& Ycur = mPyr[pyrIdx];
-	AvxMatf& Yprev = mPyr[pyrIdxPrev];
-	assert(Ycur.frameIndex > 0 && Ycur.frameIndex == Yprev.frameIndex + 1 && "wrong frames to compute");
+	size_t idx0 = frameIndex % mPyr.size();
+	size_t idx1 = (frameIndex - 1) % mPyr.size();
+	assert(mPyr[idx0].frameIndex > 0 && mPyr[idx0].frameIndex == mPyr[idx1].frameIndex + 1 && "wrong frames to compute");
 
 	for (int threadIdx = 0; threadIdx < mData.cpuThreads; threadIdx++) mPool.add([&, threadIdx] {
 		int ir = mData.ir;
@@ -264,6 +259,9 @@ void AvxFrame::computeTerminate(int64_t frameIndex, std::vector<PointResult>& re
 		for (int iy0 = threadIdx; iy0 < mData.iyCount; iy0 += mData.cpuThreads) {
 			for (int ix0 = 0; ix0 < mData.ixCount; ix0++) {
 				wp = { 1, 0, 0, 0, 1, 0 };
+				int direction = (ix0 % 2) ^ (iy0 % 2);
+				AvxMatf& pyr0 = mPyr[(frameIndex - direction) % mPyr.size()];
+				AvxMatf& pyr1 = mPyr[(frameIndex - direction + 1) % mPyr.size()];
 
 				// center of previous integration window
 				// one pixel padding around outside for delta
@@ -282,7 +280,7 @@ void AvxFrame::computeTerminate(int64_t frameIndex, std::vector<PointResult>& re
 					std::vector<V8d> s(6);
 					for (int c1 = 0; c1 < iw; c1++) {
 						for (int c2 = 0; c2 < iw; c2++) {
-							V8d a = sd(c1, c2, ym - ir + rowOffset, xm - ir, Yprev);
+							V8d a = sd(c1, c2, ym - ir + rowOffset, xm - ir, pyr1);
 							for (int k = 0; k < 6; k++) {
 								s[k] += a * a.broadcast(k);
 							}
@@ -331,7 +329,7 @@ void AvxFrame::computeTerminate(int64_t frameIndex, std::vector<PointResult>& re
 							V8d pd_zero = 0.0;
 							V8f ps_zero = 0.0f;
 							__m256i epi_one = _mm256_set1_epi32(1);
-							__m256i epi_stride = _mm256_set1_epi32(Ycur.w());
+							__m256i epi_stride = _mm256_set1_epi32(pyr0.w());
 							__m256i idx, idx2;
 
 							//index to load f00
@@ -339,21 +337,21 @@ void AvxFrame::computeTerminate(int64_t frameIndex, std::vector<PointResult>& re
 							__m256i iy = _mm512_cvtpd_epi32(fly);
 							idx = _mm256_mullo_epi32(epi_stride, iy);    //idx = stride * row
 							idx = _mm256_add_epi32(idx, ix);             //idx += col
-							V8d f00 = _mm256_mmask_i32gather_ps(ps_zero, mask, idx, Ycur.row(rowOffset), 4);
+							V8d f00 = _mm256_mmask_i32gather_ps(ps_zero, mask, idx, pyr0.row(rowOffset), 4);
 
 							//index to load f01
 							__mmask8 maskdx = _mm512_cmp_pd_mask(dx, pd_zero, _CMP_NEQ_OS); //not equal
 							idx2 = _mm256_mask_add_epi32(idx, maskdx, idx, epi_one);
-							V8d f01 = _mm256_mmask_i32gather_ps(ps_zero, mask, idx2, Ycur.row(rowOffset), 4);
+							V8d f01 = _mm256_mmask_i32gather_ps(ps_zero, mask, idx2, pyr0.row(rowOffset), 4);
 
 							//index to load f10
 							__mmask8 maskdy = _mm512_cmp_pd_mask(dy, pd_zero, _CMP_NEQ_OS); //not equal
 							idx2 = _mm256_mask_add_epi32(idx, maskdy, idx, epi_stride);
-							V8d f10 = _mm256_mmask_i32gather_ps(ps_zero, mask, idx2, Ycur.row(rowOffset), 4);
+							V8d f10 = _mm256_mmask_i32gather_ps(ps_zero, mask, idx2, pyr0.row(rowOffset), 4);
 
 							//index to load f11
 							idx2 = _mm256_mask_add_epi32(idx2, maskdx, idx2, epi_one);
-							V8d f11 = _mm256_mmask_i32gather_ps(ps_zero, mask, idx2, Ycur.row(rowOffset), 4);
+							V8d f11 = _mm256_mmask_i32gather_ps(ps_zero, mask, idx2, pyr0.row(rowOffset), 4);
 
 							//interpolate
 							V8d dx1 = V8d(1.0) - dx;
@@ -361,7 +359,7 @@ void AvxFrame::computeTerminate(int64_t frameIndex, std::vector<PointResult>& re
 							V8d jm = dx1 * dy1 * f00 + dx1 * dy * f10 + dx * dy1 * f01 + dx * dy * f11;
 
 							//delta
-							V8f im = V8f(Yprev.addr(rowOffset + ym + r - ir, xm - ir), maskIW);
+							V8f im = V8f(pyr1.addr(rowOffset + ym + r - ir, xm - ir), maskIW);
 							V8d nan = mData.dnan;
 							delta[r] = _mm512_mask_sub_pd(nan, mask, _mm512_cvtps_pd(im), jm);
 						}
@@ -371,7 +369,7 @@ void AvxFrame::computeTerminate(int64_t frameIndex, std::vector<PointResult>& re
 						V8d b = 0.0;
 						for (int c = 0; c < iw; c++) {
 							for (int r = 0; r < iw; r++) {
-								V8d vsd = sd(c, r, ym - ir + rowOffset, xm - ir, Yprev);
+								V8d vsd = sd(c, r, ym - ir + rowOffset, xm - ir, pyr1);
 								V8d vdelta = delta[r].broadcast(c);
 								b += vsd * vdelta;
 							}
@@ -427,7 +425,10 @@ void AvxFrame::computeTerminate(int64_t frameIndex, std::vector<PointResult>& re
 
 				//transformation for points with respect to center of image and level 0 of pyramid
 				int idx = iy0 * mData.ixCount + ix0;
-				results[idx] = { idx, ix0, iy0, xm - mData.w / 2.0, ym - mData.h / 2.0, u, v, result, zp };
+				double x0 = xm - mData.w / 2.0 + u * direction;
+				double y0 = ym - mData.h / 2.0 + v * direction;
+				double fdir = 1.0 - 2.0 * direction;
+				results[idx] = { idx, ix0, iy0, x0, y0, u * fdir, v * fdir, result, zp, direction };
 			}
 		}
 	});

@@ -120,9 +120,6 @@ struct Timings {
 	friend std::ostream& operator << (std::ostream& ostream, const Timings& t);
 };
 
-//convert millis into readable string hh:mm:ss.fff
-std::string timeString(int64_t millis);
-
 //generate error string from ffmpeg return codes
 std::string av_make_error(int errnum, const char* msg = "");
 

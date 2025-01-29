@@ -51,8 +51,10 @@ public:
 	void getInput(int64_t frameIndex, ImageRGBA& image) const override;
 	void getWarped(int64_t frameIndex, ImageRGBA& image) override;
 
-	void compute(int64_t frameIdx, const CoreData& core, int rowStart, int rowEnd);
+private:
+	void compute(int64_t frameIndex, const CoreData& core, int rowStart, int rowEnd);
 	void readImage(cl::Image src, size_t destPitch, void* dest, cl::CommandQueue queue) const;
+	void readImage(cl::Image2DArray src, int idx, size_t destPitch, void* dest, cl::CommandQueue queue) const;
 };
 
 namespace cl {

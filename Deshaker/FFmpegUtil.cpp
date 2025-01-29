@@ -17,6 +17,7 @@
  */
 
 #include "FFmpegUtil.hpp"
+#include "Util.hpp"
 #include "ErrorLogger.hpp"
 #include <format>
 #include <numeric>
@@ -78,24 +79,6 @@ std::ostream& operator << (std::ostream& ostream, const Timings& t) {
     return ostream;
 }
 
-std::string timeString(int64_t millis) {
-    int64_t sign = millis < 0 ? -1 : 1;
-    millis = std::abs(millis);
-    int64_t sec = millis / 1000;
-    int64_t min = sec / 60;
-    int64_t hrs = min / 60;
-
-    millis %= 1000;
-    sec %= 60;
-    min %= 60;
-    hrs %= 60;
-
-    std::string timeString = "";
-    if (hrs > 0) timeString = std::format("{}:{:02}:{:02}.{:03}", hrs * sign, min, sec, millis);
-    else timeString = std::format("{:02}:{:02}.{:03}", min * sign, sec, millis);
-    return timeString;
-}
-
 SidePacket::SidePacket(int64_t frameIndex, double pts) {
     this->frameIndex = frameIndex;
     this->packet = nullptr;
@@ -143,9 +126,9 @@ StreamContext::~StreamContext() {
 StreamInfo StreamContext::inputStreamInfo() const {
     std::string tstr;
     if (inputStream->duration != AV_NOPTS_VALUE)
-        tstr = timeString(inputStream->duration * inputStream->time_base.num * 1000 / inputStream->time_base.den);
+        tstr = util::millisToTimeString(inputStream->duration * inputStream->time_base.num * 1000 / inputStream->time_base.den);
     else if (durationMillis != -1)
-        tstr = timeString(durationMillis);
+        tstr = util::millisToTimeString(durationMillis);
     else
         tstr = "unknown";
 

@@ -20,11 +20,11 @@
 
 #include <cstddef>
 
-inline const uint64_t crcInput = 0x34AC1D122E993F14ull;
-inline const uint64_t crcPyramid = 0xFC6EE9925A8935Aull;
-inline const uint64_t crcTransformed = 0xDD547DA6970B338Dull;
-inline const uint64_t crcOutput = 0x3D09E536E30E09FDull;
-inline const uint64_t crcResult = 0x49CD43B609D8F576ull;
+inline const uint64_t crcInput = 3795440549894897428ull;
+inline const uint64_t crcPyramid = 3601505673214147633ull;
+inline const uint64_t crcTransformed = 15948510334877905805ull;
+inline const uint64_t crcOutput = 4398298535004342781ull;
+inline const uint64_t crcResult = 7127949688159767411ull;
 
 
 inline const char* movieTestData =

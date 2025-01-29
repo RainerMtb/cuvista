@@ -108,7 +108,7 @@ void ProgressDisplayGraph::terminate() {
 
 //show detailed report
 void ProgressDisplayDetailed::update(bool force) {
-	std::vector<std::string> strings;
+	std::vector<std::string_view> strings;
 
 	//input stats
 	if (frame.mReader.frameIndex != lastReadFrame && frame.mReader.endOfInput == false) {

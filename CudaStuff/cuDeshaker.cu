@@ -57,16 +57,15 @@ cudaTextureObject_t prepareComputeTexture(float* src, int w, int h, int pitch) {
 
 void ComputeTextures::create(int64_t idx, int64_t idxPrev, const CoreData& core, float* pyrBase) {
 	size_t pyramidSize = 1ull * core.pyramidRowCount * cudaData.strideFloatN; //size of one full pyramid in elements
-	float* ptr1 = pyrBase + pyramidSize * idx;
-	Ycur = prepareComputeTexture(ptr1, core.w, core.pyramidRowCount, cudaData.strideFloat);
-
-	float* ptr2 = pyrBase + pyramidSize * idxPrev;
-	Yprev = prepareComputeTexture(ptr2, core.w, core.pyramidRowCount, cudaData.strideFloat);
+	float* ptrPrev = pyrBase + pyramidSize * idxPrev;
+	Y[0] = prepareComputeTexture(ptrPrev, core.w, core.pyramidRowCount, cudaData.strideFloat);
+	float* ptrCur = pyrBase + pyramidSize * idx;
+	Y[1] = prepareComputeTexture(ptrCur, core.w, core.pyramidRowCount, cudaData.strideFloat);
 }
 
 void ComputeTextures::destroy() {
-	cudaDestroyTextureObject(Ycur);
-	cudaDestroyTextureObject(Yprev);
+	cudaDestroyTextureObject(Y[0]);
+	cudaDestroyTextureObject(Y[1]);
 }
 
 //allocate cuda memory and store pointers
@@ -368,17 +367,18 @@ void CudaExecutor::createPyramid(int64_t frameIndex) {
 	//first level of pyramid
 	//Y data
 	cu::scale_8u32f(yuvStart, cudaData.strideChar, pyrStart, cudaData.strideFloatN, w, h);
+	cu::filter_32f_h(pyrStart, d_bufferH, cudaData.strideFloatN, w, h, 0);
+	cu::filter_32f_v(d_bufferH, pyrStart, cudaData.strideFloatN, w, h, 0);
 
 	//lower levels
-	float* pyrNext = pyrStart + 1ull * cudaData.strideFloatN * h;
+	float* src = pyrStart;
+	float* dest = pyrStart + 1ull * cudaData.strideFloatN * h;
 	for (int z = 1; z <= mData.zMax; z++) {
-		cu::filter_32f_h(pyrStart, d_bufferH, cudaData.strideFloatN, w, h, 0);
-		cu::filter_32f_v(d_bufferH, d_bufferV, cudaData.strideFloatN, w, h, 0);
-		cu::remap_downsize_32f(d_bufferV, cudaData.strideFloatN, pyrNext, cudaData.strideFloatN, w, h);
+		cu::remap_downsize_32f(src, cudaData.strideFloatN, dest, cudaData.strideFloatN, w, h);
 		w /= 2;
 		h /= 2;
-		pyrStart = pyrNext;
-		pyrNext += 1ull * cudaData.strideFloatN * h;
+		src = dest;
+		dest += 1ull * cudaData.strideFloatN * h;
 	}
 
 	handleStatus(cudaGetLastError(), "error @pyramid");
@@ -390,13 +390,13 @@ void CudaExecutor::createPyramid(int64_t frameIndex) {
 //----------------------------------
 
 void CudaExecutor::computeStart(int64_t frameIndex, std::vector<PointResult>& results) {
-	assert(frameIndex > 0 && "invalid pyramid index");
+	assert(frameIndex > 0 && "invalid frame to compute");
 	int64_t pyrIdx = frameIndex % mData.pyramidCount;
 	int64_t pyrIdxPrev = (frameIndex - 1) % mData.pyramidCount;
 
 	//prepare kernel
 	assert(checkKernelParameters(cudaData, props) && "invalid kernel parameters");
-	compTex.create(pyrIdx, pyrIdxPrev, mData, d_pyrData);
+	computeTexture.create(pyrIdx, pyrIdxPrev, mData, d_pyrData);
 
 	//reset computed flags
 	handleStatus(cudaMemsetAsync(d_results, 0, sizeof(CudaPointResult) * mData.resultCount, cs[0]), "error @compute #20");
@@ -412,7 +412,7 @@ void CudaExecutor::computeStart(int64_t frameIndex, std::vector<PointResult>& re
 		frameIndex, 
 		d_interrupt
 	};
-	kernelComputeCall(param, compTex, d_results);
+	kernelComputeCall(param, computeTexture, d_results);
 
 	//cudaStreamQuery(cs[0]);
 	handleStatus(cudaGetLastError(), "error @compute #20");
@@ -433,7 +433,7 @@ void CudaExecutor::computeTerminate(int64_t frameIndex, std::vector<PointResult>
 		frameIndex,
 		d_interrupt
 	};
-	kernelComputeCall(param, compTex, d_results);
+	kernelComputeCall(param, computeTexture, d_results);
 
 	//get results from device
 	handleStatus(cudaMemcpy(h_results, d_results, sizeof(CudaPointResult) * mData.resultCount, cudaMemcpyDefault), "error @compute #100");
@@ -441,11 +441,14 @@ void CudaExecutor::computeTerminate(int64_t frameIndex, std::vector<PointResult>
 	//translate to host structure
 	for (int i = 0; i < mData.resultCount; i++) {
 		const CudaPointResult& hr = h_results[i];
-		results[i] = { hr.idx, hr.ix0, hr.iy0, hr.xm - mData.w / 2.0, hr.ym - mData.h / 2.0, hr.u, hr.v, hr.result, hr.z };
+		double x0 = hr.xm - mData.w / 2.0 + hr.u * hr.direction;
+		double y0 = hr.ym - mData.h / 2.0 + hr.v * hr.direction;
+		double fdir = 1.0 - 2.0 * hr.direction;
+		results[i] = { hr.idx, hr.ix0, hr.iy0, x0, y0, hr.u * fdir, hr.v * fdir, hr.result, hr.z };
 	}
 
 	//shutdown
-	compTex.destroy();
+	computeTexture.destroy();
 	handleStatus(cudaGetLastError(), "error @compute #100");
 }
 

@@ -1,14 +1,16 @@
 # Theory of Operation
 
 1. Create MainData structure
-1. Optional: probe cuda and/or opencl devices
+1. Optional: probe cuda devices
+1. Optional: probe opencl devices
 1. Collect device info
 1. Create subclass of MovieReader and open input
 1. Validate MainData variables with input
-1. Create subclass of MovieWriter and open output
+1. Optional: create one or more Auxiliary Writers - those are called per input frame
+1. Create subclass of MovieWriter and open output - this is called per output frame
 1. Create subclass of MovieFrame handler class - this selects the loop mechanism
 1. Create subclass of FrameExecutor - this selects the device for computations
-1. Create subclass of progress information handler class
+1. Create subclass of progress handler - this informs about progress during loop
 1. Run the loop in the frame class
 1. Close Writer
 1. Close Reader

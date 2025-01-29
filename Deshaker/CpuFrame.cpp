@@ -20,7 +20,6 @@
 #include "MovieFrame.hpp"
 #include "SubMat.hpp"
 #include "MatrixInverter.hpp"
-#include "Util.hpp"
 #include "cuDeshaker.cuh"
 
 //constructor
@@ -117,7 +116,7 @@ void CpuFrame::computeTerminate(int64_t frameIndex, std::vector<PointResult>& re
 				//pattern of forward and backwards pattern matching
 				int direction = (ix0 % 2) ^ (iy0 % 2);
 				CpuPyramid& pyr0 = mPyr[(frameIndex - direction) % mPyr.size()];
-				CpuPyramid& pyr1 = mPyr[(frameIndex - 1 + direction) % mPyr.size()];
+				CpuPyramid& pyr1 = mPyr[(frameIndex - direction + 1) % mPyr.size()];
 
 				//start with null transform
 				wp.setDiag(1.0);

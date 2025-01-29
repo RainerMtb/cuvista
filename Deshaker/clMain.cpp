@@ -62,6 +62,9 @@ void cl::probeRuntime(OpenClInfo& info) {
 				cl_bool hasImage = dev.getInfo<CL_DEVICE_IMAGE_SUPPORT>();
 				if (hasImage == false) continue;
 
+				int64_t maxImageArraySize = dev.getInfo<CL_DEVICE_IMAGE_MAX_ARRAY_SIZE>();
+				if (maxImageArraySize < 2048) continue;
+
 				//pixel dimensions
 				int64_t maxPixelWidth = dev.getInfo<CL_DEVICE_IMAGE2D_MAX_WIDTH>();
 				int64_t maxPixelHeight = dev.getInfo<CL_DEVICE_IMAGE2D_MAX_HEIGHT>();
@@ -188,11 +191,8 @@ void OpenClExecutor::init() {
 			clData.buffer.push_back(buf);
 		}
 
-		//allocate pyramid, one image for all levels
-		for (size_t idx = 0; idx < mData.pyramidCount; idx++) {
-			Image2D im = Image2D(clData.context, CL_MEM_READ_WRITE, fmt32, mData.w, mData.pyramidRowCount);
-			clData.pyramid.push_back(im);
-		}
+		//allocate pyramid array, one image holds all levels, kernel type image2d_array_depth_t
+		clData.pyramid = Image2DArray(clData.context, CL_MEM_READ_WRITE, fmt32, mData.pyramidCount, mData.w, mData.pyramidRowCount, 0, 0);
 
 		//point results
 		clData.results = Buffer(clData.context, CL_MEM_WRITE_ONLY, sizeof(cl_PointResult) * mData.resultCount);
@@ -268,22 +268,23 @@ void OpenClExecutor::createPyramid(int64_t frameIndex) {
 	try {
 		//convert yuv image to first level of Y pyramid
 		Image& im = clData.buffer[0].result;
+		Image& buf1 = clData.buffer[0].filterH;
 		scale_8u32f_1(clData.yuv[frIdx], im, clData);
-		clData.queue.enqueueCopyImage(im, clData.pyramid[pyrIdx], Size2(), Size2(), Size2(w, h));
+
+		//filter first level
+		filter_32f_h1(im, buf1, 0, clData);
+		filter_32f_v1(buf1, im, 0, clData);
+		clData.queue.enqueueCopyImage(im, clData.pyramid, Size3(), Size3(0, 0, pyrIdx), Size3(w, h, 1));
 
 		//lower levels of pyramid
 		size_t row = h;
 		for (size_t z = 1; z < mData.pyramidLevels; z++) {
 			Image& src = clData.buffer[z - 1].result;
 			Image& dest = clData.buffer[z].result;
-			Image& buf1 = clData.buffer[z - 1].filterH;
-			Image& buf2 = clData.buffer[z - 1].filterV;
-			filter_32f_h1(src, buf1, 0, clData);
-			filter_32f_v1(buf1, buf2, 0, clData);
-			remap_downsize_32f(buf2, dest, clData);
+			remap_downsize_32f(src, dest, clData);
 			int ww = w >> z;
 			int hh = h >> z;
-			clData.queue.enqueueCopyImage(dest, clData.pyramid[pyrIdx], Size2(), Size2(0ull, row), Size2(ww, hh));
+			clData.queue.enqueueCopyImage(dest, clData.pyramid, Size3(), Size3(0ull, row, pyrIdx), Size3(ww, hh, 1));
 			row += hh;
 		}
 
@@ -296,24 +297,22 @@ void OpenClExecutor::createPyramid(int64_t frameIndex) {
 //-------- COMPUTE -----------------
 //----------------------------------
 
-void OpenClExecutor::compute(int64_t frameIdx, const CoreData& core, int rowStart, int rowEnd) {
+//internal function to start compute kernel
+void OpenClExecutor::compute(int64_t frameIndex, const CoreData& core, int rowStart, int rowEnd) {
 	//util::ConsoleTimer timer("ocl compute start");
-	assert(frameIdx > 0 && "invalid pyramid index");
-	int64_t pyrIdx = frameIdx % core.pyramidCount;
-	int64_t pyrIdxPrev = (frameIdx - 1) % core.pyramidCount;
+	assert(frameIndex > 0 && "invalid pyramid index");
 
 	try {
 		//local memory size in bytes
 		int memsiz = (7LL * core.iw * core.iw + 108) * sizeof(cl_double) + 6 * sizeof(cl_double*);
 		//set up compute kernel
 		Kernel& kernel = clData.kernels.compute;
-		kernel.setArg(0, (cl_long) frameIdx);
-		kernel.setArg(1, clData.pyramid[pyrIdxPrev]);
-		kernel.setArg(2, clData.pyramid[pyrIdx]);
-		kernel.setArg(3, clData.results);
-		kernel.setArg(4, clData.core);
-		kernel.setArg(5, memsiz, nullptr);
-		kernel.setArg(6, rowStart);
+		kernel.setArg(0, (cl_long) frameIndex);
+		kernel.setArg(1, clData.pyramid);
+		kernel.setArg(2, clData.results);
+		kernel.setArg(3, clData.core);
+		kernel.setArg(4, memsiz, nullptr);
+		kernel.setArg(5, rowStart);
 
 		//threads
 		NDRange ndlocal = NDRange(core.iw, 32 / core.iw); //based on cuda warp
@@ -350,7 +349,10 @@ void OpenClExecutor::computeTerminate(int64_t frameIndex, std::vector<PointResul
 		//convert from cl_PointResult to PointResult
 		for (size_t i = 0; i < results.size(); i++) {
 			cl_PointResult& pr = clData.cl_results[i];
-			results[i] = { pr.idx, pr.ix0, pr.iy0, pr.xm - mData.w / 2.0, pr.ym - mData.h / 2.0, pr.u, pr.v, PointResultType(pr.result), pr.z };
+			double x0 = pr.xm - mData.w / 2.0 + pr.u * pr.direction;
+			double y0 = pr.ym - mData.h / 2.0 + pr.v * pr.direction;
+			double fdir = 1.0 - 2.0 * pr.direction;
+			results[i] = { pr.idx, pr.ix0, pr.iy0, x0, y0, pr.u * fdir, pr.v * fdir, PointResultType(pr.result), pr.zp, pr.direction };
 		}
 
 	} catch (const Error& err) {
@@ -399,7 +401,8 @@ void OpenClExecutor::getOutputYuv(int64_t frameIndex, ImageYuvData& image) {
 		//copy to cpu memory
 		Size2 region(image.strideInBytes(), mData.h);
 		for (int i = 0; i < 3; i++) {
-			clData.queue.enqueueReadBufferRect(clData.yuvOut, CL_TRUE, Size2(0, mData.h * i), Size2(), region, mData.cpupitch, 0, 0, 0, image.addr(i, 0, 0));
+			Size2 offset(0, mData.h * i);
+			clData.queue.enqueueReadBufferRect(clData.yuvOut, CL_TRUE, offset, Size2(), region, mData.cpupitch, 0, 0, 0, image.addr(i, 0, 0));
 		}
 
 		//forward image index
@@ -431,13 +434,20 @@ void OpenClExecutor::readImage(Image src, size_t destPitch, void* dest, CommandQ
 	queue.enqueueReadImage(src, CL_TRUE, Size2(), Size2(w, h), destPitch, 0, dest);
 }
 
+//utility function to read from image array
+void OpenClExecutor::readImage(Image2DArray src, int idx, size_t destPitch, void* dest, cl::CommandQueue queue) const {
+	size_t w = src.getImageInfo<CL_IMAGE_WIDTH>();
+	size_t h = src.getImageInfo<CL_IMAGE_HEIGHT>();
+	queue.enqueueReadImage(src, CL_TRUE, Size3(0, 0, idx), Size3(w, h, 1ull), destPitch, 0, dest);
+}
+
 Matf OpenClExecutor::getPyramid(int64_t frameIndex) const {
 	size_t pyrIdx = frameIndex % mData.pyramidCount;
 	size_t wbytes = mData.w * sizeof(float);
 	Matf out = Mat<float>::zeros(mData.pyramidRowCount, mData.w);
 
 	try {
-		readImage(clData.pyramid[pyrIdx], wbytes, out.data(), clData.queue);
+		readImage(clData.pyramid, pyrIdx, wbytes, out.data(), clData.queue);
 
 	} catch (const Error& err) {
 		errorLogger.logError("OpenCL get pyramid: ", err.what());

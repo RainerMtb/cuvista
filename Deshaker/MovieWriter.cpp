@@ -489,7 +489,7 @@ void ResultImageWriter::writeImage(const AffineTransform& trf, std::span<PointRe
 	//write text info
 	int textScale = bgr.h / 540;
 	double frac = numValid == 0 ? 0.0 : 100.0 * numConsens / numValid;
-	std::string s1 = std::format("index {}, consensus {}/{} ({:.0f}%)", idx, numConsens, numValid, frac);
+	std::string s1 = std::format("index {}, consensus {}/{} ({:.1f}%)", idx, numConsens, numValid, frac);
 	bgr.writeText(s1, 0, bgr.h - textScale * 20, textScale, textScale, TextAlign::TOP_LEFT, ColorBgr::WHITE, ColorBgr::BLACK);
 	std::string s2 = std::format("transform dx={:.1f}, dy={:.1f}, scale={:.5f}, rot={:.1f}", trf.dX(), trf.dY(), trf.scale(), trf.rotMinutes());
 	bgr.writeText(s2, 0, bgr.h - textScale * 10, textScale, textScale, TextAlign::TOP_LEFT, ColorBgr::WHITE, ColorBgr::BLACK);

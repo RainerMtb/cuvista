@@ -87,8 +87,9 @@ quality and performance settings:
 -bgcolor name   some predifined colors to use for background fill like
                 red, green, blue, white, black, ...
                 default: yellow
--bgcolor rgb    color triplet separated by colons in format R:G:B
+-bgcolor rgb    background colors separated by colons in format R:G:B
                 values must be 0..255
+-bgcolor web    background color given as a web color string in format #RRGGBB
 -cputhreads n   number of threads on the cpu to use for computations
                 default: based on hardware
 -crf n          constant rate factor used for encoding

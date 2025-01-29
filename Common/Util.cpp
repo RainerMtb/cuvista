@@ -19,7 +19,9 @@
 #include <iostream>
 #include <format>
 #include <fstream>
-
+#include <cassert>
+#include <numbers>
+#include <cmath>
 #include "Util.hpp"
 
 namespace util {
@@ -37,7 +39,11 @@ namespace util {
 		std::cout << mName << "=" << delta.count() / 1000.0 << " ms" << std::endl;
 	}
 
-	std::string concatStrings(std::vector<std::string>& strings, std::string_view delimiter, std::string_view prefix, std::string_view suffix) {
+	std::string concatStrings(std::span<std::string_view> strings) {
+		return concatStrings(strings, "", "", "");
+	}
+
+	std::string concatStrings(std::span<std::string_view> strings, std::string_view delimiter, std::string_view prefix, std::string_view suffix) {
 		std::string out = "";
 		auto it = strings.begin();
 
@@ -186,5 +192,56 @@ namespace util {
 
 	uint64_t CRC64::result() const {
 		return crc;
+	}
+
+	std::ostream& operator << (std::ostream& os, const CRC64& crc) {
+		os << std::hex << crc.crc;
+		return os;
+	}
+
+	std::string millisToTimeString(int64_t millis) {
+		int64_t sign = millis < 0 ? -1 : 1;
+		millis = std::abs(millis);
+		int64_t sec = millis / 1000;
+		int64_t min = sec / 60;
+		int64_t hrs = min / 60;
+
+		millis %= 1000;
+		sec %= 60;
+		min %= 60;
+		hrs %= 60;
+
+		std::string timeString = "";
+		if (hrs > 0) timeString = std::format("{}:{:02}:{:02}.{:03}", hrs * sign, min, sec, millis);
+		else timeString = std::format("{:02}:{:02}.{:03}", min * sign, sec, millis);
+		return timeString;
+	}
+
+
+	//----------------------------------------
+	//---------- MATH STUFF ------------------
+	//----------------------------------------
+
+	double sqr(double value) {
+		return value * value;
+	}
+
+	int alignValue(int numToAlign, int alignment) {
+		assert(alignment && "factor must not be 0");
+		return numToAlign >= 0 ? ((numToAlign + alignment - 1) / alignment) * alignment : numToAlign / alignment * alignment;
+	}
+
+	constexpr double PI = std::numbers::pi;
+
+	double cosd(double angleDegrees) {
+		return std::cos(angleDegrees * PI / 180.0);
+	}
+
+	double sind(double angleDegrees) {
+		return std::sin(angleDegrees * PI / 180.0);
+	}
+
+	double tand(double angleDegrees) {
+		return std::tan(angleDegrees * PI / 180.0);
 	}
 }

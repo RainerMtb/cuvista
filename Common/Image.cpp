@@ -386,8 +386,8 @@ template <class T> void im::ImageBase<T>::drawLine(double x0, double y0, double 
 }
 
 template <class T> void im::ImageBase<T>::drawEllipse(double cx, double cy, double rx, double ry, ColorBase<T> color, bool fill) {
-	double rx2 = sqr(rx);
-	double ry2 = sqr(ry);
+	double rx2 = util::sqr(rx);
+	double ry2 = util::sqr(ry);
 	double h = sqrt(rx2 + ry2);
 
 	if (rx < 5 && ry < 5) {
@@ -441,6 +441,8 @@ template <class T> void im::ImageBase<T>::drawMarker(double cx, double cy, Color
 }
 
 template <class T> void im::ImageBase<T>::drawMarker(double cx, double cy, ColorBase<T> color, double rx, double ry, MarkerType type) {
+	using namespace util;
+
 	const int steps = 8;
 	constexpr double ds = 1.0 / steps;
 	//align center to nearest fraction
@@ -517,7 +519,7 @@ template <class T> bool im::ImageBase<T>::saveAsBMP(const std::string& filename,
 	int w = this->w;
 
 	im::BmpGrayHeader(w, h * numPlanes).writeHeader(os);
-	size_t stridedWidth = alignValue(w, 4);
+	size_t stridedWidth = util::alignValue(w, 4);
 	std::vector<char> data(stridedWidth);
 
 	for (int i = numPlanes - 1; i >= 0; i--) {

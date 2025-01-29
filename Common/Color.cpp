@@ -19,6 +19,7 @@
 #include <cassert>
 #include <algorithm>
 #include <cmath>
+#include <regex>
 #include "Color.hpp"
 
 namespace im {
@@ -43,13 +44,26 @@ namespace im {
 	ColorRGBA ColorRGBA::WHITE = { 255, 255, 255, 255 };
 	ColorRGBA ColorRGBA::GRAY =  { 128, 128, 128, 255 };
 
-	int alignValue(int numToAlign, int alignment) {
-		assert(alignment && "factor must not be 0");
-		return numToAlign >= 0 ? ((numToAlign + alignment - 1) / alignment) * alignment : numToAlign / alignment * alignment;
+	template <class T> void ColorBase<T>::setColors(const std::string& webColor, std::array<int, 3> index) {
+		std::smatch matcher;
+		if (std::regex_match(webColor, matcher, std::regex("#([[:xdigit:]]{2})([[:xdigit:]]{2})([[:xdigit:]]{2})$"))) {
+			for (int i = 0; i < 3; i++) {
+				int group = index[i] + 1;
+				colors[i] = (unsigned char) std::stoi(matcher[group].str(), nullptr, 16);
+			}
+		}
 	}
 
-	double sqr(double d) {
-		return d * d;
+	ColorRgb ColorRgb::webColor(const std::string& webColor) {
+		ColorRgb out;
+		out.setColors(webColor, { 0, 1, 2 });
+		return out;
+	}
+
+	ColorBgr ColorBgr::webColor(const std::string& webColor) {
+		ColorBgr out;
+		out.setColors(webColor, { 2, 1, 0 });
+		return out;
 	}
 
 	static void yuv_to_rgb_func(float yf, float uf, float vf, unsigned char* r, unsigned char* g, unsigned char* b) {

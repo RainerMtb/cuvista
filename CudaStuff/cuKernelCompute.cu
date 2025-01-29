@@ -43,7 +43,7 @@ template<class T> __device__ T tex2D(cudaTextureObject_t tex, float x, float y);
 extern __constant__ CoreData d_core;
 
 //compute value for sd matrix directly
-__device__ inline double sdf(int r, int c1, int c2, int y0, int x0, cudaTextureObject_t tex) {
+__device__ double sdf(int r, int c1, int c2, int y0, int x0, cudaTextureObject_t tex) {
 	int idx = r / 2;
 	int dy = r % 2;
 	int dx = 1 - dy;
@@ -59,7 +59,11 @@ __global__ void kernelCompute(ComputeTextures tex, CudaPointResult* results, Com
 	int iy0 = blockIdx.y;
 	int blockIndex = iy0 * gridDim.x + ix0;
 	if (*param.d_interrupt || results[blockIndex].computed) return;
+
 	int64_t timeStart = cu::globaltimer();
+	int direction = (ix0 % 2) ^ (iy0 % 2);
+	cudaTextureObject_t pyr0 = tex.Y[direction];
+	cudaTextureObject_t pyr1 = tex.Y[1 - direction];
 
 	int ir = d_core.ir;
 	int iw = d_core.iw;
@@ -110,8 +114,8 @@ __global__ void kernelCompute(ComputeTextures tex, CudaPointResult* results, Com
 			int ix = xm - ir + r;
 			for (int c = ci; c < iw; c += cols) {
 				int iy = ym - ir + c + rowOffset;
-				double x = tex2D<float>(tex.Yprev, ix + 1, iy) / 2 - tex2D<float>(tex.Yprev, ix - 1, iy) / 2;
-				double y = tex2D<float>(tex.Yprev, ix, iy + 1) / 2 - tex2D<float>(tex.Yprev, ix, iy - 1) / 2;
+				double x = tex2D<float>(pyr0, ix + 1, iy) / 2 - tex2D<float>(pyr0, ix - 1, iy) / 2;
+				double y = tex2D<float>(pyr0, ix, iy + 1) / 2 - tex2D<float>(pyr0, ix, iy - 1) / 2;
 				int idx = r * iw + c;
 				sd[idx] = x;
 				idx += iw * iw;
@@ -170,16 +174,16 @@ __global__ void kernelCompute(ComputeTextures tex, CudaPointResult* results, Com
 						delta[c * iw + r] = d_core.dnan;
 
 					} else {
-						double im = tex2D<float>(tex.Yprev, xm - ir + c, rowOffset + ym + r - ir);
+						double im = tex2D<float>(pyr0, xm - ir + c, rowOffset + ym + r - ir);
 
 						double flx = floor(ix), fly = floor(iy);
 						double dx = ix - flx, dy = iy - fly;
 						int x0 = (int) flx, y0 = (int) fly;
 
-						double f00 = tex2D<float>(tex.Ycur, x0, rowOffset + y0);
-						double f01 = tex2D<float>(tex.Ycur, x0 + 1, rowOffset + y0);
-						double f10 = tex2D<float>(tex.Ycur, x0, rowOffset + y0 + 1);
-						double f11 = tex2D<float>(tex.Ycur, x0 + 1, rowOffset + y0 + 1);
+						double f00 = tex2D<float>(pyr1, x0, rowOffset + y0);
+						double f01 = tex2D<float>(pyr1, x0 + 1, rowOffset + y0);
+						double f10 = tex2D<float>(pyr1, x0, rowOffset + y0 + 1);
+						double f11 = tex2D<float>(pyr1, x0 + 1, rowOffset + y0 + 1);
 						double jm = (1.0 - dx) * (1.0 - dy) * f00 + (1.0 - dx) * dy * f10 + dx * (1.0 - dy) * f01 + dx * dy * f11;
 
 						delta[c * iw + r] = im - jm;
@@ -249,9 +253,10 @@ __global__ void kernelCompute(ComputeTextures tex, CudaPointResult* results, Com
 		//bring values to level 0
 		while (z < 0) { xm /= 2; ym /= 2; u /= 2; v /= 2; z++; }
 		while (z > 0) { xm *= 2; ym *= 2; u *= 2; v *= 2; z--; }
+
 		//store results object
 		int64_t timeStop = cu::globaltimer();
-		results[blockIndex] = { timeStart, timeStop, u, v, blockIndex, ix0, iy0, xm, ym, result, zp, err, true };
+		results[blockIndex] = { timeStart, timeStop, u, v, xm, ym, blockIndex, ix0, iy0, result, zp, direction, true };
 	}
 }
 
