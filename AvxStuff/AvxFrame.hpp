@@ -20,7 +20,6 @@
 
 #include "AvxMat.hpp"
 #include "AvxWrapper.hpp"
-#include "Image2.hpp"
 #include "Affine2D.hpp"
 #include "FrameExecutor.hpp"
 

@@ -24,7 +24,6 @@
 #include <cassert>
 #include <memory>
 #include "CharMap.hpp"
-#include "Color.hpp"
 
 //-----------------------------------------
 //Bitmap image headers

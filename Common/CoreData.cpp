@@ -19,6 +19,13 @@
 #include <cmath>
 #include "CoreData.hpp"
 
+float Triplet::operator [] (size_t idx) const {
+	if (idx == 0) return y;
+	if (idx == 1) return u;
+	if (idx == 2) return v;
+	throw std::runtime_error("invalid index");
+}
+
 bool PointResult::isValid() const {
 	return result > PointResultType::RUNNING;
 }

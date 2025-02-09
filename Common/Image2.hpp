@@ -29,8 +29,7 @@ class ImageRGBA;
 class ImageYuvMatFloat : public im::ImageMatShared<float> {
 
 public:
-	ImageYuvMatFloat(int h, int w, int stride, float* y, float* u, float* v) :
-		ImageMatShared(h, w, stride, y, u, v) {}
+	ImageYuvMatFloat(int h, int w, int stride, float* y, float* u, float* v);
 
 	ImagePPM& toPPM(ImagePPM& dest, ThreadPoolBase& pool = defaultPool) const;
 
@@ -42,8 +41,7 @@ public:
 class ImageMatYuv8 : public im::ImageMatShared<uint8_t> {
 
 public:
-	ImageMatYuv8(int h, int w, int stride, uint8_t* y, uint8_t* u, uint8_t* v) :
-		ImageMatShared(h, w, stride, y, u, v) {}
+	ImageMatYuv8(int h, int w, int stride, uint8_t* y, uint8_t* u, uint8_t* v);
 };
 
 
@@ -52,12 +50,10 @@ class ImageRGBplanar : public im::ImageBase<unsigned char> {
 
 public:
 	//allocate frame given height, width, and stride
-	ImageRGBplanar(int h, int w) :
-		ImageBase(h, w, w, 3) {}
+	ImageRGBplanar(int h, int w);
 
 	//default constructor produces invalid image
-	ImageRGBplanar() :
-		ImageRGBplanar(0, 0) {}
+	ImageRGBplanar();
 };
 
 
@@ -65,17 +61,13 @@ public:
 class ImageRGBA : public im::ImagePacked<unsigned char> {
 
 public:
-	ImageRGBA(int h, int w, int stride, unsigned char* data) :
-		ImagePacked(h, w, stride, 4, data, h * stride) {}
+	ImageRGBA(int h, int w, int stride, unsigned char* data);
 
-	ImageRGBA(int h, int w, int stride) :
-		ImagePacked(h, w, stride, 4, h * stride) {}
+	ImageRGBA(int h, int w, int stride);
 
-	ImageRGBA(int h, int w) :
-		ImageRGBA(h, w, 4 * w) {}
+	ImageRGBA(int h, int w);
 
-	ImageRGBA() :
-		ImageRGBA(0, 0) {}
+	ImageRGBA();
 
 	void copyTo(ImageRGBA& dest, size_t r0, size_t c0, ThreadPoolBase& pool = defaultPool) const;
 
@@ -87,17 +79,13 @@ public:
 class ImageYuv : public im::ImageBase<unsigned char> {
 
 public:
-	ImageYuv(int h, int w, int stride) :
-		ImageBase<unsigned char>(h, w, stride, 3) {}
+	ImageYuv(int h, int w, int stride);
 
-	ImageYuv(int h, int w, size_t stride) :
-		ImageYuv(h, w, int(stride)) {}
+	ImageYuv(int h, int w, size_t stride);
 
-	ImageYuv(int h, int w) :
-		ImageYuv(h, w, w) {}
+	ImageYuv(int h, int w);
 
-	ImageYuv() :
-		ImageYuv(0, 0) {}
+	ImageYuv();
 
 	virtual unsigned char* data();
 
@@ -141,11 +129,9 @@ public:
 class ImageBGR : public im::ImagePacked<unsigned char> {
 
 public:
-	ImageBGR(int h, int w) :
-		ImagePacked(h, w, 3 * w, 3, 3 * h * w) {}
+	ImageBGR(int h, int w);
 
-	ImageBGR() :
-		ImageBGR(0, 0) {}
+	ImageBGR();
 
 	bool saveAsColorBMP(const std::string& filename) const;
 
@@ -162,8 +148,7 @@ public:
 
 	ImagePPM(int h, int w);
 
-	ImagePPM() :
-		ImagePPM(0, 0) {}
+	ImagePPM();
 
 	const unsigned char* data() const override;
 

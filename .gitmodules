@@ -7,3 +7,6 @@
 [submodule "OpenCL-ICD-Loader"]
 	path = OpenCL-ICD-Loader
 	url = https://github.com/KhronosGroup/OpenCL-ICD-Loader.git
+[submodule "cpu_features"]
+	path = cpu_features
+	url = https://github.com/google/cpu_features.git

@@ -6,5 +6,5 @@ add_library(AvxStuff STATIC
     AvxWrapper.cpp
 )
 
-target_include_directories(AvxStuff PUBLIC "${PROJECT_SOURCE_DIR}/CudaStuff")
-target_link_libraries(AvxStuff PUBLIC CudaStuff)
+target_include_directories(AvxStuff PRIVATE "${PROJECT_SOURCE_DIR}/CudaStuff")
+target_link_libraries(AvxStuff PRIVATE CudaStuff)

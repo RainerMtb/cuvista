@@ -60,6 +60,7 @@ void runSelfTest(util::MessagePrinter& out, std::vector<DeviceInfoBase*> deviceL
 		auto executor = deviceList[i]->create(data, frame);
 		
 		//first frame
+		//std::cout << "reading" << std::endl;
 		reader.read(frame.mBufferFrame);
 		executor->inputData(reader.frameIndex, frame.mBufferFrame);
 		executor->createPyramid(reader.frameIndex);
@@ -68,6 +69,7 @@ void runSelfTest(util::MessagePrinter& out, std::vector<DeviceInfoBase*> deviceL
 		executor->inputData(reader.frameIndex, frame.mBufferFrame);
 		executor->createPyramid(reader.frameIndex);
 		//compute
+		//std::cout << "computing" << std::endl;
 		executor->computeStart(reader.frameIndex, frame.mResultPoints);
 		executor->computeTerminate(reader.frameIndex, frame.mResultPoints);
 		//input
@@ -80,6 +82,7 @@ void runSelfTest(util::MessagePrinter& out, std::vector<DeviceInfoBase*> deviceL
 		writer.prepareOutput(*executor);
 
 		//checks
+		//std::cout << "running checks" << std::endl;
 		bool check = true;
 		if (uint64_t crc = input.crc(); crc != crcInput) {
 			out.print("FAIL input ");

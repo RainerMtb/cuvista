@@ -444,7 +444,7 @@ void CudaExecutor::computeTerminate(int64_t frameIndex, std::vector<PointResult>
 		double x0 = hr.xm - mData.w / 2.0 + hr.u * hr.direction;
 		double y0 = hr.ym - mData.h / 2.0 + hr.v * hr.direction;
 		double fdir = 1.0 - 2.0 * hr.direction;
-		results[i] = { hr.idx, hr.ix0, hr.iy0, x0, y0, hr.u * fdir, hr.v * fdir, hr.result, hr.z };
+		results[i] = { hr.idx, hr.ix0, hr.iy0, x0, y0, hr.u * fdir, hr.v * fdir, hr.result, hr.z, hr.direction };
 	}
 
 	//shutdown

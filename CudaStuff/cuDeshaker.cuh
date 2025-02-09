@@ -19,7 +19,6 @@
 #pragma once
 
 #include "CoreData.hpp"
-#include "Image2.hpp"
 #include "FrameExecutor.hpp"
 #include "AffineCore.hpp"
 

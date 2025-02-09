@@ -2,8 +2,8 @@
 	<Package
 		Name="Cuvista"
 		Manufacturer="Rainer Bitschi"
-		Version="1.1.0.0"
-		UpgradeCode="1446b707-932a-49b4-a152-e2e0528cf201"
+		Version="1.5.0.0"
+		UpgradeCode="6c3afcf4-c38b-4eef-b186-0e163fa43848"
 		>
 		
 		<MajorUpgrade DowngradeErrorMessage="!(loc.DowngradeError)" />

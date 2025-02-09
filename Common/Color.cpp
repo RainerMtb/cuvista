@@ -66,6 +66,18 @@ namespace im {
 		return out;
 	}
 
+	unsigned char ColorYuv::y() const { return colors[0]; }
+	unsigned char ColorYuv::u() const { return colors[1]; }
+	unsigned char ColorYuv::v() const { return colors[2]; }
+
+	unsigned char ColorRgb::r() const { return colors[0]; }
+	unsigned char ColorRgb::g() const { return colors[1]; }
+	unsigned char ColorRgb::b() const { return colors[2]; }
+
+	unsigned char ColorBgr::r() const { return colors[2]; }
+	unsigned char ColorBgr::g() const { return colors[1]; }
+	unsigned char ColorBgr::b() const { return colors[0]; }
+
 	static void yuv_to_rgb_func(float yf, float uf, float vf, unsigned char* r, unsigned char* g, unsigned char* b) {
 		*r = (unsigned char) std::rint(std::clamp(yf + (1.370705f * (vf - 128.0f)), 0.0f, 255.0f));
 		*g = (unsigned char) std::rint(std::clamp(yf - (0.337633f * (uf - 128.0f)) - (0.698001f * (vf - 128.0f)), 0.0f, 255.0f));

@@ -59,9 +59,9 @@ namespace im {
 
 		ColorRgb toRgb() const;
 
-		unsigned char y() const { return colors[0]; }
-		unsigned char u() const { return colors[1]; }
-		unsigned char v() const { return colors[2]; }
+		unsigned char y() const;
+		unsigned char u() const;
+		unsigned char v() const;
 	};
 
 	class ColorRgb : public ImageColor {
@@ -72,9 +72,9 @@ namespace im {
 
 		ColorNorm toNormalized() const;
 
-		unsigned char r() const { return colors[0]; }
-		unsigned char g() const { return colors[1]; }
-		unsigned char b() const { return colors[2]; }
+		unsigned char r() const;
+		unsigned char g() const;
+		unsigned char b() const;
 	};
 
 	class ColorBgr : public ImageColor {
@@ -90,9 +90,9 @@ namespace im {
 
 		static ColorBgr webColor(const std::string& webColor);
 
-		unsigned char r() const { return colors[2]; }
-		unsigned char g() const { return colors[1]; }
-		unsigned char b() const { return colors[0]; }
+		unsigned char r() const;
+		unsigned char g() const;
+		unsigned char b() const;
 	};
 
 	class ColorRGBA : public ColorBase<unsigned char> {

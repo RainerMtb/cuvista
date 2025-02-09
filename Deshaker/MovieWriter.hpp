@@ -200,6 +200,11 @@ private:
 class FFmpegWriter : public FFmpegFormatWriter {
 
 protected:
+	std::map<AVCodecID, std::vector<std::string>> codecToNamesMap = {
+		{AV_CODEC_ID_H264, {"libx264", "h264", "h264_qsv"}},
+		{AV_CODEC_ID_HEVC, {"libx265", "hevc", "hevc_qsv"}},
+		{AV_CODEC_ID_AV1, {"libsvtav1", "librav1e", "libaom-av1"}},
+	};
 	int imageBufferSize;
 	std::vector<ImageYuv> imageBuffer;
 	AVFrame* av_frame = nullptr;

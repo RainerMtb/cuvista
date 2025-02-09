@@ -292,7 +292,7 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 
 	if (args.empty()) {
 		showBasicInfo();
-		throw CancelException();
+		throw SilentQuitException();
 	}
 
 	//check output file presence and permissions

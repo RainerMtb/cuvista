@@ -203,12 +203,13 @@ void AvxFrame::downsample(const float* srcptr, int h, int w, int stride, float* 
 void AvxFrame::yuvToFloat(const ImageYuv& yuv, size_t plane, AvxMatf& dest) {
 	//util::ConsoleTimer ic("avx yuv to float");
 	constexpr float f = 1.0f / 255.0f;
+	V16f ff = f;
 	for (int r = 0; r < mData.h; r++) {
 		int c = 0;
 		//handle blocks of 16 pixels
 		for (; c < mData.w / 16 * 16; c += 16) {
 			V16f result = yuv.addr(plane, r, c);
-			result = result * f;
+			result = result * ff;
 			result.storeu(dest.row(r) + c);
 		}
 		//image width may not align to 16, handle trailing pixels individually

@@ -45,9 +45,10 @@ The build script will look for Cuda and include Cuda when found. Tell cmake wher
 
 The build script will look for Qt6 and include the Gui executable when found. Tell cmake where to find Qt6 by setting ```CMAKE_PREFIX_PATH=path/to/qt``` or via the system path. Explicitly disable building the gui via option ```-D BUILD_GUI=0```
 
+
+
 ## Building on Windows
 Tested on Windows 11
-
 
 ### Dependencies
 Get ffmeg with shared libraries https://www.ffmpeg.org/download.html#build-windows  
@@ -76,6 +77,7 @@ Optionally continue with:
 cmake --install . --config Release
 ```
 This will put together the dependent libraries and the executables in the subfolder ```install```
+
 
 
 ## Building on Linux
@@ -114,10 +116,6 @@ sudo apt install -y cmake
 FFmpeg shared libraries:
 ```
 sudo apt install -y libavcodec-dev libavdevice-dev libavfilter-dev libavformat-dev libavutil-dev libswresample-dev libswscale-dev
-```
-Google Cpu Features:
-```
-sudo apt install -y libcpu-features-dev
 ```
 In case PkgConfig is missing:
 ```

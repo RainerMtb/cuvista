@@ -23,7 +23,11 @@
 
 #include "Image2.hpp"
 #include "Util.hpp"
+#include "Color.hpp"
 
+
+ImageYuvMatFloat::ImageYuvMatFloat(int h, int w, int stride, float* y, float* u, float* v) :
+	ImageMatShared(h, w, stride, y, u, v) {}
 
 ImagePPM& ImageYuvMatFloat::toPPM(ImagePPM& dest, ThreadPoolBase& pool) const {
 	yuvToRgb(dest, { 0, 1, 2 }, pool);
@@ -37,9 +41,32 @@ ImageRGBA& ImageYuvMatFloat::toRGBA(ImageRGBA& dest, ThreadPoolBase& pool) const
 }
 
 
+ImageMatYuv8::ImageMatYuv8(int h, int w, int stride, uint8_t* y, uint8_t* u, uint8_t* v) :
+	ImageMatShared(h, w, stride, y, u, v) {}
+
+
+ImageRGBplanar::ImageRGBplanar(int h, int w) :
+	ImageBase(h, w, w, 3) {}
+
+ImageRGBplanar::ImageRGBplanar() :
+	ImageRGBplanar(0, 0) {}
+
+
 //------------------------
 // YUV image stuff
 //------------------------
+
+ImageYuv::ImageYuv(int h, int w, int stride) :
+	ImageBase<unsigned char>(h, w, stride, 3) {}
+
+ImageYuv::ImageYuv(int h, int w, size_t stride) :
+	ImageYuv(h, w, int(stride)) {}
+
+ImageYuv::ImageYuv(int h, int w) :
+	ImageYuv(h, w, w) {}
+
+ImageYuv::ImageYuv() :
+	ImageYuv(0, 0) {}
 
 unsigned char* ImageYuv::data() {
 	return arrays.at(0).get();
@@ -182,6 +209,12 @@ ImageRGBA ImageYuv::toRGBA() const {
 // BGR image stuff
 //------------------------
 
+ImageBGR::ImageBGR(int h, int w) :
+	ImagePacked(h, w, 3 * w, 3, 3 * h * w) {}
+
+ImageBGR::ImageBGR() :
+	ImageBGR(0, 0) {}
+
 bool ImageBGR::saveAsColorBMP(const std::string& filename) const {
 	std::ofstream os(filename, std::ios::binary);
 	im::BmpColorHeader(w, h).writeHeader(os);
@@ -264,6 +297,24 @@ ImageYuv ImageBGR::toYUV() const {
 	return out;
 }
 
+
+//------------------------
+// RGBA image stuff
+//------------------------
+
+
+ImageRGBA::ImageRGBA(int h, int w, int stride, unsigned char* data) :
+	ImagePacked(h, w, stride, 4, data, h* stride) {}
+
+ImageRGBA::ImageRGBA(int h, int w, int stride) :
+	ImagePacked(h, w, stride, 4, h* stride) {}
+
+ImageRGBA::ImageRGBA(int h, int w) :
+	ImageRGBA(h, w, 4 * w) {}
+
+ImageRGBA::ImageRGBA() :
+	ImageRGBA(0, 0) {}
+
 void ImageRGBA::copyTo(ImageRGBA& dest, size_t r0, size_t c0, ThreadPoolBase& pool) const {
 	assert(c0 + w <= dest.w && r0 + h <= dest.h && "dimensions mismatch");
 	for (int c = 0; c < w; c++) {
@@ -304,8 +355,13 @@ ImagePPM::ImagePPM(int h, int w) :
 	ImagePacked(h, w, 3 * w, 3, 3 * h * w + headerSize) 
 {
 	//first 19 bytes are header for ppm format
-	std::format_to_n(arrays.at(0).get(), headerSize, "P6 {:5} {:5} 255 ", w, h);
+	std::string header = std::format("P6 {:5} {:5} 255 ", w, h);
+	std::copy_n(header.begin(), headerSize, arrays.at(0).get());
+	//std::format_to_n(arrays.at(0).get(), headerSize, "P6 {:5} {:5} 255 ", w, h);
 }
+
+ImagePPM::ImagePPM() :
+	ImagePPM(0, 0) {}
 
 const unsigned char* ImagePPM::data() const {
 	return arrays.at(0).get() + headerSize;

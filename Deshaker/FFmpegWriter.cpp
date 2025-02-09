@@ -27,8 +27,10 @@ void FFmpegWriter::open(AVCodecID codecId, AVPixelFormat pixfmt, int h, int w, i
     int result = 0;
 
     //find and open codec
-    const AVCodec* codec = avcodec_find_encoder(codecId);
-    //const AVCodec* codec = avcodec_find_encoder_by_name("libsvtav1");
+    const AVCodec* codec = nullptr;
+    for (const std::string& codecName : codecToNamesMap[codecId]) {
+        if (codec = avcodec_find_encoder_by_name(codecName.c_str())) break;
+    }
     if (!codec)
         throw AVException("Could not find encoder");
 
@@ -96,19 +98,13 @@ void FFmpegWriter::open(AVCodecID codecId, AVPixelFormat pixfmt, int h, int w, i
 }
 
 
-//normal entry point for opening Writer
-void FFmpegWriter::open(EncodingOption videoCodec) {
-    open(videoCodec, AV_PIX_FMT_YUV420P, mData.h, mData.w, mData.cpupitch, mData.fileOut);
-}
-
-
 //set up ffmpeg encoder
 void FFmpegWriter::open(EncodingOption videoCodec, AVPixelFormat pixfmt, int h, int w, int stride, const std::string& sourceName) {
     //open container format
-    AVCodecID id = codecMap[videoCodec.codec];
-    FFmpegFormatWriter::open(id, sourceName, imageBufferSize);
+    AVCodecID codecID = codecMap[videoCodec.codec];
+    FFmpegFormatWriter::open(codecID, sourceName, imageBufferSize);
 
-    open(id, pixfmt, h, w, stride);
+    open(codecID, pixfmt, h, w, stride);
 
     sws_scaler_ctx = sws_getContext(w, h, AV_PIX_FMT_YUV444P, w, h, pixfmt, SWS_BILINEAR, NULL, NULL, NULL);
     if (!sws_scaler_ctx) 
@@ -118,6 +114,12 @@ void FFmpegWriter::open(EncodingOption videoCodec, AVPixelFormat pixfmt, int h, 
     for (int i = 0; i < imageBufferSize; i++) {
         imageBuffer.emplace_back(h, w, stride);
     }
+}
+
+
+//normal entry point for opening Writer
+void FFmpegWriter::open(EncodingOption videoCodec) {
+    open(videoCodec, AV_PIX_FMT_YUV420P, mData.h, mData.w, mData.cpupitch, mData.fileOut);
 }
 
 

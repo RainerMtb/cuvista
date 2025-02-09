@@ -117,7 +117,7 @@ int deshake(int argsCount, char** args) {
 		}
 
 	} catch (const SilentQuitException&) {
-		return -10;
+		return 0;
 
 	} catch (const CancelException& e) {
 		*data.console << e.what() << std::endl;

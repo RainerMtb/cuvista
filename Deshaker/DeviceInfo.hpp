@@ -20,7 +20,9 @@
 
 #include "DeviceInfoBase.hpp"
 #include "FrameExecutor.hpp"
-#include "cpu_features/cpuinfo_x86.h"
+extern "C" { 
+#include "cpuinfo_x86.h" 
+}
 
 //CpuFrame
 class DeviceInfoCpu : public DeviceInfoBase {

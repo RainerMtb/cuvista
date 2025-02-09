@@ -31,8 +31,8 @@ struct NvPacket {};
 class NvEncoder {
 public:
 	NvEncoder(int cudaIndex) {}
-	void probeEncoding(uint32_t* nvencVersionApi, uint32_t* nvencVersionDriver);
-	void probeSupportedCodecs(DeviceInfoCuda& deviceInfoCuda);
+	void probeEncoding(uint32_t* nvencVersionApi, uint32_t* nvencVersionDriver) {}
+	void probeSupportedCodecs(DeviceInfoCuda& deviceInfoCuda) {}
 };
 
 #else

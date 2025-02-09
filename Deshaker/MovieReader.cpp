@@ -412,8 +412,8 @@ bool FFmpegReader::read(ImageYuv& inputFrame) {
         }
 
         //stamp frame index into image
-        //frame.writeText(std::to_string(frameIndex), 100, 100, 3, 3, ColorYuv::WHITE, ColorYuv::GRAY);
-        // frame.saveAsColorBMP(std::format("f:/im{:03d}.bmp", frameIndex));
+        //inputFrame.writeText(std::to_string(frameIndex), 20, 20, 3, 3, im::TextAlign::TOP_LEFT, im::ColorYuv::WHITE, im::ColorYuv::GRAY);
+        //inputFrame.saveAsColorBMP(std::format("f:/im{:03d}.bmp", frameIndex));
     }
 
     return endOfInput == false;
@@ -430,9 +430,6 @@ bool FFmpegReader::seek(double fraction) {
 
     } else {
         avcodec_flush_buffers(av_codec_ctx);
-    
-        //seeking may cause error messages??
-        errorLogger.clearErrors(ErrorSource::FFMPEG);
     }
 
     return response >= 0;

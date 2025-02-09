@@ -1,9 +1,15 @@
 cmake_minimum_required(VERSION 3.24)
 
+if (NOT DEFINED CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release)
+endif()
+
 project(cuvista LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
+set(CMAKE_CONFIGURATION_TYPES="Release;Debug")
+set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/install")
 
 # --------------------------------
 # start the list of libraries
@@ -53,12 +59,6 @@ if (BUILD_CUDA MATCHES 1 AND CMAKE_SYSTEM_NAME MATCHES Windows)
     )
 endif()
 
-# --------------------------------
-# build release version
-set(CMAKE_BUILD_TYPE Release)
-set(CMAKE_CONFIGURATION_TYPES="Release;Debug")
-set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/install")
-
 
 # --------------------------------
 # settings specific to Linux
@@ -86,7 +86,7 @@ endif()
 # --------------------------------
 # settings specific to Windows
 if (CMAKE_SYSTEM_NAME MATCHES Windows)
-    message(NOTICE "Looking for ffmpeg components in folder ${FFMPEG_PATH}...")
+    message(NOTICE "Looking for ffmpeg components in folder '${FFMPEG_PATH}'...")
     #check one exemplary shared ffmpeg file, assume others will be there as well
     find_library(ffmpegLIB avcodec.lib REQUIRED NO_DEFAULT_PATH HINTS "${FFMPEG_PATH}/lib")
     find_path(ffmpegH avcodec.h REQUIRED NO_DEFAULT_PATH HINTS "${FFMPEG_PATH}/include/libavcodec")
@@ -109,11 +109,15 @@ if (CMAKE_SYSTEM_NAME MATCHES Windows)
     )
 endif()
 
+# do not build cllayerinfo
+set(ENABLE_OPENCL_LAYERINFO OFF)
+
 
 # --------------------------------
 # main stuff, declare targets
 add_subdirectory(OpenCL-Headers)
 add_subdirectory(OpenCL-ICD-Loader)
+add_subdirectory(cpu_features)
 add_subdirectory(Common)
 add_subdirectory(Matrix)
 add_subdirectory(CudaStuff)
@@ -143,7 +147,7 @@ endif()
 if (CMAKE_CXX_COMPILER_ID MATCHES MSVC)
     target_compile_options(Common PRIVATE /MP)
     target_compile_options(Matrix PRIVATE /MP)
-    target_compile_options(AvxStuff PRIVATE /MP /arch:AVX512)
+    target_compile_options(AvxStuff PRIVATE -D BUILD_CUDA=${BUILD_CUDA} /MP /arch:AVX512)
     target_compile_options(Deshaker PRIVATE -D BUILD_CUDA=${BUILD_CUDA} /MP)
     target_link_options(cuvista PRIVATE /NODEFAULTLIB:libcmt.lib)
 endif()
@@ -155,8 +159,8 @@ endif()
 if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
     target_compile_options(Common PRIVATE -ffp-contract=off)
     target_compile_options(Matrix PRIVATE -ffp-contract=off)
-    target_compile_options(AvxStuff PRIVATE -ffp-contract=off -mavx512f -mavx512vl -mavx512bw -mavx512dq)
-    target_compile_options(Deshaker PRIVATE -D BUILD_CUDA=${BUILD_CUDA} -ffp-contract=off)
+    target_compile_options(AvxStuff PRIVATE -ffp-contract=off -D BUILD_CUDA=${BUILD_CUDA} -mavx512f -mavx512vl -mavx512bw -mavx512dq)
+    target_compile_options(Deshaker PRIVATE -ffp-contract=off -D BUILD_CUDA=${BUILD_CUDA} -Wno-deprecated-declarations)
     target_compile_options(cuvista PRIVATE -ffp-contract=off)
 endif()
 if (CMAKE_CXX_COMPILER_ID MATCHES GNU AND TARGET cuvistaGui)

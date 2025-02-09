@@ -20,6 +20,7 @@
 
 #include "ImageUtil.hpp"
 #include "ThreadPoolBase.h"
+#include "Color.hpp"
 
 template <class T> class ImageData {
 public:
@@ -196,11 +197,9 @@ namespace im {
 	template <class T> class ImageMatShared : public ImageBase<T> {
 
 	public:
-		ImageMatShared(int h, int w, int stride, T* mat) :
-			ImageBase<T>(h, w, stride, 1, { { mat, NullDeleter<T>() } }, h * stride) {}
+		ImageMatShared(int h, int w, int stride, T* mat);
 
-		ImageMatShared(int h, int w, int stride, T* y, T* u, T* v) :
-			ImageBase<T>(h, w, stride, 3, { { y, NullDeleter<T>() }, { u, NullDeleter<T>() }, { v, NullDeleter<T>() } }, 3 * h * stride) {}
+		ImageMatShared(int h, int w, int stride, T* y, T* u, T* v);
 
 		T* addr(size_t idx, size_t r, size_t c) override;
 

@@ -182,7 +182,7 @@ void cuvistaGui::setInputFile(const QString& filePath) {
             mReader.read(mInputYUV); //try to read again for second image
         }
 
-        if (errorLogger.hasNoError() && mReader.endOfInput == false) {
+        if (errorLogger.hasNoError()) {
             seek(0.1);
         }
 
@@ -231,6 +231,9 @@ void cuvistaGui::seek(double frac) {
         updateInputImage();
         ui.inputPosition->setValue(frac * 100.0);
     }
+
+    //seeking may cause ffmpeg decoding error messages, ignore
+    errorLogger.clearErrors(ErrorSource::FFMPEG);
 }
 
 void cuvistaGui::updateInputImage() {

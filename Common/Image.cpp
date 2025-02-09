@@ -624,6 +624,12 @@ template <class T> void im::ImagePacked<T>::copyTo(ImageBase<T>& dest, std::vect
 //------------------------
 
 
+template <class T> im::ImageMatShared<T>::ImageMatShared(int h, int w, int stride, T* mat) :
+	ImageBase<T>(h, w, stride, 1, { { mat, NullDeleter<T>() } }, h* stride) {}
+
+template <class T> im::ImageMatShared<T>::ImageMatShared(int h, int w, int stride, T* y, T* u, T* v) :
+	ImageBase<T>(h, w, stride, 3, { { y, NullDeleter<T>() }, { u, NullDeleter<T>() }, { v, NullDeleter<T>() } }, 3 * h * stride) {}
+
 template <class T> T* im::ImageMatShared<T>::addr(size_t idx, size_t r, size_t c) {
 	assert(r < this->h && c < this->w && idx < this->numPlanes && "invalid pixel address");
 	return this->arrays[idx].get() + r * this->stride + c;

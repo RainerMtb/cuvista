@@ -17,6 +17,7 @@
  */
 
 #include "ThreadPool.hpp"
+#include <algorithm>
 
 ThreadPool::ThreadPool(size_t numThreads) :
 	mBusyArray(numThreads) 

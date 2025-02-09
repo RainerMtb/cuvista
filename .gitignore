@@ -360,5 +360,6 @@ FodyWeavers.xsd
 # Folders
 build/
 buildWin/
+buildWinGcc/
 bin_inter/
 bin/

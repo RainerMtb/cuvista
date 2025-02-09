@@ -24,12 +24,7 @@
 struct Triplet {
 	float y, u, v;
 
-	float operator [] (size_t idx) const { 
-		if (idx == 0) return y;
-		if (idx == 1) return u;
-		if (idx == 2) return v;
-		throw std::runtime_error("invalid index");
-	}
+	float operator [] (size_t idx) const;
 };
 
 

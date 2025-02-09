@@ -19,8 +19,6 @@
 #pragma once
 
 #include "Mat.hpp"
-#include "Image.hpp"
-
 
 //specialization of mat for use with avx
 template <class T> class AvxMat : protected CoreMat<T> {
@@ -36,8 +34,10 @@ public:
 
 	T& at(int row, int col) { return CoreMat<T>::at(row, col); }
 	const T& at(int row, int col) const { return CoreMat<T>::at(row, col); }
+
 	T* addr(int row, int col) { return CoreMat<T>::addr(row, col); }
 	const T* addr(int row, int col) const { return CoreMat<T>::addr(row, col); }
+
 	T* data() { return CoreMat<T>::data(); }
 	const T* data() const { return CoreMat<T>::data(); }
 
