@@ -105,7 +105,7 @@ void readAndWriteOneFrame() {
 		std::cout << "writing file " << fileOut << std::endl;
 		writer.getOutputFrame().saveAsColorBMP(fileOut);
 	}
-	std::cout << errorLogger.getErrorMessage() << std::endl;
+	std::cout << errorLogger().getErrorMessage() << std::endl;
 }
 
 void checkVersions() {
@@ -225,7 +225,7 @@ void flow() {
 
 	std::chrono::time_point t2 = std::chrono::system_clock::now();
 	std::cout << "time [ms]: " << std::chrono::duration<double, std::milli>(t2 - t1).count() << std::endl;
-	std::cout << errorLogger.getErrorMessage() << std::endl;
+	std::cout << errorLogger().getErrorMessage() << std::endl;
 }
 
 void testZoom() {

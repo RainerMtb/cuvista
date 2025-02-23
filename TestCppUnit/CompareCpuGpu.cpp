@@ -85,7 +85,7 @@ public:
 	}
 
 	TEST_METHOD(status) {
-		Assert::IsTrue(errorLogger.hasNoError(), toWString(errorLogger.getErrorMessage()).c_str());
+		Assert::IsTrue(errorLogger().hasNoError(), toWString(errorLogger().getErrorMessage()).c_str());
 	}
 
 	TEST_METHOD(pyramid) {

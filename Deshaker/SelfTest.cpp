@@ -39,7 +39,7 @@ void runSelfTest(util::MessagePrinter& out, std::vector<DeviceInfoBase*> deviceL
 	out.printNewLine();
 
 	for (size_t i = 0; i < deviceList.size(); i++) {
-		errorLogger.clearErrors();
+		errorLogger().clearErrors();
 		out.print(" #");
 		out.print(std::to_string(i));
 		out.print(": ");
@@ -115,8 +115,8 @@ void runSelfTest(util::MessagePrinter& out, std::vector<DeviceInfoBase*> deviceL
 			out.print("FAIL result ");
 			check = false;
 		}
-		if (errorLogger.hasError()) {
-			out.print(errorLogger.getErrorMessage());
+		if (errorLogger().hasError()) {
+			out.print(errorLogger().getErrorMessage());
 			check = false;
 		}
 		if (check) {

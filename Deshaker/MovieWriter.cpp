@@ -123,18 +123,18 @@ void JpegImageWriter::write(const FrameExecutor& executor) {
 	av_frame->pts = this->frameIndex;
 	int result = avcodec_send_frame(ctx, av_frame);
 	if (result < 0)
-		errorLogger.logError(av_make_error(result, "error sending frame"), ErrorSource::WRITER);
+		errorLogger().logError(av_make_error(result, "error sending frame"), ErrorSource::WRITER);
 
 	result = avcodec_receive_packet(ctx, packet);
 	if (result < 0)
-		errorLogger.logError(av_make_error(result, "error receiving packet"), ErrorSource::WRITER);
+		errorLogger().logError(av_make_error(result, "error receiving packet"), ErrorSource::WRITER);
 
 	std::string fname = makeFilename("jpg");
 	std::ofstream file(fname, std::ios::binary);
 	if (file)
 		file.write(reinterpret_cast<char*>(packet->data), packet->size);
 	else
-		errorLogger.logError("error opening file '" + fname + "'", ErrorSource::WRITER);
+		errorLogger().logError("error opening file '" + fname + "'", ErrorSource::WRITER);
 
 	outputBytesWritten += packet->size;
 	av_packet_unref(packet);
@@ -174,7 +174,7 @@ std::map<int64_t, TransformValues> TransformsFile::readTransformMap(const std::s
 		std::string str = "    ";
 		file.get(str.data(), 5);
 		if (str != id) {
-			errorLogger.logError("transforms file '" + trajectoryFile + "' is not valid", ErrorSource::WRITER);
+			errorLogger().logError("transforms file '" + trajectoryFile + "' is not valid", ErrorSource::WRITER);
 
 		} else {
 			while (!file.eof()) {
@@ -191,7 +191,7 @@ std::map<int64_t, TransformValues> TransformsFile::readTransformMap(const std::s
 		}
 
 	} else {
-		errorLogger.logError("cannot open transforms file '" + trajectoryFile + "'", ErrorSource::WRITER);
+		errorLogger().logError("cannot open transforms file '" + trajectoryFile + "'", ErrorSource::WRITER);
 	}
 	return transformsMap;
 }
@@ -497,7 +497,7 @@ void ResultImageWriter::writeImage(const AffineTransform& trf, std::span<PointRe
 	//save image to file
 	bool result = bgr.saveAsColorBMP(fname);
 	if (result == false) {
-		errorLogger.logError("cannot write file '" + fname + "'");
+		errorLogger().logError("cannot write file '" + fname + "'");
 	}
 }
 

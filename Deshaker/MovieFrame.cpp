@@ -80,7 +80,7 @@ std::future<void> MovieFrame::readAsync() {
 
 //check if we should continue with the next frame
 bool MovieFrame::doLoop(UserInput& input) {
-	return errorLogger.hasNoError() && input.doContinue() && mReader.endOfInput == false && mReader.frameIndex < mData.maxFrames;
+	return errorLogger().hasNoError() && input.doContinue() && mReader.endOfInput == false && mReader.frameIndex < mData.maxFrames;
 }
 
 
@@ -90,16 +90,16 @@ bool MovieFrame::doLoop(UserInput& input) {
 
 void MovieFrame::loopInit(std::shared_ptr<ProgressBase> progress, std::shared_ptr<FrameExecutor> executor, const std::string& message) {
 	//read first frame from input into buffer
-	if (errorLogger.hasNoError()) read();
+	if (errorLogger().hasNoError()) read();
 	//show program header on console
-	if (errorLogger.hasNoError() && mData.printHeader) mData.showIntro(executor->mDeviceInfo.getName(), mReader);
+	if (errorLogger().hasNoError() && mData.printHeader) mData.showIntro(executor->mDeviceInfo.getName(), mReader);
 	//init progress display
 	progress->init();
 	progress->writeMessage(message);
 	progress->update();
 
 	//first pyramid
-	if (errorLogger.hasNoError() && mReader.endOfInput == false) {
+	if (errorLogger().hasNoError() && mReader.endOfInput == false) {
 		executor->inputData(mReader.frameIndex, mBufferFrame); //input first frame
 		executor->createPyramid(mReader.frameIndex);
 		read(); //read second frame
@@ -110,7 +110,7 @@ void MovieFrame::loopInit(std::shared_ptr<ProgressBase> progress, std::shared_pt
 void MovieFrame::loopTerminate(std::shared_ptr<ProgressBase> progress, UserInput& input, AuxWriters& auxWriters, std::shared_ptr<FrameExecutor> executor) {
 	//flush writer buffer
 	bool hasFrame = mWriter.startFlushing();
-	while (errorLogger.hasNoError() && input.mCurrentInput < UserInputEnum::HALT && hasFrame) {
+	while (errorLogger().hasNoError() && input.mCurrentInput < UserInputEnum::HALT && hasFrame) {
 		hasFrame = mWriter.flush();
 		progress->update();
 	}
@@ -179,7 +179,7 @@ void MovieFrameCombined::runLoop(std::shared_ptr<ProgressBase> progress, UserInp
 	}
 
 	//process last frame in buffer
-	if (errorLogger.hasNoError() && input.mCurrentInput <= UserInputEnum::END) {
+	if (errorLogger().hasNoError() && input.mCurrentInput <= UserInputEnum::END) {
 		computeTransform(mReader.frameIndex);
 		mTrajectory.addTrajectoryTransform(mFrameResult.getTransform());
 		const AffineTransform& finalTransform = mTrajectory.computeSmoothTransform(mData, mWriter.frameIndex);
@@ -191,7 +191,7 @@ void MovieFrameCombined::runLoop(std::shared_ptr<ProgressBase> progress, UserInp
 	}
 
 	//write remaining frames
-	while (errorLogger.hasNoError() && mWriter.frameIndex < mReader.frameIndex && input.mCurrentInput <= UserInputEnum::END) {
+	while (errorLogger().hasNoError() && mWriter.frameIndex < mReader.frameIndex && input.mCurrentInput <= UserInputEnum::END) {
 		const AffineTransform& tf = mTrajectory.computeSmoothTransform(mData, mWriter.frameIndex);
 		executor->outputData(mWriter.frameIndex, tf);
 		mWriter.prepareOutput(*executor);
@@ -234,11 +234,11 @@ void MovieFrameFirst::runLoop(std::shared_ptr<ProgressBase> progress, UserInput&
 void MovieFrameSecond::runLoop(std::shared_ptr<ProgressBase> progress, UserInput& input, AuxWriters& auxWriters, std::shared_ptr<FrameExecutor> executor) {
 	//setup list of transforms from file
 	auto map = readTransforms();
-	if (errorLogger.hasNoError()) mTrajectory.readTransforms(map);
+	if (errorLogger().hasNoError()) mTrajectory.readTransforms(map);
 
 	//init
-	if (errorLogger.hasNoError()) read();
-	if (errorLogger.hasNoError() && mData.printHeader) mData.showIntro(executor->mDeviceInfo.getName(), mReader);
+	if (errorLogger().hasNoError()) read();
+	if (errorLogger().hasNoError() && mData.printHeader) mData.showIntro(executor->mDeviceInfo.getName(), mReader);
 	progress->init();
 	progress->update();
 

@@ -5,8 +5,14 @@ if (BUILD_CUDA MATCHES 0)
 	target_include_directories(CudaStuff PUBLIC INTERFACE "${PROJECT_SOURCE_DIR}/Common")
 	target_include_directories(CudaStuff PUBLIC INTERFACE "${PROJECT_SOURCE_DIR}/Matrix")
 else()
-	file(GLOB_RECURSE sources CONFIGURE_DEPENDS "*.cu")
-	add_library(CudaStuff STATIC ${sources})
+	add_library(CudaStuff STATIC
+		cuDecompose.cu
+		cuDeshaker.cu
+		cuKernelCompute.cu
+		cuNPP.cu
+		cuTest.cu
+		cuUtil.cu
+	)
 
 	set_target_properties(CudaStuff PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 	set_target_properties(CudaStuff PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)

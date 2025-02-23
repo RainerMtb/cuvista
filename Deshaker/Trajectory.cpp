@@ -92,6 +92,7 @@ const AffineTransform& Trajectory::computeSmoothTransform(const MainData& data, 
 	double smoothFitZoom = std::max(currentZoom * data.zoomFallback, fitZoom);
 	trajectory[frameWriteIndex].zoom = currentZoom = smoothFitZoom;
 	double zoom = std::clamp(smoothFitZoom, data.zoomMin, data.zoomMax);
+	//std::printf("%04d zoom required %5.2f smoothed %5.2f final %5.2f\n", frameWriteIndex, fitZoom, smoothFitZoom, zoom);
 
 	//get transform to apply to image
 	currentTransform.reset()

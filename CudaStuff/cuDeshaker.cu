@@ -31,7 +31,7 @@ CudaData cudaData;
 
 void handleStatus(cudaError_t status, std::string&& title) {
 	if (status != cudaSuccess) {
-		errorLogger.logError(title + ": " + cudaGetErrorString(status));
+		errorLogger().logError(title + ": " + cudaGetErrorString(status));
 	}
 }
 

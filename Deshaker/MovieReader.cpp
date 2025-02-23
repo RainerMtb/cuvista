@@ -369,7 +369,7 @@ bool FFmpegReader::read(ImageYuv& inputFrame) {
                 break;
 
             } else if (response < 0) {
-                errorLogger.logError(av_make_error(response, "Failed to receive frame"));
+                errorLogger().logError(av_make_error(response, "Failed to receive frame"));
                 break;
 
             } else { //we still got a frame

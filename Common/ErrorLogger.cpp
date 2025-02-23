@@ -18,6 +18,12 @@
 
 #include "ErrorLogger.hpp"
 
+static ErrorLogger errorLoggerInstance;
+
+ErrorLogger& errorLogger() {
+	return errorLoggerInstance;
+}
+
 bool ErrorLogger::hasNoError() {
 	std::lock_guard<std::mutex> lock(mMutex);
 	return errorList.empty();

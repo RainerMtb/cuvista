@@ -50,7 +50,7 @@ private:
 		//compute
 		ex.computeStart(frame.mReader.frameIndex, frame.mResultPoints);
 		ex.computeTerminate(frame.mReader.frameIndex, frame.mResultPoints);
-		Assert::IsTrue(errorLogger.hasNoError(), toWString(errorLogger.getErrorMessage()).c_str());
+		Assert::IsTrue(errorLogger().hasNoError(), toWString(errorLogger().getErrorMessage()).c_str());
 		return frame.mResultPoints;
 	}
 
@@ -72,7 +72,7 @@ public:
 			AuxWriters writers;
 			frame.runLoop(progress, input, writers, ex);
 			cpuImages = writer.outputFrames;
-			Assert::IsTrue(errorLogger.hasNoError());
+			Assert::IsTrue(errorLogger().hasNoError());
 		}
 
 		std::vector<ImageYuv> gpuImages;
@@ -91,7 +91,7 @@ public:
 			AuxWriters writers;
 			frame.runLoop(progress, input, writers, ex);
 			gpuImages = writer.outputFrames;
-			Assert::IsTrue(errorLogger.hasNoError());
+			Assert::IsTrue(errorLogger().hasNoError());
 		}
 
 		Assert::AreEqual(cpuImages.size(), gpuImages.size());
@@ -202,7 +202,7 @@ private:
 		ex->outputData(0, trf);
 		writer.prepareOutput(*ex);
 		writer.write(*ex);
-		Assert::IsTrue(errorLogger.hasNoError(), toWString(errorLogger.getErrorMessage()).c_str());
+		Assert::IsTrue(errorLogger().hasNoError(), toWString(errorLogger().getErrorMessage()).c_str());
 
 		return { frame.mResultPoints, ex->getPyramid(0), ex->getTransformedOutput(), writer.outputFrames[0], ex->mDeviceInfo.getNameShort() };
 	}

@@ -32,7 +32,7 @@ std::string av_make_error(int errnum, const char* msg) {
 }
 
 void ffmpeg_log_error(int errnum, const char* msg, ErrorSource source) {
-    errorLogger.logError(av_make_error(errnum, msg), source);
+    errorLogger().logError(av_make_error(errnum, msg), source);
 }
 
 static constexpr FFmpegVersions ffmpeg_build_versions = { 
@@ -70,7 +70,7 @@ void ffmpeg_log(void* avclass, int level, const char* fmt, va_list args) {
             *ptr = '\0';
             ptr--;
         }
-        errorLogger.logError(ffmpeg_logbuf, ErrorSource::FFMPEG);
+        errorLogger().logError(ffmpeg_logbuf, ErrorSource::FFMPEG);
     }
 };
 

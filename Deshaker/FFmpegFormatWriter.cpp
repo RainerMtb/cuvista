@@ -412,7 +412,7 @@ FFmpegFormatWriter::~FFmpegFormatWriter() {
     if (fmt_ctx && isHeaderWritten) {
         int result = av_write_trailer(fmt_ctx);
         if (result < 0) {
-            errorLogger.logError(av_make_error(result, "error writing trailer"));
+            errorLogger().logError(av_make_error(result, "error writing trailer"));
         }
         outputBytesWritten = avio_tell(fmt_ctx->pb);
     }

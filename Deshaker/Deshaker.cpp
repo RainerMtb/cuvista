@@ -125,12 +125,16 @@ int deshake(int argsCount, char** args) {
 
 	} catch (const AVException& e) {
 		*data.console << "error: " << e.what() << std::endl;
-		if (errorLogger.hasError()) *data.console << "error: " << errorLogger.getErrorMessage() << std::endl;
+		if (errorLogger().hasError()) {
+			*data.console << "error: " << errorLogger().getErrorMessage() << std::endl;
+		}
 		return -2;
 
 	} catch (const std::invalid_argument& e) {
 		*data.console << "invalid value: " << e.what() << std::endl;
-		if (errorLogger.hasError()) *data.console << "error: " << errorLogger.getErrorMessage() << std::endl;
+		if (errorLogger().hasError()) {
+			*data.console << "error: " << errorLogger().getErrorMessage() << std::endl;
+		}
 		return -3;
 
 	} catch (...) {
@@ -151,7 +155,7 @@ int deshake(int argsCount, char** args) {
 	data.timeStart();
 	UserInputConsole inputHandler(*data.console);
 
-	if (errorLogger.hasNoError()) {
+	if (errorLogger().hasNoError()) {
 		frame->runLoop(progress, inputHandler, auxWriters, executor);
 	}
 
@@ -164,9 +168,9 @@ int deshake(int argsCount, char** args) {
 	int64_t framesWritten = writer->frameIndex;
 
 	//final console messages
-	if (errorLogger.hasError()) {
+	if (errorLogger().hasError()) {
 		*data.console << std::endl << "ERROR STACK:" << std::endl;
-		std::vector<ErrorEntry> errorList = errorLogger.getErrors();
+		std::vector<ErrorEntry> errorList = errorLogger().getErrors();
 		for (int i = 0; i < errorList.size(); i++) {
 			*data.console << "[" << i << "] " << errorList[i].msg << std::endl;
 		}
@@ -192,5 +196,5 @@ int deshake(int argsCount, char** args) {
 		*data.console << str << std::endl;
 	}
 
-	return errorLogger.hasError();
+	return errorLogger().hasError();
 }

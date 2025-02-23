@@ -1,11 +1,20 @@
 {
     "cmake.configureOnOpen": false,
     
-    "C_Cpp.default.compilerPath": "cl.exe",
-
     "cmake.configureSettings": {
-        "CMAKE_PREFIX_PATH": "c:/daten/qt/6.8.1/mingw_64",
-        "FFMPEG_PATH": "d:/util/film/ffmpeg",
-        "BUILD_GUI": "0",
-    }
+        "CMAKE_PREFIX_PATH": "c:/daten/qt/6.8.2/mingw_64",
+        "FFMPEG_PATH": "d:/util/film/ffmpegCuvista",
+        "BUILD_GUI": "1",
+    },
+
+    "cmake.debugConfig": {
+        "args": ["-info"]
+    },
+    "files.associations": {
+        "array": "cpp",
+        "span": "cpp",
+        "vector": "cpp",
+        "xstring": "cpp",
+        "xutility": "cpp"
+    },
 }

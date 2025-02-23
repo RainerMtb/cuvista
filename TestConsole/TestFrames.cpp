@@ -35,7 +35,7 @@ struct Result {
 };
 
 template <class T> Result runPyramid(MainData& data, int deviceIndex) {
-	errorLogger.clearErrors();
+	errorLogger().clearErrors();
 	try {
 		std::vector<unsigned char> bytes = util::base64_decode(movieTestData);
 		MemoryFFmpegReader reader(bytes);
@@ -75,7 +75,7 @@ template <class T> Result runPyramid(MainData& data, int deviceIndex) {
 			name,
 			writer.getOutputFrame(),
 			im,
-			(errorLogger.hasError() ? errorLogger.getErrorMessage() : "")
+			(errorLogger().hasError() ? errorLogger().getErrorMessage() : "")
 		};
 
 		return result;
@@ -159,7 +159,7 @@ void compareFramesPlatforms() {
 		std::cout << std::endl;
 	}
 
-	std::cout << errorLogger.getErrorMessage() << std::endl;
+	std::cout << errorLogger().getErrorMessage() << std::endl;
 }
 
 void analyzeFrames() {
@@ -209,8 +209,8 @@ void analyzeFrames() {
 		if (reader.frameIndex == frameTo) {
 			break;
 		}
-		if (errorLogger.hasError()) {
-			std::cout << errorLogger.getErrorMessage() << std::endl;
+		if (errorLogger().hasError()) {
+			std::cout << errorLogger().getErrorMessage() << std::endl;
 			break;
 		}
 	}

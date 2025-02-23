@@ -19,7 +19,6 @@
 #pragma once
 
 #include <span>
-#include "immintrin.h"
 #include "AvxWrapper.hpp"
 #include "CoreData.hpp"
 #include "Affine2D.hpp"

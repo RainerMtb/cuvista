@@ -35,7 +35,7 @@ void PipeWriter::open(EncodingOption videoCodec) {
 PipeWriter::~PipeWriter() {
 	int result = _setmode(_fileno(stdout), _O_TEXT);
 	if (result < 0) {
-		errorLogger.logError("Pipe: error setting stdout to text mode");
+		errorLogger().logError("Pipe: error setting stdout to text mode");
 	}
 }
 
@@ -53,7 +53,7 @@ void PipeWriter::write(const FrameExecutor& executor) {
 	packYuv();
 	size_t siz = fwrite(yuvPacked.data(), 1, yuvPacked.size(), stdout);
 	if (siz != yuvPacked.size()) {
-		errorLogger.logError("Pipe: error writing data");
+		errorLogger().logError("Pipe: error writing data");
 	}
 	outputBytesWritten += siz;
 	this->frameIndex++;

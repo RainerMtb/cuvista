@@ -150,7 +150,7 @@ void PlayerWriter::prepareOutput(FrameExecutor& executor) {
         mVideoFrame.unmap();
 
     } else {
-        errorLogger.logError("cannot map video frame");
+        errorLogger().logError("cannot map video frame");
     }
 }
 

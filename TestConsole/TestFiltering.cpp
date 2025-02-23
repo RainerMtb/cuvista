@@ -105,5 +105,5 @@ void filterCompare() {
 
 	//c.saveAsBinary("D:/VideoTest/out/cpu.dat");
 	//g.saveAsBinary("D:/VideoTest/out/gpu.dat");
-	std::cout << errorLogger.getErrorMessage() << std::endl;
+	std::cout << errorLogger().getErrorMessage() << std::endl;
 }

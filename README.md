@@ -33,8 +33,6 @@ In a fresh Windows environment the the Microsoft Visual C/C++ Runtime Libraries 
 
 # Building CUVISTA
 
-## General Notes
-
 To start, get the repository and submodules to your computer
 ```
 git clone --recursive https://github.com/RainerMtb/cuvista.git
@@ -64,7 +62,7 @@ cd build
 ```
 prepare the locations of Cuda, Qt and FFMPEG and provide them to cmake. Also see notes above. Better use forward slashes ```/``` to separate folders. Adapt locations to your system:
 ```
-cmake .. -D CMAKE_PREFIX_PATH=C:/CUDA/version;C:/Qt/6.8.1/msvc2022_64 -D FFMPEG_PATH=C:/ffmpeg --fresh
+cmake .. -D CMAKE_PREFIX_PATH=C:/CUDA/version;C:/Qt/6.8.2/msvc2022_64 -D FFMPEG_PATH=C:/ffmpeg --fresh
 cmake --build . --config Release
 ```
 Upon successfull completion you will get the files
@@ -99,7 +97,7 @@ To get the necessary components on the command line
 ```
 wget https://download.qt.io/official_releases/online_installers/qt-unified-linux-x64-online.run
 chmod +x qt-unified-linux-x64-online.run
-./qt-unified-linux-x64-online.run install qt.qt6.681.linux_gcc_64 qt.qt6.681.addons.qtmultimedia
+./qt-unified-linux-x64-online.run install qt.qt6.682.linux_gcc_64 qt.qt6.682.addons.qtmultimedia
 ```
 You might also need
 ```
@@ -132,7 +130,7 @@ cd build
 ```
 Adapt the location of Cuda and  Qt to your system and execute the build process. Also see notes above.
 ```
-export CMAKE_PREFIX_PATH=~/Qt/6.8.1/gcc_64:/usr/local/cuda
+export CMAKE_PREFIX_PATH=~/Qt/6.8.2/gcc_64:/usr/local/cuda
 cmake .. --fresh
 cmake --build .
 ```
@@ -158,5 +156,5 @@ cuvistaGui/cuvistaGui
 - Nvidia Cuda 12.8
 - Nvidia Video Codec SDK 12.2.72
 - FFmpeg 7.1
-- Qt 6.8.1
+- Qt 6.8.2
 - Cmake 3.28.3

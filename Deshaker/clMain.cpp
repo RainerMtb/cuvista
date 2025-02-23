@@ -232,11 +232,11 @@ void OpenClExecutor::init() {
 			if (msg.length() > maxLen) {
 				msg = msg.substr(0, maxLen) + "...\n[total " + std::to_string(msg.length()) + " chars]";
 			}
-			errorLogger.logError("OpenCL build error:\n", msg);
+			errorLogger().logError("OpenCL build error:\n", msg);
 		}
 
 	} catch (const Error& err) {
-		errorLogger.logError("OpenCL init error: ", err.what());
+		errorLogger().logError("OpenCL init error: ", err.what());
 	}
 }
 
@@ -250,7 +250,7 @@ void OpenClExecutor::inputData(int64_t frameIndex, const ImageYuv& inputFrame) {
 		clData.queue.enqueueWriteImage(clData.yuv[fr], CL_TRUE, Size2(), Size2(mData.w, mData.h * 3), mData.cpupitch, 0, inputFrame.data());
 	
 	} catch (const Error& err) {
-		errorLogger.logError("OpenCL input error: ", err.what());
+		errorLogger().logError("OpenCL input error: ", err.what());
 	}
 }
 
@@ -289,7 +289,7 @@ void OpenClExecutor::createPyramid(int64_t frameIndex) {
 		}
 
 	} catch (const Error& err) {
-		errorLogger.logError("OpenCL pyramid error: ", err.what());
+		errorLogger().logError("OpenCL pyramid error: ", err.what());
 	}
 }
 
@@ -320,7 +320,7 @@ void OpenClExecutor::compute(int64_t frameIndex, const CoreData& core, int rowSt
 		clData.queue.enqueueNDRangeKernel(kernel, NullRange, ndglobal, ndlocal);
 
 	} catch (const Error& err) {
-		errorLogger.logError("OpenCL compute error: ", err.what());
+		errorLogger().logError("OpenCL compute error: ", err.what());
 	}
 }
 
@@ -330,7 +330,7 @@ void OpenClExecutor::computeStart(int64_t frameIndex, std::vector<PointResult>& 
 		clData.queue.enqueueFillBuffer<cl_char>(clData.results, 0, 0, sizeof(cl_PointResult) * mData.resultCount);
 
 	} catch (const Error& err) {
-		errorLogger.logError("OpenCL compute error: ", err.what());
+		errorLogger().logError("OpenCL compute error: ", err.what());
 	}
 	//compute first part of points
 	compute(frameIndex, mData, 0, mData.iyCount / 4);
@@ -356,7 +356,7 @@ void OpenClExecutor::computeTerminate(int64_t frameIndex, std::vector<PointResul
 		}
 
 	} catch (const Error& err) {
-		errorLogger.logError("OpenCL compute error: ", err.what());
+		errorLogger().logError("OpenCL compute error: ", err.what());
 	}
 }
 
@@ -389,7 +389,7 @@ void OpenClExecutor::outputData(int64_t frameIndex, const Affine2D& trf) {
 		unsharp(outWarped, outFinal, outFilterV, clData, factor);
 
 	} catch (const Error& err) {
-		errorLogger.logError("OpenCL output error: ", err.what());
+		errorLogger().logError("OpenCL output error: ", err.what());
 	}
 }
 
@@ -409,7 +409,7 @@ void OpenClExecutor::getOutputYuv(int64_t frameIndex, ImageYuvData& image) {
 		image.setIndex(frameIndex);
 
 	} catch (const Error& err) {
-		errorLogger.logError("OpenCL output error: ", err.what());
+		errorLogger().logError("OpenCL output error: ", err.what());
 	}
 }
 
@@ -419,7 +419,7 @@ void OpenClExecutor::getOutputRgba(int64_t frameIndex, ImageRGBA& image) {
 		image.setIndex(frameIndex);
 
 	} catch (const Error& err) {
-		errorLogger.logError("OpenCL output error: ", err.what());
+		errorLogger().logError("OpenCL output error: ", err.what());
 	}
 }
 
@@ -450,7 +450,7 @@ Matf OpenClExecutor::getPyramid(int64_t frameIndex) const {
 		readImage(clData.pyramid, pyrIdx, wbytes, out.data(), clData.queue);
 
 	} catch (const Error& err) {
-		errorLogger.logError("OpenCL get pyramid: ", err.what());
+		errorLogger().logError("OpenCL get pyramid: ", err.what());
 	}
 	return out;
 }

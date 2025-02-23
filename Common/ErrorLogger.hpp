@@ -60,4 +60,4 @@ public:
 	void clearErrors(ErrorSource source);
 };
 
-inline ErrorLogger errorLogger = {};
+ErrorLogger& errorLogger();

@@ -172,22 +172,22 @@ void cuvistaGui::setInputFile(const QString& filePath) {
     ui.comboAudioTrack->clear();
     try {
         mReader.close();
-        errorLogger.clearErrors();
+        errorLogger().clearErrors();
         mReader.open(filePath.toStdString());
         mInputYUV = ImageYuv(mReader.h, mReader.w);
 
         mReader.read(mInputYUV); //read first image
 
-        if (errorLogger.hasNoError()) {
+        if (errorLogger().hasNoError()) {
             mReader.read(mInputYUV); //try to read again for second image
         }
 
-        if (errorLogger.hasNoError()) {
+        if (errorLogger().hasNoError()) {
             seek(0.1);
         }
 
-        if (errorLogger.hasError()) {
-            throw AVException(errorLogger.getErrorMessage());
+        if (errorLogger().hasError()) {
+            throw AVException(errorLogger().getErrorMessage());
         }
 
         mInputReady = true;
@@ -233,7 +233,7 @@ void cuvistaGui::seek(double frac) {
     }
 
     //seeking may cause ffmpeg decoding error messages, ignore
-    errorLogger.clearErrors(ErrorSource::FFMPEG);
+    errorLogger().clearErrors(ErrorSource::FFMPEG);
 }
 
 void cuvistaGui::updateInputImage() {
@@ -391,8 +391,8 @@ void cuvistaGui::done() {
     mThread->deleteLater();
 
     //emit signals to report result back to main thread
-    if (errorLogger.hasError())
-        doneFail(errorLogger.getErrorMessage());
+    if (errorLogger().hasError())
+        doneFail(errorLogger().getErrorMessage());
     else if (mInputHandler.mCurrentInput != UserInputEnum::CONTINUE)
         doneCancel("Operation was cancelled");
     else
@@ -415,7 +415,7 @@ void cuvistaGui::doneFail(const std::string& str) {
     QString msg = QString::fromStdString(str);
     QMessageBox::critical(this, QString("Error"), msg, QMessageBox::Ok);
     showMessage(QString("Error: %1").arg(msg));
-    errorLogger.clearErrors();
+    errorLogger().clearErrors();
 }
 
 void cuvistaGui::doneCancel(const std::string& str) {

@@ -140,7 +140,7 @@ void CudaFFmpegWriter::encodePackets() {
         nvenc->encodeFrame(*nvPackets);
 
     } catch (const AVException& e) {
-        errorLogger.logError("error writing: ", e.what());
+        errorLogger().logError("error writing: ", e.what());
     }
 }
 
