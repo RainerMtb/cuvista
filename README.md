@@ -62,7 +62,7 @@ cd build
 ```
 prepare the locations of Cuda, Qt and FFMPEG and provide them to cmake. Also see notes above. Better use forward slashes ```/``` to separate folders. Adapt locations to your system:
 ```
-cmake .. -D CMAKE_PREFIX_PATH=C:/CUDA/version;C:/Qt/6.8.2/msvc2022_64 -D FFMPEG_PATH=C:/ffmpeg --fresh
+cmake .. -D CMAKE_PREFIX_PATH=C:/CUDA/version;C:/Qt/6.8.3/msvc2022_64 -D FFMPEG_PATH=C:/ffmpeg --fresh
 cmake --build . --config Release
 ```
 Upon successfull completion you will get the files
@@ -75,6 +75,8 @@ Optionally continue with:
 cmake --install . --config Release
 ```
 This will put together the dependent libraries and the executables in the subfolder ```install```
+
+When done, run ```cuvista -info``` to see available devices and run a test
 
 
 
@@ -97,7 +99,7 @@ To get the necessary components on the command line
 ```
 wget https://download.qt.io/official_releases/online_installers/qt-unified-linux-x64-online.run
 chmod +x qt-unified-linux-x64-online.run
-./qt-unified-linux-x64-online.run install qt.qt6.682.linux_gcc_64 qt.qt6.682.addons.qtmultimedia
+./qt-unified-linux-x64-online.run install qt.qt6.683.linux_gcc_64 qt.qt6.683.addons.qtmultimedia
 ```
 You might also need
 ```
@@ -130,7 +132,7 @@ cd build
 ```
 Adapt the location of Cuda and  Qt to your system and execute the build process. Also see notes above.
 ```
-export CMAKE_PREFIX_PATH=~/Qt/6.8.2/gcc_64:/usr/local/cuda
+export CMAKE_PREFIX_PATH=~/Qt/6.8.3/gcc_64:/usr/local/cuda
 cmake .. --fresh
 cmake --build .
 ```
@@ -139,6 +141,8 @@ Upon successfull completion you will find the executables which should execute r
 cuvistaCli/cuvista
 cuvistaGui/cuvistaGui
 ```
+
+When done, run ```cuvista -info``` to see available devices and run a test
 
 
 ## Future Ideas
@@ -156,5 +160,5 @@ cuvistaGui/cuvistaGui
 - Nvidia Cuda 12.8
 - Nvidia Video Codec SDK 12.2.72
 - FFmpeg 7.1
-- Qt 6.8.2
+- Qt 6.8.3
 - Cmake 3.28.3

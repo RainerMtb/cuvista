@@ -35,14 +35,42 @@
 class MovieFrame {
 
 protected:
+	enum class StateCombined {
+		READ_FIRST,
+		READ_SECOND,
+		FILL_BUFFER,
+		MAIN_LOOP,
+		LAST_COMPUTE,
+		DRAIN_BUFFER,
+		END,
+		QUIT,
+		FLUSH,
+		CLOSE,
+		DONE,
+	};
+
+	enum class StateConsecutive {
+		READ_FIRST,
+		READ_SECOND,
+		READ,
+		WRITE_INIT,
+		WRITE,
+		QUIT,
+		FLUSH,
+		CLOSE,
+		DONE,
+	};
+
+	enum class InputState {
+		NONE,
+		SIGNAL,
+		HANDLED,
+	};
+
 	const MainData& mData;
 
-	void read();
-	std::future<void> readAsync();
-	bool doLoop(UserInput& input);
-
-	void loopInit(std::shared_ptr<ProgressBase> progress, std::shared_ptr<FrameExecutor> executor, const std::string& message = "");
-	void loopTerminate(std::shared_ptr<ProgressBase> progress, UserInput& input, AuxWriters& auxWriters, std::shared_ptr<FrameExecutor> executor);
+	virtual void read() final;
+	virtual std::future<void> readAsync() final;
 
 public:
 	MovieReader& mReader;
@@ -80,24 +108,6 @@ public:
 class MovieFrameCombined : public MovieFrame {
 public:
 	MovieFrameCombined(MainData& data, MovieReader& reader, MovieWriter& writer) :
-		MovieFrame(data, reader, writer) {}
-
-	void runLoop(std::shared_ptr<ProgressBase> progress, UserInput& input, AuxWriters& auxWriters, std::shared_ptr<FrameExecutor> executor) override;
-};
-
-
-class MovieFrameFirst : public MovieFrame {
-public:
-	MovieFrameFirst(MainData& data, MovieReader& reader, MovieWriter& writer) :
-		MovieFrame(data, reader, writer) {}
-
-	void runLoop(std::shared_ptr<ProgressBase> progress, UserInput& input, AuxWriters& auxWriters, std::shared_ptr<FrameExecutor> executor) override;
-};
-
-
-class MovieFrameSecond : public MovieFrame {
-public:
-	MovieFrameSecond(MainData& data, MovieReader& reader, MovieWriter& writer) :
 		MovieFrame(data, reader, writer) {}
 
 	void runLoop(std::shared_ptr<ProgressBase> progress, UserInput& input, AuxWriters& auxWriters, std::shared_ptr<FrameExecutor> executor) override;

@@ -15,7 +15,7 @@
                 "${workspaceFolder}/cpu_features/include",
                 "${workspaceFolder}/Matrix",
                 "/usr/local/cuda/include",
-                "/home/rainer/Qt/6.8.1/gcc_64/include/**"
+                "/home/rainer/Qt/6.8.3/gcc_64/include/**"
             ],
             "defines": [],
             "cStandard": "c17",
@@ -37,7 +37,7 @@
                 "${workspaceFolder}/cpu_features/include",
                 "${FFMPEG_PATH}/include",
                 "${CUDA_PATH}/include",
-                "C:/Daten/Qt/6.8.2/msvc2022_64/include"
+                "C:/Daten/Qt/6.8.3/msvc2022_64/include"
             ],
             "defines": [],
             "cStandard": "c17",

@@ -32,12 +32,12 @@ private:
 
 signals:
     void cancel();
-    void sigProgress(bool isFinite, double value);
+    void sigProgress(double value);
     void sigUpdateInput(QImage im, QString time);
     void sigUpdateOutput(QImage im, QString time);
 
 public slots:
-    void progress(bool isFinite, double value);
+    void progress(double value);
     void updateInput(QImage pm, QString time);
     void updateOutput(QImage pm, QString time);
 
@@ -67,5 +67,5 @@ public:
         mProgressWindow { progressWindow },
         mExecutor { executor } {}
 
-    void update(bool force = false) override;
+    void update(double totalPercentage, bool force) override;
 };

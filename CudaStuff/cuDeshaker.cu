@@ -277,6 +277,9 @@ void CudaExecutor::cudaInit(CoreData& core, int devIdx, const cudaDeviceProp& pr
 	allocDeviceIndices(&d_yuvPlanes, d_yuvRows, h, core.bufferCount * 3ull);
 	frameIndizes.assign(core.bufferCount, -1);
 
+	//check pyramid indizes
+	pyramidIndizes.assign(core.pyramidCount, -1);
+
 	//allocate float buffers
 	allocSafe(&out.data, cudaData.strideFloat4 * h * cudaData.outBufferCount);
 	//name individual parts for convenience
@@ -364,6 +367,9 @@ void CudaExecutor::createPyramid(int64_t frameIndex) {
 	int64_t pyrIdx = frameIndex % mData.pyramidCount;
 	float* pyrStart = d_pyrData + pyrIdx * mData.pyramidRowCount * cudaData.strideFloatN;
 
+	//to keep track of things
+	pyramidIndizes[pyrIdx] = frameIndex;
+
 	//first level of pyramid
 	//Y data
 	cu::scale_8u32f(yuvStart, cudaData.strideChar, pyrStart, cudaData.strideFloatN, w, h);
@@ -390,9 +396,9 @@ void CudaExecutor::createPyramid(int64_t frameIndex) {
 //----------------------------------
 
 void CudaExecutor::computeStart(int64_t frameIndex, std::vector<PointResult>& results) {
-	assert(frameIndex > 0 && "invalid frame to compute");
 	int64_t pyrIdx = frameIndex % mData.pyramidCount;
 	int64_t pyrIdxPrev = (frameIndex - 1) % mData.pyramidCount;
+	assert(frameIndex > 0 && pyramidIndizes[pyrIdx] == pyramidIndizes[pyrIdxPrev] + 1 && "wrong frames to compute"); 
 
 	//prepare kernel
 	assert(checkKernelParameters(cudaData, props) && "invalid kernel parameters");

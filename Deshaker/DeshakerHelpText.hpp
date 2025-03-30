@@ -50,26 +50,27 @@ other output options:
 -trf file       text file containing transformation data per frame
                 use in conjunction with single pass mode, see -pass
 -res file       write detailed results of the compute step to file
--resim files    write images containing transform lines in bmp file format 
+-resim files    write images containing transform vectors in bmp file format 
                 images are grayscaled, lines are colored
-                blue: calculated transform
                 green: point is consens / red: point is not consens
+                blue: calculated transform
                 see -o options for filename pattern
 -resim folder   write images to specified folder using default filename pattern
 -pass n         mode of operation
--pass 1         only reads video file and computes transformations
--pass 2         only applies transformation to generate output video
--pass 0         combination of both steps at once, requires larger buffer
+-pass 0         read and write in one single pass, requires large buffer
 -pass 12        consecutively run first and then second pass
+                reads input twice, requires less buffer memory
                 default: 0
 -frames n       maximum number of frames to encode
                 program will terminate when this number is reached
+                default: max int value 
 -stack x        stack part of source and stabilized frames side by side
                 parameter value must be between -1.0 and 1.0 and
                 specifies which part of images is shown
                 final output video is 3/2 the input width
                 3/4 of input and 3/4 of output are displayed
                 -1 takes leftmost part, 0 shows the middle, +1 takes the right
+                default: 0
 -flow file      produce video of calculated optical flow
 
 quality and performance settings:
@@ -79,7 +80,7 @@ quality and performance settings:
 -zoom n         fixed zoom value to apply to the frames after stabilization
                 value n is given in percent
 -zoom n:m       dynamic zoom between values n and m, minimizing to fill frame
-                default zoom setting is dynamic between 5 % and 40 %
+                default zoom setting is dynamic between 5 % and 15 %
 -bgmode mode    background mode, how to fill void when frame is out of center
                 blend: use preceding frames to blend into current frame
                 color: use defined color, see -bgcol
@@ -105,14 +106,14 @@ misc options:
 -copyframes     just copy input to output, do not stabilize
                 useful for testing decoding and encoding stuff
 -progress n     show progress in different ways
--progress 0     quiet mode, no progress
--progress 1     frequently rewrite line on the output console
--progress 2     print new line for every frame
--progress 3     graph indicator
--progress 4     detailed report about video packet timings
-                default: 1
+-progress 0     quiet mode, do not output progress information
+-progress 1     default mode
+-progress 2     frequently rewrite line on the output console
+-progress 3     print new line for every frame
+-progress 4     graph indicator
 -noheader       do not display headlines at start
 -quiet          same as '-progress 0 -noheader'
+                do not produce any output except error messages
 
 advanced computation parameters:
 -levels         number of pyramid levels

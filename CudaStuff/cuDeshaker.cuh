@@ -185,6 +185,9 @@ private:
 	//keep track of frames in the buffer
 	std::vector<int64_t> frameIndizes;
 
+	//keep track of pyramids in buffer
+	std::vector<int64_t> pyramidIndizes;
+
 	//properties of device in use
 	cudaDeviceProp props = {};
 

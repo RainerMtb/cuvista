@@ -152,6 +152,8 @@ namespace im {
 
 		void copyTo(ImageData<T>& dest, std::vector<int> srcPlanes, std::vector<int> destPlanes, ThreadPoolBase& pool = defaultPool) const;
 
+		void copyTo(ImageData<T>& dest, size_t r0, size_t c0, ThreadPoolBase& pool = defaultPool) const;
+
 		void copyTo(ImageData<T>& dest, ThreadPoolBase& pool = defaultPool) const;
 
 		T sample(size_t plane, double x, double y) const;

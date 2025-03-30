@@ -38,6 +38,4 @@ protected:
 		ProgressDisplay(frame, 0) {}
 
 	bool isDue(bool forceUpdate);
-	double progressPercent();
-	bool isFinite();
 };

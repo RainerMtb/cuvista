@@ -22,8 +22,8 @@
 #include "MovieFrame.hpp"
 #include "MovieReader.hpp"
 
-ProgressDisplayConsole::ProgressDisplayConsole(MovieFrame& frame, std::ostream* outstream) :
-	ProgressDisplay(frame, 500), 
+ProgressDisplayConsole::ProgressDisplayConsole(MovieFrame& frame, std::ostream* outstream, int interval) :
+	ProgressDisplay(frame, interval), 
 	outstream { outstream } 
 {
 	outBuffer.precision(1);
@@ -33,21 +33,19 @@ ProgressDisplayConsole::ProgressDisplayConsole(MovieFrame& frame, std::ostream* 
 }
 
 void ProgressDisplayConsole::writeMessage(const std::string& str) {
-	*outstream << str << std::flush;
+	*outstream << str << std::endl;
 }
 
-std::stringstream& ProgressDisplayConsole::buildMessage() {
-	outBuffer.str("");
-	double donePercent = progressPercent();
-	if (isfinite(donePercent))
-		outBuffer << "done " << donePercent << "% ";
+std::stringstream& ProgressDisplayConsole::buildMessageLine(double totalPercentage, std::stringstream& buffer) {
+	if (isfinite(totalPercentage))
+		buffer << "done " << totalPercentage << "% ";
 	if (frame.mReader.frameIndex > 0)
-		outBuffer << "frames in " << frame.mReader.frameIndex;
+		buffer << "frames in " << frame.mReader.frameIndex;
 	if (frame.mWriter.frameIndex > 0)
-		outBuffer << ", frames out " << frame.mWriter.frameIndex;
+		buffer << ", frames out " << frame.mWriter.frameIndex;
 	if (frame.mWriter.outputBytesWritten > 0)
-		outBuffer << ", output written " << util::byteSizeToString(frame.mWriter.outputBytesWritten);
-	return outBuffer;
+		buffer << ", output written " << util::byteSizeToString(frame.mWriter.outputBytesWritten);
+	return buffer;
 }
 
 //---------------------------
@@ -55,9 +53,12 @@ std::stringstream& ProgressDisplayConsole::buildMessage() {
 //---------------------------
 
 //print a new line to the console
-void ProgressDisplayNewLine::update(bool force) {
-	buildMessage();
-	*outstream << outBuffer.str() << std::endl;
+void ProgressDisplayNewLine::update(double totalPercentage, bool force) {
+	if (isDue(force)) {
+		outBuffer.str("");
+		buildMessageLine(totalPercentage, outBuffer);
+		*outstream << outBuffer.str() << std::endl;
+	}
 }
 
 //---------------------------
@@ -65,11 +66,12 @@ void ProgressDisplayNewLine::update(bool force) {
 //---------------------------
 
 //rewrite one line on the console
-void ProgressDisplayRewriteLine::update(bool force) {
+void ProgressDisplayRewriteLine::update(double totalPercentage, bool force) {
 	if (isDue(force)) {
-		size_t len = output.length();
-		output = "\r" + buildMessage().str();
-		*outstream << '\r' << std::string(len, ' ') << output << std::flush;
+		outBuffer.str("");
+		outBuffer << "\x0D\x1B[2K";
+		buildMessageLine(totalPercentage, outBuffer);
+		*outstream << outBuffer.str() << std::flush;
 	}
 }
 
@@ -77,20 +79,24 @@ void ProgressDisplayRewriteLine::terminate() {
 	*outstream << std::endl;
 }
 
+void ProgressDisplayRewriteLine::writeMessage(const std::string& msg) {
+	*outstream << "\x0D\x1B[2K" << msg << std::endl;
+}
+
 //---------------------------
 // Graph
 //---------------------------
 
 void ProgressDisplayGraph::init() {
-	std::string leadin = "  |-------- progress ";
+	std::string leadin = "|-------- progress indicator ";
 	*outstream << leadin;
-	for (size_t i = leadin.length() - 3; i < numStars; i++) *outstream << "-";
-	*outstream << "|" << std::endl << "  |";
+	for (size_t i = leadin.length() - 1; i < numStars; i++) *outstream << "-";
+	*outstream << "|" << std::endl << "|";
 }
 
 //printing stars in one line
-void ProgressDisplayGraph::update(bool force) {
-	double done = progressPercent();
+void ProgressDisplayGraph::update(double totalPercentage, bool force) {
+	double done = totalPercentage;
 	if (done > 0 && done <= 100.0) {
 		int stars = int(0.01 * done * numStars);
 		for (; numPrinted < stars; numPrinted++) *outstream << "*";
@@ -102,27 +108,78 @@ void ProgressDisplayGraph::terminate() {
 	*outstream << "|" << std::endl;
 }
 
-//---------------------------
-// Detailed timings
-//---------------------------
+//------------------------------
+// Default mode multiple lines
+//------------------------------
 
-//show detailed report
-void ProgressDisplayDetailed::update(bool force) {
-	std::vector<std::string_view> strings;
+void ProgressDisplayMultiLine::init() {
+	*outstream << buildMessage() << std::flush;
+}
 
-	//input stats
-	if (frame.mReader.frameIndex != lastReadFrame && frame.mReader.endOfInput == false) {
-		VideoPacketContext stats = frame.mReader.videoPacketList.back();
-		strings.push_back(std::format("read idx={}, dts={}, pts={}, duration={}", frame.mReader.frameIndex, stats.dts, stats.pts, stats.duration));
-		lastReadFrame = frame.mReader.frameIndex;
+void ProgressDisplayMultiLine::update(double totalPercentage, bool force) {
+	if (isDue(force)) {
+		*outstream << "\x1B[5A" << buildMessage() << std::flush;
 	}
+}
 
-	//encoding stats
-	if (frame.mWriter.frameEncoded != lastEncodedFrame) {
-		strings.push_back(std::format("encode idx={}, dts={}, pts={}", frame.mWriter.frameEncoded, frame.mWriter.encodedDts, frame.mWriter.encodedPts));
-		lastEncodedFrame = frame.mWriter.frameEncoded;
+void ProgressDisplayMultiLine::writeMessage(const std::string& str) {
+	//set message
+	statusMessage = str;
+	//move curser up and reprint lines
+	*outstream << "\x1B[5A" << buildMessage() << std::flush;
+}
+
+
+//get console width from system calls
+
+#if defined(_WIN64)
+#include <windows.h>
+
+int getSystemConsoleWidth() {
+	CONSOLE_SCREEN_BUFFER_INFO csbi;
+	GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
+	return csbi.srWindow.Right - csbi.srWindow.Left + 1;
+}
+
+#elif defined(__linux__)
+extern "C" {
+#include <sys/ioctl.h>
+}
+
+int getSystemConsoleWidth() {
+	winsize w;
+	ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+	return w.ws_col;
+}
+
+#else
+int getSystemConsoleWidth() { 
+	return 80; 
+}
+
+#endif
+
+int ProgressDisplayMultiLine::getConsoleWidth() {
+	return std::clamp(getSystemConsoleWidth(), 40, 200);
+}
+
+std::string ProgressDisplayMultiLine::buildLine(int64_t frameIndex, int64_t frameCount, int64_t graphLength) {
+	std::string line = std::format("{:6d}", frameIndex);
+	if (frameCount > 0) {
+		int64_t hashCount = std::clamp(graphLength * frameIndex / frameCount, int64_t(0), graphLength);
+		double percent = std::clamp(100.0 * frameIndex / frameCount, 0.0, 100.0);
+		line += std::format(" [{}{}] {:4.0f}%", std::string(hashCount, '#'), std::string(graphLength - hashCount, '.'), percent);
 	}
+	return line;
+}
 
-	//send to display
-	*outstream << util::concatStrings(strings, " // ", "", "\n");
+std::string ProgressDisplayMultiLine::buildMessage() {
+	int64_t graphLength = getConsoleWidth() - 25LL;
+	return std::format("\x0D\x1B[2K{}\n\x0D\x1B[2Kinput   {}\n\x0D\x1B[2Koutput  {}\n\x0D\x1B[2Kencoded {}\n\x0D\x1B[2Koutput written {}\n",
+		statusMessage,
+		buildLine(frame.mReader.frameIndex, frame.mReader.frameCount, graphLength),
+		buildLine(frame.mWriter.frameIndex, frame.mReader.frameCount, graphLength),
+		buildLine(frame.mWriter.frameEncoded, frame.mReader.frameCount, graphLength),
+		util::byteSizeToString(frame.mWriter.outputBytesWritten))
+		;
 }

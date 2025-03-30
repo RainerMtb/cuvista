@@ -73,6 +73,7 @@ private:
     QAudioSink* mAudioSink;
     QIODevice* mAudioIODevice;
     std::chrono::time_point<std::chrono::steady_clock> mNextPts;
+    std::vector<std::shared_ptr<OutputStreamContext>> outputStreams;
 
 public:
     PlayerWriter(MainData& data, MovieReader& reader, PlayerWindow* player, QImage imageWorking, int audioStreamCtx);
@@ -101,5 +102,5 @@ public:
         ProgressDisplay(frame, 0),
         mPlayer { player } {}
 
-    void update(bool force = false) override;
+    void update(double totalPercentage, bool force) override;
 };

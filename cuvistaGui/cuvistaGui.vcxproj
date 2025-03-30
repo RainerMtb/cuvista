@@ -133,7 +133,6 @@ copy $(FFMPEG_PATH)\bin\*.dll $(SolutionDir)bin\$(Platform)\Deploy</Command>
     <ClCompile Include="ImageLabel.cpp" />
     <ClCompile Include="MessagePrinterGui.cpp" />
     <ClCompile Include="player.cpp" />
-    <ClCompile Include="PlayerWidget.cpp" />
     <ClCompile Include="progress.cpp" />
     <ClCompile Include="UserInputGui.cpp" />
     <QtRcc Include="cuvistaGui.qrc" />
@@ -167,7 +166,6 @@ copy $(FFMPEG_PATH)\bin\*.dll $(SolutionDir)bin\$(Platform)\Deploy</Command>
     <QtMoc Include="Eula.h" />
     <QtMoc Include="ClickLabel.h" />
     <QtMoc Include="player.h" />
-    <ClInclude Include="PlayerWidget.h" />
     <QtMoc Include="UserInputGui.hpp" />
   </ItemGroup>
   <ItemGroup>

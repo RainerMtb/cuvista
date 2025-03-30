@@ -30,7 +30,8 @@ public:
 
 	int64_t frameIndex = -1;
 	int64_t frameCount = -1;
-	bool endOfInput = true;
+	bool endOfInput = false;
+	bool startOfInput = true;
 
 	AVStream* videoStream = nullptr;
 

@@ -29,9 +29,9 @@ public:
 	TrajectoryMat();
 	TrajectoryMat(double u, double v, double a);
 
-	double u();
-	double v();
-	double a();
+	double u() const;
+	double v() const;
+	double a() const;
 };
 
 struct TrajectoryItem {
@@ -45,7 +45,7 @@ struct TrajectoryItem {
 	bool isDuplicateFrame;
 	//frame index for debugging
 	int64_t frameIndex;
-	//zoom value to fill frame
+	//zoom value to fill stabilized frame
 	double zoom;
 
 	TrajectoryItem(double u, double v, double a, int64_t frameIndex);
@@ -62,13 +62,13 @@ private:
 	TrajectoryMat tempSum;
 	//current output
 	AffineTransform currentTransform;
-	//current zoom value
+	//current zoom value but before clamping
 	double currentZoom = 1.0;
 
 	int64_t clamp(int64_t val, int64_t lo, int64_t hi);
 
 public:
-	double calcRequiredZoom(double dx, double dy, double rot, double w, double h, const MainData& data, int64_t frameWriteIndex);
+	double calcRequiredZoom(double dx, double dy, double rot, double w, double h);
 
 	const TrajectoryItem& addTrajectoryTransform(double dx, double dy, double da, int64_t frameIndex);
 	const TrajectoryItem& addTrajectoryTransform(const AffineTransform& transform);
@@ -81,4 +81,7 @@ public:
 
 	//trajectory count
 	int64_t getTrajectorySize();
+
+	//output the list of trajectory items
+	friend std::ostream& operator << (std::ostream& os, const Trajectory& trajectory);
 };

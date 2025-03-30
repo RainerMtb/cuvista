@@ -263,14 +263,20 @@ void OpticalFlowWriter::open(const std::string& sourceName, AVPixelFormat pixfmt
 	if (result < 0)
 		throw AVException("error opening file '" + mData.fileOut + "'");
 
-	for (StreamContext& sc : mReader.inputStreams) {
+	for (StreamContext& sc : mReader.mInputStreams) {
+		auto osc = std::make_shared<OutputStreamContext>();
+		osc->inputStream = sc.inputStream;
+
 		if (sc.inputStream->index == mReader.videoStream->index) {
-			sc.handling = StreamHandling::STREAM_STABILIZE;
-			sc.outputStream = videoStream = newStream(fmt_ctx, sc.inputStream);
+			osc->handling = StreamHandling::STREAM_STABILIZE;
+			osc->outputStream = videoStream = newStream(fmt_ctx, sc.inputStream);
 
 		} else {
-			sc.handling = StreamHandling::STREAM_IGNORE;
+			osc->handling = StreamHandling::STREAM_IGNORE;
 		}
+
+		outputStreams.push_back(osc);
+		sc.outputStreams.push_back(osc);
 	}
 
 	FFmpegWriter::open(AV_CODEC_ID_H264, pixfmt, mData.h, mData.w, mData.cpupitch);

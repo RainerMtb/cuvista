@@ -239,7 +239,7 @@ void createTransformImages() {
 		data.validate(reader);
 
 		NullWriter writer(data, reader);
-		MovieFrameFirst frame(data, reader, writer);
+		MovieFrameConsecutive frame(data, reader, writer);
 		CpuFrame cpuframe(data, data.deviceInfoCpu, frame, frame.mPool);
 
 		reader.readImage(frame.mBufferFrame, im1);

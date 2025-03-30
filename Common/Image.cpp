@@ -21,6 +21,7 @@
 
 #include <cmath>
 #include <algorithm>
+#include <numeric>
 
 template <class T> im::ImageBase<T>::ImageBase(int h, int w, int stride, int numPlanes) :
 	h { h },
@@ -205,7 +206,7 @@ template <class T> void im::ImageBase<T>::yuvToRgb(ImageData<unsigned char>& des
 template <class T> void im::ImageBase<T>::copyTo(ImageData<T>& dest, size_t r0, size_t c0, 
 	std::vector<int> srcPlanes, std::vector<int> destPlanes, ThreadPoolBase& pool) const {
 
-	assert(w <= dest.width() && h <= dest.height() && srcPlanes.size() == destPlanes.size() && "dimensions mismatch");
+	assert(w + c0 <= dest.width() && h + r0 <= dest.height() && planes() == dest.planes() && "dimensions mismatch");
 	auto func = [&] (size_t i) {
 		for (size_t r = 0; r < h; r++) {
 			const T* ptr = addr(srcPlanes[i], r, 0);
@@ -220,15 +221,14 @@ template <class T> void im::ImageBase<T>::copyTo(ImageData<T>& dest, std::vector
 	copyTo(dest, 0, 0, srcPlanes, destPlanes, pool);
 }
 
+template <class T> void im::ImageBase<T>::copyTo(ImageData<T>& dest, size_t r0, size_t c0, ThreadPoolBase& pool) const {
+	std::vector<int> p(planes());
+	std::iota(p.begin(), p.end(), 0);
+	copyTo(dest, r0, c0, p, p, pool);
+}
+
 template <class T> void im::ImageBase<T>::copyTo(ImageData<T>& dest, ThreadPoolBase& pool) const {
-	assert(w == dest.width() && h == dest.height() && numPlanes == dest.planes() && "dimensions mismatch");
-	auto func = [&] (size_t i) {
-		for (size_t r = 0; r < h; r++) {
-			std::copy(addr(i, r, 0), addr(i, r, 0) + w, dest.addr(i, r, 0));
-		}
-	};
-	pool.addAndWait(func, 0, numPlanes);
-	dest.setIndex(index);
+	copyTo(dest, 0, 0, pool);
 }
 
 

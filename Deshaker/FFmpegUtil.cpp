@@ -98,7 +98,11 @@ SidePacket::~SidePacket() {
 }
 
 StreamContext::~StreamContext() {
-    packets.clear();
+    outputStreams.clear();
+}
+
+OutputStreamContext::~OutputStreamContext() {
+    sidePackets.clear();
 
     if (audioInCtx) {
         avcodec_free_context(&audioInCtx);

@@ -32,26 +32,28 @@ public:
 	UserInputConsole(std::ostream& console) : 
 		console { console } {}
 
-	void checkState() override {
+	UserInputEnum checkState() override {
+		UserInputEnum state = UserInputEnum::NONE;
 		std::optional<char> key = getKeyboardInput();
 		if (key) {
 			switch (*key) {
 			case 'e':
 			case 'E':
-				this->mCurrentInput = UserInputEnum::END;
-				console << std::endl << "[e] command received. Stop reading input." << std::endl;
+				state = UserInputEnum::END;
+				//console << std::endl << "[e] command received. Stop reading input." << std::endl;
 				break;
 			case 'q':
 			case 'Q':
-				this->mCurrentInput = UserInputEnum::QUIT;
-				console << std::endl << "[q] command received. Stop writing output." << std::endl;
+				state = UserInputEnum::QUIT;
+				//console << std::endl << "[q] command received. Stop writing output." << std::endl;
 				break;
 			case 'x':
 			case 'X':
-				this->mCurrentInput = UserInputEnum::HALT;
-				console << std::endl << "[x] command received. Terminating." << std::endl;
+				state = UserInputEnum::HALT;
+				//console << std::endl << "[x] command received. Terminating." << std::endl;
 				break;
 			}
 		}
+		return state;
 	}
 };

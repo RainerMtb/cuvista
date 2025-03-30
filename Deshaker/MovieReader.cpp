@@ -36,8 +36,8 @@ std::future<void> MovieReader::readAsync(ImageYuv& inputFrame) {
 
 std::optional<int64_t> MovieReader::ptsForFrameAsMillis(int64_t frameIndex) {
     auto fcn = [&] (const VideoPacketContext& vpc) { return vpc.readIndex == frameIndex; };
-    auto result = std::find_if(videoPacketList.cbegin(), videoPacketList.cend(), fcn);
-    if (result != videoPacketList.end()) {
+    auto result = std::find_if(mVideoPacketList.cbegin(), mVideoPacketList.cend(), fcn);
+    if (result != mVideoPacketList.end()) {
         return result->bestTimestamp * 1000 * videoStream->time_base.num / videoStream->time_base.den;
     } else {
         return std::nullopt;
@@ -101,41 +101,39 @@ void FFmpegReader::open(const std::string& source) {
 
 
 //open audio decoding
-int FFmpegReader::openAudioDecoder(int streamIndex) {
-    StreamContext& sc = inputStreams[streamIndex];
-    
+int FFmpegReader::openAudioDecoder(OutputStreamContext& osc) {
     //input format and codec
-    AVCodecID id = sc.inputStream->codecpar->codec_id;
-    sc.audioInCodec = avcodec_find_decoder(id);
-    if (!sc.audioInCodec)
+    AVCodecID id = osc.inputStream->codecpar->codec_id;
+    osc.audioInCodec = avcodec_find_decoder(id);
+    if (!osc.audioInCodec)
         throw AVException(std::format("cannot find audio decoder for '{}'", avcodec_get_name(id)));
-    sc.audioInCtx = avcodec_alloc_context3(sc.audioInCodec);
-    if (!sc.audioInCtx)
+    osc.audioInCtx = avcodec_alloc_context3(osc.audioInCodec);
+    if (!osc.audioInCtx)
         throw AVException("cannot allocate audio decoder context");
-    int retval = avcodec_parameters_to_context(sc.audioInCtx, sc.inputStream->codecpar);
+    int retval = avcodec_parameters_to_context(osc.audioInCtx, osc.inputStream->codecpar);
     if (retval < 0)
         throw AVException(av_make_error(retval, "cannot copy audio parameters to input context"));
-    retval = avcodec_open2(sc.audioInCtx, sc.audioInCodec, NULL);
+    retval = avcodec_open2(osc.audioInCtx, osc.audioInCodec, NULL);
     if (retval < 0)
         throw AVException(av_make_error(retval, "cannot open audio decoder"));
-    sc.audioInCtx->time_base = sc.inputStream->time_base;
+    osc.audioInCtx->time_base = osc.inputStream->time_base;
 
     //converter to float stereo
     AVChannelLayout bufferChannelFormat = AV_CHANNEL_LAYOUT_STEREO;
-    int sampleRate = sc.audioInCtx->sample_rate;
-    retval = swr_alloc_set_opts2(&sc.resampleCtx,
+    int sampleRate = osc.audioInCtx->sample_rate;
+    retval = swr_alloc_set_opts2(&osc.resampleCtx,
         &bufferChannelFormat, decodingSampleFormat, sampleRate,
-        &sc.audioInCtx->ch_layout, sc.audioInCtx->sample_fmt, sampleRate,
+        &osc.audioInCtx->ch_layout, osc.audioInCtx->sample_fmt, sampleRate,
         0, NULL);
     if (retval < 0)
         throw AVException("cannot set audio resampler options");
-    retval = swr_init(sc.resampleCtx);
+    retval = swr_init(osc.resampleCtx);
     if (retval < 0)
         throw AVException(av_make_error(retval, "cannot init audio resampler"));
 
     //allocate output frame
-    sc.frameIn = av_frame_alloc();
-    if (!sc.frameIn)
+    osc.frameIn = av_frame_alloc();
+    if (!osc.frameIn)
         throw AVException("cannot allocate audio output frame");
 
     return sampleRate;
@@ -189,7 +187,7 @@ void FFmpegFormatReader::openInput(AVFormatContext* fmt, const char* source) {
         }
         
         //store every stream found in input
-        inputStreams.emplace_back(stream, millis);
+        mInputStreams.emplace_back(stream, millis);
     }
     //continue only when there is a video stream to decode
     if (videoStream == nullptr || av_codec == nullptr)
@@ -260,7 +258,7 @@ bool FFmpegReader::read(ImageYuv& inputFrame) {
     //util::ConsoleTimer timer("read");
     frameIndex++;
     endOfInput = true;
-    int response;
+    int response = 0;
 
     while (true) {
         //we may have a stored packet from last run
@@ -272,15 +270,29 @@ bool FFmpegReader::read(ImageYuv& inputFrame) {
             response = av_read_frame(av_format_ctx, av_packet); //read new packet from input format
         }
 
-        //decode packet
-        if (av_packet->size > 0) {
-            int sidx = av_packet->stream_index;
-            StreamHandling sh = sidx < inputStreams.size() ? inputStreams[sidx].handling : StreamHandling::STREAM_IGNORE;
+        if (response == AVERROR_EOF) {
+            //termination signal means we still need to drain the decoder buffer
+            response = avcodec_send_packet(av_codec_ctx, NULL); //send termination, can be done repeatedly
+            response = avcodec_receive_frame(av_codec_ctx, av_frame);
+            if (response == AVERROR_EOF) { //really the end of the file
+                break;
 
+            } else if (response < 0) {
+                errorLogger().logError(av_make_error(response, "failed to receive frame"));
+                break;
+
+            } else { //we still got a frame
+                endOfInput = false;
+                break;
+            }
+
+        } else {
+            //decode a packet
+            int sidx = av_packet->stream_index;
             if (sidx == videoStream->index) {
                 //we have a video packet
                 response = avcodec_send_packet(av_codec_ctx, av_packet); //send packet to decoder
-                if (response == AVERROR(EAGAIN)) { //we have to receive frames before we can send again
+                if (response == AVERROR(EAGAIN)) { //we have to receive frames first before we can send new data
                     isStoredPacket = true;
 
                 } else if (response < 0) {
@@ -301,80 +313,73 @@ bool FFmpegReader::read(ImageYuv& inputFrame) {
                     break;
                 }
 
-            } else if (storePackets == false) {
-                //do not store any secondary packets
+            } else if (mStoreSidePackets == false) {
+                // do nothing here
 
-            } else if (sh == StreamHandling::STREAM_COPY || sh == StreamHandling::STREAM_TRANSCODE) {
-                //we should store a packet from a secondary stream for processing
-                std::list<SidePacket>& packetList = inputStreams[sidx].packets;
-                packetList.emplace_back(frameIndex, av_packet);
+            } else {
+                //provide side packets to writers
+                for (std::shared_ptr<OutputStreamContext> posc : mInputStreams[sidx].outputStreams) {
+                    if (posc->handling == StreamHandling::STREAM_COPY || posc->handling == StreamHandling::STREAM_TRANSCODE) {
+                        std::unique_lock<std::mutex> lock(posc->mMutexSidePackets);
+                        //we should store a packet from a secondary stream for processing
+                        posc->sidePackets.emplace_back(frameIndex, av_packet);
 
-                //limiting packets in memory
-                auto fcn = [] (int sum, const SidePacket& pkt) { return sum + pkt.packet->size; };
-                int siz = std::accumulate(packetList.begin(), packetList.end(), 0, fcn);
-                while (siz > sideDataMaxSize) {
-                    packetList.pop_front();
-                    siz = std::accumulate(packetList.begin(), packetList.end(), 0, fcn);
-                }
-
-            } else if (sh == StreamHandling::STREAM_DECODE) {
-                //decode the packets and store raw bytes
-                StreamContext& sc = inputStreams[sidx];
-                response = avcodec_send_packet(sc.audioInCtx, av_packet);
-                if (response == AVERROR_EOF) {
-                    break;
-
-                } else if (response < 0) {
-                    ffmpeg_log_error(response, "cannot send audio packet to decoder", ErrorSource::READER);
-                    break;
-                }
-
-                double timestamp = 1.0 * (av_packet->pts - sc.inputStream->start_time) * sc.inputStream->time_base.num / sc.inputStream->time_base.den;
-                SidePacket sidePacket(frameIndex, timestamp);
-                int bytesPerSample = av_get_bytes_per_sample(decodingSampleFormat);
-                while (response >= 0) {
-                    response = avcodec_receive_frame(sc.audioInCtx, sc.frameIn);
-                    if (response == AVERROR(EAGAIN) || response == AVERROR_EOF)
-                        break;
-
-                    else if (response < 0) {
-                        ffmpeg_log_error(response, "cannot receive audio packet from decoder", ErrorSource::READER);
-                        break;
-                    }
-
-                    //no sample rate conversion makes conversion functions simpler
-                    int sampleCount = swr_get_out_samples(sc.resampleCtx, sc.frameIn->nb_samples);
-                    int byteCount = sampleCount * bytesPerSample * 2; //two output channels in packed format
-                    sidePacket.audioData.resize(byteCount);
-                    if (sampleCount > 0) {
-                        uint8_t* dest[AV_NUM_DATA_POINTERS] = { sidePacket.audioData.data() }; //must be an array of values
-                        const uint8_t** indata = (const uint8_t**) (sc.frameIn->data);
-                        int converted = swr_convert(sc.resampleCtx, dest, sampleCount, indata, sc.frameIn->nb_samples);
-                        if (converted > 0) {
-                            byteCount = converted * bytesPerSample * 2;
-                            sidePacket.audioData.resize(byteCount);
+                        //limiting packets in memory
+                        auto fcn = [] (int sum, const SidePacket& pkt) { return sum + pkt.packet->size; };
+                        int siz = std::accumulate(posc->sidePackets.begin(), posc->sidePackets.end(), 0, fcn);
+                        while (siz > sideDataMaxSize) {
+                            siz -= posc->sidePackets.front().packet->size;
+                            posc->sidePackets.pop_front();
                         }
-                    }
-                }
 
-                //static std::ofstream file("f:/audio.raw", std::ios::binary);
-                //file.write(reinterpret_cast<char*>(sidePacket.audioData.data()), sidePacket.audioData.size());
-                inputStreams[sidx].packets.push_back(std::move(sidePacket));
-            }
+                    } else if (posc->handling == StreamHandling::STREAM_DECODE) {
+                        //decode the packets and store raw bytes
+                        StreamContext& sc = mInputStreams[sidx];
+                        response = avcodec_send_packet(posc->audioInCtx, av_packet);
+                        if (response == AVERROR_EOF) {
+                            break;
 
-        } else { //nothing left in input format, terminate the process, dump frames from decoder buffer
-            response = avcodec_send_packet(av_codec_ctx, NULL); //send terminating signal to decoder
-            response = avcodec_receive_frame(av_codec_ctx, av_frame);
-            if (response == AVERROR_EOF) { //really the end of the file
-                break;
+                        } else if (response < 0) {
+                            ffmpeg_log_error(response, "cannot send audio packet to decoder", ErrorSource::READER);
+                            break;
+                        }
 
-            } else if (response < 0) {
-                errorLogger().logError(av_make_error(response, "Failed to receive frame"));
-                break;
+                        double timestamp = 1.0 * (av_packet->pts - sc.inputStream->start_time) *
+                            sc.inputStream->time_base.num / sc.inputStream->time_base.den;
 
-            } else { //we still got a frame
-                endOfInput = false;
-                break;
+                        SidePacket sidePacket(frameIndex, timestamp);
+                        int bytesPerSample = av_get_bytes_per_sample(decodingSampleFormat);
+                        while (response >= 0) {
+                            response = avcodec_receive_frame(posc->audioInCtx, posc->frameIn);
+                            if (response == AVERROR(EAGAIN) || response == AVERROR_EOF)
+                                break;
+
+                            else if (response < 0) {
+                                ffmpeg_log_error(response, "cannot receive audio packet from decoder", ErrorSource::READER);
+                                break;
+                            }
+
+                            //no sample rate conversion makes conversion functions simpler
+                            int sampleCount = swr_get_out_samples(posc->resampleCtx, posc->frameIn->nb_samples);
+                            int byteCount = sampleCount * bytesPerSample * 2; //two output channels in packed format
+                            sidePacket.audioData.resize(byteCount);
+                            if (sampleCount > 0) {
+                                uint8_t* dest[AV_NUM_DATA_POINTERS] = { sidePacket.audioData.data() }; //must be an array of values
+                                const uint8_t** indata = (const uint8_t**) (posc->frameIn->data);
+                                int converted = swr_convert(posc->resampleCtx, dest, sampleCount, indata, posc->frameIn->nb_samples);
+                                if (converted > 0) {
+                                    byteCount = converted * bytesPerSample * 2;
+                                    sidePacket.audioData.resize(byteCount);
+                                }
+                            }
+                        }
+
+                        //static std::ofstream file("f:/audio.raw", std::ios::binary);
+                        //file.write(reinterpret_cast<char*>(sidePacket.audioData.data()), sidePacket.audioData.size());
+                        std::unique_lock<std::mutex> lock(posc->mMutexSidePackets);
+                        posc->sidePackets.push_back(std::move(sidePacket));
+                    } //end audio decoding
+                } //end loop output streams
             }
         }
     }
@@ -400,13 +405,13 @@ bool FFmpegReader::read(ImageYuv& inputFrame) {
 
         //store parameters for writer
         int64_t timestamp = av_frame->best_effort_timestamp - videoStream->start_time;
-        videoPacketList.emplace_back(frameIndex, av_frame->pts, av_frame->pkt_dts, av_frame->duration, timestamp);
+        mVideoPacketList.emplace_back(frameIndex, av_frame->pts, av_frame->pkt_dts, av_frame->duration, timestamp);
 
         //in some cases pts values are not in proper sequence, but frames decoded by ffmpeg are indeed in correct order
         //in that case just reorder pts values -- bug in ffmpeg
-        auto it = videoPacketList.end();
+        auto it = mVideoPacketList.end();
         it--;
-        while (it != videoPacketList.begin() && it->pts < std::prev(it)->pts) {
+        while (it != mVideoPacketList.begin() && it->pts < std::prev(it)->pts) {
             std::swap(it->pts, std::prev(it)->pts);
             it--;
         }
@@ -438,13 +443,16 @@ bool FFmpegReader::seek(double fraction) {
 void FFmpegReader::rewind() {
     seek(0.0);
     frameIndex = -1;
-    endOfInput = true;
-    videoPacketList.clear();
-    for (StreamContext& s : inputStreams) {
-        s.packets.clear();
-        s.packetsWritten = 0;
-        s.lastPts = 0;
-        s.pts = 0;
+    endOfInput = false;
+    startOfInput = true;
+    mVideoPacketList.clear();
+    for (StreamContext& s : mInputStreams) {
+        for (auto& ptr : s.outputStreams) {
+            ptr->sidePackets.clear();
+            ptr->packetsWritten = 0;
+            ptr->lastPts = 0;
+            ptr->pts = 0;
+        }
     }
 }
 
@@ -453,8 +461,8 @@ void FFmpegReader::close() {
 
     videoStream = nullptr;
     sws_scaler_ctx = nullptr;
-    videoPacketList.clear();
-    inputStreams.clear();
+    mVideoPacketList.clear();
+    mInputStreams.clear();
 }
 
 FFmpegReader::~FFmpegReader() {

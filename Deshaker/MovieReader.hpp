@@ -29,9 +29,9 @@
 class MovieReader : public ReaderStats {
 
 public:
-	std::list<VideoPacketContext> videoPacketList;
-	std::vector<StreamContext> inputStreams;
-	bool storePackets = true;
+	std::list<VideoPacketContext> mVideoPacketList;
+	std::vector<StreamContext> mInputStreams;
+	bool mStoreSidePackets = true;
 
 	virtual ~MovieReader() = default;
 
@@ -42,7 +42,7 @@ public:
 	virtual void close() {}
 	virtual void rewind() {}
 	virtual bool seek(double fraction) { return true; }
-	virtual int openAudioDecoder(int streamIndex) { return -1; }
+	virtual int openAudioDecoder(OutputStreamContext& osc) { return -1; }
 
 	std::optional<std::string> ptsForFrameAsString(int64_t frameIndex);
 	std::optional<int64_t> ptsForFrameAsMillis(int64_t frameIndex);
@@ -102,7 +102,7 @@ public:
 	bool read(ImageYuv& inputFrame) override;
 	void close() override;
 	void rewind() override;
-	int openAudioDecoder(int streamIndex) override;
+	int openAudioDecoder(OutputStreamContext& osc) override;
 
 	bool seek(double fraction);
 };

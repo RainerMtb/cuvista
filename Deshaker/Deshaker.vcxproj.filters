@@ -71,9 +71,6 @@
     <ClCompile Include="KeyboardInput.cpp">
       <Filter>System</Filter>
     </ClCompile>
-    <ClCompile Include="Deshaker.cpp">
-      <Filter>Main</Filter>
-    </ClCompile>
     <ClCompile Include="clTest.cpp">
       <Filter>OpenCl</Filter>
     </ClCompile>
@@ -145,20 +142,11 @@
     <ClInclude Include="Trajectory.hpp">
       <Filter>Transformation</Filter>
     </ClInclude>
-    <ClInclude Include="KeyboardInput.hpp">
-      <Filter>Util</Filter>
-    </ClInclude>
     <ClInclude Include="Stats.hpp">
       <Filter>Main</Filter>
     </ClInclude>
     <ClInclude Include="RandomSource.hpp">
       <Filter>Transformation</Filter>
-    </ClInclude>
-    <ClInclude Include="UserInput.hpp">
-      <Filter>Main</Filter>
-    </ClInclude>
-    <ClInclude Include="UserInputConsole.hpp">
-      <Filter>Main</Filter>
     </ClInclude>
     <ClInclude Include="ProgressDisplay.hpp">
       <Filter>Main</Filter>
@@ -168,9 +156,6 @@
     </ClInclude>
     <ClInclude Include="NvidiaDriver.hpp">
       <Filter>Util</Filter>
-    </ClInclude>
-    <ClInclude Include="Deshaker.hpp">
-      <Filter>Main</Filter>
     </ClInclude>
     <ClInclude Include="clTest.hpp">
       <Filter>OpenCl</Filter>
@@ -249,6 +234,15 @@
     </ClInclude>
     <ClInclude Include="CudaInterface.hpp">
       <Filter>Main</Filter>
+    </ClInclude>
+    <ClInclude Include="KeyboardInput.hpp">
+      <Filter>System</Filter>
+    </ClInclude>
+    <ClInclude Include="UserInput.hpp">
+      <Filter>System</Filter>
+    </ClInclude>
+    <ClInclude Include="UserInputConsole.hpp">
+      <Filter>System</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

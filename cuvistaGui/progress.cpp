@@ -46,8 +46,8 @@ void ProgressWindow::closeEvent(QCloseEvent* event) {
 	cancel();
 }
 
-void ProgressWindow::progress(bool isFinite, double value) {
-	if (isFinite) {
+void ProgressWindow::progress(double value) {
+	if (std::isfinite(value)) {
 		ui.progressBar->setMaximum(1000);
 		ui.progressBar->setValue((int) (value * 10.0));
 
@@ -66,9 +66,9 @@ void ProgressWindow::updateOutput(QImage im, QString time) {
 	ui.lblTimeOutput->setText(time);
 }
 
-void ProgressGui::update(bool force) {
+void ProgressGui::update(double totalPercentage, bool force) {
 	if (isDue(force)) {
-		mProgressWindow->sigProgress(isFinite(), progressPercent());
+		mProgressWindow->sigProgress(totalPercentage);
 	}
 
 	auto timePointNow = std::chrono::steady_clock::now();

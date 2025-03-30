@@ -71,7 +71,7 @@ void CudaFFmpegWriter::open(EncodingOption videoCodec) {
     nvenc = dic->nvenc;
 
     //open ffmpeg output format
-    AVCodecID id = codecMap[videoCodec.codec];
+    AVCodecID id = codecToCodecIdMap[videoCodec.codec];
     FFmpegFormatWriter::open(id, mData.fileOut, 4);
 
     //setup nvenc class

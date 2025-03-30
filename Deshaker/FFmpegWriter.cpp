@@ -49,6 +49,7 @@ void FFmpegWriter::open(AVCodecID codecId, AVPixelFormat pixfmt, int h, int w, i
     //av_opt_set(codec_ctx->priv_data, "preset", "slow", 0);
     av_opt_set(codec_ctx->priv_data, "profile", "main", 0);
     av_opt_set(codec_ctx->priv_data, "x265-params", "log-level=error", 0);
+    av_opt_set(codec_ctx->priv_data, "svtav1-params", "svt-log-level=1", 0);
     if (mData.crf) av_opt_set(codec_ctx->priv_data, "crf", std::to_string(mData.crf.value()).c_str(), 0);
 
     if (fmt_ctx->oformat->flags & AVFMT_GLOBALHEADER)
@@ -101,7 +102,7 @@ void FFmpegWriter::open(AVCodecID codecId, AVPixelFormat pixfmt, int h, int w, i
 //set up ffmpeg encoder
 void FFmpegWriter::open(EncodingOption videoCodec, AVPixelFormat pixfmt, int h, int w, int stride, const std::string& sourceName) {
     //open container format
-    AVCodecID codecID = codecMap[videoCodec.codec];
+    AVCodecID codecID = codecToCodecIdMap[videoCodec.codec];
     FFmpegFormatWriter::open(codecID, sourceName, imageBufferSize);
 
     open(codecID, pixfmt, h, w, stride);

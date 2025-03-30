@@ -22,8 +22,14 @@
 
 #include "UserInput.hpp"
 
-class UserInputGui : public QObject, public UserInputDefault {
+class UserInputGui : public QObject, public UserInput {
     Q_OBJECT
+
+public:
+    bool mIsCancelled = false;
+    UserInputEnum mBufferedInput = UserInputEnum::NONE;
+
+    UserInputEnum checkState() override;
 
 public slots:
     void cancel();

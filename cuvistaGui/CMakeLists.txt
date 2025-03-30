@@ -15,7 +15,6 @@ qt_add_executable(cuvistaGui
     Eula.cpp
     main.cpp
     player.cpp
-    PlayerWidget.cpp
     progress.cpp
     UserInputGui.cpp
     ImageLabel.cpp

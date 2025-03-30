@@ -21,18 +21,6 @@
 #include "MovieFrame.hpp"
 #include "MovieReader.hpp"
 
-double ProgressDisplay::progressPercent() {
-	//progress is NaN when no frame count is available
-	double percentage = std::numeric_limits<double>::quiet_NaN();
-	int64_t frameCount = frame.mReader.frameCount;
-	if (frameCount != 0) {
-		//reading index is worth 3/4 towards progress and writing is worth 1/4
-		double p = std::abs((300.0 * frame.mReader.frameIndex + 100.0 * frame.mWriter.frameIndex) / 4.0 / frameCount);
-		percentage = std::clamp(p, 0.0, 100.0);
-	}
-	return percentage;
-}
-
 bool ProgressDisplay::isDue(bool forceUpdate) {
 	auto t = std::chrono::steady_clock::now();
 	if (forceUpdate || t - timePoint > interval) {
@@ -42,8 +30,4 @@ bool ProgressDisplay::isDue(bool forceUpdate) {
 	} else {
 		return false;
 	}
-}
-
-bool ProgressDisplay::isFinite() {
-	return frame.mReader.frameCount != 0;
 }

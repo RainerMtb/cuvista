@@ -27,11 +27,12 @@ protected:
 	std::stringstream outBuffer;
 	std::ostream* outstream;
 
-	ProgressDisplayConsole(MovieFrame& frame, std::ostream* outstream);
+	ProgressDisplayConsole(MovieFrame& frame, std::ostream* outstream, int interval = 500);
 	void writeMessage(const std::string& str) override;
-	std::stringstream& buildMessage();
+	std::stringstream& buildMessageLine(double totalPercentage, std::stringstream& buffer);
 };
 
+//option 4
 //display a character graph between 0% and 100%
 class ProgressDisplayGraph : public ProgressDisplayConsole {
 
@@ -42,52 +43,65 @@ private:
 public:
 	ProgressDisplayGraph(MovieFrame& frame, std::ostream* outstream) :
 		ProgressDisplayConsole(frame, outstream) {}
+	
 	void init() override;
-	void update(bool force) override;
+	void update(double totalPercentage, bool force) override;
 	void terminate() override;
 	void writeMessage(const std::string& msg) override {}
 };
 
+//option 3
 //new line for every frame
 class ProgressDisplayNewLine : public ProgressDisplayConsole {
 
 public:
 	ProgressDisplayNewLine(MovieFrame& frame, std::ostream* outstream) :
 		ProgressDisplayConsole(frame, outstream) {}
-	void update(bool force = false) override;
+	
+	void update(double totalPercentage, bool force = false) override;
 };
 
+//option 2
 //rewrite one line with updated status
 class ProgressDisplayRewriteLine : public ProgressDisplayConsole {
-
-private:
-	std::string output;
 
 public:
 	ProgressDisplayRewriteLine(MovieFrame& frame, std::ostream* outstream) :
 		ProgressDisplayConsole(frame, outstream) {}
-	void update(bool force) override;
+	
+	void update(double totalPercentage, bool force) override;
 	void terminate() override;
+	void writeMessage(const std::string& msg) override;
 };
 
-//detailed progress report
-class ProgressDisplayDetailed : public ProgressDisplayConsole {
+//option 1
+//rewrite multiple lines
+class ProgressDisplayMultiLine : public ProgressDisplayConsole {
 
 private:
-	int64_t lastReadFrame = -1;
-	int64_t lastEncodedFrame = 0;
+	std::string statusMessage = "";
+
+	int getConsoleWidth();
+	std::string buildMessage();
+	std::string buildLine(int64_t frameIndex, int64_t frameCount, int64_t graphLength);
 
 public:
-	ProgressDisplayDetailed(MovieFrame& frame, std::ostream* outstream) :
-		ProgressDisplayConsole(frame, outstream) {}
-	void update(bool force) override;
+	ProgressDisplayMultiLine(MovieFrame& frame, std::ostream* outstream) :
+		ProgressDisplayConsole(frame, outstream, 200) {}
+	
+	void init() override;
+	void update(double totalPercentage, bool force) override;
+	void writeMessage(const std::string& msg) override;
 };
 
+//option 0
 //silent progress
 class ProgressDisplayNone : public ProgressDisplay {
 
 public:
 	ProgressDisplayNone(MovieFrame& frame) :
 		ProgressDisplay(frame) {}
-	void update(bool force) override {}
+	
+	void update(double totalPercentage, bool force) override {}
+	void writeMessage(const std::string& msg) override {}
 };

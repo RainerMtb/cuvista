@@ -104,7 +104,6 @@
     <ClCompile Include="StackedWriter.cpp" />
     <ClCompile Include="CpuFrame.cpp" />
     <ClCompile Include="CudaWriter.cpp" />
-    <ClCompile Include="Deshaker.cpp" />
     <ClCompile Include="DeviceInfo.cpp" />
     <ClCompile Include="FFmpegFormatWriter.cpp" />
     <ClCompile Include="FFmpegUtil.cpp" />
@@ -136,7 +135,6 @@
     <ClInclude Include="CudaFrame.hpp" />
     <ClInclude Include="CudaInterface.hpp" />
     <ClInclude Include="CudaWriter.hpp" />
-    <ClInclude Include="Deshaker.hpp" />
     <ClInclude Include="DeviceInfo.hpp" />
     <ClInclude Include="DummyFrame.hpp" />
     <ClInclude Include="FFmpegUtil.hpp" />

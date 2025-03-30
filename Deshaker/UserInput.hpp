@@ -18,28 +18,24 @@
 
 #pragma once
 
+#include <string>
+
 enum class UserInputEnum {
-	CONTINUE, END, QUIT, HALT,
+	NONE,
+	CONTINUE, 
+	END, 
+	QUIT, 
+	HALT, 
 };
 
 class UserInput {
 
 public:
-	UserInputEnum mCurrentInput = UserInputEnum::CONTINUE;
-
-	bool doContinue() const {
-		return mCurrentInput == UserInputEnum::CONTINUE;
-	}
-
-	virtual void checkState() = 0;
-
-	virtual void reset() {
-		mCurrentInput = UserInputEnum::CONTINUE;
-	}
+	virtual UserInputEnum checkState() = 0;
 };
 
 class UserInputDefault : public UserInput {
 
 public:
-	void checkState() override {}
+	UserInputEnum checkState() override { return UserInputEnum::NONE; }
 };

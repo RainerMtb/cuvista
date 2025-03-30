@@ -99,25 +99,33 @@ void PlayerWriter::open(EncodingOption videoCodec) {
     mVideoFrame = QVideoFrame(image);
 
     //handling input streams
-    for (StreamContext& sc : mReader.inputStreams) {
+    for (StreamContext& sc : mReader.mInputStreams) {
+        auto posc = std::make_shared<OutputStreamContext>();
+        posc->inputStream = sc.inputStream;
+
         if (sc.inputStream->index == mReader.videoStream->index) {
-            sc.handling = StreamHandling::STREAM_STABILIZE;
+            posc->handling = StreamHandling::STREAM_STABILIZE;
 
         } else if (sc.inputStream->index == mAudioStreamIndex) {
-            int sampleRate = mReader.openAudioDecoder(mAudioStreamIndex);
+            int sampleRate = mReader.openAudioDecoder(*posc);
             mAudioFormat.setSampleRate(sampleRate);
             mAudioFormat.setChannelCount(2);
             mAudioFormat.setSampleFormat(QAudioFormat::Float);
+            mAudioFormat.setChannelConfig(QAudioFormat::ChannelConfigStereo);
             mAudioDevice = QMediaDevices::defaultAudioOutput();
-            if (mAudioDevice.isFormatSupported(mAudioFormat)) {
-                sc.handling = StreamHandling::STREAM_DECODE;
-                connect(mPlayer, &PlayerWindow::sigVolume, this, &PlayerWriter::setVolume);
-                mPlayAudio = true;
-            }
+            //format query does report false negatives, audio does indeed play but isFormatSupported() returns false
+            //NOTE FOR FUTURE PROJECTS: QT IS SUCH AN ABSOLUTE CRAP
+            //if (mAudioDevice.isFormatSupported(mAudioFormat)) {}
+            posc->handling = StreamHandling::STREAM_DECODE;
+            connect(mPlayer, &PlayerWindow::sigVolume, this, &PlayerWriter::setVolume);
+            mPlayAudio = true;
 
         } else {
-            sc.handling = StreamHandling::STREAM_IGNORE;
+            posc->handling = StreamHandling::STREAM_IGNORE;
         }
+
+        outputStreams.push_back(posc);
+        sc.outputStreams.push_back(posc);
     }
 
     //open player window
@@ -141,7 +149,9 @@ void PlayerWriter::start() {
 
 //---- on frame executor thread
 void PlayerWriter::prepareOutput(FrameExecutor& executor) {
-    //cannot reuse QVideoFrame, cannot be mapped more than once ???
+    // cannot reuse QVideoFrame, cannot be mapped more than once ???
+    // have to create a new QVideoFrame
+    // NOTE: MAN QT IS SUCH A CRAP
     mVideoFrame = QVideoFrame(QVideoFrameFormat(QSize(mData.w, mData.h), QVideoFrameFormat::Format_RGBX8888));
     if (mVideoFrame.map(QVideoFrame::WriteOnly)) {
         int64_t idx = frameIndex;
@@ -170,11 +180,12 @@ void PlayerWriter::write(const FrameExecutor& executor) {
 
     //play audio
     if (mAudioStreamIndex != -1 && mAudioSink != nullptr && mAudioIODevice != nullptr) {
-        StreamContext& sc = mReader.inputStreams[mAudioStreamIndex];
+        std::shared_ptr<OutputStreamContext> posc = outputStreams[mAudioStreamIndex];
+        std::unique_lock<std::mutex> lock(posc->mMutexSidePackets);
         double videoPts = t1.value_or(0.0) / 1000.0;
-        for (auto it = sc.packets.begin(); it != sc.packets.end() && it->pts < videoPts + 0.25; ) {
+        for (auto it = posc->sidePackets.begin(); it != posc->sidePackets.end() && it->pts < videoPts + 0.25; ) {
             mAudioIODevice->write(reinterpret_cast<char*>(it->audioData.data()), it->audioData.size());
-            it = sc.packets.erase(it);
+            it = posc->sidePackets.erase(it);
         }
     }
 
@@ -207,7 +218,7 @@ PlayerWriter::~PlayerWriter() {}
 //------------- Progress Class --------------------
 //-------------------------------------------------
 
-void PlayerProgress::update(bool force) {
+void PlayerProgress::update(double totalPercentage, bool force) {
     int64_t idx = frame.mWriter.frameIndex - 1;
     auto opstr = frame.mReader.ptsForFrameAsString(idx);
 

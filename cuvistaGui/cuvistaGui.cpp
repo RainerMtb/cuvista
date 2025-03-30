@@ -195,7 +195,7 @@ void cuvistaGui::setInputFile(const QString& filePath) {
 
         //info about streams
         std::string str;
-        for (StreamContext& sc : mReader.inputStreams) {
+        for (StreamContext& sc : mReader.mInputStreams) {
             StreamInfo info = sc.inputStreamInfo();
             str += std::format("- stream {}\ntype: {}, codec: {}, duration: {}\n", 
                 sc.inputStream->index, info.streamType, info.codec, info.durationString);
@@ -313,7 +313,7 @@ void cuvistaGui::stabilize() {
     //check input parameters
     mData.validate(mReader);
     //reset input handler
-    mInputHandler.reset();
+    mInputHandler.mIsCancelled = false;
     //audio track to play
     int audioStreamIndex = -1;
     if (ui.chkPlayAudio->isChecked() && ui.comboAudioTrack->count() > 0) {
@@ -393,7 +393,7 @@ void cuvistaGui::done() {
     //emit signals to report result back to main thread
     if (errorLogger().hasError())
         doneFail(errorLogger().getErrorMessage());
-    else if (mInputHandler.mCurrentInput != UserInputEnum::CONTINUE)
+    else if (mInputHandler.mIsCancelled)
         doneCancel("Operation was cancelled");
     else
         doneSuccess(mData.fileOut, std::format(" written in {:.1f} min at {:.1f} fps", secs / 60.0, fps));
@@ -433,12 +433,14 @@ void cuvistaGui::showInfo() {
 
     InfoDialog msgBox(this);
     msgBox.setWindowTitle(QString("Cuvista Info"));
+    std::string strEmail = "cuvista@a1.net";
+    std::string strGitHub = "https://github.com/RainerMtb/cuvista";
     QString headerText = qformat(
         "CUVISTA - Cuda Video Stabilizer, Version {}<br>"
-        "Copyright (c) 2024 Rainer Bitschi <a href='mailto:cuvista@a1.net'>Email: cuvista@a1.net</a><br>"
+        "Copyright (c) 2024 Rainer Bitschi <a href='mailto:{}'>{}</a> <a href='{}'>{}</a><br>"
         "License GNU GPLv3+: GNU GPL version 3 or later<br>"
-        "Gui compiled with Qt {}, running on version {}",
-        CUVISTA_VERSION, QT_VERSION_STR, qVersion());
+        "Gui compiled with Qt version {}, running on version {}",
+        CUVISTA_VERSION, strEmail, strEmail, strGitHub, strGitHub, QT_VERSION_STR, qVersion());
 
     QLabel* header = new QLabel(&msgBox);
     header->setText(headerText);

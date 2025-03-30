@@ -33,9 +33,9 @@ class MovieReader;
 enum class DeshakerPass {
 	NONE,
 	COMBINED,
-	FIRST_PASS,
-	SECOND_PASS,
-	CONSECUTIVE
+	CONSECUTIVE,
+	//FIRST_PASS,
+	//SECOND_PASS,
 };
 
 enum class OutputType {
@@ -48,10 +48,10 @@ enum class OutputType {
 
 enum class ProgressType {
 	NONE,
+	MULTILINE,
 	REWRITE_LINE,
 	NEW_LINE,
 	GRAPH,
-	DETAILED,
 };
 
 enum class DecideYNA {
@@ -172,7 +172,7 @@ public:
 	std::string flowFile;               //file to write video showing optical flow
 
 	bool dummyFrame = false;
-	ProgressType progressType = ProgressType::REWRITE_LINE;
+	ProgressType progressType = ProgressType::MULTILINE;
 
 	//parameters for computation of trajectory, at least 0.33, greater -> more stable camera
 	double cSigmaParam = 1.25;

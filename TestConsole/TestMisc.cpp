@@ -237,7 +237,7 @@ void testZoom() {
 	double y = 0.0;
 	double deg = 15.0;
 	double rad = deg * std::numbers::pi / 180.0;
-	double z = t.calcRequiredZoom(x, y, rad, 100, 50, data, 0);
+	double z = t.calcRequiredZoom(x, y, rad, 100, 50);
 	std::cout << z << std::endl;
 }
 

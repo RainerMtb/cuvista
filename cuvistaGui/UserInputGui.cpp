@@ -17,10 +17,14 @@
  */
 
 #include "UserInputGui.hpp"
-/*
-* listen for interruption request from ui, set user input enum to be handled later by deshaker loop
-*/
 
 void UserInputGui::cancel() {
-    mCurrentInput = UserInputEnum::QUIT;
+	mBufferedInput = UserInputEnum::QUIT;
+	mIsCancelled = true;
+}
+
+UserInputEnum UserInputGui::checkState() {
+	UserInputEnum e = mBufferedInput;
+	mBufferedInput = UserInputEnum::NONE;
+	return e;
 }

@@ -30,7 +30,6 @@
 #include <algorithm>
 #include <regex>
 #include <vector>
-#include <map>
 #include <filesystem>
 
 
@@ -42,7 +41,7 @@ bool MainData::checkFileForWriting(const std::string& file, DecideYNA permission
 	if (permission == DecideYNA::NO) {
 		throw CancelException("output file exists, aborting...");
 	}
-	if (permission == DecideYNA::ASK && static_cast<bool>(std::ifstream(file))) {
+	if (permission == DecideYNA::ASK && std::filesystem::exists(std::filesystem::path(file))) {
 		*console << "file '" << file << "' exists, overwrite [y/n] " << std::flush;
 		while (true) {
 			std::optional<char> och = getKeyboardInput();
@@ -126,10 +125,6 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 			int p = std::stoi(next);
 			if (p == 0) { 
 				pass = DeshakerPass::COMBINED; 
-			} else if (p == 1) { 
-				pass = DeshakerPass::FIRST_PASS; 
-			} else if (p == 2) { 
-				pass = DeshakerPass::SECOND_PASS; 
 			} else if (p == 12) { 
 				pass = DeshakerPass::CONSECUTIVE; 
 			} else throw AVException("invalid value for pass: " + next);
@@ -168,10 +163,6 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 				throw AVException("invalid background mode: " + next);
 			}
 
-		} else if (args.nextArg("cputhreads", next)) {
-			//number of threads to use on cpu
-			cpuThreadsRequired = { std::stoul(next) };
-
 		} else if (args.nextArg("bgcolor", next)) {
 			//background color
 			auto it = colorMap.find(next); //some color literals
@@ -196,6 +187,10 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 			}
 
 			bgmode = BackgroundMode::COLOR;
+
+		} else if (args.nextArg("cputhreads", next)) {
+			//number of threads to use on cpu
+			cpuThreadsRequired = { std::stoul(next) };
 
 		} else if (args.nextArg("crf", next)) {
 			*crf = std::stoi(next); //output encoder crf value
@@ -224,10 +219,10 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 		} else if (args.nextArg("progress", next)) {
 			int i = std::stoi(next);
 			if (i == 0) progressType = ProgressType::NONE;
-			else if (i == 1) progressType = ProgressType::REWRITE_LINE;
-			else if (i == 2) progressType = ProgressType::NEW_LINE;
-			else if (i == 3) progressType = ProgressType::GRAPH;
-			else if (i == 4) progressType = ProgressType::DETAILED;
+			else if (i == 1) progressType = ProgressType::MULTILINE;
+			else if (i == 2) progressType = ProgressType::REWRITE_LINE;
+			else if (i == 3) progressType = ProgressType::NEW_LINE;
+			else if (i == 4) progressType = ProgressType::GRAPH;
 			else throw AVException("invalid progress type: " + next);
 
 		} else if (args.nextArg("noheader")) {
@@ -312,13 +307,6 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 			throw AVException("cannot use the same file for input and output");
 		}
 		if (pass == DeshakerPass::COMBINED || pass == DeshakerPass::CONSECUTIVE) {
-			checkFileForWriting(fileOutCheck, overwriteOutput);
-		}
-		if (pass == DeshakerPass::FIRST_PASS) {
-			checkFileForWriting(trajectoryFile, overwriteOutput);
-		}
-		if (pass == DeshakerPass::SECOND_PASS) {
-			if (trajectoryFile.empty()) throw AVException("trajectory file missing");
 			checkFileForWriting(fileOutCheck, overwriteOutput);
 		}
 	}
@@ -412,21 +400,15 @@ void MainData::validate(const MovieReader& reader) {
 
 	//number of frames to buffer
 	this->radius = (int) std::round(radsec * reader.fps());
-	this->bufferCount = radius + 2;
-
-	//zoom fallback rate
-	this->zoomFallback = 1.0 - zoomFallbackTotal / radius;
-
-	if (pass == DeshakerPass::FIRST_PASS) {
-		this->bufferCount = 2;
-	}
-	if (pass == DeshakerPass::SECOND_PASS) {
-		this->pyramidCount = 0; //no need for pyramid on pass 2
-		this->bufferCount = 2;
+	if (pass == DeshakerPass::COMBINED) {
+		this->bufferCount = radius + 2;
 	}
 	if (pass == DeshakerPass::CONSECUTIVE) {
 		this->bufferCount = 2;
 	}
+
+	//dynamic zoom fallback rate per frame
+	this->zoomFallback = 1.0 - zoomFallbackTotal / radius;
 
 	//choose device and encoding
 	if (deviceSelected >= deviceList.size()) {
@@ -470,15 +452,21 @@ void MainData::showIntro(const std::string& deviceName, const MovieReader& reade
 	*console << "FILE IN: " << fileIn << std::endl;
 
 	//streams in input
-	for (size_t i = 0; i < reader.inputStreams.size(); i++) {
-		const StreamContext& sc = reader.inputStreams[i];
+	for (size_t i = 0; i < reader.mInputStreams.size(); i++) {
+		const StreamContext& sc = reader.mInputStreams[i];
 		StreamInfo info = sc.inputStreamInfo();
 		*console << "  Stream " << i
 			<< ": type: " << info.streamType
 			<< ", codec: " << info.codec
 			<< ", duration: " << info.durationString
-			<< " --> " << streamHandlerMap.at(sc.handling)
-			<< std::endl;
+			;
+
+		int k = 0;
+		for (std::shared_ptr<OutputStreamContext> ptr : sc.outputStreams) {
+			*console << " --> " << k << ":" << streamHandlerMap.at(ptr->handling);
+			k++;
+		}
+		*console << std::endl;
 	}
 
 	//video info
@@ -488,17 +476,17 @@ void MainData::showIntro(const std::string& deviceName, const MovieReader& reade
 		<< ", radius=" << radius
 		<< std::endl;
 
+	//device info
+	*console << "\x1B[1;36m" << "USING: " << deviceName << "\x1B[0m" << std::endl;
+
 	//output to be written
-	if (videoOutputType == OutputType::VIDEO_FILE && pass != DeshakerPass::FIRST_PASS) *console << "FILE OUT: " << fileOut << std::endl;
+	if (videoOutputType == OutputType::VIDEO_FILE) *console << "FILE OUT: " << fileOut << std::endl;
 	if (trajectoryFile.empty() == false) *console << "TRAJECTORY FILE: " << trajectoryFile << std::endl;
 	if (resultsFile.empty() == false) *console << "CALCULATION DETAIL OUTPUT: " << resultsFile << std::endl;
 	if (videoOutputType == OutputType::SEQUENCE_BMP) *console << "IMAGE SEQUENCE: " << ImageWriter::makeFilenameSamples(fileOut, "bmp") << std::endl;
 	if (videoOutputType == OutputType::SEQUENCE_JPG) *console << "IMAGE SEQUENCE: " << ImageWriter::makeFilenameSamples(fileOut, "jpg") << std::endl;
 	if (resultImageFile.empty() == false) *console << "CALCULATION DETAIL IMAGES: " << ImageWriter::makeFilenameSamples(resultImageFile, "bmp") << std::endl;
 	if (flowFile.empty() == false) *console << "OPTICAL FLOW VIDEO: " << flowFile << std::endl;
-
-	//device info
-	*console << "  USING: " << deviceName << std::endl;
 }
 
 //default output when no arguments are given
@@ -578,7 +566,7 @@ void MainData::showVersionInfo() const {
 
 void MainData::showHeader() const {
 	*console << "CUVISTA - Cuda Video Stabilizer, Version " << CUVISTA_VERSION << std::endl;
-	*console << "Copyright (c) 2024 Rainer Bitschi, Email: cuvista@a1.net" << std::endl;
+	*console << "Copyright (c) 2025 Rainer Bitschi, cuvista@a1.net, https://github.com/RainerMtb/cuvista" << std::endl;
 }
 
 std::string MainData::str_toupper(const std::string& s) const {

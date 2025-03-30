@@ -23,13 +23,13 @@
 #include "ErrorLogger.hpp"
 
 extern "C" {
-#include <libavcodec/avcodec.h>
-#include <libavformat/avformat.h>
-#include <libavformat/avio.h>
-#include <libswscale/swscale.h>
-#include <libswresample/swresample.h>
-#include <libavutil/opt.h>
-#include <libavutil/audio_fifo.h>
+#include "libavcodec/avcodec.h"
+#include "libavformat/avformat.h"
+#include "libavformat/avio.h"
+#include "libswscale/swscale.h"
+#include "libswresample/swresample.h"
+#include "libavutil/opt.h"
+#include "libavutil/audio_fifo.h"
 }
 
 struct FFmpegVersions {
@@ -76,27 +76,39 @@ public:
 	~SidePacket();
 };
 
-//structure per stream in input file
-struct StreamContext {
+//strcuture per output stream
+struct OutputStreamContext {
 	AVStream* inputStream = nullptr;
-	int64_t durationMillis = -1;
-	AVStream* outputStream = nullptr;
 
+	AVStream* outputStream = nullptr;
 	StreamHandling handling = StreamHandling::STREAM_IGNORE;
-	std::list<SidePacket> packets;
+	std::list<SidePacket> sidePackets;
 	int64_t packetsWritten;
 
 	AVCodecContext* audioInCtx = nullptr;
-	AVCodecContext* audioOutCtx = nullptr;
 	const AVCodec* audioInCodec = nullptr;
+	AVFrame* frameIn = nullptr;
+
+	AVCodecContext* audioOutCtx = nullptr;
 	const AVCodec* audioOutCodec = nullptr;
 	AVPacket* outpkt = nullptr;
-	AVFrame* frameIn = nullptr;
 	AVFrame* frameOut = nullptr;
 	int64_t lastPts = 0;
 	int64_t pts = 0;
 	SwrContext* resampleCtx = nullptr;
 	AVAudioFifo* fifo = nullptr;
+
+	std::mutex mMutexSidePackets;
+
+	~OutputStreamContext();
+};
+
+//structure per stream in input file
+struct StreamContext {
+	AVStream* inputStream = nullptr;
+	int64_t durationMillis = -1;
+
+	std::list<std::shared_ptr<OutputStreamContext>> outputStreams;
 
 	StreamInfo inputStreamInfo() const;
 

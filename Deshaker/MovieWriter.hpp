@@ -163,12 +163,14 @@ public:
 class FFmpegFormatWriter : public NullWriter {
 
 protected:
-	std::map<Codec, AVCodecID> codecMap = {
+	std::map<Codec, AVCodecID> codecToCodecIdMap = {
 		{ Codec::H264, AV_CODEC_ID_H264 },
 		{ Codec::H265, AV_CODEC_ID_HEVC },
 		{ Codec::AV1, AV_CODEC_ID_AV1 },
 		{ Codec::AUTO, AV_CODEC_ID_H264 },
 	};
+
+	std::vector<std::shared_ptr<OutputStreamContext>> outputStreams;
 
 	uint32_t gopSize = 15; //interval of key frames
 	ThreadPool encoderPool = ThreadPool(1);
@@ -188,7 +190,7 @@ protected:
 	void open(AVCodecID codecId);
 	int writePacket(AVPacket* packet);
 	void writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsIdx, bool terminate);
-	void transcodeAudio(AVPacket* pkt, StreamContext& sc, bool terminate);
+	void transcodeAudio(AVPacket* pkt, OutputStreamContext& osc, bool terminate);
 	AVStream* newStream(AVFormatContext* fmt_ctx, AVStream* inStream);
 
 private:
@@ -205,6 +207,7 @@ protected:
 		{AV_CODEC_ID_HEVC, {"libx265", "hevc", "hevc_qsv"}},
 		{AV_CODEC_ID_AV1, {"libsvtav1", "librav1e", "libaom-av1"}},
 	};
+
 	int imageBufferSize;
 	std::vector<ImageYuv> imageBuffer;
 	AVFrame* av_frame = nullptr;

@@ -28,17 +28,21 @@ TrajectoryMat::TrajectoryMat(double u, double v, double a) :
 
 TrajectoryMat::TrajectoryMat() : TrajectoryMat(0, 0, 0) {}
 
-double TrajectoryMat::u() { return at(0, 0); }
-double TrajectoryMat::v() { return at(0, 1); }
-double TrajectoryMat::a() { return at(0, 2); }
+double TrajectoryMat::u() const { return at(0, 0); }
+double TrajectoryMat::v() const { return at(0, 1); }
+double TrajectoryMat::a() const { return at(0, 2); }
 
 //create new item and append to list, transformation u, v, a
 TrajectoryItem::TrajectoryItem(double u, double v, double a, int64_t frameIndex) :
 	values { u, v, a },
-	frameIndex { frameIndex }
+	frameIndex { frameIndex },
+	zoom { 1.0 }
 {
-	currentSum += values;	   //sum to this point
-	sum.setData(currentSum);   //store sum for this point
+	//sum to this point
+	currentSum += values;
+	//store sum for this point
+	sum = currentSum;
+	//special treatment if frame is duplicate to frame before
 	isDuplicateFrame = frameIndex > 0 && std::abs(u) < 0.5 && std::abs(v) < 0.5 && std::abs(a) < 0.001;
 }
 
@@ -88,11 +92,12 @@ const AffineTransform& Trajectory::computeSmoothTransform(const MainData& data, 
 	}
 
 	//calculate zoom
-	double fitZoom = calcRequiredZoom(delta.u(), delta.v(), delta.a(), data.w, data.h, data, frameWriteIndex);
-	double smoothFitZoom = std::max(currentZoom * data.zoomFallback, fitZoom);
-	trajectory[frameWriteIndex].zoom = currentZoom = smoothFitZoom;
-	double zoom = std::clamp(smoothFitZoom, data.zoomMin, data.zoomMax);
-	//std::printf("%04d zoom required %5.2f smoothed %5.2f final %5.2f\n", frameWriteIndex, fitZoom, smoothFitZoom, zoom);
+	double zoomToFillFrame = calcRequiredZoom(delta.u(), delta.v(), delta.a(), data.w, data.h);
+	currentZoom = std::max(currentZoom * data.zoomFallback, zoomToFillFrame);
+	trajectory[frameWriteIndex].zoom = currentZoom;
+	double zoom = std::clamp(currentZoom, data.zoomMin, data.zoomMax);
+	//std::printf("%04zd zoom item %5.3f, fill %5.3f, smoothed %5.3f, final %5.2f\n", 
+	//	frameWriteIndex, trajectory[frameWriteIndex].zoomItem, zoomToFillFrame, currentZoom, zoom);
 
 	//get transform to apply to image
 	currentTransform.reset()
@@ -117,7 +122,7 @@ void Trajectory::readTransforms(std::map<int64_t, TransformValues> transformsMap
 	}
 }
 
-double Trajectory::calcRequiredZoom(double dx, double dy, double rot, double w, double h, const MainData& data, int64_t frameWriteIndex) {
+double Trajectory::calcRequiredZoom(double dx, double dy, double rot, double w, double h) {
 	double w2 = w / 2.0;
 	double h2 = h / 2.0;
 	Affine2D trf = Affine2D::fromValues(1.0, -rot, dx, dy);
@@ -138,4 +143,12 @@ double Trajectory::calcRequiredZoom(double dx, double dy, double rot, double w, 
 	}
 	//std::cout << frameWriteIndex << " " << dx << " " << dy << " " << (rot * 180 / std::numbers::pi) << " " << zoom << std::endl;
 	return zoom;
+}
+
+std::ostream& operator << (std::ostream& os, const Trajectory& trajectory) {
+	for (int i = 0; i < trajectory.trajectory.size(); i++) {
+		const TrajectoryItem& item = trajectory.trajectory[i];
+		os << i << " [" << item.frameIndex << "] u=" << item.values.u() << ", v=" << item.values.v() << ", a=" << item.values.a() << std::endl;
+	}
+	return os;
 }
