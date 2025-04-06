@@ -49,6 +49,7 @@ void runSelfTest(util::MessagePrinter& out, std::vector<DeviceInfoBase*> deviceL
 		out.print(": testing... ");
 
 		MainData data;
+		data.bgcol_rgb = { 0, 50, 0 };
 		data.deviceList.push_back(deviceList[i]);
 		MemoryFFmpegReader reader(movieData);
 		reader.open("");
@@ -97,6 +98,7 @@ void runSelfTest(util::MessagePrinter& out, std::vector<DeviceInfoBase*> deviceL
 			check = false;
 		}
 		if (uint64_t crc = writer.getOutputFrame().crc(); crc != crcOutput) {
+			//writer.getOutputFrame().saveAsColorBMP("f:/test.bmp");
 			out.print("FAIL output ");
 			check = false;
 		}

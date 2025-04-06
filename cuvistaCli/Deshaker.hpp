@@ -16,9 +16,30 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
-#include "Deshaker.hpp"
+#pragma once
 
-int main(int argsCount, char** args) {
-	std::vector<std::string> argsInput(args + 1, args + argsCount);
-	return deshake(argsInput, &std::cout).statusCode;
-}
+#include "CudaWriter.hpp"
+#include "MovieReader.hpp"
+#include "MovieWriter.hpp"
+#include "MovieFrame.hpp"
+#include "DummyFrame.hpp"
+#include "ProgressDisplayConsole.hpp"
+#include "UserInputConsole.hpp"
+
+struct DeshakerResult {
+	int statusCode = 0;
+
+	int64_t frameCount;
+	int64_t framesRead;
+	int64_t framesWritten;
+	int64_t framesEncoded;
+	int64_t bytesEncoded;
+
+	double secs;
+	std::string executorName;
+	std::vector<TrajectoryItem> trajectory;
+};
+
+std::ostream& printError(std::ostream& os, const std::string& msg1);
+
+DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console);

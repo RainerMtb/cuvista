@@ -44,8 +44,8 @@ install(TARGETS cuvistaGui)
 qt_generate_deploy_app_script(
     TARGET cuvistaGui
     OUTPUT_SCRIPT deploy_script
-    NO_UNSUPPORTED_PLATFORM_ERROR
     NO_COMPILER_RUNTIME
+    NO_TRANSLATIONS
 )
 
 install(SCRIPT "${deploy_script}")

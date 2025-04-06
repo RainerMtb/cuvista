@@ -197,7 +197,8 @@ void analyzeFrames() {
 			frame.computeTransform(reader.frameIndex);
 			const AffineTransform& currentTransform = frame.mFrameResult.getTransform();
 			frame.mTrajectory.addTrajectoryTransform(currentTransform);
-			const AffineTransform& finalTransform = frame.mTrajectory.computeSmoothTransform(data, writer.frameIndex);
+			frame.mTrajectory.computeSmoothTransform(data, writer.frameIndex);
+			const AffineTransform& finalTransform = frame.mTrajectory.getTransform(data, writer.frameIndex);
 			executor->outputData(writer.frameIndex, finalTransform);
 			writer.prepareOutput(*executor);
 			writer.write(*executor);

@@ -1,6 +1,10 @@
 #project(cuvistaCli)
 
-add_executable(cuvista Main.cpp)
+add_executable(cuvista 
+    Main.cpp
+    Deshaker.cpp
+)
+
 target_include_directories(cuvista PRIVATE "${PROJECT_SOURCE_DIR}/Deshaker")
 
 target_link_libraries(cuvista PRIVATE 

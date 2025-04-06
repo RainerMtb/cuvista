@@ -38,7 +38,7 @@ endif()
 if (BUILD_CUDA MATCHES 1)
     set(CMAKE_CUDA_STANDARD 17)
     set(CMAKE_CUDA_STANDARD_REQUIRED True)
-    set(CMAKE_CUDA_ARCHITECTURES all)
+    set(CMAKE_CUDA_ARCHITECTURES native)
     enable_language(CUDA)
     list(APPEND CORE_LIBS 
         cuda
@@ -133,7 +133,8 @@ else()
     find_package(Qt6 QUIET COMPONENTS Core Gui Widgets Multimedia MultimediaWidgets)
     if (Qt6_FOUND)
         set(BUILD_GUI 1)
-        message(NOTICE "Qt6 was found, Including Gui Build...")
+        find_package(QT NAMES Qt6) # only this line will populate the version numbers... man Qt is such a $!#*
+        message(NOTICE "Qt6 version ${QT_VERSION_MAJOR}.${QT_VERSION_MINOR}.${QT_VERSION_PATCH} was found, Including Gui Build...")
         add_subdirectory(cuvistaGui)
     else()
         set(BUILD_GUI 0)

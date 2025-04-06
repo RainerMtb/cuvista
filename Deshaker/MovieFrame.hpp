@@ -69,9 +69,6 @@ protected:
 
 	const MainData& mData;
 
-	virtual void read() final;
-	virtual std::future<void> readAsync() final;
-
 public:
 	MovieReader& mReader;
 	MovieWriter& mWriter;
@@ -98,7 +95,7 @@ public:
 	virtual const AffineTransform& getTransform() const final;
 
 	// play time for given frame
-	std::string ptsForFrameAsString(int64_t frameIndex);
+	std::string ptsForFrameAsString(int64_t frameIndex) const;
 
 	//run loop in subclass
 	virtual void runLoop(std::shared_ptr<ProgressBase> progress, UserInput& input, AuxWriters& auxWriters, std::shared_ptr<FrameExecutor> executor) {}

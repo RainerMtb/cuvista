@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>648</width>
-    <height>827</height>
+    <width>680</width>
+    <height>809</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -395,6 +395,12 @@
              <width>32</width>
              <height>16</height>
             </size>
+           </property>
+           <property name="focusPolicy">
+            <enum>Qt::FocusPolicy::TabFocus</enum>
+           </property>
+           <property name="contextMenuPolicy">
+            <enum>Qt::ContextMenuPolicy::ActionsContextMenu</enum>
            </property>
            <property name="styleSheet">
             <string notr="true">QLabel {
@@ -986,6 +992,29 @@
   </customwidget>
  </customwidgets>
  <tabstops>
+  <tabstop>btnOpen</tabstop>
+  <tabstop>fileOpen</tabstop>
+  <tabstop>texInput</tabstop>
+  <tabstop>chkOverwrite</tabstop>
+  <tabstop>comboDevice</tabstop>
+  <tabstop>spinRadius</tabstop>
+  <tabstop>spinZoomMin</tabstop>
+  <tabstop>chkDynamicZoom</tabstop>
+  <tabstop>spinZoomMax</tabstop>
+  <tabstop>radioBlend</tabstop>
+  <tabstop>radioColor</tabstop>
+  <tabstop>lblColor</tabstop>
+  <tabstop>chkEncode</tabstop>
+  <tabstop>comboEncoding</tabstop>
+  <tabstop>chkStack</tabstop>
+  <tabstop>slideStack</tabstop>
+  <tabstop>chkSequence</tabstop>
+  <tabstop>comboImageType</tabstop>
+  <tabstop>chkPlayer</tabstop>
+  <tabstop>chkPlayAudio</tabstop>
+  <tabstop>comboAudioTrack</tabstop>
+  <tabstop>chkFrameLimit</tabstop>
+  <tabstop>spinFrameLimit</tabstop>
   <tabstop>btnStart</tabstop>
   <tabstop>btnInfo</tabstop>
  </tabstops>
@@ -994,7 +1023,7 @@
  </resources>
  <connections/>
  <buttongroups>
-  <buttongroup name="buttonGroupBackground"/>
   <buttongroup name="buttonGroupOutput"/>
+  <buttongroup name="buttonGroupBackground"/>
  </buttongroups>
 </ui>

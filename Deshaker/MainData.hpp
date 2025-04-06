@@ -163,6 +163,7 @@ public:
 	std::optional<double> stackPosition = std::nullopt;
 
 	bool printHeader = true;
+	bool printSummary = true;
 
 	std::string fileIn;					//input file path
 	std::string fileOut;				//output file path
@@ -178,7 +179,7 @@ public:
 	double cSigmaParam = 1.25;
 
 	int64_t maxFrames = std::numeric_limits<int32_t>::max();
-	im::ColorRgb bgcol_rgb { 0, 50, 0 };
+	im::ColorRgb bgcol_rgb { 0, 255, 0 };
 
 	std::chrono::steady_clock::time_point timePoint;
 

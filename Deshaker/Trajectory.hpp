@@ -29,59 +29,88 @@ public:
 	TrajectoryMat();
 	TrajectoryMat(double u, double v, double a);
 
+	double& u();
+	double& v();
+	double& a();
+
 	double u() const;
 	double v() const;
 	double a() const;
 };
 
 struct TrajectoryItem {
-	//accumulated values up to most recent frame
-	inline static TrajectoryMat currentSum;
 	//values calculated from previous frame to this frame
 	TrajectoryMat values;
 	//accumulated values up to this frame
 	TrajectoryMat sum;
+	//smoothed values
+	TrajectoryMat smoothed;
 	//frame is identical to previous frame
 	bool isDuplicateFrame;
 	//frame index for debugging
 	int64_t frameIndex;
 	//zoom value to fill stabilized frame
+	double zoomRequired;
+	//zoom value smoothed
 	double zoom;
+	//check if has been computed
+	bool isComputed;
 
-	TrajectoryItem(double u, double v, double a, int64_t frameIndex);
+	bool operator == (const TrajectoryItem& other) const;
 };
 
 class Trajectory {
 
 private:
 	//holds all trajectory items, grows with each frame
-	std::vector<TrajectoryItem> trajectory;
+	std::vector<TrajectoryItem> mTrajectory;
 	//temporary mats
-	TrajectoryMat delta;
 	TrajectoryMat tempAvg;
 	TrajectoryMat tempSum;
-	//current output
-	AffineTransform currentTransform;
-	//current zoom value but before clamping
-	double currentZoom = 1.0;
+	TrajectoryMat delta;
+
+	//current output transform
+	AffineTransform mCurrentTransform;
+	//accumulated values up to most recent frame
+	TrajectoryMat mCurrentSum;
+	//accumulated zoom value for the previous frame
+	double mCurrentZoom = 1.0;
 
 	int64_t clamp(int64_t val, int64_t lo, int64_t hi);
 
 public:
+	//compute zoom value to fill the frame
 	double calcRequiredZoom(double dx, double dy, double rot, double w, double h);
 
-	const TrajectoryItem& addTrajectoryTransform(double dx, double dy, double da, int64_t frameIndex);
-	const TrajectoryItem& addTrajectoryTransform(const AffineTransform& transform);
+	//add transform to the trajectory list
+	void addTrajectoryTransform(double dx, double dy, double da, int64_t frameIndex);
+	//add transform to the trajectory list
+	void addTrajectoryTransform(const AffineTransform& transform);
 
-	//create affine transformation
-	const AffineTransform& computeSmoothTransform(const MainData& data, int64_t frameWriteIndex);
+	//compute smoothed transform for frame
+	void computeSmoothTransform(const MainData& data, int64_t frameIndex);
 
-	//read transforms
+	//compute smoothed zoom for frame
+	void computeSmoothZoom(const MainData& data, int64_t frameIndex);
+
+	//get computed transform
+	const AffineTransform& getTransform(const MainData& data, int64_t frameWriteIndex);
+
+	//load transforms from list into trajectory
 	void readTransforms(std::map<int64_t, TransformValues> transformsMap);
 
 	//trajectory count
-	int64_t getTrajectorySize();
+	int64_t size();
 
-	//output the list of trajectory items
+	//reserve trajectory size
+	void reserve(int64_t siz);
+
+	//get a copy of the complete trajectory
+	std::vector<TrajectoryItem> getTrajectory();
+
+	//check if this item is already computed
+	bool isComputed(int64_t frameindex);
+
+	//output trajectory items
 	friend std::ostream& operator << (std::ostream& os, const Trajectory& trajectory);
 };

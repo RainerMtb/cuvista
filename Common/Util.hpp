@@ -91,6 +91,8 @@ namespace util {
 
     std::string concatStrings(std::span<std::string_view> strings);
 
+    std::vector<std::string> splitString(std::string_view str, std::string_view delimiter);
+
     //convert a number of bytes into more readable values, bytes / kb / Mb
     std::string byteSizeToString(int64_t bytes);
 

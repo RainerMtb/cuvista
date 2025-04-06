@@ -138,7 +138,7 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     connect(mPlayerWindow, &PlayerWindow::cancel, &mInputHandler, &UserInputGui::cancel);
 
     //set default main window size
-    resize(600, 650);
+    resize(700, 650);
 
     //load files from command line argument
     //preset input file
@@ -429,7 +429,7 @@ void cuvistaGui::showMessage(const QString& msg) {
 
 void cuvistaGui::showInfo() {
     int boxHeight = 250;
-    int boxWidth = 400;
+    int boxWidth = 450;
 
     InfoDialog msgBox(this);
     msgBox.setWindowTitle(QString("Cuvista Info"));

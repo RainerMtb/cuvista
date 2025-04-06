@@ -80,14 +80,14 @@ quality and performance settings:
 -zoom n         fixed zoom value to apply to the frames after stabilization
                 value n is given in percent
 -zoom n:m       dynamic zoom between values n and m, minimizing to fill frame
-                default zoom setting is dynamic between 5 % and 15 %
+                default zoom setting is dynamic between 5 % and 20 %
 -bgmode mode    background mode, how to fill void when frame is out of center
                 blend: use preceding frames to blend into current frame
                 color: use defined color, see -bgcol
                 default: blend
 -bgcolor name   some predifined colors to use for background fill like
                 red, green, blue, white, black, ...
-                default: yellow
+                default: green
 -bgcolor rgb    background colors separated by colons in format R:G:B
                 values must be 0..255
 -bgcolor web    background color given as a web color string in format #RRGGBB
@@ -99,7 +99,7 @@ quality and performance settings:
 
 misc options:
 -y              overwrite output file without asking
--n              never overwrite output, quit application
+-n              never overwrite output, quit application instead
 -h, -help, -?   display help text
 -info           display information about software and hardware detected
                 run a test on available devices
@@ -111,8 +111,11 @@ misc options:
 -progress 2     frequently rewrite line on the output console
 -progress 3     print new line for every frame
 -progress 4     graph indicator
--noheader       do not display headlines at start
--quiet          same as '-progress 0 -noheader'
+-noheader       do not display program info at start
+-showheader     display program info at start
+-nosummary      do not display summary satistics at end of program
+-showsummary    display summary statistics 
+-quiet          same as '-progress 0 -noheader -nosummary'
                 do not produce any output except error messages
 
 advanced computation parameters:

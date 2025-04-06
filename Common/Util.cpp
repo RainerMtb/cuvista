@@ -22,6 +22,7 @@
 #include <cassert>
 #include <numbers>
 #include <cmath>
+#include <regex>
 #include "Util.hpp"
 
 namespace util {
@@ -41,6 +42,12 @@ namespace util {
 
 	std::string concatStrings(std::span<std::string_view> strings) {
 		return concatStrings(strings, "", "", "");
+	}
+
+	std::vector<std::string> splitString(std::string_view str, std::string_view delimiter) {
+		std::regex rd(delimiter.cbegin(), delimiter.cend());
+		std::string rs(str.cbegin(), str.cend());
+		return { std::sregex_token_iterator(rs.begin(), rs.end(), rd, -1), std::sregex_token_iterator() };
 	}
 
 	std::string concatStrings(std::span<std::string_view> strings, std::string_view delimiter, std::string_view prefix, std::string_view suffix) {

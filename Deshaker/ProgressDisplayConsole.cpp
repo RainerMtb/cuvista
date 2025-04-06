@@ -164,11 +164,17 @@ int ProgressDisplayMultiLine::getConsoleWidth() {
 }
 
 std::string ProgressDisplayMultiLine::buildLine(int64_t frameIndex, int64_t frameCount, int64_t graphLength) {
-	std::string line = std::format("{:6d}", frameIndex);
+	std::string line(graphLength + 15, ' ');
 	if (frameCount > 0) {
-		int64_t hashCount = std::clamp(graphLength * frameIndex / frameCount, int64_t(0), graphLength);
+		int64_t hashNum = std::clamp(graphLength * frameIndex / frameCount, int64_t(0), graphLength);
 		double percent = std::clamp(100.0 * frameIndex / frameCount, 0.0, 100.0);
-		line += std::format(" [{}{}] {:4.0f}%", std::string(hashCount, '#'), std::string(graphLength - hashCount, '.'), percent);
+		std::format_to(line.begin(), "{:6d} [{}{}] {:4.0f}%", frameIndex, std::string(hashNum, '#'), std::string(graphLength - hashNum, '.'), percent);
+
+	} else {
+		int64_t loopDuration = 500;
+		std::format_to(line.begin(), "{:6d} [{}]", frameIndex, std::string(graphLength, '.'));
+		int64_t pos = (frameIndex % loopDuration) * graphLength / loopDuration;
+		line[pos + 8] = '#';
 	}
 	return line;
 }

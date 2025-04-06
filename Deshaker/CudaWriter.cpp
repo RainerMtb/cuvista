@@ -169,6 +169,7 @@ bool CudaFFmpegWriter::flush() {
 
 
 CudaFFmpegWriter::~CudaFFmpegWriter() {
+    nvenc->endEncode();
     nvenc->destroyEncoder();
 }
 

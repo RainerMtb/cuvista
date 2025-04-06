@@ -181,6 +181,7 @@ private:
 		NullReader reader;
 		reader.w = 1920;
 		reader.h = 1080;
+		reader.frameCount = 2;
 		data.validate(reader);
 		TestWriter writer(data, reader);
 		MovieFrame frame(data, reader, writer);

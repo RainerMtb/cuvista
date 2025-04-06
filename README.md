@@ -27,7 +27,7 @@ For Windows you can get the latest version from the [Releases](https://github.co
 
 Have a look at available options on the command line via ```cuvista -h``` or ```cuvista -help```, in the GUI version a subset of most important options is available.
 
-In a fresh Windows environment the the Microsoft Visual C/C++ Runtime Libraries might be missing, so when prompted with a message like ```MSVCP140.dll not found```, download and install the latest redistributable https://aka.ms/vs/17/release/vc_redist.x64.exe
+In a fresh Windows environment the the Microsoft Visual C/C++ Runtime Libraries might be missing, so when using the zip archive you might be prompted with a message like ```MSVCP140.dll not found```, then download and install the latest redistributable https://aka.ms/vs/17/release/vc_redist.x64.exe. The .msi installer already comes with the necessary system files.
 
 
 
@@ -62,7 +62,7 @@ cd build
 ```
 prepare the locations of Cuda, Qt and FFMPEG and provide them to cmake. Also see notes above. Better use forward slashes ```/``` to separate folders. Adapt locations to your system:
 ```
-cmake .. -D CMAKE_PREFIX_PATH=C:/CUDA/version;C:/Qt/6.8.3/msvc2022_64 -D FFMPEG_PATH=C:/ffmpeg --fresh
+cmake .. -D CMAKE_PREFIX_PATH=C:/CUDA/version;C:/Qt/6.9.0/msvc2022_64 -D FFMPEG_PATH=C:/ffmpeg --fresh
 cmake --build . --config Release
 ```
 Upon successfull completion you will get the files
@@ -97,9 +97,9 @@ sudo apt install -y libffmpeg-nvenc-dev
 Optionally get Qt6, see https://www.qt.io/download-qt-installer. 
 To get the necessary components on the command line
 ```
-wget https://download.qt.io/official_releases/online_installers/qt-unified-linux-x64-online.run
-chmod +x qt-unified-linux-x64-online.run
-./qt-unified-linux-x64-online.run install qt.qt6.683.linux_gcc_64 qt.qt6.683.addons.qtmultimedia
+wget https://download.qt.io/official_releases/online_installers/qt-online-installer-linux-x64-online.run
+chmod +x qt-online-installer-linux-x64-online.run
+./qt-online-installer-linux-x64-online.run install qt.qt6.690.linux_gcc_64 qt.qt6.690.addons.qtmultimedia
 ```
 You might also need
 ```
@@ -132,7 +132,7 @@ cd build
 ```
 Adapt the location of Cuda and  Qt to your system and execute the build process. Also see notes above.
 ```
-export CMAKE_PREFIX_PATH=~/Qt/6.8.3/gcc_64:/usr/local/cuda
+export CMAKE_PREFIX_PATH=~/Qt/6.9.0/gcc_64:/usr/local/cuda
 cmake .. --fresh
 cmake --build .
 ```
@@ -160,5 +160,5 @@ When done, run ```cuvista -info``` to see available devices and run a test
 - Nvidia Cuda 12.8
 - Nvidia Video Codec SDK 12.2.72
 - FFmpeg 7.1
-- Qt 6.8.3
-- Cmake 3.28.3
+- Qt 6.9.0
+- Cmake 3.30.6

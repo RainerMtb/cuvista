@@ -180,8 +180,8 @@ void FFmpegFormatReader::openInput(AVFormatContext* fmt, const char* source) {
                 videoStream = stream;
             }
             //calculate frame count on duration tag
-            if (millis != -1) {
-                AVRational rate = stream->avg_frame_rate;
+            AVRational rate = stream->avg_frame_rate;
+            if (millis != -1 && rate.den > 0) {
                 frameCountEstimate = rate.num * millis / rate.den / 1000;
             }
         }

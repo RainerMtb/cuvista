@@ -228,8 +228,18 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 		} else if (args.nextArg("noheader")) {
 			printHeader = false;
 
+		} else if (args.nextArg("showheader")) {
+			printHeader = true;
+
+		} else if (args.nextArg("nosummary")) {
+			printSummary = false;
+
+		} else if (args.nextArg("showsummary")) {
+			printSummary = true;
+
 		} else if (args.nextArg("quiet")) {
 			printHeader = false;
+			printSummary = false;
 			progressType = ProgressType::NONE;
 
 		} else if (args.nextArg("levels", next)) {
@@ -401,7 +411,7 @@ void MainData::validate(const MovieReader& reader) {
 	//number of frames to buffer
 	this->radius = (int) std::round(radsec * reader.fps());
 	if (pass == DeshakerPass::COMBINED) {
-		this->bufferCount = radius + 2;
+		this->bufferCount = 2 * radius + 2;
 	}
 	if (pass == DeshakerPass::CONSECUTIVE) {
 		this->bufferCount = 2;
@@ -471,7 +481,7 @@ void MainData::showIntro(const std::string& deviceName, const MovieReader& reade
 
 	//video info
 	*console << "VIDEO w=" << w << ", h=" << h
-		<< ", frames total=" << (reader.frameCount == 0 ? "unknown" : std::to_string(reader.frameCount))
+		<< ", frames=" << (reader.frameCount < 1 ? "unknown" : std::to_string(reader.frameCount))
 		<< ", fps=" << reader.fps() << " (" << reader.fpsNum << ":" << reader.fpsDen << ")"
 		<< ", radius=" << radius
 		<< std::endl;

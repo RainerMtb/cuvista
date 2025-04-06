@@ -44,15 +44,15 @@ class NvEncoder {
 private:
 	NV_ENC_BUFFER_FORMAT mBufferFormat = NV_ENC_BUFFER_FORMAT_NV12;
 
-	int cudaIndex;
-	CUcontext cuctx = nullptr;
-	void* encoder = nullptr;
+	int mCudaIndex = -1;
+	CUcontext mCuContext = nullptr;
+	void* mEncoder = nullptr;
+	int32_t mEncoderBufferSize = 0;
+	int32_t mOutputDelay = 0;
+	int32_t mFrameToSend = 0;
+	int32_t mFrameGot = 0;
 	int h = 0;
 	int w = 0;
-	int32_t encBufferSize = 0;
-	int32_t outputDelay = 0;
-	int32_t frameToSend = 0;
-	int32_t frameGot = 0;
 
 	NV_ENCODE_API_FUNCTION_LIST encFuncList = { NV_ENCODE_API_FUNCTION_LIST_VER };
 	std::vector<CUdeviceptr> inputFrames;
@@ -68,7 +68,7 @@ public:
 	uint32_t mExtradataSize = 0;
 
 	NvEncoder(int cudaIndex) :
-		cudaIndex { cudaIndex } {}
+		mCudaIndex { cudaIndex } {}
 
 	void init();
 	void probeEncoding(uint32_t* nvencVersionApi, uint32_t* nvencVersionDriver);

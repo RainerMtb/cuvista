@@ -54,9 +54,12 @@
 			<Component>
 				<File Source="$(DeployDir)\opengl32sw.dll" />
 			</Component>
+			
+			<!--
 			<Component>
 				<File Source="$(DeployDir)\D3Dcompiler_47.dll" />
 			</Component>
+			-->
 
 			<!-- files Qt6 -->
 			<Component>

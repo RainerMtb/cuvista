@@ -45,9 +45,12 @@ MovieFrame::MovieFrame(MainData& data, MovieReader& reader, MovieWriter& writer)
 			idx++;
 		}
 	}
+
+	//allocate trajectory list
+	mTrajectory.reserve(reader.frameCount);
 }
 
-std::string MovieFrame::ptsForFrameAsString(int64_t frameIndex) {
+std::string MovieFrame::ptsForFrameAsString(int64_t frameIndex) const {
 	return mReader.ptsForFrameAsString(frameIndex).value_or("");
 }
 
@@ -68,15 +71,6 @@ std::map<int64_t, TransformValues> MovieFrame::readTransforms() {
 
 const AffineTransform& MovieFrame::getTransform() const {
 	return mFrameResult.getTransform();
-}
-
-//try to read next frame from reader class into input buffer
-void MovieFrame::read() {
-	mReader.read(mBufferFrame);
-}
-
-std::future<void> MovieFrame::readAsync() {
-	return mReader.readAsync(mBufferFrame);
 }
 
 
@@ -113,6 +107,8 @@ void MovieFrameCombined::runLoop(std::shared_ptr<ProgressBase> progress, UserInp
 			//transform for previous frame
 			computeTransform(mReader.frameIndex - 1);
 			mTrajectory.addTrajectoryTransform(mFrameResult.getTransform());
+			//begin computing smooth transform
+			if (mReader.frameIndex > mData.radius) mTrajectory.computeSmoothTransform(mData, mReader.frameIndex - mData.radius - 1);
 			auxWriters.writeAll(*executor);
 			//compute flow for current frame
 			executor->computeStart(mReader.frameIndex, mResultPoints);
@@ -136,7 +132,9 @@ void MovieFrameCombined::runLoop(std::shared_ptr<ProgressBase> progress, UserInp
 			computeTransform(readIndex - 1);
 			const AffineTransform& currentTransform = mFrameResult.getTransform();
 			mTrajectory.addTrajectoryTransform(currentTransform);
-			const AffineTransform& finalTransform = mTrajectory.computeSmoothTransform(mData, mWriter.frameIndex);
+			mTrajectory.computeSmoothTransform(mData, readIndex - mData.radius - 1);
+			mTrajectory.computeSmoothZoom(mData, mWriter.frameIndex);
+			const AffineTransform& finalTransform = mTrajectory.getTransform(mData, mWriter.frameIndex);
 			executor->outputData(mWriter.frameIndex, finalTransform);
 			mWriter.prepareOutput(*executor);
 			//write output
@@ -148,16 +146,24 @@ void MovieFrameCombined::runLoop(std::shared_ptr<ProgressBase> progress, UserInp
 			f.wait();
 
 		} else if (state == StateCombined::LAST_COMPUTE) {
+			//compute last transform
 			computeTransform(mReader.frameIndex - 1);
+			//add last transform
 			mTrajectory.addTrajectoryTransform(mFrameResult.getTransform());
-			const AffineTransform& finalTransform = mTrajectory.computeSmoothTransform(mData, mWriter.frameIndex);
+			//compute all remaining transforms
+			for (int64_t idx = mWriter.frameIndex; idx < mTrajectory.size(); idx++) {
+				if (mTrajectory.isComputed(idx) == false) mTrajectory.computeSmoothTransform(mData, idx);
+			}
+			mTrajectory.computeSmoothZoom(mData, mWriter.frameIndex);
+			const AffineTransform& finalTransform = mTrajectory.getTransform(mData, mWriter.frameIndex);
 			executor->outputData(mWriter.frameIndex, finalTransform);
 			mWriter.prepareOutput(*executor);
 			mWriter.write(*executor);
 			auxWriters.writeAll(*executor);
 
 		} else if (state == StateCombined::DRAIN_BUFFER) {
-			const AffineTransform& tf = mTrajectory.computeSmoothTransform(mData, mWriter.frameIndex);
+			mTrajectory.computeSmoothZoom(mData, mWriter.frameIndex);
+			const AffineTransform& tf = mTrajectory.getTransform(mData, mWriter.frameIndex);
 			executor->outputData(mWriter.frameIndex, tf);
 			mWriter.prepareOutput(*executor);
 			mWriter.write(*executor);
@@ -181,7 +187,7 @@ void MovieFrameCombined::runLoop(std::shared_ptr<ProgressBase> progress, UserInp
 		}
 		progress->update(percentage, mReader.endOfInput || state == StateCombined::CLOSE);
 
-		//stop signal must not be handled repeatedly
+		//stop signal must be handled exactly once
 		if (inputState == InputState::NONE && (mReader.endOfInput || mReader.frameIndex >= mData.maxFrames)) {
 			inputState = InputState::SIGNAL;
 		}
@@ -245,6 +251,7 @@ void MovieFrameConsecutive::runLoop(std::shared_ptr<ProgressBase> progress, User
 	StateConsecutive state = StateConsecutive::READ_FIRST;
 	bool hasFramesToFlush = false;
 	int currentPass = 1;
+	int64_t maxFrames = mData.maxFrames;
 
 	while (state != StateConsecutive::DONE) {
 		//handle current state
@@ -290,11 +297,14 @@ void MovieFrameConsecutive::runLoop(std::shared_ptr<ProgressBase> progress, User
 			mReader.read(mBufferFrame);
 			currentPass = 2;
 			inputState = InputState::NONE;
+			//compute smooth transforms
+			for (int64_t idx = 0; idx < mTrajectory.size(); idx++) mTrajectory.computeSmoothTransform(mData, idx);
+			for (int64_t idx = 0; idx < mTrajectory.size(); idx++) mTrajectory.computeSmoothZoom(mData, idx);
 
 		} else if (state == StateConsecutive::WRITE) {
 			//output stabilized frame, read next frame
 			executor->inputData(mReader.frameIndex, mBufferFrame);
-			const AffineTransform& tf = mTrajectory.computeSmoothTransform(mData, mWriter.frameIndex);
+			const AffineTransform& tf = mTrajectory.getTransform(mData, mWriter.frameIndex);
 			executor->outputData(mWriter.frameIndex, tf);
 			mWriter.prepareOutput(*executor);
 			mWriter.write(*executor);
@@ -319,16 +329,17 @@ void MovieFrameConsecutive::runLoop(std::shared_ptr<ProgressBase> progress, User
 		}
 		progress->update(percentage, mReader.endOfInput || state == StateConsecutive::CLOSE);
 
-		//stop signal must not be handled repeatedly
-		if (inputState == InputState::NONE && (mReader.endOfInput || mReader.frameIndex >= mData.maxFrames)) {
+		//stop signal must be handled exactly once
+		if (inputState == InputState::NONE && (mReader.endOfInput || mReader.frameIndex >= maxFrames)) {
 			inputState = InputState::SIGNAL;
 		}
 
 		//check user input and set state
 		UserInputEnum e = input.checkState();
-		if (e == UserInputEnum::END) {
-			progress->writeMessage("[e] command received. Stopping.");
-			state = StateConsecutive::QUIT;
+		if (e == UserInputEnum::END && currentPass == 1) {
+			progress->writeMessage("[e] command received. Stop reading input.");
+			maxFrames = mReader.frameIndex;
+			state = StateConsecutive::WRITE_INIT;
 
 		} else if (e == UserInputEnum::QUIT) {
 			progress->writeMessage("[q] command received. Stopping.");

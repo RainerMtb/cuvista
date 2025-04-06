@@ -16,68 +16,100 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
-//residual transformation of frames
-
 #include "Trajectory.hpp"
+
+//----------- TrajectoryMat
+//----------- Matrix holding trajectory values
 
 TrajectoryMat::TrajectoryMat(double u, double v, double a) : 
 	Matd(1, 3) 
 {
-	array[0] = u; array[1] = v; array[2] = a;
+	array[0] = u;
+	array[1] = v;
+	array[2] = a;
 }
 
-TrajectoryMat::TrajectoryMat() : TrajectoryMat(0, 0, 0) {}
+TrajectoryMat::TrajectoryMat() : 
+	TrajectoryMat(0, 0, 0) 
+{}
+
+double& TrajectoryMat::u() { return at(0, 0); }
+double& TrajectoryMat::v() { return at(0, 1); }
+double& TrajectoryMat::a() { return at(0, 2); }
 
 double TrajectoryMat::u() const { return at(0, 0); }
 double TrajectoryMat::v() const { return at(0, 1); }
 double TrajectoryMat::a() const { return at(0, 2); }
 
-//create new item and append to list, transformation u, v, a
-TrajectoryItem::TrajectoryItem(double u, double v, double a, int64_t frameIndex) :
-	values { u, v, a },
-	frameIndex { frameIndex },
-	zoom { 1.0 }
-{
-	//sum to this point
-	currentSum += values;
-	//store sum for this point
-	sum = currentSum;
-	//special treatment if frame is duplicate to frame before
-	isDuplicateFrame = frameIndex > 0 && std::abs(u) < 0.5 && std::abs(v) < 0.5 && std::abs(a) < 0.001;
+//----------- Trajectory Item
+//----------- Current state of the trajectory
+
+bool TrajectoryItem::operator == (const TrajectoryItem& other) const {
+	return values == other.values && smoothed == other.smoothed && sum == other.sum
+		&& isDuplicateFrame == other.isDuplicateFrame && frameIndex == other.frameIndex 
+		&& zoom == other.zoom && zoomRequired == other.zoomRequired;
 }
 
-const TrajectoryItem& Trajectory::addTrajectoryTransform(double dx, double dy, double da, int64_t frameIndex) {
-	return trajectory.emplace_back(dx, dy, da, frameIndex);
+//----------- Trajectory
+//----------- List of Items
+
+//append new result to trajectory
+void Trajectory::addTrajectoryTransform(double u, double v, double a, int64_t frameIndex) {
+	TrajectoryItem item;
+	item.values.u() = u;
+	item.values.v() = v;
+	item.values.a() = a;
+	item.frameIndex = frameIndex;
+	item.zoomRequired = 1.0;
+	item.zoom = 1.0;
+	mCurrentSum += item.values;
+	item.sum = mCurrentSum;
+	item.isDuplicateFrame = frameIndex > 0 && std::abs(u) < 0.5 && std::abs(v) < 0.5 && std::abs(a) < 0.001;
+	item.isComputed = false;
+	mTrajectory.push_back(item);
 }
 
-//append new result to list
-const TrajectoryItem& Trajectory::addTrajectoryTransform(const AffineTransform& transform) {
-	return addTrajectoryTransform(transform.dX(), transform.dY(), transform.rot(), transform.frameIndex);
+//append new result to trajectory
+void Trajectory::addTrajectoryTransform(const AffineTransform& transform) {
+	addTrajectoryTransform(transform.dX(), transform.dY(), transform.rot(), transform.frameIndex);
 }
 
-int64_t Trajectory::getTrajectorySize() {
-	return trajectory.size();
+int64_t Trajectory::size() {
+	return mTrajectory.size();
+}
+
+void Trajectory::reserve(int64_t siz) {
+	mTrajectory.reserve(siz);
+}
+
+std::vector<TrajectoryItem> Trajectory::getTrajectory() {
+	return mTrajectory;
+}
+
+bool Trajectory::isComputed(int64_t frameIndex) {
+	return mTrajectory[frameIndex].isComputed;
 }
 
 int64_t Trajectory::clamp(int64_t val, int64_t lo, int64_t hi) {
 	return std::clamp(val, lo, hi);
 }
 
-const AffineTransform& Trajectory::computeSmoothTransform(const MainData& data, int64_t frameWriteIndex) {
-	//compute average movements over current window
+//compute average movements over current window
+void Trajectory::computeSmoothTransform(const MainData& data, int64_t frameIndex) {
 	double sig = data.radius * data.cSigmaParam;
 	double sumWeight = 0.0;
 	tempAvg.setValues(0.0);
 	for (int64_t i = -data.radius; i <= data.radius; i++) {
 		double w = std::exp(-0.5 * i * i / (sig * sig));
-		int64_t idx = clamp(frameWriteIndex + i, 0, trajectory.size() - 1);
-		tempSum.setValues(trajectory[idx].sum);
+		int64_t idx = clamp(frameIndex + i, 0, mTrajectory.size() - 1);
+		tempSum.setValues(mTrajectory[idx].sum);
 		tempSum *= w;
 		tempAvg += tempSum;
 		sumWeight += w;
 	}
 	tempAvg /= sumWeight;
-	TrajectoryItem& ti = trajectory[frameWriteIndex];
+	TrajectoryItem& ti = mTrajectory[frameIndex];
+	assert(ti.isComputed == false && "trajectory item has already been computed");
 
 	if (ti.isDuplicateFrame) {
 		//take midpoint between transformation of previous frame and calculated transform
@@ -90,25 +122,41 @@ const AffineTransform& Trajectory::computeSmoothTransform(const MainData& data, 
 		delta.setValues(ti.sum);
 		delta -= tempAvg;
 	}
+	ti.smoothed.setValues(delta);
 
-	//calculate zoom
-	double zoomToFillFrame = calcRequiredZoom(delta.u(), delta.v(), delta.a(), data.w, data.h);
-	currentZoom = std::max(currentZoom * data.zoomFallback, zoomToFillFrame);
-	trajectory[frameWriteIndex].zoom = currentZoom;
-	double zoom = std::clamp(currentZoom, data.zoomMin, data.zoomMax);
-	//std::printf("%04zd zoom item %5.3f, fill %5.3f, smoothed %5.3f, final %5.2f\n", 
-	//	frameWriteIndex, trajectory[frameWriteIndex].zoomItem, zoomToFillFrame, currentZoom, zoom);
+	//calculate zoom to fill frame
+	ti.zoomRequired = calcRequiredZoom(delta.u(), delta.v(), delta.a(), data.w, data.h);
+
+	ti.isComputed = true;
+}
+
+//smooth dynamic zooming
+void Trajectory::computeSmoothZoom(const MainData& data, int64_t frameIndex) {
+	TrajectoryItem& ti = mTrajectory[frameIndex];
+	double gradient = data.zoomFallback - 1.0;
+
+	for (int i = 0; i <= data.radius && frameIndex + i < mTrajectory.size(); i++) {
+		int64_t idx = frameIndex + i;
+		gradient = std::max(gradient, (mTrajectory[idx].zoomRequired - mCurrentZoom) / (1.0 + i));
+	}
+
+	mCurrentZoom = ti.zoom = std::clamp(mCurrentZoom + gradient, data.zoomMin, data.zoomMax);
+}
+
+//build AffineTransform from trajectory
+const AffineTransform& Trajectory::getTransform(const MainData& data, int64_t frameWriteIndex) {
+	TrajectoryItem& ti = mTrajectory[frameWriteIndex];
 
 	//get transform to apply to image
-	currentTransform.reset()
-		.addTranslation(data.w / 2.0, data.h / 2.0)		//translate to origin
-		.addRotation(delta.a())					    	//rotation
-		.addZoom(zoom)							        //zoom as set
-		.addTranslation(delta.u(), delta.v())	        //computed translation to stabilize
-		.addTranslation(data.w / -2.0, data.h / -2.0)	//translate back to center
+	mCurrentTransform.reset()
+		.addTranslation(data.w / 2.0, data.h / 2.0)          //translate to origin
+		.addRotation(ti.smoothed.a())                        //rotation
+		.addZoom(ti.zoom)                                    //zoom as set
+		.addTranslation(ti.smoothed.u(), ti.smoothed.v())    //computed translation to stabilize
+		.addTranslation(data.w / -2.0, data.h / -2.0)        //translate back to center
 		;
-	currentTransform.frameIndex = frameWriteIndex;
-	return currentTransform;
+	mCurrentTransform.frameIndex = frameWriteIndex;
+	return mCurrentTransform;
 }
 
 void Trajectory::readTransforms(std::map<int64_t, TransformValues> transformsMap) {
@@ -141,14 +189,17 @@ double Trajectory::calcRequiredZoom(double dx, double dy, double rot, double w, 
 			zoom = std::max(zoom, z);
 		}
 	}
-	//std::cout << frameWriteIndex << " " << dx << " " << dy << " " << (rot * 180 / std::numbers::pi) << " " << zoom << std::endl;
 	return zoom;
 }
 
 std::ostream& operator << (std::ostream& os, const Trajectory& trajectory) {
-	for (int i = 0; i < trajectory.trajectory.size(); i++) {
-		const TrajectoryItem& item = trajectory.trajectory[i];
-		os << i << " [" << item.frameIndex << "] u=" << item.values.u() << ", v=" << item.values.v() << ", a=" << item.values.a() << std::endl;
+	for (int i = 0; i < trajectory.mTrajectory.size(); i++) {
+		const TrajectoryItem& item = trajectory.mTrajectory[i];
+		os << i << " [" << item.frameIndex << "] "
+			<< "u = " << item.values.u() << ", v = " << item.values.v() << ", a = " << item.values.a() 
+			<< " / smu = " << item.smoothed.u() << ", smv = " << item.smoothed.v() << ", sma = " << item.smoothed.a() 
+			<< " / zoom = " << item.zoom
+			<< std::endl;
 	}
 	return os;
 }
