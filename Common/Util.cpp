@@ -206,6 +206,14 @@ namespace util {
 		return os;
 	}
 
+	bool CRC64::operator == (const CRC64& other) const {
+		return result() == other.result();
+	}
+
+	bool CRC64::operator == (uint64_t crc) const {
+		return result() == crc;
+	}
+
 	std::string millisToTimeString(int64_t millis) {
 		int64_t sign = millis < 0 ? -1 : 1;
 		millis = std::abs(millis);

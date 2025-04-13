@@ -90,3 +90,8 @@ void ProgressGui::update(double totalPercentage, bool force) {
 		mProgressWindow->sigUpdateOutput(im, QString::fromStdString(frame.ptsForFrameAsString(idx)));
 	}
 }
+
+void ProgressWindow::setBackgroundColor(QString style) {
+	ui.imageInput->setStyleSheet(style);
+	ui.imageOutput->setStyleSheet(style);
+}

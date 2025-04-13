@@ -210,9 +210,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="CodecTest.cpp" />
-    <ClCompile Include="CompareCpuGpu.cpp" />
     <ClCompile Include="DecompositionTest.cpp" />
-    <ClCompile Include="CompareFrames.cpp" />
     <ClCompile Include="MathTest.cpp" />
     <ClCompile Include="MatrixTest.cpp" />
     <ClCompile Include="pch.cpp">

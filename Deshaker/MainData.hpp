@@ -42,6 +42,7 @@ enum class OutputType {
 	NONE,
 	PIPE,
 	VIDEO_FILE,
+	RAW_YUV_FILE,
 	SEQUENCE_BMP,
 	SEQUENCE_JPG,
 };
@@ -179,7 +180,7 @@ public:
 	double cSigmaParam = 1.25;
 
 	int64_t maxFrames = std::numeric_limits<int32_t>::max();
-	im::ColorRgb bgcol_rgb { 0, 255, 0 };
+	im::ColorRgb bgcol_rgb { 0, 150, 0 };
 
 	std::chrono::steady_clock::time_point timePoint;
 

@@ -21,13 +21,13 @@
 #include <regex>
 #include <filesystem>
 
-static void printArgs(std::span<std::string> s) {
+void printArgs(std::span<std::string> s) {
 	std::cout << "ARGS: ";
 	for (const std::string& str : s) std::cout << str << " ";
 	std::cout << std::endl;
 }
 
-static DeshakerResult run(const std::string& argsLine) {
+DeshakerResult run(const std::string& argsLine) {
 	std::vector<std::string> argsList = util::splitString(argsLine, " ");
 	std::ostringstream oss;
 
@@ -52,12 +52,19 @@ int main() {
 		if (entry.is_regular_file()) std::filesystem::remove(entry);
 	}
 
+	/*
 	std::cout << "--- Short Runs ---" << std::endl;
 	run("-frames 0 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/00.mp4 -noheader -progress 0 -y");
 	run("-frames 1 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/00.mp4 -noheader -progress 0 -y");
 	run("-frames 2 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/00.mp4 -noheader -progress 0 -y");
 	run("-frames 3 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/00.mp4 -noheader -progress 0 -y");
 	run("-frames 40 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/00.mp4 -noheader -progress 0 -y");
+
+	run("-pass 12 -frames 0 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/00.mp4 -noheader -progress 0 -y");
+	run("-pass 12 -frames 1 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/00.mp4 -noheader -progress 0 -y");
+	run("-pass 12 -frames 2 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/00.mp4 -noheader -progress 0 -y");
+	run("-pass 12 -frames 3 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/00.mp4 -noheader -progress 0 -y");
+	run("-pass 12 -frames 40 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/00.mp4 -noheader -progress 0 -y");
 
 	std::cout << "--- Images ---" << std::endl;
 	run("-frames 10 -i d:/VideoTest/04.ts -resim d:/VideoTest/out/images/test%02d.jpg -progress 0 -y");
@@ -98,10 +105,62 @@ int main() {
 	std::cout << "--- Misc ---" << std::endl;
 	run("-device 2 -stack 0 -i d:/VideoTest/06.mp4 -o d:/videoTest/out/06_stack.mp4 -noheader -progress 0");
 	run("-device 2 -i d:/VideoTest/01.mp4 -o null -flow d:/videoTest/out/flow.mp4 -noheader -progress 0");
+	*/
 
-	std::cout << "--- Pass 12 ---" << std::endl;
-	run("-pass 12 -device 3 -i d:/VideoTest/01.mp4 -o d:/videoTest/out/01.pass12.ocl.mp4 -noheader -progress 0");
-	run("-pass 12 -device 2 -i d:/VideoTest/02.mp4 -o d:/videoTest/out/02.pass12.ocl.mp4 -noheader -progress 0");
+	std::cout << "--- Check Equal Files ---" << std::endl;
+	std::vector<std::string> commands = {
+		"-device 0 -i d:/VideoTest/02short.mp4 -o d:/videoTest/out/check.00.yuv -quiet",
+		"-device 1 -i d:/VideoTest/02short.mp4 -o d:/videoTest/out/check.01.yuv -quiet",
+		"-device 2 -i d:/VideoTest/02short.mp4 -o d:/videoTest/out/check.02.yuv -quiet",
+		"-device 3 -i d:/VideoTest/02short.mp4 -o d:/videoTest/out/check.03.yuv -quiet"
+	};
+	std::vector<std::string> filenames = {
+		"d:/videoTest/out/check.00.yuv",
+		"d:/videoTest/out/check.01.yuv",
+		"d:/videoTest/out/check.02.yuv",
+		"d:/videoTest/out/check.03.yuv",
+	};
+
+	uint64_t crcTrajectory = 0xee4f4fd33e21b564;
+	uint64_t crcFile = 0x42ca17fa90208328;
+
+	for (size_t i = 0; i < commands.size(); i++) {
+		DeshakerResult result = run(commands[i]);
+
+		util::CRC64 crc;
+		for (const TrajectoryItem& ti : result.trajectory) {
+			crc.add(ti.values.u());
+			crc.add(ti.values.v());
+			crc.add(ti.values.a());
+			crc.add(ti.smoothed.u());
+			crc.add(ti.smoothed.v());
+			crc.add(ti.smoothed.a());
+			crc.add(ti.sum.u());
+			crc.add(ti.sum.v());
+			crc.add(ti.sum.a());
+			crc.add(ti.isDuplicateFrame);
+			crc.add(ti.frameIndex);
+			crc.add(ti.zoom);
+			crc.add(ti.zoomRequired);
+		}
+		std::cout << std::hex << "trajectory crc expected: " << crcTrajectory << ", actual crc: " << crc
+			<< std::boolalpha << ", crc match: " << (crcTrajectory == crc) << std::endl;
+
+
+		util::CRC64 crcyuv;
+		std::string filename = filenames[i];
+		std::vector<unsigned char> data(std::filesystem::file_size(filename));
+		std::ifstream infile(filename, std::ios::binary);
+		infile.read(reinterpret_cast<char*>(data.data()), data.size());
+		crcyuv.addBytes(data.data(), data.size());
+
+		std::cout << std::hex << "yuv file crc expected: " << crcFile << ", actual crc: " << crcyuv
+			<< std::boolalpha << ", crc match: " << (crcFile == crcyuv) << std::endl;
+	}
 
 	return 0;
 }
+
+/*
+return { (std::istreambuf_iterator<char>(infile)), (std::istreambuf_iterator<char>()) };
+*/

@@ -22,7 +22,7 @@
                 <h1>CUVISTA - Video Stabilizer</h1>
                 <p>Stabilize shaky video on your PC quick and easy</p>
                 <div id="banner">
-                    <a id="download" href="https://github.com/RainerMtb/cuvista/releases/download/v1.1.0/CuvistaInstaller-1.1.0.msi">
+                    <a id="download" href="https://github.com/RainerMtb/cuvista/releases/download/v1.5.0/CuvistaInstaller-1.5.0.msi">
                         <span><strong>Download Latest Version</strong></span>
                         <span><img id="dlsymb" src="images/download-solid.svg"></span>
                     </a>
@@ -35,16 +35,15 @@
             <h1>Introduction</h1>
             <p>
                 <span class="cuvista">Cuvista</span> stabilizes shaky video footage on your PC. Open a video file,
-                save to a new filename, and watch the software do its job. Contrary to other software by default only one single pass over the input is made to analyse and
-                generate the output.
+                save to a new filename, and watch the software do its job. Contrary to other software by default <span class="cuvista">Cuvista</span> will 
+                do only one single pass over the input to analyse the video and generate the output.
             </p>
             <p>
-                The software will make use of GPU acceleration if supported hardware is present, greatly accelerating the process in that way.
-                The cuda platform present on Nvidia grahics cards is used if such a suitable device is detected.
-                Also OpenCL capable devices are supported.
+                The software will use GPU acceleration if supported hardware is found, greatly accelerating the process that way.
+                The Cuda platform present on Nvidia grahics cards is used preferably, but OpenCL capable devices are supported as well.
                 No special driver or software is needed to make use of gpu acceleration.
-                Without any dedicated hardware stabilization will still run on CPU power alone, which will provide the same result,
-                although at a significantly lower speed.
+                Without any dedicated hardware the stabilization process will still be completed, albeit on CPU power alone, which will provide the same result 
+                at a significantly lower speed.
             </p>
 
             <h2>Sample Footage</h2>
@@ -66,13 +65,14 @@
             Get yourself the latest version of <span class="cuvista">Cuvista</span> and stabilize
             your videos by following the steps
             <ul>
-                <li>Click the link at the <a href=#top>top of this page</a> to download the latest version</li>
+                <li>Click the link at the <a href=#top>top of this page</a> to download an installer for the latest version</li>
                 <li>Install the application</li>
-                <li>Find the entry for <span class="cuvista">cuvista</span> in the Windows Start Menu and start the application</li>
+                <li>Find the entry for <span class="cuvista">cuvista</span> in the Windows Start Menu and click</li>
                 <li>Open any video file by clicking the camera button</li>
                 <li>Click Stabilize to process and save the new video</li>
                 <li>You may uninstall the application via the list of installed Windows Apps</li>
             </ul>
+            Portable binaries are available in the GitHub repository
 
             <h2>Screenshots</h2>
             <div class="screenshots">
@@ -90,21 +90,20 @@
                     Higher value will generally provide smoother output</li>
                 <li><strong>Zoom:</strong> Stabilization moves frames around the screen, which may reaveal blank areas.
                     Zooming into the video can hide this moving effect. Set a minimum zoom value and optionally allow dynamic zoom up to a 
-                    certain maximum value to compensate for violent movements</li>
-                <li><strong>Background:</strong> Fill the void in the background either with a fixed color or preceding frames</li>
+                    certain maximum value to compensate for violent movements. Dynamic zoom may adversely introduce new moving effects, keep low values</li>
+                <li><strong>Background:</strong> Fill the void in the background either with a fixed color or preceding frames from the video</li>
                 <li><strong>Encoding:</strong> Select the device and video format for encoding the output. Can be different from the stabilization device</li>
-                <li><strong>Side by Side:</strong> Put original and stabilized video side by side to check the stabilization result</li>
+                <li><strong>Side by Side:</strong> Put original and stabilized video side by side to directly compare stabilization results</li>
                 <li><strong>Image Sequence:</strong> Output a sequence of individual image files rather than a video file</li>
                 <li><strong>Live Playback:</strong> Play resulting video directly, do not produce an output file</li>
                 <li><strong>Limit Output:</strong> Stop producing output after given number of frames, useful for testing results</li>
             </ul>
             If you want to watch how exactly each frame is moved around to compensate for the shakyness in the input footage,
-            try to setting zoom to -10 and background to some fixed color
+            try to setting zoom to -8 and background to some fixed color
 
             <h2>Command Line Version</h2>
             <p>There also is a command line version availabe which provides more advances options</p>
-            <p>Open a command prompt, go to the folder containing the unzipped application files
-                and use the syntax <span class="cuvista">cuvista.exe -i infile -o outfile</span></p>
+            <p>Open a command prompt, go to the installation folder and use the syntax <span class="cuvista">cuvista.exe -i infile -o outfile</span></p>
             <p>Provide the option <span class="cuvista">-h</span> to get additional help</p>
 
             <h2>GitHub</h2>

@@ -133,25 +133,24 @@ public:
 //-----------------------------------------------------------------------------------
 class RawWriter : public BaseWriter {
 
-protected:
-	std::vector<char> yuvPacked;
+private:
+	std::ofstream file;
 
-	//constructor
+public:
 	RawWriter(MainData& data, MovieReader& reader) :
-		BaseWriter(data, reader),
-		yuvPacked(3ull * data.h * data.w) {}
+		BaseWriter(data, reader) {}
 
-	//copy strided yuv data into a packed array [w * h * 3]
-	void packYuv();
+	void open(EncodingOption videoCodec) override;
+	void write(const FrameExecutor& executor) override;
 };
 
 
 //-----------------------------------------------------------------------------------
-class PipeWriter : public RawWriter {
+class PipeWriter : public BaseWriter {
 
 public:
 	PipeWriter(MainData& data, MovieReader& reader) :
-		RawWriter(data, reader) {}
+		BaseWriter(data, reader) {}
 
 	~PipeWriter() override;
 	void open(EncodingOption videoCodec) override;
@@ -246,8 +245,9 @@ private:
 	int mWidthTotal;
 	double mStackPosition;
 	ImageYuv mInputFrame;
+	ImageYuv mInputFrameScaled;
 	ImageYuv mOutputFrame;
-	std::vector<unsigned char> mBackground;
+	im::ColorYuv mBackgroundColor;
 
 public:
 	StackedWriter(MainData& data, MovieReader& reader, double stackPosition) :
@@ -255,6 +255,7 @@ public:
 		mWidthTotal { data.w * 3 / 2 },
 		mStackPosition { stackPosition },
 		mInputFrame(data.h, data.w, data.cpupitch),
+		mInputFrameScaled(data.h, data.w * 3 / 4),
 		mOutputFrame(data.h, data.w, data.cpupitch) {}
 
 	void open(EncodingOption videoCodec) override;

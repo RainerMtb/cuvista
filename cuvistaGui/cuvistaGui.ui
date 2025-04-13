@@ -128,7 +128,7 @@
         </layout>
        </item>
        <item>
-        <layout class="QHBoxLayout" name="inputHbox">
+        <layout class="QHBoxLayout" name="inputHbox" stretch="1,1">
          <item>
           <widget class="QPlainTextEdit" name="texInput">
            <property name="sizePolicy">
@@ -273,6 +273,12 @@
        </item>
        <item row="0" column="1">
         <widget class="QCheckBox" name="chkOverwrite">
+         <property name="minimumSize">
+          <size>
+           <width>20</width>
+           <height>0</height>
+          </size>
+         </property>
          <property name="toolTip">
           <string>assume permission to overwrite output file</string>
          </property>
@@ -390,17 +396,20 @@
          </item>
          <item>
           <widget class="ClickLabel" name="lblColor">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
            <property name="minimumSize">
             <size>
              <width>32</width>
-             <height>16</height>
+             <height>20</height>
             </size>
            </property>
            <property name="focusPolicy">
             <enum>Qt::FocusPolicy::TabFocus</enum>
-           </property>
-           <property name="contextMenuPolicy">
-            <enum>Qt::ContextMenuPolicy::ActionsContextMenu</enum>
            </property>
            <property name="styleSheet">
             <string notr="true">QLabel {
@@ -449,7 +458,7 @@
           </widget>
          </item>
          <item>
-          <spacer name="horizontalSpacer_5">
+          <spacer name="horizontalSpacer_1">
            <property name="orientation">
             <enum>Qt::Orientation::Horizontal</enum>
            </property>
@@ -693,7 +702,7 @@
           </widget>
          </item>
          <item>
-          <spacer name="horizontalSpacer_4">
+          <spacer name="horizontalSpacer_3">
            <property name="orientation">
             <enum>Qt::Orientation::Horizontal</enum>
            </property>
@@ -733,7 +742,7 @@
           </widget>
          </item>
          <item>
-          <spacer name="horizontalSpacer_3">
+          <spacer name="horizontalSpacer_4">
            <property name="orientation">
             <enum>Qt::Orientation::Horizontal</enum>
            </property>
@@ -845,7 +854,7 @@
           </widget>
          </item>
          <item>
-          <spacer name="horizontalSpacer_7">
+          <spacer name="horizontalSpacer_5">
            <property name="orientation">
             <enum>Qt::Orientation::Horizontal</enum>
            </property>
@@ -881,7 +890,7 @@
        </widget>
       </item>
       <item>
-       <spacer name="horizontalSpacer">
+       <spacer name="horizontalSpacer_7">
         <property name="orientation">
          <enum>Qt::Orientation::Horizontal</enum>
         </property>
@@ -1023,7 +1032,7 @@
  </resources>
  <connections/>
  <buttongroups>
-  <buttongroup name="buttonGroupOutput"/>
   <buttongroup name="buttonGroupBackground"/>
+  <buttongroup name="buttonGroupOutput"/>
  </buttongroups>
 </ui>

@@ -1,10 +1,15 @@
-﻿<Project Sdk="WixToolset.Sdk/5.0.2">
+﻿<Project Sdk="WixToolset.Sdk/6.0.0">
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <OutputPath>$(SolutionDir)bin\$(Platform)\$(Configuration)\</OutputPath>
-    <Platforms>x86;x64</Platforms>
+    <OutputPath>$(SolutionDir)bin\$(Platform)\Installer\</OutputPath>
+    <Platforms>x64</Platforms>
+    <SuppressValidation>false</SuppressValidation>
+    <SuppressIces>ICE03;ICE30</SuppressIces>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutputPath>$(SolutionDir)bin\$(Platform)\$(Configuration)\</OutputPath>
+    <OutputPath>$(SolutionDir)bin\$(Platform)\Installer\</OutputPath>
+	  <Platforms>x64</Platforms>
+	  <SuppressValidation>false</SuppressValidation>
+	  <SuppressIces>ICE03;ICE30</SuppressIces>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\cuvistaCli\cuvista.vcxproj" />

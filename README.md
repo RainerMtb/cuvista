@@ -27,7 +27,7 @@ For Windows you can get the latest version from the [Releases](https://github.co
 
 Have a look at available options on the command line via ```cuvista -h``` or ```cuvista -help```, in the GUI version a subset of most important options is available.
 
-In a fresh Windows environment the the Microsoft Visual C/C++ Runtime Libraries might be missing, so when using the zip archive you might be prompted with a message like ```MSVCP140.dll not found```, then download and install the latest redistributable https://aka.ms/vs/17/release/vc_redist.x64.exe. The .msi installer already comes with the necessary system files.
+In a fresh Windows environment the the Microsoft Visual C/C++ Runtime Libraries might be missing, so when using the zip archive you might be prompted with a message like ```MSVCP140.dll not found```, then download and install the latest redistributable https://aka.ms/vs/17/release/vc_redist.x64.exe. The MSI installer already comes with the necessary system files.
 
 
 
@@ -134,7 +134,7 @@ Adapt the location of Cuda and  Qt to your system and execute the build process.
 ```
 export CMAKE_PREFIX_PATH=~/Qt/6.9.0/gcc_64:/usr/local/cuda
 cmake .. --fresh
-cmake --build .
+cmake --build . --parallel
 ```
 Upon successfull completion you will find the executables which should execute right away
 ```

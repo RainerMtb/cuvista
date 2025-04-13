@@ -2,8 +2,6 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="CodecTest.cpp" />
-    <ClCompile Include="CompareCpuGpu.cpp" />
-    <ClCompile Include="CompareFrames.cpp" />
     <ClCompile Include="DecompositionTest.cpp" />
     <ClCompile Include="MatrixTest.cpp" />
     <ClCompile Include="pch.cpp" />

@@ -63,6 +63,8 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 			writer = std::make_unique<BmpImageWriter>(data, *reader);
 		else if (data.videoOutputType == OutputType::SEQUENCE_JPG)
 			writer = std::make_unique<JpegImageWriter>(data, *reader);
+		else if (data.videoOutputType == OutputType::RAW_YUV_FILE)
+			writer = std::make_unique<RawWriter>(data, *reader);
 		else if (data.videoOutputType == OutputType::VIDEO_FILE && data.selectedEncoding.device == EncodingDevice::CPU)
 			writer = std::make_unique<FFmpegWriter>(data, *reader);
 		else if (data.videoOutputType == OutputType::VIDEO_FILE && data.selectedEncoding.device == EncodingDevice::NVENC)
@@ -157,13 +159,13 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 	//close input and output, destruct frame object
 	//copy statistics before destructing
 	int64_t framesWritten = writer->frameIndex;
-
+	
 	//final console messages
 	if (errorLogger().hasError()) {
-		printError(*data.console, "ERROR STACK:");
+		printError(std::cerr, "ERROR STACK:");
 		std::vector<ErrorEntry> errorList = errorLogger().getErrors();
 		for (int i = 0; i < errorList.size(); i++) {
-			printError(*data.console, std::format("[{}] {}", i, errorList[i].msg));
+			printError(std::cerr, std::format("[{}] {}", i, errorList[i].msg));
 		}
 
 	} else {

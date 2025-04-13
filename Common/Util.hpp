@@ -83,6 +83,8 @@ namespace util {
         CRC64& addBytes(const unsigned char* data, size_t size);
         uint64_t result() const;
         friend std::ostream& operator << (std::ostream& os, const CRC64& crc);
+        bool operator == (const CRC64& other) const;
+        bool operator == (uint64_t crc) const;
     };
 
 

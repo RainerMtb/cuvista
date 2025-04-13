@@ -85,11 +85,13 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 				//do not do any output
 				videoOutputType = OutputType::NONE;
 
-			} else if (str_toupper(next) == "PIPE:0") {
+			} else if (str_toupper(next) == "PIPE:") {
 				//activate pipe output
 				console = &nullStream;
 				printHeader = false;
+				printSummary = false;
 				videoOutputType = OutputType::PIPE;
+				progressType = ProgressType::NONE;
 
 			} else if (str_toupper(next).ends_with(".BMP")) {
 				videoOutputType = OutputType::SEQUENCE_BMP;
@@ -97,6 +99,10 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 
 			} else if (str_toupper(next).ends_with(".JPG")) {
 				videoOutputType = OutputType::SEQUENCE_JPG;
+				fileOut = next;
+
+			} else if (str_toupper(next).ends_with(".YUV")) {
+				videoOutputType = OutputType::RAW_YUV_FILE;
 				fileOut = next;
 
 			} else {

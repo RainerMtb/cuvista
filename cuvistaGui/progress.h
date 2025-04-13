@@ -47,6 +47,7 @@ public:
     void changeEvent(QEvent* ev) override;
     void closeEvent(QCloseEvent* event) override;
     void showEvent(QShowEvent* event) override;
+    void setBackgroundColor(QString style);
 };
 
 

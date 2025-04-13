@@ -51,7 +51,7 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     mData.printHeader = false;
     mData.probeCuda();
     mData.probeOpenCl();
-    mData.collectDeviceInfo(); 
+    mData.collectDeviceInfo();
 
     //devices
     for (int i = 0; i < mData.deviceList.size(); i++) {
@@ -70,6 +70,8 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
             ui.comboEncoding->addItem(qs, qv);
         }
     };
+    //initialize encoder with first device
+    fcnEncoding(0);
     //set encoding options when device changes
     connect(ui.comboDevice, &QComboBox::currentIndexChanged, this, fcnEncoding);
     //trigger setting encoding options
@@ -94,6 +96,9 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
             mBackgroundColor = result;
             setColorIcon(ui.lblColor, mBackgroundColor);
             ui.radioColor->setChecked(true);
+            QString style = qformat("background-color: rgb({}, {}, {})", result.red(), result.green(), result.blue());
+            ui.imageInput->setStyleSheet(style);
+            mProgressWindow->setBackgroundColor(style);
         }
     };
     connect(ui.lblColor, &ClickLabel::clicked, this, fcnColorSelection);
@@ -170,6 +175,8 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
 //open and read new input file
 void cuvistaGui::setInputFile(const QString& filePath) {
     ui.comboAudioTrack->clear();
+    mInputReady = false;
+    
     try {
         mReader.close();
         errorLogger().clearErrors();
@@ -183,6 +190,7 @@ void cuvistaGui::setInputFile(const QString& filePath) {
         }
 
         if (errorLogger().hasNoError()) {
+            mInputReady = true;
             seek(0.1);
         }
 
@@ -190,7 +198,6 @@ void cuvistaGui::setInputFile(const QString& filePath) {
             throw AVException(errorLogger().getErrorMessage());
         }
 
-        mInputReady = true;
         statusBar()->showMessage({});
 
         //info about streams
@@ -218,7 +225,6 @@ void cuvistaGui::setInputFile(const QString& filePath) {
         ui.imageInput->setImage(mErrorImage);
         ui.statusbar->showMessage(QString(ex.what()));
         ui.texInput->setPlainText("");
-        mInputReady = false;
     }
     mFileInput = QFileInfo(filePath);
     mInputDir = mFileInput.path();
@@ -227,7 +233,7 @@ void cuvistaGui::setInputFile(const QString& filePath) {
 }
 
 void cuvistaGui::seek(double frac) {
-    if (mReader.seek(frac) && mReader.read(mInputYUV)) {
+    if (mInputReady && mReader.seek(frac) && mReader.read(mInputYUV)) {
         updateInputImage();
         ui.inputPosition->setValue(frac * 100.0);
     }
@@ -246,7 +252,7 @@ void cuvistaGui::updateInputImage() {
 
 void cuvistaGui::stabilize() {
     //check if input is present
-    if (mFileInput.fileName().isEmpty()) {
+    if (mFileInput.fileName().isEmpty() || mInputReady == false) {
         statusBar()->showMessage(mDefaultMessage);
         return; //nothing to do
     }
@@ -307,6 +313,7 @@ void cuvistaGui::stabilize() {
 
     using uchar = unsigned char;
     mData.bgcol_rgb = { (uchar) mBackgroundColor.red(), (uchar) mBackgroundColor.green(), (uchar) mBackgroundColor.blue() };
+    mData.bgcol_yuv = mData.bgcol_rgb.toNormalized();
 
     //rewind reader to beginning of input
     mReader.rewind();

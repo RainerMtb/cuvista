@@ -39,6 +39,7 @@ PlayerWindow::PlayerWindow(QWidget* parent) :
     setWindowModality(Qt::ApplicationModal);
     connect(ui.btnPause, &QPushButton::clicked, this, &PlayerWindow::pause);
     connect(ui.btnPlay, &QPushButton::clicked, this, &PlayerWindow::play);
+    connect(ui.btnStop, &QPushButton::clicked, this, &PlayerWindow::close);
     connect(this, &PlayerWindow::sigUpdate, ui.videoWidget->videoSink(), &QVideoSink::videoFrameChanged);
     connect(ui.sliderVolume, &QSlider::valueChanged, this, &PlayerWindow::sigVolume);
 }

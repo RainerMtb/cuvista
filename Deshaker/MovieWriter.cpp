@@ -146,19 +146,23 @@ JpegImageWriter::~JpegImageWriter() {
 	avcodec_free_context(&ctx);
 }
 
+
 //-----------------------------------------------------------------------------------
 // YUV444 packed without striding pixels
 //-----------------------------------------------------------------------------------
 
-void RawWriter::packYuv() {
-	unsigned char* yuv = outputFrame.data();
-	char* dest = yuvPacked.data();
+//open file
+void RawWriter::open(EncodingOption videoCodec) {
+	file = std::ofstream(mData.fileOut, std::ios::binary);
+}
 
+void RawWriter::write(const FrameExecutor& executor) {
+	const unsigned char* src = outputFrame.data();
 	for (int i = 0; i < 3ull * outputFrame.h; i++) {
-		std::copy(yuv, yuv + outputFrame.w, dest);
-		yuv += outputFrame.stride;
-		dest += outputFrame.w;
+		file.write(reinterpret_cast<const char*>(src), outputFrame.w);
+		src += outputFrame.stride;
 	}
+	this->frameIndex++;
 }
 
 

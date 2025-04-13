@@ -20,6 +20,14 @@
 #include "MovieFrame.hpp"
 #include <fcntl.h>
 
+/*
+* write raw video data via pipe to receiving program
+* example usage:
+* cuvista ... | ffmpeg -f rawvideo -pix_fmt yuv444p -video_size ww:hh -r xx -i pipe:0 -pix_fmt yuv420p outfile.mp4 -y
+* make sure on the ffmpeg side the -i pipe:0 follows all the input format specifiers
+* on windows do not use PowerShell!!
+*/
+
 #if defined(_WIN64)
 
 //in windows we need to set pipe mode
@@ -28,8 +36,9 @@
 void PipeWriter::open(EncodingOption videoCodec) {
 	//set stdout to binary mode
 	int result = _setmode(_fileno(stdout), _O_BINARY);
-	if (result < 0)
+	if (result < 0) {
 		throw AVException("Pipe: error setting stdout to binary mode");
+	}
 }
 
 PipeWriter::~PipeWriter() {
@@ -41,23 +50,24 @@ PipeWriter::~PipeWriter() {
 
 #else
 
-//do nothing in linux
 void PipeWriter::open(EncodingOption videoCodec) {}
 
-//do nothing in linux
 PipeWriter::~PipeWriter() {}
 
 #endif
 
 void PipeWriter::write(const FrameExecutor& executor) {
-	packYuv();
-	size_t siz = fwrite(yuvPacked.data(), 1, yuvPacked.size(), stdout);
-	if (siz != yuvPacked.size()) {
+	const unsigned char* src = outputFrame.data();
+	size_t bytes = 0;
+	
+	for (int i = 0; i < 3ull * outputFrame.h; i++) {
+		bytes += fwrite(src, 1, outputFrame.w, stdout);
+		src += outputFrame.stride;
+	}
+	
+	if (bytes != 3ull * outputFrame.w * outputFrame.h) {
 		errorLogger().logError("Pipe: error writing data");
 	}
-	outputBytesWritten += siz;
+	outputBytesWritten += bytes;
 	this->frameIndex++;
-
-	//static std::ofstream out("f:/test.yuv", std::ios::binary);
-	//out.write(yuvPacked.data(), yuvPacked.size());
 }

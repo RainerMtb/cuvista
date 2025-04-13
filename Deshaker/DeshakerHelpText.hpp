@@ -22,16 +22,17 @@ usage: cuvista [-i inputfile -o outputfile] [options...]
 input/output options:
 -i file         input file, anything that ffmpeg can read will do
 -o file         output file, recommended formats are .MP4 and .MKV
--o pipe:0       output to pipe in raw YUV444P format
-                forward to other software, for example ffmpeg through
-                -f rawvideo -framerate n -pix_fmt yuv444p -video_size w:h
-                note: does not work on windows PowerShell, use cmd shell
--o null         do not write any output
+-o file.yuv     write uncompressed YUV444P video data to given file
+-o pipe:        output to pipe in raw YUV444P format
+                use for example to connect to ffmpeg for processing via
+                -f rawvideo -video_size w:h -framerate n -pix_fmt yuv444p 
+                note: does not work on Windows PowerShell, use cmd instead
 -o fmt.jpg      output a sequence of images in jpeg format
                 format see below for bmp images
 -o fmt.bmp      output a sequence of images in 8bit bmp format
                 fmt must contain a number formatting sequence
                 example: -o im%03d.bmp will produce 3 digits with leading 0
+-o null         do not write any output
 
 computing options:
 -device n       device to use for stabilization computations

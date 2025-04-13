@@ -32,4 +32,6 @@ signals:
 
 protected:
     void mousePressEvent(QMouseEvent* event);
+
+    void keyPressEvent(QKeyEvent* event);
 };

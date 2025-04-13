@@ -105,10 +105,11 @@
     </Link>
     <PostBuildEvent>
       <Command>copy $(OutDir)cuvistaGui.exe $(SolutionDir)bin\$(Platform)\Deploy
-copy $(FFMPEG_PATH)\bin\*.dll $(SolutionDir)bin\$(Platform)\Deploy</Command>
+copy $(FFMPEG_PATH)\bin\*.dll $(SolutionDir)bin\$(Platform)\Deploy
+</Command>
     </PostBuildEvent>
     <PostBuildEvent>
-      <Message>copy files to deploy</Message>
+      <Message>copy to deploy dir</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'" Label="Configuration">

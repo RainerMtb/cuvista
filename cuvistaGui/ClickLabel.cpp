@@ -17,10 +17,20 @@
  */
 
 #include "ClickLabel.h"
+#include <QKeyEvent>
 
 ClickLabel::ClickLabel(QWidget* parent) :
-    QLabel(parent) {}
+    QLabel(parent) 
+{}
 
+//forward mouse click to click signal
 void ClickLabel::mousePressEvent(QMouseEvent* event) {
     clicked();
+}
+
+//forward keys to click signal
+void ClickLabel::keyPressEvent(QKeyEvent* event) {
+    if (event->key() == Qt::Key::Key_Space || event->key() == Qt::Key::Key_Enter || event->key() == Qt::Key::Key_Return) {
+        clicked();
+    }
 }
