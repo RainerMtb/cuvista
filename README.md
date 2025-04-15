@@ -9,8 +9,13 @@ I put in great effort to ensure that on all platforms the stabilization results 
 
 Have a look at a sample video comparing an original recording side by side to the stabilized version:
 
+
 <a href="http://www.youtube.com/watch?feature=player_embedded&v=kD84VqBurZc" target="_blank">
-<img src="http://img.youtube.com/vi/kD84VqBurZc/mqdefault.jpg" alt="Cuvista Demo" width="320" height="160" border="10"/>
+<img src="http://img.youtube.com/vi/kD84VqBurZc/mqdefault.jpg" alt="Cuvista Demo" width="340" height="170" border="10"/>
+</a>
+
+<a href="http://www.youtube.com/watch?feature=player_embedded&v=kBkYwDKidPA" target="_blank">
+<img src="http://img.youtube.com/vi/kBkYwDKidPA/mqdefault.jpg" alt="Cuvista Demo" width="340" height="170" border="10"/>
 </a>
 
 ## GPU Support
