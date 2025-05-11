@@ -148,8 +148,10 @@ __global__ void kernel_warp_back_3(cudaTextureObject_t texObj, cuMatf4 dest, Aff
 	double x = blockIdx.x * blockDim.x + threadIdx.x;
 	double y = blockIdx.y * blockDim.y + threadIdx.y;
 
-	float xx = (float) (__fma_rn(x, trf.m00, __fma_rn(y, trf.m01, trf.m02)));
-	float yy = (float) (__fma_rn(x, trf.m10, __fma_rn(y, trf.m11, trf.m12)));
+	//float xx = x * trf.m00 + y + trf.m01 * trf.m02;
+	//float yy = x * trf.m10 + y + trf.m11 * trf.m12;
+	float xx = (float) (__fma_rz(x, trf.m00, __fma_rz(y, trf.m01, trf.m02)));
+	float yy = (float) (__fma_rz(x, trf.m10, __fma_rz(y, trf.m11, trf.m12)));
 	if (x < dest.w && y < dest.h && xx >= 0.0f && xx <= dest.w - 1 && yy >= 0.0f && yy <= dest.h - 1) {
 		//dest.at(y, x) = tex2D<float>(texObj, xx + 0.5f, yy + 0.5f); //linear interpolation does not match
 		dest.at(y, x) = tex2Dinterp_3(texObj, xx, yy);

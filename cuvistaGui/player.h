@@ -36,12 +36,15 @@ class PlayerWindow : public QMainWindow {
 
 private:
     Ui::playerWindow ui;
+    QPixmap mSpeakerOn = QPixmap(":/cuvistaGui/res/09_speaker_on.png");
+    QPixmap mSpeakerOff = QPixmap(":/cuvistaGui/res/09_speaker_off.png");
 
 public:
     QAtomicInt isPaused;
+    bool hasAudio = false;
 
     PlayerWindow(QWidget* parent);
-    void open(const QVideoFrame& videoFrame);
+    void open(const QVideoFrame& videoFrame, bool hasAudio);
     void closeEvent(QCloseEvent* event) override;
     int getAudioVolume();
 
@@ -82,7 +85,7 @@ public:
     void open(EncodingOption videoCodec) override;
     void start() override;
     void prepareOutput(FrameExecutor& executor) override;
-    void write(const FrameExecutor& executor) override;
+    void writeOutput(const FrameExecutor& executor) override;
     bool startFlushing() override;
     bool flush() override;
 

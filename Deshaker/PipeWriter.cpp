@@ -56,7 +56,7 @@ PipeWriter::~PipeWriter() {}
 
 #endif
 
-void PipeWriter::write(const FrameExecutor& executor) {
+void PipeWriter::writeOutput(const FrameExecutor& executor) {
 	const unsigned char* src = outputFrame.data();
 	size_t bytes = 0;
 	
@@ -68,6 +68,8 @@ void PipeWriter::write(const FrameExecutor& executor) {
 	if (bytes != 3ull * outputFrame.w * outputFrame.h) {
 		errorLogger().logError("Pipe: error writing data");
 	}
+
+	std::unique_lock<std::mutex> lock(mStatsMutex);
 	outputBytesWritten += bytes;
 	this->frameIndex++;
 }

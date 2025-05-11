@@ -43,7 +43,7 @@ public:
 	static Affine2D fromParam(double scale, double rot, double dx, double dy);
 
 	//add values to identity transform
-	static Affine2D fromValues(double scale, double rot, double dx, double dy);
+	static Affine2D setTransforms(double scale, double rot, double dx, double dy);
 
 	//identity transform
 	static Affine2D identity();

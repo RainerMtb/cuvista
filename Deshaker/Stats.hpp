@@ -42,11 +42,9 @@ public:
 
 class WriterStats {
 public:
+	std::mutex mStatsMutex;
 	int64_t frameIndex = 0;
 	int64_t frameEncoded = 0;
 	int64_t encodedBytesTotal = 0;
 	int64_t outputBytesWritten = 0;
-
-	int64_t encodedDts = 0;
-	int64_t encodedPts = 0;
 };

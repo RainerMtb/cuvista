@@ -30,7 +30,7 @@ void StackedWriter::prepareOutput(FrameExecutor& executor) {
 	executor.getOutputYuv(frameIndex, mOutputFrame);
 }
 
-void StackedWriter::write(const FrameExecutor& executor) {
+void StackedWriter::writeOutput(const FrameExecutor& executor) {
 	executor.getInput(frameIndex, mInputFrame);
 
 	int bufferIndex = 0;

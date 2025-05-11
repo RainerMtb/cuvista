@@ -42,14 +42,17 @@ void Affine2D::setParam(double m00, double m01, double m02, double m10, double m
 	array[6] = 0;     array[7] = 0;     array[8] = 1;
 }
 
+//set parameters directly
 Affine2D Affine2D::fromParam(double scale, double rot, double dx, double dy) {
 	return Affine2D().setParam(scale, rot, dx, dy);
 }
 
-Affine2D Affine2D::fromValues(double scale, double rot, double dx, double dy) {
+//set new transform, one parameter after the other
+Affine2D Affine2D::setTransforms(double scale, double rot, double dx, double dy) {
 	return Affine2D().addTranslation(dx, dy).addRotation(rot).addZoom(scale);
 }
 
+//reset to identity transform
 Affine2D& Affine2D::reset() {
 	setValuesByRow({ 1, 0, 0, 0, 1, 0, 0, 0, 1 });
 	return *this;
@@ -100,6 +103,8 @@ Point Affine2D::transform(const Point& p) const {
 }
 
 Point Affine2D::transform(double x0, double y0) const {
+	//double x = x0 * at(0, 0) + y0 + at(0, 1) * at(0, 2);
+	//double y = x0 * at(1, 0) + y0 + at(1, 1) * at(1, 2);
 	double x = std::fma(x0, at(0, 0), std::fma(y0, at(0, 1), at(0, 2)));
 	double y = std::fma(x0, at(1, 0), std::fma(y0, at(1, 1), at(1, 2)));
 	return { x, y };

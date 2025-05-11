@@ -176,7 +176,7 @@ void analyzeFrames() {
 	data.collectDeviceInfo();
 	data.validate(reader);
 	ResultImageWriter writer(data);
-	writer.open();
+	writer.start();
 	MovieFrameCombined frame(data, reader, writer);
 	std::unique_ptr<FrameExecutor> executor = std::make_unique<CpuFrame>(data, *data.deviceList[0], frame, frame.mPool);
 
@@ -201,7 +201,7 @@ void analyzeFrames() {
 			const AffineTransform& finalTransform = frame.mTrajectory.getTransform(data, writer.frameIndex);
 			executor->outputData(writer.frameIndex, finalTransform);
 			writer.prepareOutput(*executor);
-			writer.write(*executor);
+			writer.writeOutput(*executor);
 		} else {
 			frame.mTrajectory.addTrajectoryTransform(AffineTransform());
 			writer.frameIndex++;

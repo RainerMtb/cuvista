@@ -31,6 +31,9 @@ void __trap();
 long long int clock64();
 float __saturatef(float);
 double __fma_rn(double, double, double);
+double __fma_rz(double, double, double);
+double __fma_ru(double, double, double);
+double __fma_rd(double, double, double);
 double min(double, double);
 double max(double, double);
 

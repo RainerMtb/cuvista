@@ -43,6 +43,8 @@ std::stringstream& ProgressDisplayConsole::buildMessageLine(double totalPercenta
 		buffer << "frames in " << frame.mReader.frameIndex;
 	if (frame.mWriter.frameIndex > 0)
 		buffer << ", frames out " << frame.mWriter.frameIndex;
+
+	std::unique_lock<std::mutex> lock(frame.mWriter.mStatsMutex);
 	if (frame.mWriter.outputBytesWritten > 0)
 		buffer << ", output written " << util::byteSizeToString(frame.mWriter.outputBytesWritten);
 	return buffer;
@@ -180,6 +182,7 @@ std::string ProgressDisplayMultiLine::buildLine(int64_t frameIndex, int64_t fram
 }
 
 std::string ProgressDisplayMultiLine::buildMessage() {
+	std::unique_lock<std::mutex> lock(frame.mWriter.mStatsMutex);
 	int64_t graphLength = getConsoleWidth() - 25LL;
 	return std::format("\x0D\x1B[2K{}\n\x0D\x1B[2Kinput   {}\n\x0D\x1B[2Koutput  {}\n\x0D\x1B[2Kencoded {}\n\x0D\x1B[2Koutput written {}\n",
 		statusMessage,

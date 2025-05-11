@@ -145,7 +145,7 @@ void CudaFFmpegWriter::encodePackets() {
 }
 
 
-void CudaFFmpegWriter::write(const FrameExecutor& executor) {
+void CudaFFmpegWriter::writeOutput(const FrameExecutor& executor) {
     encodePackets();
     encodingQueue.push_back(encoderPool.add([this, pkts = *nvPackets] { writePacketsToFile(pkts, false); }));
     encodingQueue.front().wait();

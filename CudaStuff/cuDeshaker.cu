@@ -491,8 +491,6 @@ void CudaExecutor::cudaOutputData(int64_t frameIndex, const AffineCore& trf) {
 	cu::filter_32f_v_3(out.filterH, out.filterV, cudaData.strideFloat4N, w, h, cs[1]);
 	//combine unsharp mask
 	cu::unsharp_32f_3(out.warped, out.filterV, out.final, cudaData.strideFloat4N, w, h, cs[1]);
-
-	//writeText(std::to_string(frameIdx), 10, 10, 2, 3, bufferFrames[18], mData);
 }
 
 void CudaExecutor::getOutputYuv(int64_t frameIndex, ImageYuvData& image) {

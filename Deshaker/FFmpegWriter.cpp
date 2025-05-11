@@ -187,7 +187,7 @@ void FFmpegWriter::write(int bufferIndex) {
 }
 
 
-void FFmpegWriter::write(const FrameExecutor& executor) {
+void FFmpegWriter::writeOutput(const FrameExecutor& executor) {
     assert(frameIndex == this->frameIndex && "invalid frame index");
     int idx = frameIndex % imageBufferSize;
     write(idx);

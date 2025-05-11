@@ -173,7 +173,7 @@ void Trajectory::readTransforms(std::map<int64_t, TransformValues> transformsMap
 double Trajectory::calcRequiredZoom(double dx, double dy, double rot, double w, double h) {
 	double w2 = w / 2.0;
 	double h2 = h / 2.0;
-	Affine2D trf = Affine2D::fromValues(1.0, -rot, dx, dy);
+	Affine2D trf = Affine2D::setTransforms(1.0, -rot, dx, dy);
 	std::vector<Point> corners = { {w2, h2}, {-w2, h2}, {-w2, -h2}, {w2, -h2}, {w2, h2} };
 	std::vector<Point> transformedCorners(5);
 	for (int i = 0; i < 5; i++) transformedCorners[i] = trf.transform(corners[i]);

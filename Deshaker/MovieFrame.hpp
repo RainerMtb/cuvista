@@ -98,7 +98,7 @@ public:
 	std::string ptsForFrameAsString(int64_t frameIndex) const;
 
 	//run loop in subclass
-	virtual void runLoop(std::shared_ptr<ProgressBase> progress, UserInput& input, AuxWriters& auxWriters, std::shared_ptr<FrameExecutor> executor) {}
+	virtual void runLoop(std::shared_ptr<ProgressBase> progress, UserInput& input, std::shared_ptr<FrameExecutor> executor) {}
 };
 
 
@@ -107,7 +107,7 @@ public:
 	MovieFrameCombined(MainData& data, MovieReader& reader, MovieWriter& writer) :
 		MovieFrame(data, reader, writer) {}
 
-	void runLoop(std::shared_ptr<ProgressBase> progress, UserInput& input, AuxWriters& auxWriters, std::shared_ptr<FrameExecutor> executor) override;
+	void runLoop(std::shared_ptr<ProgressBase> progress, UserInput& input, std::shared_ptr<FrameExecutor> executor) override;
 };
 
 
@@ -116,5 +116,5 @@ public:
 	MovieFrameConsecutive(MainData& data, MovieReader& reader, MovieWriter& writer) :
 		MovieFrame(data, reader, writer) {}
 
-	void runLoop(std::shared_ptr<ProgressBase> progress, UserInput& input, AuxWriters& auxWriters, std::shared_ptr<FrameExecutor> executor) override;
+	void runLoop(std::shared_ptr<ProgressBase> progress, UserInput& input, std::shared_ptr<FrameExecutor> executor) override;
 };

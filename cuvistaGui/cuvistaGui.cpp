@@ -367,12 +367,10 @@ void cuvistaGui::stabilize() {
 
     //set up worker thread
     auto fcn = [&] {
-        //no secondary writers
-        AuxWriters writers;
         //init writer on executor thread
         mWriter->start();
         //run loop
-        mFrame->runLoop(mProgress, mInputHandler, writers, mExecutor);
+        mFrame->runLoop(mProgress, mInputHandler, mExecutor);
     };
     mThread = QThread::create(fcn);
     connect(mThread, &QThread::finished, this, &cuvistaGui::done);

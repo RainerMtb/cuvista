@@ -52,7 +52,6 @@ int main() {
 		if (entry.is_regular_file()) std::filesystem::remove(entry);
 	}
 
-	/*
 	std::cout << "--- Short Runs ---" << std::endl;
 	run("-frames 0 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/00.mp4 -noheader -progress 0 -y");
 	run("-frames 1 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/00.mp4 -noheader -progress 0 -y");
@@ -105,7 +104,6 @@ int main() {
 	std::cout << "--- Misc ---" << std::endl;
 	run("-device 2 -stack 0 -i d:/VideoTest/06.mp4 -o d:/videoTest/out/06_stack.mp4 -noheader -progress 0");
 	run("-device 2 -i d:/VideoTest/01.mp4 -o null -flow d:/videoTest/out/flow.mp4 -noheader -progress 0");
-	*/
 
 	std::cout << "--- Check Equal Files ---" << std::endl;
 	std::vector<std::string> commands = {
@@ -143,8 +141,13 @@ int main() {
 			crc.add(ti.zoom);
 			crc.add(ti.zoomRequired);
 		}
-		std::cout << std::hex << "trajectory crc expected: " << crcTrajectory << ", actual crc: " << crc
-			<< std::boolalpha << ", crc match: " << (crcTrajectory == crc) << std::endl;
+
+		{
+			bool match = crcTrajectory == crc;
+			std::string color = match ? "\x1b[1;32m" : "\x1b[1;31m";
+			std::cout << color << std::hex << "trajectory crc expected: " << crcTrajectory << ", actual crc: " << crc
+				<< std::boolalpha << ", crc match: " << match << "\x1b[0m" << std::endl;
+		}
 
 
 		util::CRC64 crcyuv;
@@ -154,8 +157,12 @@ int main() {
 		infile.read(reinterpret_cast<char*>(data.data()), data.size());
 		crcyuv.addBytes(data.data(), data.size());
 
-		std::cout << std::hex << "yuv file crc expected: " << crcFile << ", actual crc: " << crcyuv
-			<< std::boolalpha << ", crc match: " << (crcFile == crcyuv) << std::endl;
+		{
+			bool match = crcFile == crcyuv;
+			std::string color = match ? "\x1b[1;32m" : "\x1b[1;31m";
+			std::cout << color << std::hex << "yuv file crc expected: " << crcFile << ", actual crc: " << crcyuv
+				<< std::boolalpha << ", crc match: " << match << "\x1b[0m" << std::endl;
+		}
 	}
 
 	return 0;

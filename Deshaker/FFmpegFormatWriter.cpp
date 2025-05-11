@@ -352,10 +352,18 @@ void FFmpegFormatWriter::writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsI
     //STEP 1: looking at input stream
     //set pts and dts with respect to input timebase
     auto compareFunc = [&] (const VideoPacketContext& ctx) { return ctx.readIndex == ptsIdx; }; //sometimes wrong, check for increasing pts values
-    auto vpc = std::find_if(mReader.mVideoPacketList.cbegin(), mReader.mVideoPacketList.cend(), compareFunc);
-    encodedFrame = *vpc; //store for debugging
+    VideoPacketContext vpc = {};
+    {
+        std::unique_lock<std::mutex> lock(mReader.mVideoPacketMutex);
+        //search for packet info
+        auto vpcIter = std::find_if(mReader.mVideoPacketList.cbegin(), mReader.mVideoPacketList.cend(), compareFunc);
+        //store
+        vpc = *vpcIter;
+        //delete from input list
+        mReader.mVideoPacketList.erase(vpcIter);
+    }
 
-    int64_t pts = vpc->pts - videoInputStream->start_time;
+    int64_t pts = vpc.pts - videoInputStream->start_time;
     //offset pts to always start at 0
     pkt->pts = pts;
     //calculate dts with offset to pts coming from current encoder
@@ -363,7 +371,7 @@ void FFmpegFormatWriter::writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsI
     AVRational r2 = videoInputStream->time_base;
     pkt->dts = pts - av_rescale_q(ptsIdx - dtsIdx, r1, r2);
     //copy duration from input
-    pkt->duration = vpc->duration;
+    pkt->duration = vpc.duration;
     //std::printf("pktpts=%zd pktdts=%zd dur=%zd\n", pkt->pts, pkt->dts, pkt->duration);
 
     //STEP 2: convert to output timebase
@@ -408,23 +416,18 @@ void FFmpegFormatWriter::writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsI
     //static std::ofstream testFile("f:/test.h265", std::ios::binary);
     //testFile.write(reinterpret_cast<char*>(videoPacket->data), videoPacket->size);
 
-    //delete from input list
-    mReader.mVideoPacketList.erase(vpc);
-
     //store stats
     int encodedBytes = pkt->size;
-    encodedDts = pkt->dts;
-    encodedPts = pkt->pts;
-    //static std::ofstream time("f:/time.txt");
-    //time << frameEncoded << " " << pkt->pts << " " << pkt->dts << std::endl;
+    //static std::ofstream time("f:/time.txt"); time << frameEncoded << " " << pkt->pts << " " << pkt->dts << std::endl;
 
-    //write packet to output
+    //write packet to output, this will unref packet data
     writePacket(pkt);
+
+    //update stats
+    std::unique_lock<std::mutex> lock(mStatsMutex);
     encodedBytesTotal += encodedBytes;
     outputBytesWritten = avio_tell(fmt_ctx->pb);
-
-    //advance encoded counter
-    this->frameEncoded++;
+    frameEncoded++;
 }
 
 //close ffmpeg format
@@ -443,6 +446,7 @@ FFmpegFormatWriter::~FFmpegFormatWriter() {
         av_packet_free(&videoPacket);
     }
     if (fmt_ctx) {
-        avformat_free_context(fmt_ctx);
+        avformat_close_input(&fmt_ctx); //free_context does not properly close the output file
+        avformat_free_context(fmt_ctx); //release all resources of the output file
     }
 }

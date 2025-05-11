@@ -39,7 +39,7 @@ public:
 
 	void open(EncodingOption videoCodec) override;
 	void prepareOutput(FrameExecutor& executor) override;
-	void write(const FrameExecutor& executor) override;
+	void writeOutput(const FrameExecutor& executor) override;
 	bool startFlushing() override;
 	bool flush() override;
 };

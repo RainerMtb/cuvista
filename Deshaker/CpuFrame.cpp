@@ -248,13 +248,18 @@ void CpuFrame::outputData(int64_t frameIndex, const Affine2D& trf) {
 	size_t yuvidx = frameIndex % mYUV.size();
 	const ImageYuv& input = mYUV[yuvidx];
 	for (size_t z = 0; z < 3; z++) {
-		float f = 1.0f / 255.0f;
+		constexpr float f = 1.0f / 255.0f;
 		mYuvPlane.setValues([&] (size_t r, size_t c) { return input.at(z, r, c) * f; }, mPool);
 		//transform and evaluate pixels, write to out buffer
 		auto func1 = [&] (size_t r, size_t c) {
 			float bg = (mData.bgmode == BackgroundMode::COLOR ? mData.bgcol_yuv.colors[z] : mPrevOut[z].at(r, c));
 			auto [x, y] = trf.transform(c, r); //pay attention to order of x and y
-			return mYuvPlane.interp2(float(x), float(y)).value_or(bg);
+			float result = mYuvPlane.interp2(float(x), float(y)).value_or(bg);
+			//if (z == 0 && r == 1049 && c == 842) {
+			//	float result = mYuvPlane.interp2(float(x), float(y)).value_or(bg);
+			//	std::printf(" cpu %.14f %.14f %.14f %.14f\n", float(x), float(y), mYuvPlane.at(r, c), result);
+			//}
+			return result;
 		};
 		Matf& buf = mBuffer[z];
 		buf.setValues(func1, mPool);
@@ -274,7 +279,7 @@ void CpuFrame::outputData(int64_t frameIndex, const Affine2D& trf) {
 				float val = buf.at(r, c) + (buf.at(r, c) - mFilterResult.at(r, c)) * mData.unsharp[z];
 				val = std::clamp(val, 0.0f, 1.0f);
 				mOutput.at(z, r, c) = (unsigned char) std::rint(val * 255);
-				//if (r==755 && c==478) std::printf("cpu %.14f %d\n", val * 255, yuvrow[c]);
+				//if (z==0 && r==1049 && c==842) std::printf("cpu %.14f %d\n", val * 255, mOutput.at(z, r, c));
 			}
 		};
 		//forward to thread pool for iteration there

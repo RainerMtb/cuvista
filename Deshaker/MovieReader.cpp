@@ -36,6 +36,7 @@ std::future<void> MovieReader::readAsync(ImageYuv& inputFrame) {
 
 std::optional<int64_t> MovieReader::ptsForFrameAsMillis(int64_t frameIndex) {
     auto fcn = [&] (const VideoPacketContext& vpc) { return vpc.readIndex == frameIndex; };
+    std::unique_lock<std::mutex> lock(mVideoPacketMutex);
     auto result = std::find_if(mVideoPacketList.cbegin(), mVideoPacketList.cend(), fcn);
     if (result != mVideoPacketList.end()) {
         return result->bestTimestamp * 1000 * videoStream->time_base.num / videoStream->time_base.den;
@@ -243,8 +244,10 @@ void FFmpegFormatReader::close() {
     avcodec_free_context(&av_codec_ctx);
     av_packet_free(&av_packet);
     av_frame_free(&av_frame);
-    if (isFormatOpen) avformat_close_input(&av_format_ctx);
-    if (isFormatOpen) avformat_free_context(av_format_ctx);
+    if (isFormatOpen) {
+        avformat_close_input(&av_format_ctx);
+        avformat_free_context(av_format_ctx);
+    }
 }
 
 
@@ -405,6 +408,7 @@ bool FFmpegReader::read(ImageYuv& inputFrame) {
 
         //store parameters for writer
         int64_t timestamp = av_frame->best_effort_timestamp - videoStream->start_time;
+        std::unique_lock<std::mutex> lock(mVideoPacketMutex);
         mVideoPacketList.emplace_back(frameIndex, av_frame->pts, av_frame->pkt_dts, av_frame->duration, timestamp);
 
         //in some cases pts values are not in proper sequence, but frames decoded by ffmpeg are indeed in correct order

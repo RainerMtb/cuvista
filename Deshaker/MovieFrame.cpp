@@ -78,7 +78,7 @@ const AffineTransform& MovieFrame::getTransform() const {
 //---------- DESHAKER LOOP COMBINED -----------------------------
 //---------------------------------------------------------------
 
-void MovieFrameCombined::runLoop(std::shared_ptr<ProgressBase> progress, UserInput& input, AuxWriters& auxWriters, std::shared_ptr<FrameExecutor> executor) {
+void MovieFrameCombined::runLoop(std::shared_ptr<ProgressBase> progress, UserInput& input, std::shared_ptr<FrameExecutor> executor) {
 	InputState inputState = InputState::NONE;
 	StateCombined state = StateCombined::READ_FIRST;
 	bool hasFramesToFlush = false;
@@ -109,7 +109,7 @@ void MovieFrameCombined::runLoop(std::shared_ptr<ProgressBase> progress, UserInp
 			mTrajectory.addTrajectoryTransform(mFrameResult.getTransform());
 			//begin computing smooth transform
 			if (mReader.frameIndex > mData.radius) mTrajectory.computeSmoothTransform(mData, mReader.frameIndex - mData.radius - 1);
-			auxWriters.writeAll(*executor);
+			mWriter.writeInput(*executor);
 			//compute flow for current frame
 			executor->computeStart(mReader.frameIndex, mResultPoints);
 			executor->computeTerminate(mReader.frameIndex, mResultPoints);
@@ -137,9 +137,8 @@ void MovieFrameCombined::runLoop(std::shared_ptr<ProgressBase> progress, UserInp
 			const AffineTransform& finalTransform = mTrajectory.getTransform(mData, mWriter.frameIndex);
 			executor->outputData(mWriter.frameIndex, finalTransform);
 			mWriter.prepareOutput(*executor);
-			//write output
-			mWriter.write(*executor);
-			auxWriters.writeAll(*executor);
+			mWriter.writeOutput(*executor);
+			mWriter.writeInput(*executor);
 			//get computed flow for current frame
 			executor->computeTerminate(readIndex, mResultPoints);
 			//wait for async read to complete
@@ -158,15 +157,15 @@ void MovieFrameCombined::runLoop(std::shared_ptr<ProgressBase> progress, UserInp
 			const AffineTransform& finalTransform = mTrajectory.getTransform(mData, mWriter.frameIndex);
 			executor->outputData(mWriter.frameIndex, finalTransform);
 			mWriter.prepareOutput(*executor);
-			mWriter.write(*executor);
-			auxWriters.writeAll(*executor);
+			mWriter.writeOutput(*executor);
+			mWriter.writeInput(*executor);
 
 		} else if (state == StateCombined::DRAIN_BUFFER) {
 			mTrajectory.computeSmoothZoom(mData, mWriter.frameIndex);
 			const AffineTransform& tf = mTrajectory.getTransform(mData, mWriter.frameIndex);
 			executor->outputData(mWriter.frameIndex, tf);
 			mWriter.prepareOutput(*executor);
-			mWriter.write(*executor);
+			mWriter.writeOutput(*executor);
 
 		} else if (state == StateCombined::QUIT) {
 			//start to flush the writer
@@ -246,7 +245,7 @@ void MovieFrameCombined::runLoop(std::shared_ptr<ProgressBase> progress, UserInp
 // -------- DESHAKER LOOP CONSECUTIVE-------
 // -----------------------------------------
 
-void MovieFrameConsecutive::runLoop(std::shared_ptr<ProgressBase> progress, UserInput& input, AuxWriters& auxWriters, std::shared_ptr<FrameExecutor> executor) {
+void MovieFrameConsecutive::runLoop(std::shared_ptr<ProgressBase> progress, UserInput& input, std::shared_ptr<FrameExecutor> executor) {
 	InputState inputState = InputState::NONE;
 	StateConsecutive state = StateConsecutive::READ_FIRST;
 	bool hasFramesToFlush = false;
@@ -273,7 +272,7 @@ void MovieFrameConsecutive::runLoop(std::shared_ptr<ProgressBase> progress, User
 			executor->createPyramid(mReader.frameIndex);
 			mReader.read(mBufferFrame); //read second frame
 			mTrajectory.addTrajectoryTransform({}); //first frame has no transform applied
-			auxWriters.writeAll(*executor);
+			mWriter.writeInput(*executor);
 
 		} else if (state == StateConsecutive::READ) {
 			//main loop, compute frame, read one frame ahead async
@@ -286,7 +285,7 @@ void MovieFrameConsecutive::runLoop(std::shared_ptr<ProgressBase> progress, User
 			executor->computeTerminate(idx, mResultPoints);
 			computeTransform(idx);
 			mTrajectory.addTrajectoryTransform(mFrameResult.getTransform());
-			auxWriters.writeAll(*executor);
+			mWriter.writeInput(*executor);
 			f.wait();
 
 		} else if (state == StateConsecutive::WRITE_INIT) {
@@ -307,7 +306,7 @@ void MovieFrameConsecutive::runLoop(std::shared_ptr<ProgressBase> progress, User
 			const AffineTransform& tf = mTrajectory.getTransform(mData, mWriter.frameIndex);
 			executor->outputData(mWriter.frameIndex, tf);
 			mWriter.prepareOutput(*executor);
-			mWriter.write(*executor);
+			mWriter.writeOutput(*executor);
 			mReader.read(mBufferFrame);
 
 		} else if (state == StateConsecutive::QUIT) {

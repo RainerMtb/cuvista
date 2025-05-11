@@ -40,14 +40,13 @@ public:
 
 	virtual ~MovieWriter() = default;
 	virtual void open(EncodingOption videoCodec) {}
-	virtual void open() {}
 	virtual void start() {}
+	virtual void writeInput(const FrameExecutor& executor) {}
 	virtual void prepareOutput(FrameExecutor& executor) {}
-	virtual void write(const FrameExecutor& executor) { frameIndex++; }
+	virtual void writeOutput(const FrameExecutor& executor) { frameIndex++; }
 	virtual bool startFlushing() { return false; }
 	virtual bool flush() { return false; }
 };
-
 
 //-----------------------------------------------------------------------------------
 class NullWriter : public MovieWriter {
@@ -59,6 +58,30 @@ public:
 	NullWriter(MainData& data, MovieReader& reader) :
 		MovieWriter(data),
 		mReader { reader } {}
+};
+
+
+//-----------------------------------------------------------------------------------
+class MovieWriterCollection : public NullWriter {
+
+private:
+	std::shared_ptr<MovieWriter> mainWriter;
+	std::list<std::shared_ptr<MovieWriter>> auxWriters;
+
+	void updateStats();
+
+public:
+	MovieWriterCollection(MainData& data, MovieReader& reader, std::shared_ptr<MovieWriter> mainWriter);
+
+	void addWriter(std::shared_ptr<MovieWriter> writer);
+
+	void open(EncodingOption encodingOption) override;
+	void start() override;
+	void writeInput(const FrameExecutor& executor) override;
+	void prepareOutput(FrameExecutor& executor) override;
+	void writeOutput(const FrameExecutor& executor) override;
+	bool startFlushing() override;
+	bool flush() override;
 };
 
 
@@ -75,7 +98,7 @@ public:
 
 	const ImageYuv& getOutputFrame() { return outputFrame; }
 	void prepareOutput(FrameExecutor& executor) override;
-	void write(const FrameExecutor& executor) override;
+	void writeOutput(const FrameExecutor& executor) override;
 };
 
 
@@ -108,7 +131,7 @@ public:
 
 	~BmpImageWriter() override;
 	void prepareOutput(FrameExecutor& executor) override;
-	void write(const FrameExecutor& executor) override;
+	void writeOutput(const FrameExecutor& executor) override;
 };
 
 
@@ -126,7 +149,7 @@ public:
 
 	~JpegImageWriter() override;
 	void open(EncodingOption videoCodec) override;
-	void write(const FrameExecutor& executor) override;
+	void writeOutput(const FrameExecutor& executor) override;
 };
 
 
@@ -141,7 +164,7 @@ public:
 		BaseWriter(data, reader) {}
 
 	void open(EncodingOption videoCodec) override;
-	void write(const FrameExecutor& executor) override;
+	void writeOutput(const FrameExecutor& executor) override;
 };
 
 
@@ -154,7 +177,7 @@ public:
 
 	~PipeWriter() override;
 	void open(EncodingOption videoCodec) override;
-	void write(const FrameExecutor& executor) override;
+	void writeOutput(const FrameExecutor& executor) override;
 };
 
 
@@ -191,9 +214,6 @@ protected:
 	void writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsIdx, bool terminate);
 	void transcodeAudio(AVPacket* pkt, OutputStreamContext& osc, bool terminate);
 	AVStream* newStream(AVFormatContext* fmt_ctx, AVStream* inStream);
-
-private:
-	VideoPacketContext encodedFrame = {};
 };
 
 
@@ -232,7 +252,7 @@ public:
 	~FFmpegWriter() override;
 	void open(EncodingOption videoCodec) override;
 	void prepareOutput(FrameExecutor& executor) override;
-	void write(const FrameExecutor& executor) override;
+	void writeOutput(const FrameExecutor& executor) override;
 	bool startFlushing() override;
 	bool flush() override;
 };
@@ -260,7 +280,7 @@ public:
 
 	void open(EncodingOption videoCodec) override;
 	void prepareOutput(FrameExecutor& executor) override;
-	void write(const FrameExecutor& executor) override;
+	void writeOutput(const FrameExecutor& executor) override;
 };
 
 
@@ -285,44 +305,21 @@ public:
 };
 
 
-//------------- write binary transformation file ------------------------------------
-class TransformsWriterMain : public MovieWriter, public TransformsFile {
-
-public:
-	TransformsWriterMain(MainData& data, MovieReader& reader) :
-		MovieWriter(data),
-		TransformsFile() {}
-
-	void open(EncodingOption videoCodec) override; //for use as a main writer
-	void write(const FrameExecutor& executor) override;
-};
-
-
-//signature class
-class AuxiliaryWriter {
-
-public:
-	virtual void open() = 0;
-	virtual void write(const FrameExecutor& executor) = 0;
-	virtual ~AuxiliaryWriter() {};
-};
-
-
 //--------------- write transforms --------------------------------------------------
-class AuxTransformsWriter : public MovieWriter, public TransformsFile, public AuxiliaryWriter {
+class TransformsWriter : public MovieWriter, public TransformsFile {
 
 public:
-	AuxTransformsWriter(MainData& data) :
+	TransformsWriter(MainData& data) :
 		MovieWriter(data),
 		TransformsFile() {}
 
-	void open() override;
-	void write(const FrameExecutor& executor) override;
+	void start() override;
+	void writeInput(const FrameExecutor& executor) override;
 };
 
 
 //optical flow video
-class OpticalFlowWriter : public FFmpegWriter, public AuxiliaryWriter {
+class OpticalFlowWriter : public FFmpegWriter {
 
 private:
 	int legendSizeBase = 64;
@@ -334,7 +331,7 @@ protected:
 	ImageRGBA imageInterpolated;
 	ImageRGBplanar imageResults;
 
-	void open(const std::string& sourceName, AVPixelFormat pixfmt);
+	void start(const std::string& sourceName, AVPixelFormat pixfmt);
 	void writeFlow(const MovieFrame& frame);
 	void writeAVFrame(AVFrame* av_frame);
 	void vectorToColor(double dx, double dy, unsigned char* r, unsigned char* g, unsigned char* b);
@@ -345,14 +342,17 @@ public:
 		imageInterpolated(data.h, data.w),
 		imageResults(data.iyCount, data.ixCount) {}
 
-	void open() override;
-	void write(const FrameExecutor& executor) override;
+	void open(EncodingOption videoCodec) override {}
+	void start() override;
+	void writeInput(const FrameExecutor& executor) override;
+	void prepareOutput(FrameExecutor& executor) override {}
+	void writeOutput(const FrameExecutor& executor) override {}
 	~OpticalFlowWriter();
 };
 
 
 //--------------- write point results as large text file ----------------------------
-class ResultDetailsWriter : public MovieWriter, public AuxiliaryWriter {
+class ResultDetailsWriter : public MovieWriter {
 
 private:
 	std::string mDelim = ";";
@@ -364,15 +364,15 @@ public:
 	ResultDetailsWriter(MainData& data) :
 		MovieWriter(data) {}
 
-	virtual void open() override;
-	virtual void write(const FrameExecutor& executor) override;
-
 	static void write(std::span<PointResult> results, const std::string& filename);
+
+	void start() override;
+	void writeInput(const FrameExecutor& executor) override;
 };
 
 
 //--------------- write individual images to show point results ---------------------
-class ResultImageWriter : public MovieWriter, public AuxiliaryWriter {
+class ResultImageWriter : public MovieWriter {
 
 private:
 	ImageYuv yuv;
@@ -384,16 +384,8 @@ public:
 		yuv(data.h, data.w),
 		bgr(data.h, data.w) {}
 
-	virtual void open() override {}
-	virtual void write(const FrameExecutor& executor) override;
+	void start() override {}
+	void writeInput(const FrameExecutor& executor) override;
 
 	void writeImage(const AffineTransform& trf, std::span<PointResult> res, int64_t idx, const ImageYuv& yuv, const std::string& fname);
-};
-
-
-//--------------- collection of auxiliary writer instances
-class AuxWriters : public std::vector<std::unique_ptr<AuxiliaryWriter>> {
-
-public:
-	void writeAll(const FrameExecutor& executor);
 };

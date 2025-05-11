@@ -44,9 +44,12 @@ PlayerWindow::PlayerWindow(QWidget* parent) :
     connect(ui.sliderVolume, &QSlider::valueChanged, this, &PlayerWindow::sigVolume);
 }
 
-void PlayerWindow::open(const QVideoFrame& videoFrame) {
+void PlayerWindow::open(const QVideoFrame& videoFrame, bool hasAudio) {
     ui.videoWidget->videoSink()->setVideoFrame(videoFrame);
     ui.lblStatus->setText("Buffering...");
+    ui.sliderVolume->setEnabled(hasAudio);
+    QPixmap speaker = hasAudio ? mSpeakerOn : mSpeakerOff;
+    ui.lblSpeaker->setPixmap(speaker.scaled(18, 18, Qt::KeepAspectRatio, Qt::SmoothTransformation));
 }
 
 void PlayerWindow::progress(QString str, QString status) {
@@ -130,7 +133,7 @@ void PlayerWriter::open(EncodingOption videoCodec) {
     }
 
     //open player window
-    mPlayer->open(mVideoFrame);
+    mPlayer->open(mVideoFrame, mPlayAudio);
     mPlayer->show();
 }
 
@@ -166,7 +169,7 @@ void PlayerWriter::prepareOutput(FrameExecutor& executor) {
 }
 
 //---- on frame executor thread
-void PlayerWriter::write(const FrameExecutor& executor) {
+void PlayerWriter::writeOutput(const FrameExecutor& executor) {
     //presentation time for next frame
     auto t1 = mReader.ptsForFrameAsMillis(frameIndex);
     auto t2 = mReader.ptsForFrameAsMillis(frameIndex + 1);
@@ -193,7 +196,6 @@ void PlayerWriter::write(const FrameExecutor& executor) {
     //set next presentation time
     mNextPts = tnow + std::chrono::milliseconds(delta);
     frameIndex++;
-    frameEncoded++;
 }
 
 //---- on frame executor thread

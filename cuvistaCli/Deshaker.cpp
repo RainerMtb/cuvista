@@ -37,11 +37,10 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 	data.console = console;
 
 	std::unique_ptr<MovieReader> reader;
-	std::unique_ptr<MovieWriter> writer;
+	std::unique_ptr<MovieWriterCollection> writer;
 	std::shared_ptr<ProgressDisplay> progress;
 	std::shared_ptr<FrameExecutor> executor;
 	std::shared_ptr<MovieFrame> frame;
-	AuxWriters auxWriters;
 
 	try {
 		data.probeOpenCl();
@@ -55,41 +54,41 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 		data.validate(*reader);
 
 		//----------- create appropriate MovieWriter
+		std::shared_ptr<MovieWriter> mainWriter;
 		if (data.stackPosition)
-			writer = std::make_unique<StackedWriter>(data, *reader, *data.stackPosition);
+			mainWriter = std::make_shared<StackedWriter>(data, *reader, *data.stackPosition);
 		else if (data.videoOutputType == OutputType::PIPE)
-			writer = std::make_unique<PipeWriter>(data, *reader);
+			mainWriter = std::make_shared<PipeWriter>(data, *reader);
 		else if (data.videoOutputType == OutputType::SEQUENCE_BMP)
-			writer = std::make_unique<BmpImageWriter>(data, *reader);
+			mainWriter = std::make_shared<BmpImageWriter>(data, *reader);
 		else if (data.videoOutputType == OutputType::SEQUENCE_JPG)
-			writer = std::make_unique<JpegImageWriter>(data, *reader);
+			mainWriter = std::make_shared<JpegImageWriter>(data, *reader);
 		else if (data.videoOutputType == OutputType::RAW_YUV_FILE)
-			writer = std::make_unique<RawWriter>(data, *reader);
+			mainWriter = std::make_shared<RawWriter>(data, *reader);
 		else if (data.videoOutputType == OutputType::VIDEO_FILE && data.selectedEncoding.device == EncodingDevice::CPU)
-			writer = std::make_unique<FFmpegWriter>(data, *reader);
+			mainWriter = std::make_shared<FFmpegWriter>(data, *reader);
 		else if (data.videoOutputType == OutputType::VIDEO_FILE && data.selectedEncoding.device == EncodingDevice::NVENC)
-			writer = std::make_unique<CudaFFmpegWriter>(data, *reader);
+			mainWriter = std::make_shared<CudaFFmpegWriter>(data, *reader);
 		else
-			writer = std::make_unique<BaseWriter>(data, *reader);
+			mainWriter = std::make_shared<BaseWriter>(data, *reader);
 
-		writer->open(data.requestedEncoding);
+		writer = std::make_unique<MovieWriterCollection>(data, *reader, mainWriter);
 
 		//----------- create secondary Writers
 		if (!data.trajectoryFile.empty()) {
-			auxWriters.push_back(std::make_unique<AuxTransformsWriter>(data));
+			writer->addWriter(std::make_shared<TransformsWriter>(data));
 		}
 		if (!data.resultsFile.empty()) {
-			auxWriters.push_back(std::make_unique<ResultDetailsWriter>(data));
+			writer->addWriter(std::make_unique<ResultDetailsWriter>(data));
 		}
 		if (!data.resultImageFile.empty()) {
-			auxWriters.push_back(std::make_unique<ResultImageWriter>(data));
+			writer->addWriter(std::make_unique<ResultImageWriter>(data));
 		}
 		if (!data.flowFile.empty()) {
-			auxWriters.push_back(std::make_unique<OpticalFlowWriter>(data, *reader));
+			writer->addWriter(std::make_unique<OpticalFlowWriter>(data, *reader));
 		}
-		for (auto& aw : auxWriters) {
-			aw->open();
-		}
+		writer->open(data.requestedEncoding);
+		writer->start();
 
 		//----------- create Frame Handler for selected loop
 		if (data.pass == DeshakerPass::COMBINED) {
@@ -149,7 +148,7 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 	UserInputConsole inputHandler(*data.console);
 
 	if (errorLogger().hasNoError()) {
-		frame->runLoop(progress, inputHandler, auxWriters, executor);
+		frame->runLoop(progress, inputHandler, executor);
 	}
 
 	// --------------------------------------------------------------
@@ -185,7 +184,6 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 	result.executorName = executor->mDeviceInfo.getName();
 
 	//destruct writer before frame
-	auxWriters.clear();
 	writer.reset();
 	reader.reset();
 	executor.reset();

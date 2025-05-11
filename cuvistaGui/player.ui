@@ -104,7 +104,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QLabel" name="label_2">
+       <widget class="QLabel" name="lblSpeaker">
         <property name="maximumSize">
          <size>
           <width>18</width>
@@ -118,7 +118,7 @@
          <enum>Qt::TextFormat::PlainText</enum>
         </property>
         <property name="pixmap">
-         <pixmap resource="cuvistaGui.qrc">:/cuvistaGui/res/09_speaker.png</pixmap>
+         <pixmap resource="cuvistaGui.qrc">:/cuvistaGui/res/09_speaker_on.png</pixmap>
         </property>
         <property name="scaledContents">
          <bool>true</bool>

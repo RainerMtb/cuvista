@@ -22,17 +22,74 @@
 #include "MovieReader.hpp"
 
 
-void AuxWriters::writeAll(const FrameExecutor& executor) {
-	for (auto it = begin(); it != end(); it++) {
-		it->get()->write(executor);
-	}
+//-----------------------------------------------------------------------------------
+// Writer Collection
+//-----------------------------------------------------------------------------------
+
+MovieWriterCollection::MovieWriterCollection(MainData& data, MovieReader& reader, std::shared_ptr<MovieWriter> mainWriter) :
+	NullWriter(data, reader),
+	mainWriter { mainWriter } {}
+
+void MovieWriterCollection::addWriter(std::shared_ptr<MovieWriter> writer) {
+	auxWriters.push_back(writer);
 }
+
+void MovieWriterCollection::open(EncodingOption encodingOption) {
+	mainWriter->open(encodingOption);
+	for (auto& writer : auxWriters) writer->open(encodingOption);
+}
+
+void MovieWriterCollection::start() {
+	mainWriter->start();
+	for (auto& writer : auxWriters) writer->start();
+}
+
+void MovieWriterCollection::writeInput(const FrameExecutor& executor) {
+	mainWriter->writeInput(executor);
+	for (auto& writer : auxWriters) writer->writeInput(executor);
+}
+
+void MovieWriterCollection::prepareOutput(FrameExecutor& executor) {
+	mainWriter->prepareOutput(executor);
+	for (auto& writer : auxWriters) writer->prepareOutput(executor);
+}
+
+void MovieWriterCollection::updateStats() {
+	std::unique_lock<std::mutex> lock(mStatsMutex);
+	frameIndex = mainWriter->frameIndex;
+	frameEncoded = mainWriter->frameEncoded;
+	encodedBytesTotal = mainWriter->encodedBytesTotal;
+	outputBytesWritten = mainWriter->outputBytesWritten;
+}
+
+void MovieWriterCollection::writeOutput(const FrameExecutor& executor) {
+	mainWriter->writeOutput(executor);
+	for (auto& writer : auxWriters) writer->writeOutput(executor);
+	updateStats();
+}
+
+bool MovieWriterCollection::startFlushing() {
+	bool retval = mainWriter->startFlushing();
+	updateStats();
+	return retval;
+}
+
+bool MovieWriterCollection::flush() {
+	bool retval = mainWriter->flush();
+	updateStats();
+	return retval;
+}
+
+
+//-----------------------------------------------------------------------------------
+// Image Helpers
+//-----------------------------------------------------------------------------------
 
 void BaseWriter::prepareOutput(FrameExecutor& executor) {
 	executor.getOutputYuv(frameIndex, outputFrame);
 }
 
-void BaseWriter::write(const FrameExecutor& executor) {
+void BaseWriter::writeOutput(const FrameExecutor& executor) {
 	this->frameIndex++;
 }
 
@@ -62,6 +119,7 @@ std::string ImageWriter::makeFilename(const std::string& extension) const {
 	return makeFilename(mData.fileOut, this->frameIndex, extension);
 }
 
+
 //-----------------------------------------------------------------------------------
 // BMP Images
 //-----------------------------------------------------------------------------------
@@ -71,7 +129,7 @@ void BmpImageWriter::prepareOutput(FrameExecutor& executor) {
 	executor.getOutputRgba(frameIndex, image);
 }
 
-void BmpImageWriter::write(const FrameExecutor& executor) {
+void BmpImageWriter::writeOutput(const FrameExecutor& executor) {
 	std::string fname = makeFilename("bmp");
 	worker = std::jthread([&, fname] { image.saveAsColorBMP(fname); });
 	outputBytesWritten += image.bytes();
@@ -81,6 +139,7 @@ void BmpImageWriter::write(const FrameExecutor& executor) {
 BmpImageWriter::~BmpImageWriter() {
 	worker.join();
 }
+
 
 //-----------------------------------------------------------------------------------
 // JPG Images via ffmpeg
@@ -119,7 +178,7 @@ void JpegImageWriter::open(EncodingOption videoCodec) {
 	packet = av_packet_alloc();
 }
 
-void JpegImageWriter::write(const FrameExecutor& executor) {
+void JpegImageWriter::writeOutput(const FrameExecutor& executor) {
 	av_frame->pts = this->frameIndex;
 	int result = avcodec_send_frame(ctx, av_frame);
 	if (result < 0)
@@ -156,7 +215,7 @@ void RawWriter::open(EncodingOption videoCodec) {
 	file = std::ofstream(mData.fileOut, std::ios::binary);
 }
 
-void RawWriter::write(const FrameExecutor& executor) {
+void RawWriter::writeOutput(const FrameExecutor& executor) {
 	const unsigned char* src = outputFrame.data();
 	for (int i = 0; i < 3ull * outputFrame.h; i++) {
 		file.write(reinterpret_cast<const char*>(src), outputFrame.w);
@@ -219,21 +278,11 @@ void TransformsFile::writeTransform(const Affine2D& transform, int64_t frameInde
 	writeValue(transform.rotMinutes());
 }
 
-void TransformsWriterMain::open(EncodingOption videoCodec) {
+void TransformsWriter::start() {
 	TransformsFile::open(mData.trajectoryFile);
 }
 
-void TransformsWriterMain::write(const FrameExecutor& executor) {
-	writeTransform(movieFrame->mFrameResult.getTransform(), frameIndex);
-	this->frameIndex++;
-	this->outputBytesWritten = file.tellp();
-}
-
-void AuxTransformsWriter::open() {
-	TransformsFile::open(mData.trajectoryFile);
-}
-
-void AuxTransformsWriter::write(const FrameExecutor& executor) {
+void TransformsWriter::writeInput(const FrameExecutor& executor) {
 	writeTransform(executor.mFrame.mFrameResult.getTransform(), frameIndex);
 	this->frameIndex++;
 }
@@ -250,11 +299,11 @@ void OpticalFlowWriter::vectorToColor(double dx, double dy, unsigned char* r, un
 	im::hsv_to_rgb(hue, 1.0, val, r, g, b);
 }
 
-void OpticalFlowWriter::open() {
-	open(mData.flowFile, AV_PIX_FMT_YUV420P);
+void OpticalFlowWriter::start() {
+	start(mData.flowFile, AV_PIX_FMT_YUV420P);
 }
 
-void OpticalFlowWriter::open(const std::string& sourceName, AVPixelFormat pixfmt) {
+void OpticalFlowWriter::start(const std::string& sourceName, AVPixelFormat pixfmt) {
 	//simplified ffmpeg video setup
 	av_log_set_callback(ffmpeg_log);
 
@@ -368,11 +417,12 @@ void OpticalFlowWriter::writeAVFrame(AVFrame* av_frame) {
 		}
 	}
 
+	std::unique_lock<std::mutex> lock(mStatsMutex);
 	outputBytesWritten = avio_tell(fmt_ctx->pb);
 	frameEncoded++;
 }
 
-void OpticalFlowWriter::write(const FrameExecutor& executor) {
+void OpticalFlowWriter::writeInput(const FrameExecutor& executor) {
 	writeFlow(executor.mFrame);
 	//imageInterpolated.saveAsBMP("f:/im.bmp");
 
@@ -397,11 +447,12 @@ OpticalFlowWriter::~OpticalFlowWriter() {
 	writeAVFrame(nullptr);
 }
 
+
 //-----------------------------------------------------------------------------------
 // Computed Results per Point
 //-----------------------------------------------------------------------------------
 
-void  ResultDetailsWriter::open() {
+void  ResultDetailsWriter::start() {
 	mFile = std::ofstream(mData.resultsFile);
 	if (mFile.is_open()) {
 		mFile << "frameIdx" << mDelim << "ix0" << mDelim << "iy0"
@@ -425,7 +476,7 @@ void ResultDetailsWriter::write(std::span<PointResult> results, int64_t frameInd
 	mFile << ss.str();
 }
 
-void ResultDetailsWriter::write(const FrameExecutor& executor) {
+void ResultDetailsWriter::writeInput(const FrameExecutor& executor) {
 	write(executor.mFrame.mResultPoints, frameIndex);
 	this->frameIndex++;
 }
@@ -435,7 +486,7 @@ void ResultDetailsWriter::write(std::span<PointResult> results, const std::strin
 	data.resultsFile = filename;
 
 	ResultDetailsWriter writer(data);
-	writer.open();
+	writer.start();
 	writer.write(results, 0);
 }
 
@@ -511,7 +562,7 @@ void ResultImageWriter::writeImage(const AffineTransform& trf, std::span<PointRe
 	}
 }
 
-void ResultImageWriter::write(const FrameExecutor& executor) {
+void ResultImageWriter::writeInput(const FrameExecutor& executor) {
 	//get input image from buffers
 	executor.getInput(frameIndex, yuv);
 	std::string fname = ImageWriter::makeFilename(mData.resultImageFile, frameIndex, "bmp");

@@ -29,6 +29,7 @@
 class MovieReader : public ReaderStats {
 
 public:
+	std::mutex mVideoPacketMutex;
 	std::list<VideoPacketContext> mVideoPacketList;
 	std::vector<StreamContext> mInputStreams;
 	bool mStoreSidePackets = true;
