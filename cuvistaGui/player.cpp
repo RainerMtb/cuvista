@@ -117,12 +117,18 @@ void PlayerWriter::open(EncodingOption videoCodec) {
             mAudioFormat.setSampleFormat(QAudioFormat::Float);
             mAudioFormat.setChannelConfig(QAudioFormat::ChannelConfigStereo);
             mAudioDevice = QMediaDevices::defaultAudioOutput();
-            //format query does report false negatives, audio does indeed play but isFormatSupported() returns false
-            //NOTE FOR FUTURE PROJECTS: QT IS SUCH AN ABSOLUTE CRAP
-            //if (mAudioDevice.isFormatSupported(mAudioFormat)) {}
-            posc->handling = StreamHandling::STREAM_DECODE;
-            connect(mPlayer, &PlayerWindow::sigVolume, this, &PlayerWriter::setVolume);
-            mPlayAudio = true;
+
+            // qDebug() << "preferred " << mAudioDevice.preferredFormat();
+            // qDebug() << "source format" << mAudioFormat;
+            // NOTE: QT IS SUCH AN ABSOLUTE CRAP
+            // QAudioDevice does not allow audio formats which the device CLEARLY DOES support
+            // seems like ONLY the preferred format is supported
+            mPlayAudio = false;
+            if (mAudioDevice.isFormatSupported(mAudioFormat)) {
+                posc->handling = StreamHandling::STREAM_DECODE;
+                connect(mPlayer, &PlayerWindow::sigVolume, this, &PlayerWriter::setVolume);
+                mPlayAudio = true;
+            }
 
         } else {
             posc->handling = StreamHandling::STREAM_IGNORE;
@@ -144,10 +150,11 @@ void PlayerWriter::setVolume(int volume) {
 
 //---- on frame executor thread
 void PlayerWriter::start() {
-    if (mAudioStreamIndex != -1) {
+    if (mPlayAudio && mAudioStreamIndex != -1) {
         mAudioSink = new QAudioSink(mAudioDevice, mAudioFormat);
         mAudioSink->setVolume(mPlayer->getAudioVolume() / 100.0);
         mAudioIODevice = mAudioSink->start();
+        //mAudioSink->dumpObjectInfo();
     }
 }
 

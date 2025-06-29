@@ -67,3 +67,9 @@ in program folder:
         qopensslbackend.dll
         qschannelbackend.dll
 ```
+
+# update git submodules to latest commit
+on the main project folder
+```
+git submodule update --recursive --remote --rebase
+```

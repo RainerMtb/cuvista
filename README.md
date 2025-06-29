@@ -152,9 +152,8 @@ When done, run ```cuvista -info``` to see available devices and run a test
 
 ## Future Ideas
 - Improve performance and robustness of stabilization - very likely mutually exclusive goals
-- Look into more advanced algorithms like 3D stabilization - but I currently lack information on the fundamental math of suchs approaches
-- Use this codebase to remove duplicate frames from videos
-- Possibly improve performace by using multiple GPUs - dont know if anyone would need that though
+- Maybe look into more advanced algorithms like 3D stabilization
+- Maybe support for using multiple GPUs - dont know if anyone would need that though
 - Maybe porting to Mac and Apple Silicon
 
  
@@ -162,8 +161,8 @@ When done, run ```cuvista -info``` to see available devices and run a test
 - Windows 11 64bit
 - Ubuntu 24.04
 - Visual Studio 2022
-- Nvidia Cuda 12.8
-- Nvidia Video Codec SDK 12.2.72
+- Nvidia Cuda 12.9.1
+- Nvidia Video Codec SDK 13.0.19
 - FFmpeg 7.1
-- Qt 6.9.0
+- Qt 6.9.1
 - Cmake 3.30.6
