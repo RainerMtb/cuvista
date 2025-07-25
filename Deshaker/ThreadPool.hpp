@@ -35,6 +35,8 @@ private:
 	bool isBusy() const;
 
 public:
+	static inline ThreadPoolBase defaultPool;
+
 	ThreadPool(size_t numThreads = 1);
 	~ThreadPool() override;
 

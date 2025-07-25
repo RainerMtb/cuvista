@@ -56,16 +56,16 @@ public:
 		im::ImageMatShared<T>(h(), w(), w(), this->array).saveAsBMP(filename, 255);
 	}
 
-	Mat<T> copyToMat() const { 
+	Mat<T> matCopy() const { 
 		return Mat<T>::fromRowData(h(), w(), w(), this->array); 
 	}
 
-	Mat<T> toMat() const { 
+	Mat<T> matShare() const { 
 		return Mat<T>::fromArray(h(), w(), this->array, false); 
 	}
 
 	void toConsole(int digits = 5) const {
-		toMat().toConsole("avx", digits);
+		matShare().toConsole("avx", digits);
 	}
 };
 

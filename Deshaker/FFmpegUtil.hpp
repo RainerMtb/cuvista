@@ -133,7 +133,7 @@ struct Timings {
 };
 
 //generate error string from ffmpeg return codes
-std::string av_make_error(int errnum, const char* msg = "");
+std::string av_make_error(int errnum, const char* msg = "", const std::string& str = "");
 
 //log error from ffmpeg retunr codes
 void ffmpeg_log_error(int errnum, const char* msg, ErrorSource source);

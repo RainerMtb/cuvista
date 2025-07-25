@@ -85,8 +85,8 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     connect(ui.btnOpen, &QPushButton::clicked, this, fcnOpen);
 
     //color selection
-    const im::ColorRgb& rgb = mData.bgcol_rgb;
-    mBackgroundColor.setRgb(rgb.r(), rgb.g(), rgb.b());
+    Color& rgb = mData.backgroundColor;
+    mBackgroundColor.setRgb(rgb.getRed(), rgb.getGreen(), rgb.getBlue());
     setColorIcon(ui.lblColor, mBackgroundColor);
 
     auto fcnColorSelection = [&] () {
@@ -312,8 +312,10 @@ void cuvistaGui::stabilize() {
     if (ui.chkFrameLimit->isChecked()) mData.maxFrames = ui.spinFrameLimit->value();
 
     using uchar = unsigned char;
-    mData.bgcol_rgb = { (uchar) mBackgroundColor.red(), (uchar) mBackgroundColor.green(), (uchar) mBackgroundColor.blue() };
-    mData.bgcol_yuv = mData.bgcol_rgb.toNormalized();
+    uchar rgb[] = { (uchar) mBackgroundColor.red(), (uchar) mBackgroundColor.green(), (uchar) mBackgroundColor.blue() };
+    mData.backgroundColor = Color::rgb(rgb[0], rgb[1], rgb[2]);
+    auto yuv = mData.backgroundColor.getYUVfloats();
+    mData.bgcol_yuv = { yuv[0], yuv[1], yuv[2] };
 
     //rewind reader to beginning of input
     mReader.rewind();

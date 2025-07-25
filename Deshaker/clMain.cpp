@@ -170,7 +170,7 @@ void OpenClExecutor::init() {
 		ImageFormat outFmt(CL_RGBA, CL_FLOAT);
 		for (Image2D& im : clData.out) {
 			im = Image2D(clData.context, CL_MEM_READ_WRITE, outFmt, mData.w, mData.h);
-			cl_float4 bg = { mData.bgcol_yuv.colors[0], mData.bgcol_yuv.colors[1], mData.bgcol_yuv.colors[2], 0.0f };
+			cl_float4 bg = { mData.bgcol_yuv[0], mData.bgcol_yuv[1], mData.bgcol_yuv[2], 0.0f };
 			clData.queue.enqueueFillImage(im, bg, Size2(), Size2(mData.w, mData.h));
 		}
 		clData.yuvOut = Buffer(clData.context, CL_MEM_WRITE_ONLY, 3ull * mData.cpupitch * mData.h);
@@ -374,7 +374,7 @@ void OpenClExecutor::outputData(int64_t frameIndex, const Affine2D& trf) {
 		scale_8u32f_3(clData.yuv[frIdx], outStart, clData);
 		//fill static background when requested
 		if (mData.bgmode == BackgroundMode::COLOR) {
-			cl_float4 bg = { mData.bgcol_yuv.colors[0], mData.bgcol_yuv.colors[1], mData.bgcol_yuv.colors[2], 0.0f };
+			cl_float4 bg = { mData.bgcol_yuv[0], mData.bgcol_yuv[1], mData.bgcol_yuv[2], 0.0f };
 			clData.queue.enqueueFillImage(outWarped, bg, Size2(), Size2(mData.w, mData.h));
 		}
 		//warp input on top of background

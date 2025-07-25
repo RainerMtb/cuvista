@@ -32,6 +32,7 @@ namespace avx {
 	__m128i yuvToRgbaPacked(V4f y, V4f u, V4f v);
 
 	void inv(std::span<V8d> v);
+	void inv(std::span<V8d> v, std::span<size_t> piv);
 
 	double norm1(std::span<V8d> v);
 

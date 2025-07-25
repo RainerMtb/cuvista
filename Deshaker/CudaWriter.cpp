@@ -35,7 +35,7 @@ void CudaFFmpegWriter::encodePackets() {}
 
 void CudaFFmpegWriter::open(EncodingOption videoCodec) {}
 void CudaFFmpegWriter::prepareOutput(FrameExecutor& executor) {}
-void CudaFFmpegWriter::write(const FrameExecutor& executor) {}
+void CudaFFmpegWriter::writeOutput(const FrameExecutor& executor) {}
 bool CudaFFmpegWriter::startFlushing() { return false; }
 bool CudaFFmpegWriter::flush() { return false; }
 

@@ -90,6 +90,19 @@ void V16f::storeu(float* dest, __mmask16 mask) const {
 	_mm512_mask_storeu_ps(dest, mask, a);
 }
 
+std::vector<float> V16f::vector() const {
+	std::vector<float> v(16);
+	_mm512_storeu_ps(v.data(), a);
+	return v;
+}
+
+V16f V16f::rot(int i) const {
+	__m512i idx = _mm512_loadu_epi32(Iota::i32);
+	__m512i delta = _mm512_set1_epi32(i & 0xF);
+	idx = _mm512_add_epi32(idx, delta);
+	return _mm512_permutex2var_ps(a, idx, a);
+}
+
 V16f::operator __m512() { return a; }
 
 //--------------------------------------------------------
@@ -163,6 +176,19 @@ void V8f::storeu(float* dest, __mmask8 mask) const {
 	_mm256_mask_storeu_ps(dest, mask, a);
 }
 
+std::vector<float> V8f::vector() const {
+	std::vector<float> v(8);
+	_mm256_storeu_ps(v.data(), a);
+	return v;
+}
+
+V8f V8f::rot(int i) const {
+	__m256i idx = _mm256_loadu_epi32(Iota::i32);
+	__m256i delta = _mm256_set1_epi32(i & 0b111);
+	idx = _mm256_add_epi32(idx, delta);
+	return _mm256_permutex2var_ps(a, idx, a);
+}
+
 V8f::operator __m256() { return a; }
 
 //---------------------------------------------------
@@ -234,6 +260,21 @@ void V4f::storeu(float* dest) const {
 
 void V4f::storeu(float* dest, __mmask8 mask) const {
 	_mm_mask_storeu_ps(dest, mask, a);
+}
+
+std::vector<float> V4f::vector() const {
+	std::vector<float> v(4);
+	_mm_storeu_ps(v.data(), a);
+	return v;
+}
+
+V4f V4f::rot(int i) const {
+	switch (i & 0b11) {
+	case 1: return _mm_permute_ps(a, 0b00111001); break;
+	case 2: return _mm_permute_ps(a, 0b01001110); break;
+	case 3: return _mm_permute_ps(a, 0b10010011); break;
+	}
+	return a;
 }
 
 V4f::operator __m128() { return a; }
@@ -311,6 +352,19 @@ void V8d::storeu(double* dest) const {
 
 void V8d::storeu(double* dest, __mmask8 mask) const {
 	_mm512_mask_storeu_pd(dest, mask, a);
+}
+
+std::vector<double> V8d::vector() const {
+	std::vector<double> v(8);
+	_mm512_storeu_pd(v.data(), a);
+	return v;
+}
+
+V8d V8d::rot(int i) const {
+	__m512i idx = _mm512_loadu_epi64(Iota::i64);
+	__m512i delta = _mm512_set1_epi64(i & 0b111);
+	idx = _mm512_add_epi64(idx, delta);
+	return _mm512_permutex2var_pd(a, idx, a);
 }
 
 V8d::operator __m512d() { return a; }

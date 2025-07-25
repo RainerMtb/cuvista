@@ -118,7 +118,7 @@ public:
 	std::string nvencApiToString() const;
 	std::string nvencDriverToString() const;
 
-	void probeCuda();
+	std::vector<DeviceInfoCuda> probeCuda();
 };
 
 //Null Device

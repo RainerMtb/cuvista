@@ -22,8 +22,6 @@
 #include <string>
 #include <cstddef>
 #include <cassert>
-#include <memory>
-#include "CharMap.hpp"
 
 //-----------------------------------------
 //Bitmap image headers

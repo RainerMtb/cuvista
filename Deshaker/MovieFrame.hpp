@@ -20,7 +20,7 @@
 
 #include "MovieWriter.hpp"
 #include "ThreadPool.hpp"
-#include "UserInput.hpp"
+#include "SystemStuff.hpp"
 #include "MainData.hpp"
 #include "Trajectory.hpp"
 #include "ProgressBase.hpp"
@@ -99,6 +99,9 @@ public:
 
 	//run loop in subclass
 	virtual void runLoop(std::shared_ptr<ProgressBase> progress, UserInput& input, std::shared_ptr<FrameExecutor> executor) {}
+
+	//run loop with default progress and input, used for development
+	void runLoop(std::shared_ptr<FrameExecutor> executor);
 };
 
 

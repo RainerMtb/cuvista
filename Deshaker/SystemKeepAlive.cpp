@@ -16,26 +16,17 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
-#pragma once
+#include "SystemStuff.hpp"
 
-#include <string>
+#if defined(_WIN64)
+#include <Windows.h>
 
-enum class UserInputEnum {
-	NONE,
-	CONTINUE, 
-	END, 
-	QUIT, 
-	HALT, 
-};
+void keepSystemAlive() {
+	SetThreadExecutionState(ES_SYSTEM_REQUIRED);
+}
 
-class UserInput {
+#else
 
-public:
-	virtual UserInputEnum checkState() = 0;
-};
+void keepSystemAlive() {}
 
-class UserInputDefault : public UserInput {
-
-public:
-	UserInputEnum checkState() override { return UserInputEnum::NONE; }
-};
+#endif

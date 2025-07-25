@@ -24,7 +24,6 @@
 #include "MovieFrame.hpp"
 #include "DummyFrame.hpp"
 #include "ProgressDisplayConsole.hpp"
-#include "UserInputConsole.hpp"
 
 struct DeshakerResult {
 	int statusCode = 0;

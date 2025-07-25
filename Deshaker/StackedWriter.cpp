@@ -21,9 +21,7 @@
 
 void StackedWriter::open(EncodingOption videoCodec) {
 	FFmpegWriter::open(videoCodec, AV_PIX_FMT_YUV420P, mData.h, mWidthTotal, mWidthTotal, mData.fileOut);
-
-	mBackgroundColor = mData.bgcol_rgb.toYuv();
-	mInputFrameScaled.setValues(mBackgroundColor);
+	mInputFrameScaled.setColor(mData.backgroundColor);
 }
 
 void StackedWriter::prepareOutput(FrameExecutor& executor) {
@@ -61,7 +59,8 @@ void StackedWriter::writeOutput(const FrameExecutor& executor) {
 		//output frame on right side
 		std::copy(out, out + combinedFrame.w / 2, dest + combinedFrame.w / 2);
 		//middle 1% of width in background color
-		for (int col = combinedFrame.w * 99 / 200; col < combinedFrame.w * 101 / 200; col++) dest[col] = mBackgroundColor.colors[row / mData.h];
+		auto color = mData.backgroundColor.getYUV();
+		for (int col = combinedFrame.w * 99 / 200; col < combinedFrame.w * 101 / 200; col++) dest[col] = color[row / mData.h];
 
 		in += mInputFrameScaled.stride;
 		out += mOutputFrame.stride;

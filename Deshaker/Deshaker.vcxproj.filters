@@ -68,9 +68,6 @@
     <ClCompile Include="FFmpegFormatWriter.cpp">
       <Filter>Writer</Filter>
     </ClCompile>
-    <ClCompile Include="KeyboardInput.cpp">
-      <Filter>System</Filter>
-    </ClCompile>
     <ClCompile Include="clTest.cpp">
       <Filter>OpenCl</Filter>
     </ClCompile>
@@ -124,6 +121,15 @@
     </ClCompile>
     <ClCompile Include="ImageYuvFFmpeg.cpp">
       <Filter>Util</Filter>
+    </ClCompile>
+    <ClCompile Include="SystemInput.cpp">
+      <Filter>System</Filter>
+    </ClCompile>
+    <ClCompile Include="SystemKeepAlive.cpp">
+      <Filter>System</Filter>
+    </ClCompile>
+    <ClCompile Include="SystemConsole.cpp">
+      <Filter>System</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -235,13 +241,7 @@
     <ClInclude Include="CudaInterface.hpp">
       <Filter>Main</Filter>
     </ClInclude>
-    <ClInclude Include="KeyboardInput.hpp">
-      <Filter>System</Filter>
-    </ClInclude>
-    <ClInclude Include="UserInput.hpp">
-      <Filter>System</Filter>
-    </ClInclude>
-    <ClInclude Include="UserInputConsole.hpp">
+    <ClInclude Include="SystemStuff.hpp">
       <Filter>System</Filter>
     </ClInclude>
   </ItemGroup>

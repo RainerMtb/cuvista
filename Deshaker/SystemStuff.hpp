@@ -18,10 +18,35 @@
 
 #pragma once
 
-#include <vector>
-#include <iostream>
-#include "UserInput.hpp"
-#include "KeyboardInput.hpp"
+#include <fstream>
+#include <optional>
+
+int getSystemConsoleWidth();
+
+std::optional<char> getKeyboardInput();
+
+void keepSystemAlive();
+
+enum class UserInputEnum {
+	NONE,
+	CONTINUE,
+	END,
+	QUIT,
+	HALT,
+};
+
+class UserInput {
+
+public:
+	virtual UserInputEnum checkState() = 0;
+};
+
+class UserInputDefault : public UserInput {
+
+public:
+	UserInputEnum checkState() override;
+};
+
 
 class UserInputConsole : public UserInput {
 
@@ -29,31 +54,9 @@ private:
 	std::ostream& console;
 
 public:
-	UserInputConsole(std::ostream& console) : 
-		console { console } {}
-
-	UserInputEnum checkState() override {
-		UserInputEnum state = UserInputEnum::NONE;
-		std::optional<char> key = getKeyboardInput();
-		if (key) {
-			switch (*key) {
-			case 'e':
-			case 'E':
-				state = UserInputEnum::END;
-				//console << std::endl << "[e] command received. Stop reading input." << std::endl;
-				break;
-			case 'q':
-			case 'Q':
-				state = UserInputEnum::QUIT;
-				//console << std::endl << "[q] command received. Stop writing output." << std::endl;
-				break;
-			case 'x':
-			case 'X':
-				state = UserInputEnum::HALT;
-				//console << std::endl << "[x] command received. Terminating." << std::endl;
-				break;
-			}
-		}
-		return state;
+	UserInputConsole(std::ostream& console) :
+		console{ console } {
 	}
+
+	UserInputEnum checkState() override;
 };

@@ -20,7 +20,7 @@
 
 #include <QObject>
 
-#include "UserInput.hpp"
+#include "SystemStuff.hpp"
 
 class UserInputGui : public QObject, public UserInput {
     Q_OBJECT

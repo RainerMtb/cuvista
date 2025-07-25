@@ -7,6 +7,7 @@
     <ClCompile Include="pch.cpp" />
     <ClCompile Include="UtilsTest.cpp" />
     <ClCompile Include="MathTest.cpp" />
+    <ClCompile Include="AvxTest.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Utils.hpp" />

@@ -118,25 +118,29 @@ void checkVersions() {
 	} catch (CancelException ignore) {}
 }
 
-void draw() {
+void draw(const std::string& filename) {
 	using namespace im;
 
-	//text in yuv image
-	ImageYuv im(200, 500);
-	std::string file1 = "f:/draw1.bmp";
-	im.writeText("abcdefghijklmnopqrstuvwxyz", 10, 10, 2, 3, TextAlign::TOP_LEFT, ColorYuv::WHITE, ColorYuv::BLACK);
-	im.writeText("ABCDEFGHIJKLMNOPQRSTUVWXYZ", 10, 50, 2, 3, TextAlign::TOP_LEFT, ColorYuv::WHITE, ColorYuv::GRAY);
-	im.writeText("дцья %,.()/-=", 10, 90, 2, 3, TextAlign::TOP_LEFT, ColorYuv::WHITE);
-	std::cout << "save to " << file1 << std::endl;
-	im.saveAsColorBMP(file1);
+	//draw into bgr image
+	ImageBGR bgr(600, 800);
+	bgr.setColor(Color::GRAY);
+	bgr.writeText("abcdefghijklmnopqrstuvwxyz", 10, 10, 2, 3, TextAlign::TOP_LEFT);
+	bgr.writeText("ABCDEFGHIJKLMNOPQRSTUVWXYZ", 10, 50, 2, 3, TextAlign::TOP_LEFT);
+	bgr.writeText("A quick brown fox", 10, 90, 2, 3, TextAlign::TOP_LEFT, Color::YELLOW, Color::BLACK);
+	bgr.writeText("jumps over a lazy dog", 10, 120, 2, 3, TextAlign::TOP_LEFT, Color::rgba(255, 255, 255, 0.75), Color::GREEN);
+	bgr.writeText("A quick brown fox", 10, 150, 2, 3, TextAlign::TOP_LEFT, Color::YELLOW, Color::rgba(0, 255, 255, 0.25));
+	bgr.writeText("jumps over a lazy dog", 10, 180, 2, 3, TextAlign::TOP_LEFT, Color::rgba(255, 0, 255, 0.5), Color::rgba(0, 255, 255, 0.5));
 
-	//text in bgr image
-	ImageBGR bgr(500, 500);
-	std::string file2 = "f:/draw2.bmp";
-	bgr.writeText("A quick brown fox", 10, 10, 2, 3, TextAlign::TOP_LEFT, { 255, 255, 0 });
-	bgr.writeText("jumps over a lazy dog", 10, 50, 2, 3, TextAlign::TOP_LEFT, { 255, 255, 0, 0, 0.5 });
-	bgr.writeText("A quick brown fox", 10, 90, 2, 3, TextAlign::TOP_LEFT, { 255, 255, 0 }, { 0, 255, 255, 0, 0.25 });
-	bgr.writeText("jumps over a lazy dog", 10, 130, 2, 3, TextAlign::TOP_LEFT, { 255, 255, 0, 0, 0.5 }, { 0, 255, 255, 0, 0.5 });
+	//charachter map
+	int x0 = 500;
+	int y0 = 20;
+	for (int i = 0; i < 16; i++) {
+		for (int k = 0; k < 16; k++) {
+			char ch = i * 16 + k;
+			std::string str({ ch });
+			bgr.writeText(str, x0 + i * 16, y0 + k * 22, 2, 2, TextAlign::TOP_LEFT);
+		}
+	}
 
 	//lines and dots
 	double len = 100.0;
@@ -146,8 +150,8 @@ void draw() {
 	for (double angle = 0.0; angle < 360.0; angle += 15.0) {
 		double x1 = cx + len * std::cos(angle * std::numbers::pi / 180.0);
 		double y1 = cy + len * std::sin(angle * std::numbers::pi / 180.0);
-		bgr.drawLine(cx, cy, x1, y1, ColorBgr::BLUE);
-		bgr.drawMarker(x1, y1, ColorBgr::RED, r);
+		bgr.drawLine(cx, cy, x1, y1, Color::BLUE);
+		bgr.drawMarker(x1, y1, Color::RED, r);
 	}
 
 	//dots at fractional pixel values
@@ -155,19 +159,19 @@ void draw() {
 		for (int k = 0; k < 5; k++) {
 			double x = 20 + 10.2 * i + 0.2 * k;
 			double y = 250 + 10.2 * k + 0.2 * i;
-			bgr.drawMarker(x, y, ColorBgr::GREEN, 1.5);
+			bgr.drawMarker(x, y, Color::GREEN, 1.5);
 		}
 	}
 
 	//polygon
-	bgr.drawLine(400, 300, 425, 320, ColorBgr::GREEN);
-	bgr.drawLine(425, 320, 410, 375, ColorBgr::GREEN);
-	bgr.drawLine(410, 375, 380, 355, ColorBgr::GREEN);
-	bgr.drawLine(380, 355, 400, 300, ColorBgr::GREEN);
+	bgr.drawLine(400, 300, 425, 320, Color::GREEN);
+	bgr.drawLine(425, 320, 410, 375, Color::GREEN);
+	bgr.drawLine(410, 375, 380, 355, Color::GREEN);
+	bgr.drawLine(380, 355, 400, 300, Color::GREEN);
 
 	//save to file
-	std::cout << "save to " << file2 << std::endl;
-	bgr.saveAsColorBMP(file2);
+	std::cout << "save to " << filename << std::endl;
+	bgr.saveAsColorBMP(filename);
 }
 
 class OpticalFlowImageWriter : public OpticalFlowWriter {

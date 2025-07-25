@@ -85,7 +85,7 @@ protected:
 	void close() override;
 	~FFmpegFormatReader() override;
 
-	void openInput(AVFormatContext* fmt, const char* source);
+	void openInput(AVFormatContext* fmt, const std::string& source);
 };
 
 

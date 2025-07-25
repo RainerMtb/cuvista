@@ -51,10 +51,12 @@ private:
 
 		//set up a frame in nv12 format
 		ImageYuv inputFrame(h, w, nvenc.cudaPitch);
-		inputFrame.setValues({ y, u, v });
-		inputFrame.writeText("test", 20, 20, 5, 5, im::TextAlign::TOP_LEFT, im::ColorYuv::BLACK, im::ColorYuv::WHITE);
+		inputFrame.setColorPlane(0, y);
+		inputFrame.setColorPlane(1, u);
+		inputFrame.setColorPlane(2, v);
+		//inputFrame.writeText("test", 20, 20, 5, 5, im::TextAlign::TOP_LEFT);
 
-		size_t siz = h * nvenc.cudaPitch * 3 / 2;
+		size_t siz = 3LL * h * nvenc.cudaPitch / 2;
 		std::vector<unsigned char> inputNV12(siz);
 		inputFrame.toNV12(inputNV12, nvenc.cudaPitch);
 		CUdeviceptr devptr = (CUdeviceptr) nvenc.getNextInputFramePtr();
@@ -103,8 +105,8 @@ private:
 		int linesizes[] = { stride, stride, stride, 0 };
 		sws_scale(scaler, av_frame->data, av_frame->linesize, 0, av_frame->height, frame_buffer, linesizes);
 
-		//inputFrame.writeToBMPcolor("f:/test_in.bmp");
-		//outputFrame.writeToBMPcolor("f:/test_out.bmp");
+		//inputFrame.saveAsColorBMP("f:/test_in.bmp");
+		//outputFrame.saveAsColorBMP("f:/test_out.bmp");
 
 		//compare input and output
 		double avg = inputFrame.compareTo(outputFrame);

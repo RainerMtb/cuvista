@@ -49,7 +49,7 @@ void runSelfTest(util::MessagePrinter& out, std::vector<DeviceInfoBase*> deviceL
 		out.print(": testing... ");
 
 		MainData data;
-		data.bgcol_rgb = { 0, 50, 0 };
+		data.backgroundColor = Color::rgb(0, 50, 0);
 		data.deviceList.push_back(deviceList[i]);
 		MemoryFFmpegReader reader(movieData);
 		reader.open("");
@@ -94,10 +94,12 @@ void runSelfTest(util::MessagePrinter& out, std::vector<DeviceInfoBase*> deviceL
 			check = false;
 		}
 		if (uint64_t crc = executor->getTransformedOutput().crc(); crc != crcTransformed) {
+			//std::cout << std::hex << crc << " ";
 			out.print("FAIL transformed ");
 			check = false;
 		}
 		if (uint64_t crc = writer.getOutputFrame().crc(); crc != crcOutput) {
+			//std::cout << std::hex << crc << " ";
 			//writer.getOutputFrame().saveAsColorBMP("f:/test.bmp");
 			out.print("FAIL output ");
 			check = false;

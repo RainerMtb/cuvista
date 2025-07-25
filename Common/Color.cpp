@@ -22,61 +22,100 @@
 #include <regex>
 #include "Color.hpp"
 
-namespace im {
+Color::Color() {
+	colorData[0] = -1;
+	colorData[1] = -1;
+	colorData[2] = -1;
+	alpha = -1.0;
+}
 
-	ColorNorm ColorNorm::WHITE = { 0.0f, 0.5f, 0.5f };
-	ColorNorm ColorNorm::BLACK = { 1.0f, 0.5f, 0.5f };
+Color::Color(int r, int g, int b, double alpha) {
+	colorData[0] = r;
+	colorData[1] = g;
+	colorData[2] = b;
+	this->alpha = alpha;
+}
 
-	ColorYuv ColorYuv::BLACK =   { 0,   128, 128 };
-	ColorYuv ColorYuv::WHITE =   { 255, 128, 128 };
-	ColorYuv ColorYuv::GRAY =    { 128, 128, 128 };
+Color Color::WHITE =   Color(255, 255, 255);
+Color Color::BLACK =   Color(  0,   0,   0);
+Color Color::GRAY =    Color(128, 128, 128);
+Color Color::RED =     Color(255,   0,   0);
+Color Color::GREEN =   Color(  0, 255,   0);
+Color Color::BLUE =    Color(  0,   0, 255);
+Color Color::MAGENTA = Color(255,   0, 255);
+Color Color::YELLOW =  Color(255, 255,   0);
+Color Color::CYAN =    Color(  0, 255, 255);
 
-	ColorBgr ColorBgr::RED =     {   0,   0, 255 };
-	ColorBgr ColorBgr::GREEN =   {   0, 255,   0 };
-	ColorBgr ColorBgr::WHITE =   { 255, 255, 255 };
-	ColorBgr ColorBgr::BLACK =   {   0,   0,   0 };
-	ColorBgr ColorBgr::BLUE =    { 255,   0,   0 }; 
-	ColorBgr ColorBgr::CYAN =    { 255, 255,   0 };
-	ColorBgr ColorBgr::MAGENTA = { 255,   0, 255 }; 
-	ColorBgr ColorBgr::YELLOW =  {   0, 255, 255 }; 
+Color Color::BLACK_SEMI = Color(0, 0, 0, 0.7);
 
-	ColorRGBA ColorRGBA::BLACK = {   0,   0,   0, 255 };
-	ColorRGBA ColorRGBA::WHITE = { 255, 255, 255, 255 };
-	ColorRGBA ColorRGBA::GRAY =  { 128, 128, 128, 255 };
-
-	template <class T> void ColorBase<T>::setColors(const std::string& webColor, std::array<int, 3> index) {
-		std::smatch matcher;
-		if (std::regex_match(webColor, matcher, std::regex("#([[:xdigit:]]{2})([[:xdigit:]]{2})([[:xdigit:]]{2})$"))) {
-			for (int i = 0; i < 3; i++) {
-				int group = index[i] + 1;
-				colors[i] = (unsigned char) std::stoi(matcher[group].str(), nullptr, 16);
-			}
+Color Color::web(const std::string& webColor) {
+	Color color;
+	std::smatch matcher;
+	if (std::regex_match(webColor, matcher, std::regex("#([[:xdigit:]]{2})([[:xdigit:]]{2})([[:xdigit:]]{2})$"))) {
+		for (int i = 0; i < 3; i++) {
+			color.colorData[i] = std::stoi(matcher[i].str(), nullptr, 16);
 		}
 	}
+	return color;
+}
 
-	ColorRgb ColorRgb::webColor(const std::string& webColor) {
-		ColorRgb out;
-		out.setColors(webColor, { 0, 1, 2 });
-		return out;
-	}
+Color Color::rgbDouble(double red, double green, double blue) {
+	return Color((int) (red * 255.0), (int) (green * 255.0), (int) (blue * 255.0));
+}
 
-	ColorBgr ColorBgr::webColor(const std::string& webColor) {
-		ColorBgr out;
-		out.setColors(webColor, { 2, 1, 0 });
-		return out;
-	}
+Color Color::rgb(int red, int green, int blue) {
+	return Color(red, green, blue);
+}
 
-	unsigned char ColorYuv::y() const { return colors[0]; }
-	unsigned char ColorYuv::u() const { return colors[1]; }
-	unsigned char ColorYuv::v() const { return colors[2]; }
+Color Color::rgba(int red, int green, int blue, double alpha) {
+	return Color(red, green, blue, alpha);
+}
 
-	unsigned char ColorRgb::r() const { return colors[0]; }
-	unsigned char ColorRgb::g() const { return colors[1]; }
-	unsigned char ColorRgb::b() const { return colors[2]; }
+Color Color::yuv(unsigned char y, unsigned char u, unsigned char v) {
+	unsigned char r, g, b;
+	im::yuv_to_rgb(y, u, v, &r, &g, &b);
+	return Color(r, g, b);
+}
 
-	unsigned char ColorBgr::r() const { return colors[2]; }
-	unsigned char ColorBgr::g() const { return colors[1]; }
-	unsigned char ColorBgr::b() const { return colors[0]; }
+Color Color::hsv(double h, double s, double v) {
+	unsigned char r, g, b;
+	im::hsv_to_rgb(h, s, v, &r, &g, &b);
+	return Color(r, g, b);
+}
+
+std::vector<unsigned char> Color::getRGB() const {
+	return { (unsigned char) colorData[0], (unsigned char) colorData[1], (unsigned char) colorData[2] };
+}
+
+std::vector<unsigned char> Color::getYUV() const {
+	unsigned char y, u, v;
+	im::rgb_to_yuv(colorData[0], colorData[1], colorData[2], &y, &u, &v);
+	return { y, u, v };
+}
+	
+std::array<float, 3> Color::getYUVfloats() const {
+	float y, u, v;
+	im::rgb_to_yuv(colorData[0], colorData[1], colorData[2], &y, &u, &v);
+	return { y, u, v };
+}
+
+unsigned char Color::getRed() const { return (unsigned char) colorData[0]; }
+unsigned char Color::getGreen() const { return (unsigned char) colorData[1]; }
+unsigned char Color::getBlue() const { return (unsigned char) colorData[2]; }
+
+double Color::getAlpha() const { return alpha; }
+
+void Color::setAlpha(double alpha) { this->alpha = alpha; }
+
+int Color::getRGBchannel(size_t index) const {
+	assert(index >= 0 && index < 4 && "invalid index");
+	return colorData[index];
+}
+
+
+	//----------------------------------------------------------------------------------------------------
+
+namespace im {
 
 	static void yuv_to_rgb_func(float yf, float uf, float vf, unsigned char* r, unsigned char* g, unsigned char* b) {
 		*r = (unsigned char) std::rint(std::clamp(yf + (1.370705f * (vf - 128.0f)), 0.0f, 255.0f));
@@ -139,22 +178,5 @@ namespace im {
 		*out_r = (unsigned char) (r * 255.0);
 		*out_g = (unsigned char) (g * 255.0);
 		*out_b = (unsigned char) (b * 255.0);
-	}
-
-	ColorYuv ColorRgb::toYuv() const {
-		ColorYuv out {};
-		rgb_to_yuv(colors[0], colors[1], colors[2], &out.colors[0], &out.colors[1], &out.colors[2]);
-		return out;
-	}
-
-	ColorNorm ColorRgb::toNormalized() const {
-		ColorYuv yuv = toYuv();
-		return { yuv.colors[0] / 255.0f, yuv.colors[1] / 255.0f, yuv.colors[2] / 255.0f };
-	}
-
-	ColorRgb ColorYuv::toRgb() const {
-		ColorRgb out {};
-		yuv_to_rgb(colors[0], colors[1], colors[2], &out.colors[0], &out.colors[1], &out.colors[2]);
-		return out;
 	}
 }

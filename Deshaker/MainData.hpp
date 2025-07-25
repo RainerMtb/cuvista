@@ -64,15 +64,15 @@ enum class DecideYNA {
 class MainData : public CoreData {
 
 private:
-	std::map<std::string, std::vector<unsigned char>> colorMap = {
-		{"red",     {255,   0,   0}},
-		{"green",   {  0, 255,   0}},
-		{"blue",    {  0,   0, 255}},
-		{"black",   {  0,   0,   0}},
-		{"white",   {255, 255, 255}},
-		{"magenta", {255,   0, 255}},
-		{"yellow",  {255, 255,   0}},
-		{"cyan",    {  0, 255, 255}},
+	std::map<std::string, Color> colorMap = {
+		{"red",     Color::RED},
+		{"green",   Color::GREEN},
+		{"blue",    Color::BLUE},
+		{"black",   Color::BLACK},
+		{"white",   Color::WHITE},
+		{"magenta", Color::MAGENTA},
+		{"yellow",  Color::YELLOW},
+		{"cyan",    Color::CYAN},
 	};
 
 	//utililty class holding command line parameters, extension of vector
@@ -180,7 +180,7 @@ public:
 	double cSigmaParam = 1.25;
 
 	int64_t maxFrames = std::numeric_limits<int32_t>::max();
-	im::ColorRgb bgcol_rgb { 0, 150, 0 };
+	Color backgroundColor = Color::rgb(0, 150, 0);
 
 	std::chrono::steady_clock::time_point timePoint;
 
@@ -190,9 +190,9 @@ public:
 
 	void probeInput(std::vector<std::string> args);
 
-	void probeCuda();
+	std::vector<DeviceInfoCuda> probeCuda();
 
-	void probeOpenCl();
+	std::vector<DeviceInfoOpenCl> probeOpenCl();
 
 	void collectDeviceInfo();
 

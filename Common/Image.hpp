@@ -34,6 +34,7 @@ public:
 	virtual int strideInBytes() const = 0;
 	virtual void setIndex(int64_t frameIndex) = 0;
 	virtual bool saveAsBMP(const std::string& filename, T scale = 1) const = 0;
+	virtual std::vector<T> rawBytes() const = 0;
 };
 
 using ImageYuvData = ImageData<unsigned char>;
@@ -72,15 +73,20 @@ namespace im {
 
 		int colorValue(T pixelValue) const;
 
-		void plot(double x, double y, double a, ColorBase<T> color);
+		void plot(double x, double y, double a, const std::vector<T>& colorData, double colorAlpha);
+		void plot(int x, int y, double a, const std::vector<T>& colorData, double colorAlpha);
+		void plot(double x, double y, double a, const Color& color);
+		void plot(int x, int y, double a, const Color& color);
 
-		void plot(int x, int y, double a, ColorBase<T> color);
+		void plot4(double cx, double cy, double dx, double dy, double a, const Color& color);
 
-		void plot4(double cx, double cy, double dx, double dy, double a, ColorBase<T> color);
+		void yuvToRgb(ImageData<unsigned char>& dest, std::vector<int> planes, 
+			ThreadPoolBase& pool = defaultPool) const;
 
-		void yuvToRgb(ImageData<unsigned char>& dest, std::vector<int> planes, ThreadPoolBase& pool = defaultPool) const;
+		void copyTo(ImageData<T>& dest, size_t r0, size_t c0, std::vector<int> srcPlanes, std::vector<int> destPlanes, 
+			ThreadPoolBase& pool = defaultPool) const;
 
-		void copyTo(ImageData<T>& dest, size_t r0, size_t c0, std::vector<int> srcPlanes, std::vector<int> destPlanes, ThreadPoolBase& pool = defaultPool) const;
+		virtual std::vector<T> getColorData(const Color& color) const;
 
 	public:
 		ImageBase(int h, int w, int stride, int numPlanes);
@@ -96,9 +102,9 @@ namespace im {
 
 		const T* addr(size_t idx, size_t r, size_t c) const override;
 
-		virtual size_t size() const;
+		virtual size_t stridedSize() const;
 
-		virtual size_t bytes() const;
+		virtual size_t stridedByteSize() const;
 
 		virtual uint64_t crc() const;
 
@@ -123,10 +129,10 @@ namespace im {
 		const T& at(size_t idx, size_t r, size_t c) const;
 
 		//set color value for all pixels in one plane
-		void setValues(int plane, T colorValue);
+		void setColorPlane(int plane, T colorValue);
 
 		//set color values per color plane
-		void setValues(const ColorBase<T>& color);
+		void setColor(const Color& color);
 
 		//set color values for one pixel
 		void setPixel(size_t row, size_t col, std::vector<T> colors);
@@ -137,24 +143,32 @@ namespace im {
 		//compute median value of differences
 		double compareTo(const ImageBase& other) const;
 
-		//imprint text
-		void writeText(std::string_view text, int x, int y, int sx, int sy, TextAlign alignment, ColorBase<T> fg, ColorBase<T> bg = ColorBase<T>());
+		//write text into image
+		void writeText(std::string_view text, int x, int y);
 
-		void drawLine(double x0, double y0, double x1, double y1, ColorBase<T> color, double alpha = 1.0);
+		//write text into image
+		void writeText(std::string_view text, int x, int y, int sx, int sy, TextAlign alignment);
 
-		void drawEllipse(double cx, double cy, double rx, double ry, ColorBase<T> color, bool fill = false);
+		//write text into image
+		void writeText(std::string_view text, int x, int y, int sx, int sy, TextAlign alignment, const Color& fg, const Color& bg);
 
-		void drawCircle(double cx, double cy, double r, ColorBase<T> color, bool fill = false);
+		void drawLine(double x0, double y0, double x1, double y1, const Color& color, double alpha = 1.0);
 
-		void drawMarker(double cx, double cy, ColorBase<T> color, double rx, double ry, MarkerType type);
+		void drawEllipse(double cx, double cy, double rx, double ry, const Color& color, bool fill = false);
 
-		void drawMarker(double cx, double cy, ColorBase<T> color, double radius = 1.5, MarkerType = MarkerType::DOT);
+		void drawCircle(double cx, double cy, double r, const Color& color, bool fill = false);
+
+		void drawMarker(double cx, double cy, const Color& color, double rx, double ry, MarkerType type);
+
+		void drawMarker(double cx, double cy, const Color& color, double radius = 1.5, MarkerType = MarkerType::DOT);
 
 		void copyTo(ImageData<T>& dest, std::vector<int> srcPlanes, std::vector<int> destPlanes, ThreadPoolBase& pool = defaultPool) const;
 
 		void copyTo(ImageData<T>& dest, size_t r0, size_t c0, ThreadPoolBase& pool = defaultPool) const;
 
 		void copyTo(ImageData<T>& dest, ThreadPoolBase& pool = defaultPool) const;
+
+		std::vector<T> rawBytes() const override;
 
 		T sample(size_t plane, double x, double y) const;
 
@@ -193,6 +207,8 @@ namespace im {
 		void copyTo(ImageBase<T>& dest) const;
 
 		void copyTo(ImageBase<T>& dest, std::vector<int> srcPlanes, std::vector<int> destPlanes) const;
+
+		std::vector<T> rawBytes() const override;
 	};
 
 

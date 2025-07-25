@@ -19,7 +19,7 @@
 #include "MainData.hpp"
 #include "DeviceInfo.hpp"
 #include "DeshakerHelpText.hpp"
-#include "KeyboardInput.hpp"
+#include "SystemStuff.hpp"
 #include "MovieReader.hpp"
 #include "MovieWriter.hpp"
 #include "CudaFrame.hpp"
@@ -175,23 +175,29 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 			if (it == colorMap.end()) {
 				std::smatch matcher;
 				if (std::regex_match(next, matcher, std::regex("(\\d{1,3}):(\\d{1,3}):(\\d{1,3})$"))) {
-					for (int i = 0; i < 3; i++) {
-						bgcol_rgb.colors[i] = (unsigned char) std::stoi(matcher[i + 1ull].str());
-					}
+					//decimal numbers seperated by colon
+					int r = std::stoi(matcher[1].str());
+					int g = std::stoi(matcher[2].str());
+					int b = std::stoi(matcher[3].str());
+					backgroundColor = Color::rgb(r, g, b);
 
 				} else if (std::regex_match(next, matcher, std::regex("#([[:xdigit:]]{2})([[:xdigit:]]{2})([[:xdigit:]]{2})$"))) {
-					for (int i = 0; i < 3; i++) {
-						bgcol_rgb.colors[i] = (unsigned char) std::stoi(matcher[i + 1ull].str(), nullptr, 16);
-					}
+					//webcolor
+					int r = std::stoi(matcher[1].str(), nullptr, 16);
+					int g = std::stoi(matcher[2].str(), nullptr, 16);
+					int b = std::stoi(matcher[3].str(), nullptr, 16);
+					backgroundColor = Color::rgb(r, g, b);
 
 				} else {
 					throw AVException("invalid color definition: " + next);
 				}
 
 			} else {
-				bgcol_rgb = { it->second[0], it->second[1],it->second[2] };
+				//color literal
+				backgroundColor = it->second;
 			}
 
+			//also set background mode
 			bgmode = BackgroundMode::COLOR;
 
 		} else if (args.nextArg("cputhreads", next)) {
@@ -405,11 +411,12 @@ void MainData::validate(const MovieReader& reader) {
 
 	//check background color value
 	for (int i = 0; i < 3; i++) {
-		int col = bgcol_rgb.colors[i];
+		int col = backgroundColor.getRGBchannel(i);
 		if (col < 0 || col > 255) throw AVException("invalid background color value: " + std::to_string(col));
 	}
-	//set background yuv
-	bgcol_yuv = bgcol_rgb.toNormalized();
+	//set background yuv color vector
+	auto yuv = backgroundColor.getYUVfloats();
+	bgcol_yuv = { yuv[0], yuv[1], yuv[2] };
 
 	int pitchBase = 256;
 	cpupitch = (w + pitchBase - 1) / pitchBase * pitchBase;
@@ -620,16 +627,17 @@ bool MainData::Parameters::nextArg(std::string&& param, std::string& nextParam) 
 	return ok;
 }
 
-void MainData::probeCuda() {
-	cudaInfo.probeCuda();
+std::vector<DeviceInfoCuda> MainData::probeCuda() {
+	return cudaInfo.probeCuda();
 }
 
 size_t MainData::deviceCountCuda() const {
 	return cudaInfo.devices.size();
 }
 
-void MainData::probeOpenCl() {
+std::vector<DeviceInfoOpenCl> MainData::probeOpenCl() {
 	cl::probeRuntime(clinfo);
+	return clinfo.devices;
 }
 
 size_t MainData::deviceCountOpenCl() const {

@@ -129,7 +129,7 @@ void writeText(const std::string& text, int x0, int y0, int scaleX, int scaleY, 
 	}
 
 	//write text
-	im.writeText(text, x0, 0, scaleX, scaleY, im::TextAlign::TOP_LEFT, im::ColorNorm::WHITE, im::ColorNorm::BLACK); //write into host memory
+	im.writeText(text, x0, 0, scaleX, scaleY, im::TextAlign::TOP_LEFT); //write into host memory
 
 	//copy YUV planes back into device memory
 	for (size_t z = 0; z < 3; z++) {
@@ -185,7 +185,7 @@ void CudaExecutor::cudaInit(CoreData& core, int devIdx, const cudaDeviceProp& pr
 
 	//pin memory of transfer object
 	registeredMemPtr = yuvFrame.data();
-	handleStatus(cudaHostRegister(registeredMemPtr, yuvFrame.bytes(), cudaHostRegisterDefault), "error @init #2");
+	handleStatus(cudaHostRegister(registeredMemPtr, yuvFrame.stridedByteSize(), cudaHostRegisterDefault), "error @init #2");
 
 	const size_t h = core.h;
 	const size_t w = core.w;
@@ -296,7 +296,7 @@ void CudaExecutor::cudaInit(CoreData& core, int devIdx, const cudaDeviceProp& pr
 	allocSafe(&d_bufferV, cudaData.strideFloat * h);
 
 	//initialize background color in output buffer
-	float4 bgval = { core.bgcol_yuv.colors[0], core.bgcol_yuv.colors[1], core.bgcol_yuv.colors[2] };
+	float4 bgval = { core.bgcol_yuv[0], core.bgcol_yuv[1], core.bgcol_yuv[2] };
 	std::vector<float4> bg(w * h, bgval);
 	//write to static background
 	size_t siz = w * sizeof(float4);

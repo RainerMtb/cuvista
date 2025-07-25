@@ -20,6 +20,52 @@
 
 #include <array>
 
+class Color {
+
+private:
+	std::array<int, 4> colorData;
+	double alpha;
+
+	Color(int r, int g, int b, double alpha = 1.0);
+
+public:
+	Color();
+
+	static Color WHITE;
+	static Color BLACK;
+	static Color GRAY;
+	static Color RED;
+	static Color GREEN;
+	static Color BLUE;
+	static Color MAGENTA;
+	static Color YELLOW;
+	static Color CYAN;
+	static Color BLACK_SEMI;
+
+	static Color web(const std::string& webColor);
+
+	static Color rgbDouble(double red, double green, double blue);
+	static Color rgb(int red, int green, int blue);
+	static Color rgba(int red, int green, int blue, double alpha = 1.0);
+
+	static Color yuv(unsigned char y, unsigned char u, unsigned char v);
+
+	static Color hsv(double h, double s, double v);
+
+	std::vector<unsigned char> getRGB() const;
+	std::vector<unsigned char> getYUV() const;
+	std::array<float, 3> getYUVfloats() const;
+
+	unsigned char getRed() const;
+	unsigned char getGreen() const;
+	unsigned char getBlue() const;
+
+	void setAlpha(double alpha);
+	double getAlpha() const;
+
+	int getRGBchannel(size_t index) const;
+};
+
 namespace im {
 
 	void yuv_to_rgb(unsigned char y, unsigned char u, unsigned char v, unsigned char* r, unsigned char* g, unsigned char* b);
@@ -31,74 +77,4 @@ namespace im {
 	void rgb_to_yuv(unsigned char r, unsigned char g, unsigned char b, float* y, float* u, float* v);
 
 	void hsv_to_rgb(double h, double s, double v, unsigned char* out_r, unsigned char* out_g, unsigned char* out_b);
-
-	template <class T> class ColorBase {
-	public:
-		std::array<T, 4> colors = { 0, 0, 0, 0 };
-		double alpha = 1.0;
-
-	protected:
-		void setColors(const std::string& webColor, std::array<int, 3> index);
-	};
-
-	class ColorNorm : public ColorBase<float> {
-	public:
-		static ColorNorm WHITE;
-		static ColorNorm BLACK;
-	};
-
-	class ImageColor : public ColorBase<unsigned char> {};
-
-	class ColorRgb;
-
-	class ColorYuv : public ImageColor {
-	public:
-		static ColorYuv WHITE;
-		static ColorYuv BLACK;
-		static ColorYuv GRAY;
-
-		ColorRgb toRgb() const;
-
-		unsigned char y() const;
-		unsigned char u() const;
-		unsigned char v() const;
-	};
-
-	class ColorRgb : public ImageColor {
-	public:
-		static ColorRgb webColor(const std::string& webColor);
-
-		ColorYuv toYuv() const;
-
-		ColorNorm toNormalized() const;
-
-		unsigned char r() const;
-		unsigned char g() const;
-		unsigned char b() const;
-	};
-
-	class ColorBgr : public ImageColor {
-	public:
-		static ColorBgr RED;
-		static ColorBgr GREEN;
-		static ColorBgr BLUE;
-		static ColorBgr WHITE;
-		static ColorBgr BLACK;
-		static ColorBgr MAGENTA;
-		static ColorBgr CYAN;
-		static ColorBgr YELLOW;
-
-		static ColorBgr webColor(const std::string& webColor);
-
-		unsigned char r() const;
-		unsigned char g() const;
-		unsigned char b() const;
-	};
-
-	class ColorRGBA : public ColorBase<unsigned char> {
-	public:
-		static ColorRGBA BLACK;
-		static ColorRGBA WHITE;
-		static ColorRGBA GRAY;
-	};
 }

@@ -38,7 +38,7 @@ void FFmpegFormatWriter::open(AVCodecID codecId, const std::string& sourceName, 
     //setup output context
     int result = avformat_alloc_output_context2(&fmt_ctx, NULL, NULL, sourceName.c_str());
     if (result < 0)
-        throw AVException(av_make_error(result));
+        throw AVException(av_make_error(result, "cannot allocate output format"));
 
     //set default stream handling
     for (StreamContext& sc : mReader.mInputStreams) {
@@ -435,7 +435,7 @@ FFmpegFormatWriter::~FFmpegFormatWriter() {
     if (fmt_ctx && isHeaderWritten) {
         int result = av_write_trailer(fmt_ctx);
         if (result < 0) {
-            errorLogger().logError(av_make_error(result, "error writing trailer"));
+            errorLogger().logError(av_make_error(result, "error writing trailer"), ErrorSource::WRITER);
         }
         outputBytesWritten = avio_tell(fmt_ctx->pb);
     }

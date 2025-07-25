@@ -19,38 +19,6 @@
 #include "MovieWriter.hpp"
 #include "Util.hpp"
 
-// --------------------------------------
-// ------------ UTILS -------------------
-// --------------------------------------
-
-void FrameResult::writeResults(std::span<PointContext> pc, const std::string& filename) {
-	std::ofstream file(filename);
-	file << "idx;x;y;u;v;Type" << std::endl;
-
-	for (const PointContext& p : pc) {
-		const PointResult& pr = *p.ptr;
-		file << pr.idx << ";" << pr.x << ";" << pr.y << ";" << pr.u << ";" << pr.v << ";" << pr.resultValue() << std::endl;
-	}
-}
-
-void writeImage(std::span<PointContext> pc, const std::string& filename, int h, int w) {
-	ImageBGR bgr(h, w);
-	bgr.setValues({ 200, 230, 240 });
-
-	for (const PointContext& p : pc) {
-		PointResult& pr = *p.ptr;
-		double px = pr.x + w / 2.0;
-		double py = pr.y + h / 2.0;
-		double x2 = px + pr.u;
-		double y2 = py + pr.v;
-
-		im::ColorBgr col = im::ColorBgr::BLUE;
-		bgr.drawLine(px, py, x2, y2, col);
-		bgr.drawMarker(x2, y2, col, 1.4);
-	}
-
-	bgr.saveAsColorBMP(filename);
-}
 
 struct ClusterSizes {
 	int index;
@@ -62,22 +30,25 @@ struct ClusterSizes {
 };
 
 
-// --------------------------------------
-// ------------ MAIN --------------------
-// --------------------------------------
-
 FrameResult::FrameResult(MainData& data, ThreadPoolBase& threadPool) :
 	mData { data }
 {
+
+	//create solver class
 	if (data.hasAvx512()) {
 		mAffineSolver = std::make_unique<AffineSolverAvx>(data.resultCount);
 	} else {
 		mAffineSolver = std::make_unique<AffineSolverFast>(threadPool, data.resultCount);
 	}
 
+	//prepare result lists
 	mConsList.reserve(data.resultCount);
 	mList1.resize(data.resultCount);
 	mList2.resize(data.resultCount);
+
+	//init debug storage and put in first item
+	resultStore.clear();
+	resultStore.emplace_back(0);
 }
 
 const AffineTransform& FrameResult::getTransform() const {
@@ -90,7 +61,7 @@ void FrameResult::reset() {
 	mBestTransform.reset();
 }
 
-void FrameResult::computeTransform(std::vector<PointResult>& results, ThreadPoolBase& threadPool, int64_t frameIndex, SamplerPtr sampler) {
+void FrameResult::computeTransform(std::span<PointResult> results, ThreadPoolBase& threadPool, int64_t frameIndex, SamplerPtr sampler) {
 	using namespace util;
 
 	const size_t cMinConsensPoints = 8;	              //min numbers of points for consensus set
@@ -136,8 +107,6 @@ void FrameResult::computeTransform(std::vector<PointResult>& results, ThreadPool
 		mConsList.resize(numValid * cConsLoopPercent / 100);
 		AffineTransform trf1, trf2;
 
-		//ResultDetailsWriter::write(results, "f:/results.txt");
-		
 		// STEP 1
 		// traditional method
 		{
@@ -323,5 +292,7 @@ void FrameResult::computeTransform(std::vector<PointResult>& results, ThreadPool
 
 		for (PointContext& pc : mConsList) pc.ptr->isConsens = true;
 	}
+
+	resultStore.emplace_back(frameIndex, std::vector<PointResult>(results.begin(), results.end())); //-----------
 	//std::cout << "frame " << frameIndex << ", " << mBestTransform << std::endl;
 }

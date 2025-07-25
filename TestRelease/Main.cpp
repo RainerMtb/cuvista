@@ -21,14 +21,13 @@
 #include <regex>
 #include <filesystem>
 
-void printArgs(std::span<std::string> s) {
+static void printArgs(std::span<std::string> s) {
 	std::cout << "ARGS: ";
 	for (const std::string& str : s) std::cout << str << " ";
 	std::cout << std::endl;
 }
 
-DeshakerResult run(const std::string& argsLine) {
-	std::vector<std::string> argsList = util::splitString(argsLine, " ");
+static DeshakerResult run(std::vector<std::string> argsList) {
 	std::ostringstream oss;
 
 	std::cout << std::endl;
@@ -42,6 +41,10 @@ DeshakerResult run(const std::string& argsLine) {
 		std::cout << "output: " << std::endl << str << std::endl;
 	}
 	return result;
+}
+
+static DeshakerResult run(const std::string& argsLine) {
+	return run(util::splitString(argsLine, " "));
 }
 
 int main() {
@@ -58,6 +61,7 @@ int main() {
 	run("-frames 2 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/00.mp4 -noheader -progress 0 -y");
 	run("-frames 3 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/00.mp4 -noheader -progress 0 -y");
 	run("-frames 40 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/00.mp4 -noheader -progress 0 -y");
+	run({ "-frames",  "40", "-i", "d:/VideoTest/example space.mp4", "-o", "d:/videoTest/out/00 space.mp4", "-noheader",  "-progress", "0", "-y" });
 
 	run("-pass 12 -frames 0 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/00.mp4 -noheader -progress 0 -y");
 	run("-pass 12 -frames 1 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/00.mp4 -noheader -progress 0 -y");

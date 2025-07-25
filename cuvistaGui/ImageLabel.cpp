@@ -31,7 +31,7 @@ void ImageLabel::resizePixmap() {
 }
 
 void ImageLabel::setImage(const ImagePPM& ppm) {
-    pm.loadFromData(ppm.data(), ppm.size(), "PPM");
+    pm.loadFromData(ppm.data(), ppm.stridedSize(), "PPM");
     resizePixmap();
 }
 

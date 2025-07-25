@@ -27,3 +27,10 @@ public:
 	virtual void writeMessage(const std::string& msg) {}
 	virtual ~ProgressBase() {}
 };
+
+
+class ProgressDefault : public ProgressBase {
+
+public:
+	void update(double totalPercentage, bool force = false) override {}
+};

@@ -23,10 +23,10 @@
 #include <numeric>
 
 
-std::string av_make_error(int errnum, const char* msg) {
+std::string av_make_error(int errnum, const char* msg, const std::string& str) {
     char av_errbuf[AV_ERROR_MAX_STRING_SIZE];
-    std::string info = msg;
-    if (!info.empty()) info += ": ";
+    std::string info = msg + str;
+    if (info.empty() == false) info += ": ";
     info += av_make_error_string(av_errbuf, AV_ERROR_MAX_STRING_SIZE, errnum);
     return info;
 }

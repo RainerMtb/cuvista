@@ -20,6 +20,17 @@
 
 #include <immintrin.h>
 #include <iostream>
+#include <vector>
+#include <cstdint>
+
+class Iota {
+
+public:
+	inline static constexpr double d[16] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+	inline static constexpr float f[16] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+	inline static constexpr int32_t i32[16] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+	inline static constexpr int64_t i64[16] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+};
 
  //wrapper for __m512 (512 bits - 16 floats)
 class V16f {
@@ -56,6 +67,8 @@ public:
 		return _mm512_castsi512_ps(_mm512_alignr_epi32(_mm512_castps_si512(a), _mm512_castps_si512(a), i)); 
 	}
 
+	V16f rot(int i) const;
+
 	V16f broadcast(int i) const;
 
 	float operator [] (size_t i) const;
@@ -69,6 +82,8 @@ public:
 
 	void storeu(float* dest) const;
 	void storeu(float* dest, __mmask16 mask) const;
+
+	std::vector<float> vector() const;
 
 	operator __m512();
 };
@@ -107,6 +122,8 @@ public:
 		return _mm256_castsi256_ps(_mm256_alignr_epi32(_mm256_castps_si256(a), _mm256_castps_si256(a), i)); 
 	}
 
+	V8f rot(int i) const;
+
 	V8f broadcast(int i) const;
 
 	float operator [] (size_t i) const;
@@ -120,6 +137,8 @@ public:
 
 	void storeu(float* dest) const;
 	void storeu(float* dest, __mmask8 mask) const;
+
+	std::vector<float> vector() const;
 
 	operator __m256();
 };
@@ -158,6 +177,8 @@ public:
 		return _mm_castsi128_ps(_mm_alignr_epi32(_mm_castps_si128(a), _mm_castps_si128(a), i)); 
 	}
 
+	V4f rot(int i) const;
+
 	V4f broadcast(int i) const;
 
 	float operator [] (size_t i) const;
@@ -171,6 +192,8 @@ public:
 
 	void storeu(float* dest) const;
 	void storeu(float* dest, __mmask8 mask) const;
+
+	std::vector<float> vector() const;
 
 	operator __m128();
 };
@@ -211,6 +234,8 @@ public:
 		return _mm512_castsi512_pd(_mm512_alignr_epi64(_mm512_castpd_si512(a), _mm512_castpd_si512(a), i)); 
 	}
 
+	V8d rot(int i) const;
+
 	V8d broadcast(int i) const;
 
 	double operator [] (size_t i) const;
@@ -224,6 +249,8 @@ public:
 
 	void storeu(double* dest) const;
 	void storeu(double* dest, __mmask8 mask) const;
+
+	std::vector<double> vector() const;
 
 	operator __m512d();
 };

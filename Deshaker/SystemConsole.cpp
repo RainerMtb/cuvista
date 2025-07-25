@@ -16,8 +16,34 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
-#pragma once
+#include "SystemStuff.hpp"
 
-#include <optional>
+//get console width from system calls
 
-std::optional<char> getKeyboardInput();
+#if defined(_WIN64)
+#include <windows.h>
+
+int getSystemConsoleWidth() {
+	CONSOLE_SCREEN_BUFFER_INFO csbi;
+	GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
+	return csbi.srWindow.Right - csbi.srWindow.Left + 1;
+}
+
+#elif defined(__linux__)
+extern "C" {
+#include <sys/ioctl.h>
+#include <unistd.h>
+}
+
+int getSystemConsoleWidth() {
+	winsize w;
+	ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+	return w.ws_col;
+}
+
+#else
+int getSystemConsoleWidth() {
+	return 80;
+}
+
+#endif

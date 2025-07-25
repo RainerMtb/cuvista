@@ -35,9 +35,9 @@ CpuFrame::CpuFrame(MainData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame
 	for (int i = 0; i < mData.pyramidCount; i++) mPyr.emplace_back(mData);
 
 	//init storage for previous output frame to background colors
-	mPrevOut.push_back(Matf::values(mData.h, mData.w, mData.bgcol_yuv.colors[0]));
-	mPrevOut.push_back(Matf::values(mData.h, mData.w, mData.bgcol_yuv.colors[1]));
-	mPrevOut.push_back(Matf::values(mData.h, mData.w, mData.bgcol_yuv.colors[2]));
+	mPrevOut.push_back(Matf::values(mData.h, mData.w, mData.bgcol_yuv[0]));
+	mPrevOut.push_back(Matf::values(mData.h, mData.w, mData.bgcol_yuv[1]));
+	mPrevOut.push_back(Matf::values(mData.h, mData.w, mData.bgcol_yuv[2]));
 
 	//buffer for output and pyramid creation
 	mBuffer.assign(3, Matf::allocate(mData.h, mData.w));
@@ -252,7 +252,7 @@ void CpuFrame::outputData(int64_t frameIndex, const Affine2D& trf) {
 		mYuvPlane.setValues([&] (size_t r, size_t c) { return input.at(z, r, c) * f; }, mPool);
 		//transform and evaluate pixels, write to out buffer
 		auto func1 = [&] (size_t r, size_t c) {
-			float bg = (mData.bgmode == BackgroundMode::COLOR ? mData.bgcol_yuv.colors[z] : mPrevOut[z].at(r, c));
+			float bg = (mData.bgmode == BackgroundMode::COLOR ? mData.bgcol_yuv[z] : mPrevOut[z].at(r, c));
 			auto [x, y] = trf.transform(c, r); //pay attention to order of x and y
 			float result = mYuvPlane.interp2(float(x), float(y)).value_or(bg);
 			//if (z == 0 && r == 1049 && c == 842) {

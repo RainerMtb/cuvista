@@ -35,7 +35,7 @@ public:
 		int h = 200;
 		int stride = w + 12;
 		ImageYuv yuv(h, w, stride);
-		yuv.setValues({ 50, 10, 20 });
+		yuv.setColor(Color::yuv(50, 10, 20));
 		std::vector<unsigned char> nv12(w * h * 3 / 2);
 		yuv.toNV12(nv12, w);
 

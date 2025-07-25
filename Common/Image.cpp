@@ -18,10 +18,12 @@
 
 #include "Image.hpp"
 #include "Util.hpp"
+#include "CharMap.hpp"
 
 #include <cmath>
 #include <algorithm>
 #include <numeric>
+#include <map>
 
 template <class T> im::ImageBase<T>::ImageBase(int h, int w, int stride, int numPlanes) :
 	h { h },
@@ -68,12 +70,12 @@ template <class T> const T* im::ImageBase<T>::addr(size_t idx, size_t r, size_t 
 	return arrays[0].get() + idx * h * stride + r * stride + c;
 }
 
-template <class T> size_t im::ImageBase<T>::size() const {
+template <class T> size_t im::ImageBase<T>::stridedSize() const {
 	return imageSize;
 }
 
-template <class T> size_t im::ImageBase<T>::bytes() const {
-	return size() * sizeof(T);
+template <class T> size_t im::ImageBase<T>::stridedByteSize() const {
+	return stridedSize() * sizeof(T);
 }
 
 template <class T> uint64_t im::ImageBase<T>::crc() const {
@@ -179,7 +181,11 @@ template <class T> double im::ImageBase<T>::compareTo(const ImageBase<T>& other)
 	return out;
 }
 
-template <class T> void im::ImageBase<T>::setValues(int plane, T colorValue) {
+template <class T> std::vector<T> im::ImageBase<T>::getColorData(const Color& color) const {
+	return {};
+}
+
+template <class T> void im::ImageBase<T>::setColorPlane(int plane, T colorValue) {
 	for (size_t r = 0; r < h; r++) {
 		for (size_t c = 0; c < w; c++) {
 			at(plane, r, c) = colorValue;
@@ -187,9 +193,10 @@ template <class T> void im::ImageBase<T>::setValues(int plane, T colorValue) {
 	}
 }
 
-template <class T> void im::ImageBase<T>::setValues(const ColorBase<T>& color) {
+template <class T> void im::ImageBase<T>::setColor(const Color& color) {
+	std::vector<T> colors = getColorData(color);
 	for (int z = 0; z < numPlanes; z++) {
-		setValues(z, color.colors[z]);
+		setColorPlane(z, colors[z]);
 	}
 }
 
@@ -236,8 +243,17 @@ template <class T> void im::ImageBase<T>::copyTo(ImageData<T>& dest, ThreadPoolB
 //write text
 //------------------------
 
+template <class T> void im::ImageBase<T>::writeText(std::string_view text, int x, int y) {
+	int scale = std::min(w, h) / 600 + 1;
+	writeText(text, x, y, scale, scale, TextAlign::BOTTOM_LEFT);
+}
+
+template <class T> void im::ImageBase<T>::writeText(std::string_view text, int x, int y, int sx, int sy, TextAlign alignment) {
+	writeText(text, x, y, sx, sy, alignment, Color::WHITE, Color::BLACK_SEMI);
+}
+
 template <class T> void im::ImageBase<T>::writeText(std::string_view text, int x, int y, int sx, int sy, 
-	TextAlign alignment, ColorBase<T> fg, ColorBase<T> bg) {
+	TextAlign alignment, const Color& fg, const Color& bg) {
 
 	//compute alignment
 	int wt = int(text.size()) * 6 * sx;
@@ -248,7 +264,7 @@ template <class T> void im::ImageBase<T>::writeText(std::string_view text, int x
 	
 	//fill background area
 	for (int ix = x0; ix < x0 + sx + wt; ix++) {
-		for (int iy = y0; iy < y0 + 10 * sy; iy++) {
+		for (int iy = y0; iy < y0 + ht; iy++) {
 			if (iy < h && ix < w) {
 				plot(ix, iy, 1.0, bg);
 			}
@@ -257,9 +273,8 @@ template <class T> void im::ImageBase<T>::writeText(std::string_view text, int x
 
 	//write foreground characters
 	for (int charIdx = 0; charIdx < text.size(); charIdx++) {
-		unsigned char ch = text.at(charIdx); //one character from the string
-		auto it = charMap.find(ch);
-		uint64_t bitmap = it == charMap.end() ? charMap.at('\0') : it->second; //mapping sequence 0 or 1
+		uint8_t charValue = (uint8_t) text.at(charIdx); //one character from the string
+		uint64_t bitmap = charMap[charValue];
 
 		for (int yi = 7; yi >= 0; yi--) { //row of character map
 			for (int xi = 4; xi >= 0; xi--) { //column of digit image
@@ -287,25 +302,35 @@ template <class T> void im::ImageBase<T>::writeText(std::string_view text, int x
 //drawing funtions
 //------------------------
 
-template <class T> void im::ImageBase<T>::plot(int x, int y, double a, ColorBase<T> color) {
+template <class T> void im::ImageBase<T>::plot(int x, int y, double a, const std::vector<T>& colorData, double colorAlpha) {
+	double alpha = a * colorAlpha;
 	if (x >= 0 && x < w && y >= 0 && y < h) {
-		double alpha = a * color.alpha;
 		for (int z = 0; z < 3; z++) {
 			T* pix = addr(z, y, x);
-			*pix = T(*pix * (1.0 - alpha) + color.colors[z] * alpha);
+			*pix = T(*pix * (1.0 - alpha) + colorData[z] * alpha);
 		}
 	}
 }
 
-template <class T> void im::ImageBase<T>::plot(double x, double y, double a, ColorBase<T> color) {
-	plot(int(x), int(y), a, color);
+template <class T> void im::ImageBase<T>::plot(double x, double y, double a, const std::vector<T>& colorData, double colorAlpha) {
+	plot(int(x), int(y), a, colorData, colorAlpha);
 }
 
-template <class T> void im::ImageBase<T>::plot4(double cx, double cy, double dx, double dy, double a, ColorBase<T> color) {
-	plot(cx + dx, cy + dy, a, color);
-	plot(cx - dx, cy + dy, a, color);
-	plot(cx + dx, cy - dy, a, color);
-	plot(cx - dx, cy - dy, a, color);
+template <class T> void im::ImageBase<T>::plot(int x, int y, double a, const Color& color) {
+	plot(x, y, a, getColorData(color), color.getAlpha());
+}
+
+template <class T> void im::ImageBase<T>::plot(double x, double y, double a, const Color& color) {
+	plot(int(x), int(y), a, getColorData(color), color.getAlpha());
+}
+
+template <class T> void im::ImageBase<T>::plot4(double cx, double cy, double dx, double dy, double a, const Color& color) {
+	std::vector<T> colorData = getColorData(color);
+	double colorAlpha = color.getAlpha();
+	plot(cx + dx, cy + dy, a, colorData, colorAlpha);
+	plot(cx - dx, cy + dy, a, colorData, colorAlpha);
+	plot(cx + dx, cy - dy, a, colorData, colorAlpha);
+	plot(cx - dx, cy - dy, a, colorData, colorAlpha);
 }
 
 template <class T> double im::ImageBase<T>::fpart(double d) {
@@ -316,7 +341,7 @@ template <class T> double im::ImageBase<T>::rfpart(double d) {
 	return 1.0 - fpart(d);
 }
 
-template <class T> void im::ImageBase<T>::drawLine(double x0, double y0, double x1, double y1, ColorBase<T> color, double alpha) {
+template <class T> void im::ImageBase<T>::drawLine(double x0, double y0, double x1, double y1, const Color& color, double alpha) {
 	/*
 	Xiaolin Wu's line algorithm
 	https://en.wikipedia.org/wiki/Xiaolin_Wu%27s_line_algorithm
@@ -342,13 +367,17 @@ template <class T> void im::ImageBase<T>::drawLine(double x0, double y0, double 
 	double xpxl1 = xend;
 	double ypxl1 = floor(yend);
 
+	//color information
+	std::vector<T> colorData = getColorData(color);
+	double colorAlpha = color.getAlpha();
+
 	if (steep) {
-		plot(ypxl1, xpxl1, rfpart(yend) * xgap * alpha, color);
-		plot(ypxl1 + 1, xpxl1, fpart(yend) * xgap * alpha, color);
+		plot(ypxl1, xpxl1, rfpart(yend) * xgap * alpha, colorData, colorAlpha);
+		plot(ypxl1 + 1, xpxl1, fpart(yend) * xgap * alpha, colorData, colorAlpha);
 
 	} else {
-		plot(xpxl1, ypxl1, rfpart(yend) * xgap * alpha, color);
-		plot(xpxl1, ypxl1 + 1, fpart(yend) * xgap * alpha, color);
+		plot(xpxl1, ypxl1, rfpart(yend) * xgap * alpha, colorData, colorAlpha);
+		plot(xpxl1, ypxl1 + 1, fpart(yend) * xgap * alpha, colorData, colorAlpha);
 	}
 	double inter = yend + g;
 
@@ -360,32 +389,32 @@ template <class T> void im::ImageBase<T>::drawLine(double x0, double y0, double 
 	double ypxl2 = floor(yend);
 
 	if (steep) {
-		plot(ypxl2, xpxl2, rfpart(yend) * xgap * alpha, color);
-		plot(ypxl2 + 1, xpxl2, fpart(yend) * xgap * alpha, color);
+		plot(ypxl2, xpxl2, rfpart(yend) * xgap * alpha, colorData, colorAlpha);
+		plot(ypxl2 + 1, xpxl2, fpart(yend) * xgap * alpha, colorData, colorAlpha);
 
 	} else {
-		plot(xpxl2, ypxl2, rfpart(yend) * xgap * alpha, color);
-		plot(xpxl2, ypxl2 + 1, fpart(yend) * xgap * alpha, color);
+		plot(xpxl2, ypxl2, rfpart(yend) * xgap * alpha, colorData, colorAlpha);
+		plot(xpxl2, ypxl2 + 1, fpart(yend) * xgap * alpha, colorData, colorAlpha);
 	}
 
 	//main loop
 	if (steep) {
 		for (double x = xpxl1 + 1.0; x < xpxl2; x++) {
-			plot(floor(inter), x, rfpart(inter) * alpha, color);
-			plot(floor(inter) + 1, x, fpart(inter) * alpha, color);
+			plot(floor(inter), x, rfpart(inter) * alpha, colorData, colorAlpha);
+			plot(floor(inter) + 1, x, fpart(inter) * alpha, colorData, colorAlpha);
 			inter += g;
 		}
 
 	} else {
 		for (double x = xpxl1 + 1.0; x < xpxl2; x++) {
-			plot(x, floor(inter), rfpart(inter) * alpha, color);
-			plot(x, floor(inter) + 1, fpart(inter) * alpha, color);
+			plot(x, floor(inter), rfpart(inter) * alpha, colorData, colorAlpha);
+			plot(x, floor(inter) + 1, fpart(inter) * alpha, colorData, colorAlpha);
 			inter += g;
 		}
 	}
 }
 
-template <class T> void im::ImageBase<T>::drawEllipse(double cx, double cy, double rx, double ry, ColorBase<T> color, bool fill) {
+template <class T> void im::ImageBase<T>::drawEllipse(double cx, double cy, double rx, double ry, const Color& color, bool fill) {
 	double rx2 = util::sqr(rx);
 	double ry2 = util::sqr(ry);
 	double h = sqrt(rx2 + ry2);
@@ -432,15 +461,15 @@ template <class T> void im::ImageBase<T>::drawEllipse(double cx, double cy, doub
 	}
 }
 
-template <class T> void im::ImageBase<T>::drawCircle(double cx, double cy, double r, ColorBase<T> color, bool fill) {
+template <class T> void im::ImageBase<T>::drawCircle(double cx, double cy, double r, const Color& color, bool fill) {
 	drawEllipse(cx, cy, r, r, color, fill);
 }
 
-template <class T> void im::ImageBase<T>::drawMarker(double cx, double cy, ColorBase<T> color, double radius, MarkerType type) {
+template <class T> void im::ImageBase<T>::drawMarker(double cx, double cy, const Color& color, double radius, MarkerType type) {
 	drawMarker(cx, cy, color, radius, radius, type);
 }
 
-template <class T> void im::ImageBase<T>::drawMarker(double cx, double cy, ColorBase<T> color, double rx, double ry, MarkerType type) {
+template <class T> void im::ImageBase<T>::drawMarker(double cx, double cy, const Color& color, double rx, double ry, MarkerType type) {
 	using namespace util;
 
 	const int steps = 8;
@@ -473,11 +502,15 @@ template <class T> void im::ImageBase<T>::drawMarker(double cx, double cy, Color
 		}
 	}
 
+	//color information
+	std::vector<T> colorData = getColorData(color);
+	double colorAlpha = color.getAlpha();
+
 	for (auto& [idx, a] : alpha) {
 		int iy = idx / stride;
 		int ix = idx % stride;
 		if (ix >= 0 && ix < w && iy >= 0 && iy < h) {
-			plot(ix, iy, a * ds * ds, color);
+			plot(ix, iy, a * ds * ds, colorData, colorAlpha);
 		}
 	}
 }
@@ -511,6 +544,20 @@ template <class T> T im::ImageBase<T>::sample(size_t plane, double x, double y) 
 	double f11 = at(plane, iy + yd, ix + xd);
 	double result = ((1 - dx) * (1 - dy) * f00 + (1 - dx) * dy * f10 + dx * (1 - dy) * f01 + dx * dy * f11);
 	return (T) result;
+}
+
+template <class T> std::vector<T> im::ImageBase<T>::rawBytes() const {
+	std::vector<T> data(h * w * numPlanes);
+	size_t idx = 0;
+	for (int i = 0; i < numPlanes; i++) {
+		for (int r = 0; r < h; r++) {
+			for (int c = 0; c < w; c++) {
+				data[idx] = at(i, r, c);
+				idx++;
+			}
+		}
+	}
+	return data;
 }
 
 template <class T> bool im::ImageBase<T>::saveAsBMP(const std::string& filename, T scale) const {
@@ -616,6 +663,19 @@ template <class T> void im::ImagePacked<T>::copyTo(ImageBase<T>& dest, std::vect
 		}
 	}
 	dest.index = this->index;
+}
+
+template <class T> std::vector<T> im::ImagePacked<T>::rawBytes() const {
+	int linesiz = this->w * this->numPlanes;
+	std::vector<T> data(this->h * linesiz);
+	T* dest = data.data();
+	const T* src = this->arrays[0].get();
+	for (int r = 0; r < this->h; r++) {
+		std::copy(src, src + linesiz, dest);
+		src += linesiz;
+		dest += linesiz;
+	}
+	return data;
 }
 
 

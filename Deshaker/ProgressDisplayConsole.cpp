@@ -132,35 +132,6 @@ void ProgressDisplayMultiLine::writeMessage(const std::string& str) {
 }
 
 
-//get console width from system calls
-
-#if defined(_WIN64)
-#include <windows.h>
-
-int getSystemConsoleWidth() {
-	CONSOLE_SCREEN_BUFFER_INFO csbi;
-	GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
-	return csbi.srWindow.Right - csbi.srWindow.Left + 1;
-}
-
-#elif defined(__linux__)
-extern "C" {
-#include <sys/ioctl.h>
-}
-
-int getSystemConsoleWidth() {
-	winsize w;
-	ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
-	return w.ws_col;
-}
-
-#else
-int getSystemConsoleWidth() { 
-	return 80; 
-}
-
-#endif
-
 int ProgressDisplayMultiLine::getConsoleWidth() {
 	return std::clamp(getSystemConsoleWidth(), 40, 200);
 }

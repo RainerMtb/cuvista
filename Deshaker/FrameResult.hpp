@@ -23,15 +23,26 @@
 #include "MainData.hpp"
 #include "ThreadPoolBase.h"
 
+//hold data for debugging
+struct FrameResultStore {
+	int64_t frameIndex = -1;
+	std::vector<PointResult> results;
+};
+
+//compute and hold transform for one video frame
 class FrameResult {
 
 	using SamplerPtr = std::shared_ptr<SamplerBase<PointContext>>;
 
 public:
+	//store results for analyzing and debugging
+	inline static std::list<FrameResultStore> resultStore;
+
+	//construct lists and solver class
 	FrameResult(MainData& data, ThreadPoolBase& threadPool);
 
 	//compute resulting transformation for this frame
-	void computeTransform(std::vector<PointResult>& results, ThreadPoolBase& threadPool, int64_t frameIndex, SamplerPtr sampler);
+	void computeTransform(std::span<PointResult> results, ThreadPoolBase& threadPool, int64_t frameIndex, SamplerPtr sampler);
 
 	//get the last computed treansform
 	const AffineTransform& getTransform() const;
@@ -45,6 +56,4 @@ private:
 	AffineTransform mBestTransform;
 	std::vector<PointContext> mConsList, mList1, mList2;
 	std::vector<PointContext*> mRegion;
-
-	void writeResults(std::span<PointContext> pc, const std::string& filename);
 };

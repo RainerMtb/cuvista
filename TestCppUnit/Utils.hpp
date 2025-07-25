@@ -102,4 +102,12 @@ namespace Microsoft::VisualStudio::CppUnitTestFramework {
 	template <> static std::wstring ToString(const ImageYuv& im) {
 		return L"image w=" + std::to_wstring(im.w) + L" h=" + std::to_wstring(im.h);
 	}
+
+	template <> static std::wstring ToString(const std::vector<double>& v) {
+		return Mat<double>::fromRowData(1, v.size(), v).toWString();
+	}
+
+	template <> static std::wstring ToString(const std::vector<float>& v) {
+		return Mat<float>::fromRowData(1, v.size(), v).toWString();
+	}
 }

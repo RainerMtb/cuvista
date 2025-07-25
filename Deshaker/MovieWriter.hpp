@@ -24,6 +24,7 @@
 #include "ThreadPool.hpp"
 #include "FrameExecutor.hpp"
 
+
 class MovieFrame;
 
 //-----------------------------------------------------------------------------------
@@ -99,6 +100,28 @@ public:
 	const ImageYuv& getOutputFrame() { return outputFrame; }
 	void prepareOutput(FrameExecutor& executor) override;
 	void writeOutput(const FrameExecutor& executor) override;
+};
+
+
+//-----------------------------------------------------------------------------------
+class RawMemoryStoreWriter : public BaseWriter {
+
+protected:
+	size_t maxFrameCount;
+	int inputFrameIndex = 0;
+
+public:
+	std::list<ImageYuv> outputFrames;
+	std::list<ImageYuv> inputFrames;
+
+	RawMemoryStoreWriter(MainData& data, MovieReader& reader, size_t maxFrameCount = 500) :
+		BaseWriter(data, reader),
+		maxFrameCount { maxFrameCount } {}
+
+	void writeOutput(const FrameExecutor& executor) override;
+	void writeInput(const FrameExecutor& executor) override;
+	
+	void writeYuvFiles(const std::string& inputFile, const std::string& outputFile);
 };
 
 
@@ -267,7 +290,6 @@ private:
 	ImageYuv mInputFrame;
 	ImageYuv mInputFrameScaled;
 	ImageYuv mOutputFrame;
-	im::ColorYuv mBackgroundColor;
 
 public:
 	StackedWriter(MainData& data, MovieReader& reader, double stackPosition) :
@@ -387,5 +409,20 @@ public:
 	void start() override {}
 	void writeInput(const FrameExecutor& executor) override;
 
-	void writeImage(const AffineTransform& trf, std::span<PointResult> res, int64_t idx, const ImageYuv& yuv, const std::string& fname);
+	void writeImage(const AffineTransform& trf, std::span<PointResult> res, int64_t idx, const ImageYuv& yuv, ThreadPoolBase& pool);
+	void writeImage(const AffineTransform& trf, std::span<PointResult> res, int64_t idx, const ImageYuv& yuv, const std::string& outFile);
+};
+
+
+//--------------------------------------------------------------------------------------
+//simple writer for debugging, writes YUV data to file, cannot be used in executor loop
+class SimpleYuvWriter {
+
+private:
+	std::ofstream os;
+
+public:
+	SimpleYuvWriter(const std::string& file);
+
+	void write(ImageYuv& image);
 };

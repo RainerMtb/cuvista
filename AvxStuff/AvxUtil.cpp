@@ -114,6 +114,11 @@ void avx::inv(std::span<V8d> v) {
 	size_t m = v.size();
 	std::vector<size_t> piv(m);
 	std::iota(piv.begin(), piv.end(), 0);
+	avx::inv(v, piv);
+}
+
+void avx::inv(std::span<V8d> v, std::span<size_t> piv) {
+	size_t m = v.size();
 	V8d tmp;
 
 	for (size_t j = 0; j < m; j++) {

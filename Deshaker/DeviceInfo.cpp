@@ -115,7 +115,7 @@ bool DeviceInfoCuda::operator < (const DeviceInfoCuda& other) const {
 	return props->major == other.props->major ? props->minor < other.props->minor : props->major < other.props->major;
 }
 
-void CudaInfo::probeCuda() {
+std::vector<DeviceInfoCuda> CudaInfo::probeCuda() {
 	//check Nvidia Driver
 	NvidiaDriverInfo driverInfo = probeNvidiaDriver();
 	nvidiaDriverVersion = driverInfo.version;
@@ -145,6 +145,7 @@ void CudaInfo::probeCuda() {
 
 		devices.push_back(cuda);
 	}
+	return devices;
 }
 
 std::string DeviceInfoCuda::getNameShort() const {

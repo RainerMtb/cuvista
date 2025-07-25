@@ -61,18 +61,18 @@ struct CoreData {
 	double deps = std::numeric_limits<double>::epsilon();
 	double dnan = std::numeric_limits<double>::quiet_NaN();
 
-	Triplet unsharp = { 0.6f, 0.3f, 0.3f };	   //ffmpeg unsharp=5:5:0.6:3:3:0.3
-	im::ColorNorm bgcol_yuv = {};			   //background fill colors in yuv
-	BackgroundMode bgmode = BackgroundMode::BLEND;
+	Triplet unsharp = { 0.6f, 0.3f, 0.3f };          //ffmpeg unsharp=5:5:0.6:3:3:0.3
+	Triplet bgcol_yuv = {};                          //background fill colors in yuv
+	BackgroundMode bgmode = BackgroundMode::BLEND;   //fill gap with previous frames or not
 
-	int radius = -1;			//number of frames before and after used for smoothing
-	double radsec = 0.5;		//radius in seconds
+	int radius = -1;			//temporal radius, number of frames before and after used for smoothing
+	double radsec = 0.5;		//temporal radius in seconds
 	int bufferCount = -1;		//number of frames to read before starting to average out trajectory
 
 	double zoomMin = 1.05;		        //min additional zoom
 	double zoomMax = 1.15;              //max additioanl zoom
-	double zoomFallbackTotal = 0.025;   //fallback rate for dynamic zoom, to be divided by frame radius
-	double zoomFallback = 0.0;          //fallback rate for dynamic zoom
+	double zoomFallbackTotal = 0.025;   //fallback rate for dynamic zoom, to be divided by temporal radius
+	double zoomFallback = 0.0;          //fallback rate for dynamic zoom, to be applied per frame
 
 	int cpuThreads = 1;         //cpu threads to use in cpu-compute and computing transform parameters, leave room for other things
 };

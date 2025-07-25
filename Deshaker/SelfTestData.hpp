@@ -22,8 +22,8 @@
 
 inline const uint64_t crcInput = 3795440549894897428ull;
 inline const uint64_t crcPyramid = 3601505673214147633ull;
-inline const uint64_t crcTransformed = 15948510334877905805ull;
-inline const uint64_t crcOutput = 4398298535004342781ull;
+inline const uint64_t crcTransformed = 0x2c222c742b167b5d;
+inline const uint64_t crcOutput = 0xa2ccd7c00f29c887;
 inline const uint64_t crcResult = 7127949688159767411ull;
 
 

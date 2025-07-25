@@ -73,6 +73,12 @@ const AffineTransform& MovieFrame::getTransform() const {
 	return mFrameResult.getTransform();
 }
 
+void MovieFrame::runLoop(std::shared_ptr<FrameExecutor> executor) {
+	std::shared_ptr<ProgressBase> progress = std::make_shared<ProgressDefault>();
+	UserInputDefault input;
+	runLoop(progress, input, executor);
+}
+
 
 //---------------------------------------------------------------
 //---------- DESHAKER LOOP COMBINED -----------------------------
@@ -88,10 +94,10 @@ void MovieFrameCombined::runLoop(std::shared_ptr<ProgressBase> progress, UserInp
 		if (state == StateCombined::READ_FIRST) {
 			//show program header on console
 			if (mData.printHeader) mData.showIntro(executor->mDeviceInfo.getName(), mReader);
-			//read first frame from input into buffer
 			//init progress display
 			progress->init();
 			progress->writeMessage("processing frames...");
+			//read first frame from input into buffer
 			mReader.read(mBufferFrame);
 			mReader.startOfInput = false;
 
@@ -180,11 +186,14 @@ void MovieFrameCombined::runLoop(std::shared_ptr<ProgressBase> progress, UserInp
 		double percentage = std::numeric_limits<double>::quiet_NaN();
 		int64_t frameCount = mReader.frameCount;
 		if (frameCount > 0) {
-			//first pass is worth 85% of total progress
+			//total progress is 75% read and 25% write progress
 			double p = 75.0 * mReader.frameIndex / frameCount + 25.0 * mWriter.frameIndex / frameCount;
 			percentage = std::clamp(p, 0.0, 100.0);
 		}
 		progress->update(percentage, mReader.endOfInput || state == StateCombined::CLOSE);
+
+		//prevent system sleep
+		keepSystemAlive();
 
 		//stop signal must be handled exactly once
 		if (inputState == InputState::NONE && (mReader.endOfInput || mReader.frameIndex >= mData.maxFrames)) {
@@ -327,6 +336,9 @@ void MovieFrameConsecutive::runLoop(std::shared_ptr<ProgressBase> progress, User
 			percentage = std::clamp(p, 0.0, 100.0);
 		}
 		progress->update(percentage, mReader.endOfInput || state == StateConsecutive::CLOSE);
+		
+		//prevent system sleep
+		keepSystemAlive();
 
 		//stop signal must be handled exactly once
 		if (inputState == InputState::NONE && (mReader.endOfInput || mReader.frameIndex >= maxFrames)) {

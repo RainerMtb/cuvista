@@ -66,7 +66,7 @@ std::optional<std::string> MovieReader::ptsForFrameAsString(int64_t frameIndex) 
 
 bool NullReader::read(ImageYuv& inputFrame) {
     frameIndex++;
-    inputFrame.setValues(im::ColorYuv { 0, 0, 0 });
+    inputFrame.setColor(Color::BLACK);
     endOfInput = false;
     return false;
 }
@@ -97,7 +97,7 @@ void FFmpegReader::open(const std::string& source) {
     if (av_fmt == nullptr)
         throw AVException("could not create AVFormatContext");
 
-    openInput(av_fmt, source.data());
+    openInput(av_fmt, source);
 }
 
 
@@ -142,15 +142,16 @@ int FFmpegReader::openAudioDecoder(OutputStreamContext& osc) {
 
 
 //open ffmpeg file
-void FFmpegFormatReader::openInput(AVFormatContext* fmt, const char* source) {
+void FFmpegFormatReader::openInput(AVFormatContext* fmt, const std::string& source) {
     av_format_ctx = fmt;
     int err;
 
     // Open the file using libavformat
-    err = avformat_open_input(&av_format_ctx, source, NULL, NULL);
-    isFormatOpen = (err == 0);
-    if (err < 0) 
-        throw AVException(av_make_error(err, "could not open input video file"));
+    err = avformat_open_input(&av_format_ctx, source.c_str(), NULL, NULL);
+    if (err < 0)
+        throw AVException(av_make_error(err, "", std::format("could not open file '{}'", source)));
+    else
+        isFormatOpen = true;
 
     //without find_stream_info width or height might be 0
     err = avformat_find_stream_info(av_format_ctx, NULL);
@@ -281,7 +282,7 @@ bool FFmpegReader::read(ImageYuv& inputFrame) {
                 break;
 
             } else if (response < 0) {
-                errorLogger().logError(av_make_error(response, "failed to receive frame"));
+                errorLogger().logError(av_make_error(response, "failed to receive frame"), ErrorSource::READER);
                 break;
 
             } else { //we still got a frame

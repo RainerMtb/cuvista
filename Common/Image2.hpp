@@ -54,6 +54,8 @@ public:
 
 	//default constructor produces invalid image
 	ImageRGBplanar();
+
+	std::vector<unsigned char> getColorData(const Color& color) const override;
 };
 
 
@@ -72,6 +74,8 @@ public:
 	void copyTo(ImageRGBA& dest, size_t r0, size_t c0, ThreadPoolBase& pool = defaultPool) const;
 
 	bool saveAsColorBMP(const std::string& filename) const;
+
+	std::vector<unsigned char> getColorData(const Color& color) const override;
 };
 
 
@@ -91,11 +95,16 @@ public:
 
 	virtual const unsigned char* data() const;
 
-	//downsample and copy pixeldata to given array in nv12 format
+	ImageYuv copy() const;
+
+	//convert to NV12 format and copy pixeldata to provided array
 	void toNV12(std::vector<unsigned char>& nv12, size_t strideNV12, ThreadPoolBase& pool = defaultPool) const;
 
-	//downsample and copy pixeldata
+	//convert to NV12 format and return pixeldata
 	std::vector<unsigned char> toNV12(size_t strideNV12) const;
+
+	//convert to NV12 format
+	std::vector<unsigned char> toNV12() const;
 
 	//convert NV12 array into YuvFrame
 	ImageYuv& fromNV12(const std::vector<unsigned char>& nv12, size_t strideNV12);
@@ -122,6 +131,8 @@ public:
 
 	//convert to ImageBGR and save to file, for repeated use BGR image should be preallocated
 	bool saveAsColorBMP(const std::string& filename) const;
+
+	std::vector<unsigned char> getColorData(const Color& color) const override;
 };
 
 
@@ -138,6 +149,8 @@ public:
 	ImageYuv toYUV() const;
 
 	static ImageBGR readFromBMP(const std::string& filename);
+
+	std::vector<unsigned char> getColorData(const Color& color) const override;
 };
 
 
@@ -154,9 +167,9 @@ public:
 
 	unsigned char* data() override;
 
-	size_t size() const override;
+	size_t stridedSize() const override;
 
-	size_t bytes() const override;
+	size_t stridedByteSize() const override;
 
 	const unsigned char* header() const;
 

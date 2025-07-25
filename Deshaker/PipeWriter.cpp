@@ -44,7 +44,7 @@ void PipeWriter::open(EncodingOption videoCodec) {
 PipeWriter::~PipeWriter() {
 	int result = _setmode(_fileno(stdout), _O_TEXT);
 	if (result < 0) {
-		errorLogger().logError("Pipe: error setting stdout to text mode");
+		errorLogger().logError("Pipe: error setting stdout to text mode", ErrorSource::WRITER);
 	}
 }
 
@@ -66,7 +66,7 @@ void PipeWriter::writeOutput(const FrameExecutor& executor) {
 	}
 	
 	if (bytes != 3ull * outputFrame.w * outputFrame.h) {
-		errorLogger().logError("Pipe: error writing data");
+		errorLogger().logError("Pipe: error writing data", ErrorSource::WRITER);
 	}
 
 	std::unique_lock<std::mutex> lock(mStatsMutex);

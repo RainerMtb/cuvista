@@ -107,7 +107,6 @@
     <ClCompile Include="DeviceInfo.cpp" />
     <ClCompile Include="FFmpegFormatWriter.cpp" />
     <ClCompile Include="FFmpegUtil.cpp" />
-    <ClCompile Include="KeyboardInput.cpp" />
     <ClCompile Include="NvidiaDriver.cpp" />
     <ClCompile Include="PipeWriter.cpp" />
     <ClCompile Include="ProgressDisplayConsole.cpp" />
@@ -119,6 +118,9 @@
     <ClCompile Include="ProgressDisplay.cpp" />
     <ClCompile Include="MovieWriter.cpp" />
     <ClCompile Include="Stats.cpp" />
+    <ClCompile Include="SystemConsole.cpp" />
+    <ClCompile Include="SystemInput.cpp" />
+    <ClCompile Include="SystemKeepAlive.cpp" />
     <ClCompile Include="ThreadPool.cpp" />
     <ClCompile Include="Trajectory.cpp" />
   </ItemGroup>
@@ -140,7 +142,6 @@
     <ClInclude Include="FFmpegUtil.hpp" />
     <ClInclude Include="FrameResult.hpp" />
     <ClInclude Include="ImageYuvFFmpeg.hpp" />
-    <ClInclude Include="KeyboardInput.hpp" />
     <ClInclude Include="DeshakerHelpText.hpp" />
     <ClInclude Include="MainData.hpp" />
     <ClInclude Include="MatrixInverter.hpp" />
@@ -157,10 +158,9 @@
     <ClInclude Include="RandomSource.hpp" />
     <ClInclude Include="MovieReader.hpp" />
     <ClInclude Include="NvEncoder.hpp" />
+    <ClInclude Include="SystemStuff.hpp" />
     <ClInclude Include="ThreadPool.hpp" />
     <ClInclude Include="Trajectory.hpp" />
-    <ClInclude Include="UserInput.hpp" />
-    <ClInclude Include="UserInputConsole.hpp" />
     <ClInclude Include="Version.hpp" />
   </ItemGroup>
   <ItemGroup>

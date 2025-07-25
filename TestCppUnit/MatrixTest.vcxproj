@@ -209,6 +209,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="AvxTest.cpp" />
     <ClCompile Include="CodecTest.cpp" />
     <ClCompile Include="DecompositionTest.cpp" />
     <ClCompile Include="MathTest.cpp" />

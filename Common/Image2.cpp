@@ -35,21 +35,28 @@ ImagePPM& ImageYuvMatFloat::toPPM(ImagePPM& dest, ThreadPoolBase& pool) const {
 }
 
 ImageRGBA& ImageYuvMatFloat::toRGBA(ImageRGBA& dest, ThreadPoolBase& pool) const {
-	dest.setValues(3, 0xFF);
+	dest.setColorPlane(3, 0xFF);
 	yuvToRgb(dest, { 0, 1, 2 }, pool);
 	return dest;
 }
 
-
 ImageMatYuv8::ImageMatYuv8(int h, int w, int stride, uint8_t* y, uint8_t* u, uint8_t* v) :
 	ImageMatShared(h, w, stride, y, u, v) {}
 
+
+//------------------------
+// RGB planar image stuff
+//------------------------
 
 ImageRGBplanar::ImageRGBplanar(int h, int w) :
 	ImageBase(h, w, w, 3) {}
 
 ImageRGBplanar::ImageRGBplanar() :
 	ImageRGBplanar(0, 0) {}
+
+std::vector<unsigned char> ImageRGBplanar::getColorData(const Color& color) const {
+	return color.getRGB();
+}
 
 
 //------------------------
@@ -66,7 +73,7 @@ ImageYuv::ImageYuv(int h, int w) :
 	ImageYuv(h, w, w) {}
 
 ImageYuv::ImageYuv() :
-	ImageYuv(0, 0) {}
+	ImageYuv(0, 0, 0) {}
 
 unsigned char* ImageYuv::data() {
 	return arrays.at(0).get();
@@ -74,6 +81,13 @@ unsigned char* ImageYuv::data() {
 
 const unsigned char* ImageYuv::data() const {
 	return arrays.at(0).get();
+}
+
+ImageYuv ImageYuv::copy() const {
+	ImageYuv copyImage(h, w, stride);
+	std::copy(arrays[0].get(), arrays[0].get() + imageSize, copyImage.arrays[0].get());
+	copyImage.index = index;
+	return copyImage;
 }
 
 bool ImageYuv::saveAsColorBMP(const std::string& filename) const {
@@ -161,6 +175,10 @@ std::vector<unsigned char> ImageYuv::toNV12(size_t strideNV12) const {
 	return data;
 }
 
+std::vector<unsigned char> ImageYuv::toNV12() const {
+	return toNV12(w);
+}
+
 ImageRGBplanar& ImageYuv::toRGB(ImageRGBplanar& dest, ThreadPoolBase& pool) const {
 	yuvToRgb(dest, { 0, 1, 2 }, pool);
 	return dest;
@@ -193,7 +211,7 @@ ImagePPM ImageYuv::toPPM() const {
 }
 
 ImageRGBA& ImageYuv::toRGBA(ImageRGBA& dest, ThreadPoolBase& pool) const {
-	dest.setValues(3, 0xFF);
+	dest.setColorPlane(3, 0xFF);
 	yuvToRgb(dest, { 0, 1, 2 }, pool);
 	return dest;
 }
@@ -202,6 +220,10 @@ ImageRGBA ImageYuv::toRGBA() const {
 	ImageRGBA out(h, w);
 	toRGBA(out);
 	return out;
+}
+
+std::vector<unsigned char> ImageYuv::getColorData(const Color& color) const {
+	return color.getYUV();
 }
 
 
@@ -297,6 +319,11 @@ ImageYuv ImageBGR::toYUV() const {
 	return out;
 }
 
+std::vector<unsigned char> ImageBGR::getColorData(const Color& color) const {
+	auto rgb = color.getRGB();
+	return { rgb[2], rgb[1], rgb[0] };
+}
+
 
 //------------------------
 // RGBA image stuff
@@ -346,6 +373,10 @@ bool ImageRGBA::saveAsColorBMP(const std::string& filename) const {
 	return os.good();
 }
 
+std::vector<unsigned char> ImageRGBA::getColorData(const Color& color) const {
+	return color.getRGB();
+}
+
 
 //------------------------
 // PPM image stuff
@@ -371,11 +402,11 @@ unsigned char* ImagePPM::data() {
 	return arrays.at(0).get() + headerSize;
 }
 
-size_t ImagePPM::size() const {
+size_t ImagePPM::stridedSize() const {
 	return 3ull * h * w;
 }
 
-size_t ImagePPM::bytes() const {
+size_t ImagePPM::stridedByteSize() const {
 	return imageSize;
 }
 
@@ -385,7 +416,7 @@ const unsigned char* ImagePPM::header() const {
 
 bool ImagePPM::saveAsPPM(const std::string& filename) const {
 	std::ofstream os(filename, std::ios::binary);
-	os.write(reinterpret_cast<const char*>(arrays.at(0).get()), size());
+	os.write(reinterpret_cast<const char*>(arrays.at(0).get()), stridedSize());
 	return os.good();
 }
 

@@ -21,6 +21,18 @@
 #include "MovieFrame.hpp"
 #include "MovieReader.hpp"
 
+SimpleYuvWriter::SimpleYuvWriter(const std::string& file) {
+	os = std::ofstream(file, std::ios::binary);
+}
+
+void SimpleYuvWriter::write(ImageYuv& image) {
+	const unsigned char* src = image.data();
+	for (int i = 0; i < 3ull * image.h; i++) {
+		os.write(reinterpret_cast<const char*>(src), image.w);
+		src += image.stride;
+	}
+}
+
 
 //-----------------------------------------------------------------------------------
 // Writer Collection
@@ -93,6 +105,46 @@ void BaseWriter::writeOutput(const FrameExecutor& executor) {
 	this->frameIndex++;
 }
 
+void RawMemoryStoreWriter::writeOutput(const FrameExecutor& executor) {
+	outputFrames.push_back(outputFrame.copy());
+	while (outputFrames.size() > maxFrameCount) outputFrames.pop_front();
+	this->frameIndex++;
+}
+
+void RawMemoryStoreWriter::writeInput(const FrameExecutor& executor) {
+	ImageYuv image(mData.h, mData.w);
+	executor.getInput(inputFrameIndex, image);
+	image.index = inputFrameIndex;
+	inputFrames.push_back(image);
+	while (inputFrames.size() > maxFrameCount) inputFrames.pop_front();
+	this->inputFrameIndex++;
+}
+
+void RawMemoryStoreWriter::writeYuvFiles(const std::string& inputFile, const std::string& outputFile) {
+	std::vector<unsigned char> nv12(mData.w * mData.h * 3 / 2);
+	
+	std::ofstream osin(inputFile, std::ios::binary);
+	for (ImageYuv& image : outputFrames) {
+		std::string str = std::format(" frame {:04} ", image.index);
+		image.writeText(str, 0, image.h);
+		image.toNV12(nv12, mData.w);
+		osin.write(reinterpret_cast<char*>(nv12.data()), nv12.size());
+	}
+
+	std::ofstream osout(outputFile, std::ios::binary);
+	for (ImageYuv& image : inputFrames) {
+		std::string str = std::format(" frame {:04} ", image.index);
+		image.writeText(str, 0, image.h);
+		image.toNV12(nv12, mData.w);
+		osout.write(reinterpret_cast<char*>(nv12.data()), nv12.size());
+	}
+}
+
+
+//-----------------------------------------------------------------------------------
+// Image Helpers
+//-----------------------------------------------------------------------------------
+
 std::string ImageWriter::makeFilename(const std::string& pattern, int64_t index, const std::string& extension) {
 	namespace fs = std::filesystem;
 	fs::path out;
@@ -132,7 +184,7 @@ void BmpImageWriter::prepareOutput(FrameExecutor& executor) {
 void BmpImageWriter::writeOutput(const FrameExecutor& executor) {
 	std::string fname = makeFilename("bmp");
 	worker = std::jthread([&, fname] { image.saveAsColorBMP(fname); });
-	outputBytesWritten += image.bytes();
+	outputBytesWritten += image.stridedByteSize();
 	this->frameIndex++;
 }
 
@@ -430,8 +482,7 @@ void OpticalFlowWriter::writeInput(const FrameExecutor& executor) {
 	legend.copyTo(imageInterpolated, 0ull + mData.h - 10 - legendSize, 10);
 	int tx = 10 + legendSize / 2;
 	int ty = 0ull + mData.h - 10 - legendSize / 2;
-	imageInterpolated.writeText(std::to_string(frameIndex), tx, ty, legendScale, legendScale, 
-		im::TextAlign::MIDDLE_CENTER, im::ColorRGBA::WHITE, im::ColorRGBA::BLACK);
+	imageInterpolated.writeText(std::to_string(frameIndex), tx, ty, legendScale, legendScale, im::TextAlign::MIDDLE_CENTER);
 
 	//encode rgba image
 	uint8_t* src[] = { imageInterpolated.data(), nullptr, nullptr, nullptr };
@@ -495,7 +546,7 @@ void ResultDetailsWriter::write(std::span<PointResult> results, const std::strin
 // Result Images
 //-----------------------------------------------------------------------------------
 
-void ResultImageWriter::writeImage(const AffineTransform& trf, std::span<PointResult> res, int64_t idx, const ImageYuv& yuv, const std::string& fname) {
+void ResultImageWriter::writeImage(const AffineTransform& trf, std::span<PointResult> res, int64_t idx, const ImageYuv& yuv, ThreadPoolBase& pool) {
 	using namespace im;
 
 	//copy Y plane of YUV to all planes in bgr image making it grayscale bgr
@@ -509,7 +560,8 @@ void ResultImageWriter::writeImage(const AffineTransform& trf, std::span<PointRe
 
 	//draw lines
 	//draw blue lines first
-	for (const PointResult& pr : res) {
+	auto func1 = [&] (size_t idx) {
+		const PointResult& pr = res[idx];
 		if (pr.isValid()) {
 			double px = pr.x + mData.w / 2.0;
 			double py = pr.y + mData.h / 2.0;
@@ -518,15 +570,16 @@ void ResultImageWriter::writeImage(const AffineTransform& trf, std::span<PointRe
 
 			//blue line to computed transformation
 			auto [tx, ty] = trf.transform(pr.x, pr.y);
-			bgr.drawLine(px, py, tx + bgr.w / 2.0, ty + bgr.h / 2.0, ColorBgr::BLUE, 0.5);
+			bgr.drawLine(px, py, tx + bgr.w / 2.0, ty + bgr.h / 2.0, Color::BLUE, 0.5);
 		}
-	}
+	};
+	pool.addAndWait(func1, 0, res.size());
 
 	//draw on top
 	//green line if point is consens
 	//red line if point is not consens
 	int numValid = 0, numConsens = 0;
-	ImageColor col;
+	Color col;
 	for (const PointResult& pr : res) {
 		if (pr.isValid()) {
 			numValid++;
@@ -536,11 +589,11 @@ void ResultImageWriter::writeImage(const AffineTransform& trf, std::span<PointRe
 			double y2 = py + pr.v;
 
 			if (pr.isConsens) {
-				col = ColorBgr::GREEN;
+				col = Color::GREEN;
 				numConsens++;
 
 			} else {
-				col = ColorBgr::RED;
+				col = Color::RED;
 			}
 			bgr.drawLine(px, py, x2, y2, col);
 			bgr.drawMarker(x2, y2, col, 1.4);
@@ -551,21 +604,26 @@ void ResultImageWriter::writeImage(const AffineTransform& trf, std::span<PointRe
 	int textScale = bgr.h / 540;
 	double frac = numValid == 0 ? 0.0 : 100.0 * numConsens / numValid;
 	std::string s1 = std::format("index {}, consensus {}/{} ({:.1f}%)", idx, numConsens, numValid, frac);
-	bgr.writeText(s1, 0, bgr.h - textScale * 20, textScale, textScale, TextAlign::TOP_LEFT, ColorBgr::WHITE, ColorBgr::BLACK);
+	bgr.writeText(s1, 0, bgr.h - textScale * 20, textScale, textScale, TextAlign::TOP_LEFT);
 	std::string s2 = std::format("transform dx={:.1f}, dy={:.1f}, scale={:.5f}, rot={:.1f}", trf.dX(), trf.dY(), trf.scale(), trf.rotMinutes());
-	bgr.writeText(s2, 0, bgr.h - textScale * 10, textScale, textScale, TextAlign::TOP_LEFT, ColorBgr::WHITE, ColorBgr::BLACK);
-
-	//save image to file
-	bool result = bgr.saveAsColorBMP(fname);
-	if (result == false) {
-		errorLogger().logError("cannot write file '" + fname + "'");
-	}
+	bgr.writeText(s2, 0, bgr.h - textScale * 10, textScale, textScale, TextAlign::TOP_LEFT);
 }
 
 void ResultImageWriter::writeInput(const FrameExecutor& executor) {
 	//get input image from buffers
 	executor.getInput(frameIndex, yuv);
 	std::string fname = ImageWriter::makeFilename(mData.resultImageFile, frameIndex, "bmp");
-	writeImage(executor.mFrame.getTransform(), executor.mFrame.mResultPoints, frameIndex, yuv, fname);
+	writeImage(executor.mFrame.getTransform(), executor.mFrame.mResultPoints, frameIndex, yuv, executor.mPool);
+
+	//save image to file
+	bool result = bgr.saveAsColorBMP(fname);
+	if (result == false) {
+		errorLogger().logError("cannot write file '" + fname + "'", ErrorSource::WRITER);
+	}
 	this->frameIndex++;
+}
+
+void ResultImageWriter::writeImage(const AffineTransform& trf, std::span<PointResult> res, int64_t idx, const ImageYuv& yuv, const std::string& outFile) {
+	writeImage(trf, res, idx, yuv, ThreadPool::defaultPool);
+	bgr.saveAsColorBMP(outFile);
 }

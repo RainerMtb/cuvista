@@ -72,12 +72,14 @@ Affine2D& Affine2D::setParam(double scale, double rot, double dx, double dy) {
 }
 
 Affine2D& Affine2D::addTranslation(double dx, double dy) {
-	setValues(times(Matd::fromRowData(3, 3, { 1, 0, dx, 0, 1, dy, 0, 0, 1 })));
+	Matd mat = Matd::fromRowData(3, 3, { 1, 0, dx, 0, 1, dy, 0, 0, 1 });
+	setValues(this->times(mat));
 	return *this;
 }
 
 Affine2D& Affine2D::addRotation(double angleRad) {
-	setValues(times(Matd::fromRowData(3, 3, { std::cos(angleRad), std::sin(angleRad), 0, -std::sin(angleRad), std::cos(angleRad), 0, 0, 0, 1 })));
+	Matd mat = Matd::fromRowData(3, 3, { std::cos(angleRad), std::sin(angleRad), 0, -std::sin(angleRad), std::cos(angleRad), 0, 0, 0, 1 });
+	setValues(this->times(mat));
 	return *this;
 }
 
@@ -86,7 +88,8 @@ Affine2D& Affine2D::addRotationDegrees(double angleDegrees) {
 }
 
 Affine2D& Affine2D::addZoom(double zoom) {
-	setValues(times(Matd::fromRowData(3, 3, { 1 / zoom, 0, 0, 0, 1 / zoom, 0, 0, 0, 1 })));
+	Matd mat = Matd::fromRowData(3, 3, { 1 / zoom, 0, 0, 0, 1 / zoom, 0, 0, 0, 1 });
+	setValues(this->times(mat));
 	return *this;
 }
 

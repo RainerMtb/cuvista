@@ -163,83 +163,89 @@ void compareFramesPlatforms() {
 }
 
 void analyzeFrames() {
-	std::string file = "d:/VideoTest/02.mp4";
-	std::string dest = "f:/";
-	int frameFrom = 100;
-	int frameTo = 105;
+	std::string inFile = "f:/pic/input.mp4";
+	std::string outputFile = "f:/pic/videoOut.yuv";
+	std::string inputFile = "f:/pic/videoInput.yuv";
 
 	MainData data;
+	data.fileIn = inFile;
 	data.deviceRequested = true;
-	data.resultImageFile = dest;
-	FFmpegReader reader;
-	reader.open(file);
+	std::vector<DeviceInfoCuda> cudaDevices = data.probeCuda();
 	data.collectDeviceInfo();
+	FFmpegReader reader;
+	reader.open(inFile);
 	data.validate(reader);
-	ResultImageWriter writer(data);
-	writer.start();
-	MovieFrameCombined frame(data, reader, writer);
-	std::unique_ptr<FrameExecutor> executor = std::make_unique<CpuFrame>(data, *data.deviceList[0], frame, frame.mPool);
 
-	while (true) {
-		reader.read(frame.mBufferFrame);
+	int maxFrames = 200;
+	RawMemoryStoreWriter writer(data, reader, maxFrames);
+	std::shared_ptr<MovieFrame> frame = std::make_shared<MovieFrameConsecutive>(data, reader, writer);
+	std::shared_ptr<FrameExecutor> executor = std::make_shared<CudaFrame>(data, cudaDevices[0], *frame, frame->mPool);
+	frame->runLoop(executor);
 
-		if (reader.frameIndex == frameFrom - data.radius) {
-			executor->inputData(reader.frameIndex, frame.mBufferFrame);
-			executor->createPyramid(reader.frameIndex);
-		} else if (reader.frameIndex > frameFrom - data.radius) {
-			executor->inputData(reader.frameIndex, frame.mBufferFrame);
-			executor->createPyramid(reader.frameIndex);
-			executor->computeStart(reader.frameIndex, frame.mResultPoints);
-			executor->computeTerminate(reader.frameIndex, frame.mResultPoints);
-		}
-		
-		if (writer.frameIndex >= frameFrom) {
-			frame.computeTransform(reader.frameIndex);
-			const AffineTransform& currentTransform = frame.mFrameResult.getTransform();
-			frame.mTrajectory.addTrajectoryTransform(currentTransform);
-			frame.mTrajectory.computeSmoothTransform(data, writer.frameIndex);
-			const AffineTransform& finalTransform = frame.mTrajectory.getTransform(data, writer.frameIndex);
-			executor->outputData(writer.frameIndex, finalTransform);
-			writer.prepareOutput(*executor);
-			writer.writeOutput(*executor);
-		} else {
-			frame.mTrajectory.addTrajectoryTransform(AffineTransform());
-			writer.frameIndex++;
-		}
+	//paint vectors of displacements into gray input image
+	std::vector<ImageYuv> inputFrames(writer.inputFrames.begin(), writer.inputFrames.end());
+	auto& lst = FrameResult::resultStore;
+	std::vector<FrameResultStore> resultStoreData(std::move_iterator(std::begin(lst)), std::move_iterator(std::end(lst)));
 
-		if (reader.frameIndex == frameTo) {
-			break;
-		}
-		if (errorLogger().hasError()) {
-			std::cout << errorLogger().getErrorMessage() << std::endl;
-			break;
-		}
-	}
+	auto func = [&] (size_t idx) {
+		ImageYuv& image = inputFrames[idx];
+		const FrameResultStore& resultStore = resultStoreData[image.index];
+		assert(image.index == resultStore.frameIndex && "index mismatch");
+		image.setColorPlane(1, 128);
+		image.setColorPlane(2, 128);
 
-	std::cout << "done" << std::endl;
+		Color col;
+		for (const PointResult& pr : resultStore.results) {
+			if (pr.isValid()) {
+				double px = pr.x + data.w / 2.0;
+				double py = pr.y + data.h / 2.0;
+				double x2 = px + pr.u;
+				double y2 = py + pr.v;
+
+				if (pr.isConsens) {
+					col = Color::GREEN;
+
+				} else {
+					col = Color::RED;
+				}
+				image.drawLine(px, py, x2, y2, col);
+				image.drawMarker(x2, y2, col, 1.4);
+			}
+		}
+	};
+	frame->mPool.addAndWait(func, 0, inputFrames.size());
+
+	//output raw yuv files
+	writer.writeYuvFiles(outputFile, inputFile);
+
+	std::cout << std::endl << "input frames " << writer.inputFrames.size() << " " << inputFile << std::endl;
+	std::cout << "output frames " << writer.outputFrames.size() << " " << outputFile << std::endl;
 }
 
 
 // read and transform distinct images
 void createTransformImages() {
+	SimpleYuvWriter yuvFile("f:/pic/video.yuv");
+
 	for (int i = 0; i < 10; i++) {
-		std::string in1 = std::format("f:/pic/{:04}.bmp", i);
-		std::string in2 = std::format("f:/pic/{:04}.bmp", i + 1);
-		std::string out = std::format("f:/pic/out{:02}.bmp", i + 1);
-		std::cout << "writing " << out << std::endl;
+		std::string inFile1 = std::format("f:/pic/{:04}.bmp", i);
+		std::string inFile2 = std::format("f:/pic/{:04}.bmp", i + 1);
+		std::string outFile = std::format("f:/pic/out{:02}.bmp", i + 1);
+		std::cout << "writing " << outFile << std::endl;
 
 		//std::cout << "reading images" << std::endl;
-		ImageYuv im1 = ImageBGR::readFromBMP(in1).toYUV();
-		ImageYuv im2 = ImageBGR::readFromBMP(in2).toYUV();
+		ImageYuv im1 = ImageBGR::readFromBMP(inFile1).toYUV();
+		ImageYuv im2 = ImageBGR::readFromBMP(inFile2).toYUV();
 
 		MainData data;
 		data.collectDeviceInfo();
 		ImageReader reader;
 		reader.h = im1.h;
 		reader.w = im1.w;
+		reader.frameCount = 2;
 		data.validate(reader);
 
-		NullWriter writer(data, reader);
+		BaseWriter writer(data, reader);
 		MovieFrameConsecutive frame(data, reader, writer);
 		CpuFrame cpuframe(data, data.deviceInfoCpu, frame, frame.mPool);
 
@@ -254,12 +260,21 @@ void createTransformImages() {
 		//std::cout << "computing transform" << std::endl;
 		cpuframe.computeStart(reader.frameIndex, frame.mResultPoints);
 		cpuframe.computeTerminate(reader.frameIndex, frame.mResultPoints);
-		frame.computeTransform(i + 1);
+		frame.computeTransform(i + 1LL);
 		const AffineTransform& trf = frame.getTransform();
+
+		//save pairwise output images
+		im1.writeText("input " + std::to_string(i), 0, 1080);
+		yuvFile.write(im1);
+		cpuframe.outputData(0, trf);
+		writer.prepareOutput(cpuframe);
+		ImageYuv imOut = writer.getOutputFrame();
+		imOut.writeText("output " + std::to_string(i + 1), 0, 1080);
+		yuvFile.write(imOut);
 
 		//std::cout << "writing result" << std::endl;
 		ResultImageWriter riw(data);
-		riw.writeImage(trf, frame.mResultPoints, i, im2, out);
+		riw.writeImage(trf, frame.mResultPoints, i, im2, outFile);
 
 		std::cout << "done" << std::endl;
 	}

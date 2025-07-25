@@ -3,9 +3,11 @@
 # CUVISTA - Gpu accelerated Video Stabilizer
 Check the projects [GitHub Page](https://rainermtb.github.io/cuvista)
 
-A simple, easy to use Application to stabilize shaky video footage preferably using GPU acceleration via Cuda or OpenCL platforms when available. The software will run on CPU power alone, which will be significantly slower but produces the exact same outcome.
+A simple, easy to use Application to stabilize shaky video footage preferably using GPU acceleration via Cuda or OpenCL. The software will run on CPU power alone, which will be significantly slower but produces the exact same outcome.
 
 I put in great effort to ensure that on all platforms the stabilization results are absolutely equal. By that I mean floating point equal, to the bit. So far I tested on Windows 11 and Ubuntu 24.04 with MSVC and GCC compilers.
+
+There is no AI involved, just math, algorithms and brain power.
 
 Have a look at a sample video comparing an original recording side by side to the stabilized version:
 
@@ -67,7 +69,7 @@ cd build
 ```
 prepare the locations of Cuda, Qt and FFMPEG and provide them to cmake. Also see notes above. Better use forward slashes ```/``` to separate folders. Adapt locations to your system:
 ```
-cmake .. -D CMAKE_PREFIX_PATH=C:/CUDA/version;C:/Qt/6.9.0/msvc2022_64 -D FFMPEG_PATH=C:/ffmpeg --fresh
+cmake .. -D CMAKE_PREFIX_PATH=C:/CUDA/version;C:/Qt/6.9.1/msvc2022_64 -D FFMPEG_PATH=C:/ffmpeg --fresh
 cmake --build . --config Release
 ```
 Upon successfull completion you will get the files
@@ -104,7 +106,7 @@ To get the necessary components on the command line
 ```
 wget https://download.qt.io/official_releases/online_installers/qt-online-installer-linux-x64-online.run
 chmod +x qt-online-installer-linux-x64-online.run
-./qt-online-installer-linux-x64-online.run install qt.qt6.690.linux_gcc_64 qt.qt6.690.addons.qtmultimedia
+./qt-online-installer-linux-x64-online.run install qt.qt6.691.linux_gcc_64 qt.qt6.691.addons.qtmultimedia
 ```
 You might also need
 ```
@@ -137,7 +139,7 @@ cd build
 ```
 Adapt the location of Cuda and  Qt to your system and execute the build process. Also see notes above.
 ```
-export CMAKE_PREFIX_PATH=~/Qt/6.9.0/gcc_64:/usr/local/cuda
+export CMAKE_PREFIX_PATH=~/Qt/6.9.1/gcc_64:/usr/local/cuda
 cmake .. --fresh
 cmake --build . --parallel
 ```
@@ -152,9 +154,9 @@ When done, run ```cuvista -info``` to see available devices and run a test
 
 ## Future Ideas
 - Improve performance and robustness of stabilization - very likely mutually exclusive goals
-- Maybe look into more advanced algorithms like 3D stabilization
-- Maybe support for using multiple GPUs - dont know if anyone would need that though
+- Maybe supporting multiple GPUs - dont know if anyone would need that though
 - Maybe porting to Mac and Apple Silicon
+- Maybe look into more advanced algorithms for stabilization
 
  
 ## Built and Tested on following Tools and versions

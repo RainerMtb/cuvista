@@ -26,7 +26,7 @@ std::ostream& printError(std::ostream& os, const std::string& msg1) {
 DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console) {
 	std::set_terminate([] {
 		printError(std::cout, "error: std::terminate was called");
-		std::exit(-20);
+		std::exit(100);
 	});
 
 	//set command line arguments for debugging
@@ -109,29 +109,29 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 		}
 
 	} catch (const SilentQuitException&) {
-		return { 0 };
+		return { 10 };
 
 	} catch (const CancelException& e) {
 		printError(*data.console, e.what());
-		return { -1 };
+		return { 1 };
 
 	} catch (const AVException& e) {
 		printError(*data.console, std::string("error: ") + e.what());
 		if (errorLogger().hasError()) {
 			printError(*data.console, std::string("error: ") + errorLogger().getErrorMessage());
 		}
-		return { -2 };
+		return { 2 };
 
 	} catch (const std::invalid_argument& e) {
 		printError(*data.console, std::string("invalid value: ") + e.what());
 		if (errorLogger().hasError()) {
 			printError(*data.console, std::string("error: ") + errorLogger().getErrorMessage());
 		}
-		return { -3 };
+		return { 3 };
 
 	} catch (...) {
 		printError(*data.console, "unknown error in cuvista");
-		return { -4 };
+		return { 4 };
 	}
 
 	//setup progress output
@@ -172,9 +172,8 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 		progress->terminate();
 	}
 
-	//collect debugging data
+	//collect state info
 	DeshakerResult result;
-	result.statusCode = errorLogger().hasError() ? -10 : 0;
 	result.frameCount = reader->frameCount;
 	result.framesRead = reader->frameIndex;
 	result.framesWritten = writer->frameIndex;
@@ -189,7 +188,7 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 	executor.reset();
 	frame.reset();
 
-	//stopwatch
+	//show performance metrics
 	double secs = data.timeElapsedSeconds();
 	double fps = framesWritten / secs;
 	if (framesWritten > 0 && data.printSummary) {
@@ -198,6 +197,7 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 		*data.console << "\x1B[1;36m" << str << "\x1B[0m" << std::endl;
 	}
 
+	result.statusCode = errorLogger().hasError() ? 20 : 0;
 	result.secs = secs;
 	return result;
 }
