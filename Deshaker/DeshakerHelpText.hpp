@@ -129,7 +129,7 @@ misc options:
                 do not produce any output except error messages
 
 advanced computation parameters:
--levels         number of pyramid levels
+-levels         number of pyramid levels, between 1 and 6
                 default: 3
 -ir             integration radius
                 default: 3, maximum: 3

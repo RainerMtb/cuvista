@@ -134,7 +134,7 @@ public:
 		double imZoomMin = 0.1, imZoomMax = 10.0;
 		int radiusMin = 1, radiusMax = 500;
 		int wMin = 100, hMin = 100;
-		int levelsMin = 1, levelsMax = 8;
+		int levelsMin = 1, levelsMax = 6;
 		int irMin = 0, irMax = 3;
 	} limits;
 

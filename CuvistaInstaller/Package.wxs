@@ -2,7 +2,7 @@
 	<Package
 		Name="Cuvista"
 		Manufacturer="Rainer Bitschi"
-		Version="1.6.0.0"
+		Version="1.7.0.0"
 		Id="Rainer Bitschi - Cuvista"
 		UpgradeCode="1446b707-932a-49b4-a152-e2e0528cf201"
 		>

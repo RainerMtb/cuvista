@@ -460,8 +460,8 @@ void MainData::validate(const MovieReader& reader) {
 	if (zoomMin < limits.imZoomMin || zoomMin > limits.imZoomMax) throw AVException("invalid zoom value");
 	if (zoomMax < limits.imZoomMin || zoomMax > limits.imZoomMax) throw AVException("invalid zoom value");
 
-	if (zCount < limits.levelsMin || zCount > limits.levelsMax) throw AVException("invalid pyramid levels:" + std::to_string(pyramidLevels));
-	if (ir < limits.irMin || ir > limits.irMax) throw AVException("invalid integration radius:" + std::to_string(ir));
+	if (zCount < limits.levelsMin || zCount > limits.levelsMax) throw AVException("invalid pyramid levels: " + std::to_string(pyramidLevels));
+	if (ir < limits.irMin || ir > limits.irMax) throw AVException("invalid integration radius: " + std::to_string(ir));
 
 	//check ffmpeg versions
 	//if (ffmpeg_check_versions() == false) {
