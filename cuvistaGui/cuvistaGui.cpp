@@ -53,7 +53,14 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     mData.probeOpenCl();
     mData.collectDeviceInfo();
 
-    //devices
+    //clear stored settings on cmd option /resetgui
+    QStringList cmdArgs = QCoreApplication::arguments();
+    if (cmdArgs.size() == 2 && cmdArgs.at(1) == "/resetgui") {
+        mSettings.clear();
+        cmdArgs.clear();
+    }
+
+    //available devices
     for (int i = 0; i < mData.deviceList.size(); i++) {
         ui.comboDevice->addItem(QString::fromStdString(mData.deviceList[i]->getName()));
     }
@@ -77,28 +84,19 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     //trigger setting encoding options
     ui.comboDevice->setCurrentIndex(ui.comboDevice->count() - 1);
 
-    //file for reading
-    auto fcnOpen = [&] () {
-        QString str = QFileDialog::getOpenFileName(this, QString("Select Video file to open"), mInputDir, "All Files (*.*)");
-        if (!str.isEmpty()) setInputFile(str);
-    };
-    connect(ui.btnOpen, &QPushButton::clicked, this, fcnOpen);
-
-    //color selection
-    Color& rgb = mData.backgroundColor;
-    mBackgroundColor.setRgb(rgb.getRed(), rgb.getGreen(), rgb.getBlue());
-    setColorIcon(ui.lblColor, mBackgroundColor);
+    //background color selection
+    int colorRed = mSettings.value("qt/color/red", mData.backgroundColor.getChannel(0)).toInt();
+    int colorGreen = mSettings.value("qt/color/green", mData.backgroundColor.getChannel(1)).toInt();
+    int colorBlue = mSettings.value("qt/color/blue", mData.backgroundColor.getChannel(2)).toInt();
+    QColor bg(colorRed, colorGreen, colorBlue);
+    setBackgroundColor(bg);
 
     auto fcnColorSelection = [&] () {
         QColorDialog::ColorDialogOptions options = QColorDialog::ColorDialogOption::NoEyeDropperButton;
         QColor result = QColorDialog::getColor(mBackgroundColor, this, QString("Select Background Color"), options);
         if (result.isValid()) {
-            mBackgroundColor = result;
-            setColorIcon(ui.lblColor, mBackgroundColor);
+            setBackgroundColor(result);
             ui.radioColor->setChecked(true);
-            QString style = qformat("background-color: rgb({}, {}, {})", result.red(), result.green(), result.blue());
-            ui.imageInput->setStyleSheet(style);
-            mProgressWindow->setBackgroundColor(style);
         }
     };
     connect(ui.lblColor, &ClickLabel::clicked, this, fcnColorSelection);
@@ -137,29 +135,45 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     connect(mProgressWindow, &ProgressWindow::sigProgress, mProgressWindow, &ProgressWindow::progress);
     connect(mProgressWindow, &ProgressWindow::sigUpdateInput, mProgressWindow, &ProgressWindow::updateInput);
     connect(mProgressWindow, &ProgressWindow::sigUpdateOutput, mProgressWindow, &ProgressWindow::updateOutput);
+    connect(mProgressWindow, &ProgressWindow::sigUpdateStatus, mProgressWindow, &ProgressWindow::updateStatus);
 
     //player window
     connect(mPlayerWindow, &PlayerWindow::sigProgress, mPlayerWindow, &PlayerWindow::progress);
     connect(mPlayerWindow, &PlayerWindow::cancel, &mInputHandler, &UserInputGui::cancel);
 
-    //set default main window size
-    resize(700, 650);
+    //load recent files before activating combo box action
+    for (int idx = 0; idx < 6; idx++) {
+        QString key = QString("qt/input%1").arg(idx);
+        QString file = mSettings.value(key, "").toString();
+        if (file.isEmpty() == false) ui.comboInputFile->addItem(file);
+    }
+
+    //select input from list of recent files
+    auto fcnSelectFile = [&] (const QString& str) {
+        //qDebug() << "combo" << str;
+        setInputFile(str);
+        ui.comboInputFile->setToolTip(str);
+    };
+    connect(ui.comboInputFile, &QComboBox::currentTextChanged, this, fcnSelectFile);
+
+    //file for reading
+    auto fcnOpenFile = [&] () {
+        QString str = QFileDialog::getOpenFileName(this, QString("Select Video file to open"), mInputDir, "All Files (*.*)");
+        addInputFile(str);
+    };
+    connect(ui.btnOpen, &QPushButton::clicked, this, fcnOpenFile);
 
     //load files from command line argument
-    //preset input file
-    QStringList cmdArgs = QCoreApplication::arguments();
+    //load input file
     if (cmdArgs.size() > 1) {
-        QString inputFile = cmdArgs.at(1);
-        if (QFileInfo(inputFile).exists()) {
-            setInputFile(inputFile);
-        }
+        addInputFile(cmdArgs.at(1));
     }
     //preset output file
     if (cmdArgs.size() > 2) {
         mOutputDir = cmdArgs.at(2);
         mOutputFilterSelected = "All Files (*.*)";
     }
-
+    
     //label to show file link in status bar upon success
     mStatusLinkLabel = new QLabel(this);
     mStatusLinkLabel->setTextFormat(Qt::RichText);
@@ -170,17 +184,39 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     };
     connect(mStatusLinkLabel, &QLabel::linkActivated, this, fileOpener);
     statusBar()->addWidget(mStatusLinkLabel);
+
+    //stored settings
+    //window position and size
+    int windowPosX = mSettings.value("qt/window/posx", 50).toInt();
+    int windowPosY = mSettings.value("qt/window/posy", 50).toInt();
+    int windowWidth = mSettings.value("qt/window/width", 700).toInt();
+    int windowHeight = mSettings.value("qt/window/height", 700).toInt();
+    move(windowPosX, windowPosY);
+    resize(windowWidth, windowHeight);
+
+    //other settings
+    ui.chkOverwrite->setChecked(mSettings.value("qt/overwrite", false).toBool());
+    ui.spinRadius->setValue(mSettings.value("qt/radius", mData.radsec).toDouble());
+    ui.spinZoomMin->setValue(mSettings.value("qt/zoom/min", std::round(mData.zoomMin * 100 - 100)).toInt());
+    ui.spinZoomMax->setValue(mSettings.value("qt/zoom/max", std::round(mData.zoomMax * 100 - 100)).toInt());
+    ui.chkDynamicZoom->setChecked(mSettings.value("qt/zoom/dynamic", true).toBool());
+    ui.chkFrameLimit->setChecked(mSettings.value("qt/limit/enable", false).toBool());
+    ui.spinFrameLimit->setValue(mSettings.value("qt/limit/value", 500).toInt());
 }
 
-//open and read new input file
-void cuvistaGui::setInputFile(const QString& filePath) {
+//-------------------------
+// set input file
+//-------------------------
+
+void cuvistaGui::setInputFile(const QString& inputPath) {
+    //qDebug() << "input" << inputPath;
     ui.comboAudioTrack->clear();
     mInputReady = false;
     
     try {
         mReader.close();
         errorLogger().clearErrors();
-        mReader.open(filePath.toStdString());
+        mReader.open(inputPath.toStdString());
         mInputYUV = ImageYuv(mReader.h, mReader.w);
 
         mReader.read(mInputYUV); //read first image
@@ -226,10 +262,20 @@ void cuvistaGui::setInputFile(const QString& filePath) {
         ui.statusbar->showMessage(QString(ex.what()));
         ui.texInput->setPlainText("");
     }
-    mFileInput = QFileInfo(filePath);
+
+    mFileInput = QFileInfo(inputPath);
     mInputDir = mFileInput.path();
-    ui.fileOpen->setText(mFileInput.fileName());
-    ui.fileOpen->setToolTip(filePath);
+}
+
+void cuvistaGui::addInputFile(const QString& inputPath) {
+    if (inputPath.isEmpty() == false) {
+        int idx = ui.comboInputFile->findText(inputPath);
+        ui.comboInputFile->insertItem(0, inputPath);
+        ui.comboInputFile->setCurrentIndex(0);
+        if (idx > -1) {
+            ui.comboInputFile->removeItem(idx + 1);
+        }
+    }
 }
 
 void cuvistaGui::seek(double frac) {
@@ -310,12 +356,12 @@ void cuvistaGui::stabilize() {
     mData.zoomMax = ui.chkDynamicZoom->isChecked() ? 1.0 + ui.spinZoomMax->value() / 100.0 : mData.zoomMin;
     mData.bgmode = ui.radioBlend->isChecked() ? BackgroundMode::BLEND : BackgroundMode::COLOR;
     if (ui.chkFrameLimit->isChecked()) mData.maxFrames = ui.spinFrameLimit->value();
+    mData.pass = DeshakerPass::NONE;
 
     using uchar = unsigned char;
     uchar rgb[] = { (uchar) mBackgroundColor.red(), (uchar) mBackgroundColor.green(), (uchar) mBackgroundColor.blue() };
     mData.backgroundColor = Color::rgb(rgb[0], rgb[1], rgb[2]);
-    auto yuv = mData.backgroundColor.getYUVfloats();
-    mData.bgcol_yuv = { yuv[0], yuv[1], yuv[2] };
+    mData.backgroundColor.toYUVfloat(&mData.bgcol_yuv.y, &mData.bgcol_yuv.u, &mData.bgcol_yuv.v);
 
     //rewind reader to beginning of input
     mReader.rewind();
@@ -349,7 +395,13 @@ void cuvistaGui::stabilize() {
     mWriter->open(mData.requestedEncoding);
 
     //select frame handler
-    mFrame = std::make_shared<MovieFrameCombined>(mData, mReader, *mWriter);
+    if (ui.chkModeCombined->isChecked()) {
+        mFrame = std::make_shared<MovieFrameCombined>(mData, mReader, *mWriter);
+        mData.bufferCount = 2 * mData.radius + 2;
+    } else {
+        mFrame = std::make_shared<MovieFrameConsecutive>(mData, mReader, *mWriter);
+        mData.bufferCount = 2;
+    }
 
     //select frame executor class
     mExecutor = mData.deviceList[mData.deviceSelected]->create(mData, *mFrame);
@@ -502,10 +554,16 @@ void cuvistaGui::showInfo() {
 }
 
 //show selected color
-void cuvistaGui::setColorIcon(ClickLabel* btn, QColor& color) {
+void cuvistaGui::setBackgroundColor(QColor& color) {
+    mBackgroundColor = color;
+    
+    QString style = qformat("background-color: rgb({}, {}, {})", color.red(), color.green(), color.blue());
+    ui.imageInput->setStyleSheet(style);
+    mProgressWindow->setBackgroundColor(style);
+
     QPixmap icon(30, 24);
     icon.fill(color);
-    btn->setPixmap(icon);
+    ui.lblColor->setPixmap(icon);
 }
 
 //terminate test thread when closing info dialog
@@ -513,4 +571,29 @@ void InfoDialog::closeEvent(QCloseEvent* event) {
     worker->wait();
     worker->deleteLater();
     event->accept();
+}
+
+//destructor stores settings
+cuvistaGui::~cuvistaGui() {
+    mSettings.setValue("qt/color/red", mBackgroundColor.red());
+    mSettings.setValue("qt/color/green", mBackgroundColor.green());
+    mSettings.setValue("qt/color/blue", mBackgroundColor.blue());
+
+    mSettings.setValue("qt/window/posx", x());
+    mSettings.setValue("qt/window/posy", y());
+    mSettings.setValue("qt/window/width", width());
+    mSettings.setValue("qt/window/height", height());
+
+    mSettings.setValue("qt/overwrite", ui.chkOverwrite->isChecked());
+    mSettings.setValue("qt/radius", ui.spinRadius->value());
+    mSettings.setValue("qt/zoom/min", ui.spinZoomMin->value());
+    mSettings.setValue("qt/zoom/max", ui.spinZoomMax->value());
+    mSettings.setValue("qt/zoom/dynamic", ui.chkDynamicZoom->isChecked());
+    mSettings.setValue("qt/limit/enable", ui.chkFrameLimit->isChecked());
+    mSettings.setValue("qt/limit/value", ui.spinFrameLimit->value());
+
+    for (int idx = 0; idx < 6; idx++) {
+        QString key = QString("qt/input%1").arg(idx);
+        mSettings.setValue(key, ui.comboInputFile->itemText(idx));
+    }
 }

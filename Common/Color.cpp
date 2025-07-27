@@ -83,8 +83,8 @@ Color Color::hsv(double h, double s, double v) {
 	return Color(r, g, b);
 }
 
-std::vector<unsigned char> Color::getRGB() const {
-	return { (unsigned char) colorData[0], (unsigned char) colorData[1], (unsigned char) colorData[2] };
+void Color::toYUVfloat(float* y, float* u, float* v) const {
+	im::rgb_to_yuv(colorData[0], colorData[1], colorData[2], y, u, v);
 }
 
 std::vector<unsigned char> Color::getYUV() const {
@@ -92,22 +92,16 @@ std::vector<unsigned char> Color::getYUV() const {
 	im::rgb_to_yuv(colorData[0], colorData[1], colorData[2], &y, &u, &v);
 	return { y, u, v };
 }
-	
-std::array<float, 3> Color::getYUVfloats() const {
-	float y, u, v;
-	im::rgb_to_yuv(colorData[0], colorData[1], colorData[2], &y, &u, &v);
-	return { y, u, v };
+
+double Color::getAlpha() const { 
+	return alpha; 
 }
 
-unsigned char Color::getRed() const { return (unsigned char) colorData[0]; }
-unsigned char Color::getGreen() const { return (unsigned char) colorData[1]; }
-unsigned char Color::getBlue() const { return (unsigned char) colorData[2]; }
+void Color::setAlpha(double alpha) { 
+	this->alpha = alpha; 
+}
 
-double Color::getAlpha() const { return alpha; }
-
-void Color::setAlpha(double alpha) { this->alpha = alpha; }
-
-int Color::getRGBchannel(size_t index) const {
+int Color::getChannel(size_t index) const {
 	assert(index >= 0 && index < 4 && "invalid index");
 	return colorData[index];
 }

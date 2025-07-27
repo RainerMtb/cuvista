@@ -27,10 +27,9 @@ input/output options:
                 this will produce a huge file, you have been warned
 
 -o pipe:        output raw YUV444P data to pipe
-                maybe used to for example to connect to ffmpeg
+                use for example to connect to ffmpeg encoder
                 for further processing, input must then be specified as
                 -f rawvideo -video_size w:h -framerate n -pix_fmt yuv444p 
-                note: does not work on Windows PowerShell, use cmd instead
                 refer to pipe mechanism of your OS for further information
 -o fmt.jpg      output a sequence of images in jpeg format
                 format see below for bmp images
@@ -40,7 +39,7 @@ fmt specifier   fmt must specify the output file and should contain a number
                 formatting sequence, otherwise the same file will just
                 be written repeatedly
                 example: -o im%03d.bmp will produce 3 digits with leading 0
-                will then be im000.bmp, im001.bmp, im002.bmp, ...
+                im000.bmp, im001.bmp, im002.bmp, ...
 
 -o null         do not write any output, for whatever reason this may be
 
@@ -51,7 +50,7 @@ computing options:
 -device cpu     same as -device 0
 -encoder xxx    device to use for video encoding
                 options: auto, nvenc, cpu
-                default: auto; use nvenc when available
+                default: auto; prefer nvenc when available
 -codec xxx      video codec to use for encoding
                 options: auto, h264, h265
                 default: auto; which is h265 on gpu / h264 on cpu

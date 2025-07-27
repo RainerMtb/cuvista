@@ -163,8 +163,17 @@ std::string ImageWriter::makeFilename(const std::string& pattern, int64_t index,
 }
 
 std::string ImageWriter::makeFilenameSamples(const std::string& pattern, const std::string& extension) {
-	std::string str = makeFilename(pattern, 0, extension) + ", " + makeFilename(pattern, 1, extension) + ", " + makeFilename(pattern, 2, extension);
-	return str.substr(0, 100) + ", ...";
+	std::string samples = "";
+	std::string file = makeFilename(pattern, 0, extension);
+	int idx = 0;
+	while (samples.size() + file.size() < 100 && idx < 3) {
+		samples += file;
+		samples += ", ";
+		idx++;
+		file = makeFilename(pattern, idx, extension);
+	}
+	samples += "...";
+	return samples;
 }
 
 std::string ImageWriter::makeFilename(const std::string& extension) const {

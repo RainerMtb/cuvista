@@ -19,6 +19,7 @@ qt_add_executable(cuvistaGui
     UserInputGui.cpp
     ImageLabel.cpp
     ClickLabel.cpp
+    DoubleClickSlider.cpp
     MessagePrinterGui.cpp
 )
 

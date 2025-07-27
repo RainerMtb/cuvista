@@ -35,11 +35,13 @@ signals:
     void sigProgress(double value);
     void sigUpdateInput(QImage im, QString time);
     void sigUpdateOutput(QImage im, QString time);
+    void sigUpdateStatus(QString msg);
 
 public slots:
     void progress(double value);
     void updateInput(QImage pm, QString time);
     void updateOutput(QImage pm, QString time);
+    void updateStatus(QString msg);
 
 public:
     ProgressWindow(QWidget* parent);
@@ -69,4 +71,5 @@ public:
         mExecutor { executor } {}
 
     void update(double totalPercentage, bool force) override;
+    void updateStatus(const std::string& msg) override;
 };

@@ -66,6 +66,19 @@ void ProgressWindow::updateOutput(QImage im, QString time) {
 	ui.lblTimeOutput->setText(time);
 }
 
+void ProgressWindow::updateStatus(QString msg) {
+	ui.lblStatus->setText(msg);
+}
+
+void ProgressWindow::setBackgroundColor(QString style) {
+	ui.imageInput->setStyleSheet(style);
+	ui.imageOutput->setStyleSheet(style);
+}
+
+//-----------------------------------------
+//-------- handle progess update ----------
+//-----------------------------------------
+
 void ProgressGui::update(double totalPercentage, bool force) {
 	if (isDue(force)) {
 		mProgressWindow->sigProgress(totalPercentage);
@@ -91,7 +104,6 @@ void ProgressGui::update(double totalPercentage, bool force) {
 	}
 }
 
-void ProgressWindow::setBackgroundColor(QString style) {
-	ui.imageInput->setStyleSheet(style);
-	ui.imageOutput->setStyleSheet(style);
+void ProgressGui::updateStatus(const std::string& msg) {
+	mProgressWindow->sigUpdateStatus(QString::fromStdString(msg));
 }

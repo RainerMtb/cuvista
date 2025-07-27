@@ -67,6 +67,9 @@
     <ClCompile Include="UserInputGui.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="DoubleClickSlider.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="ImageLabel.h">
@@ -88,6 +91,9 @@
       <Filter>Header Files</Filter>
     </QtMoc>
     <QtMoc Include="MessagePrinterGui.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="DoubleClickSlider.h">
       <Filter>Header Files</Filter>
     </QtMoc>
   </ItemGroup>

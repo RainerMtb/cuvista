@@ -237,15 +237,15 @@ void CudaExecutor::cudaInit(CoreData& core, int devIdx, const cudaDeviceProp& pr
 	cudaFree(d_ptr128);
 
 	//compute required heap size
-	size_t frameSize8 = 3ull * cudaData.strideChar * h;		//bytes for yuv444 images
+	size_t frameSize8 = 3ull * cudaData.strideChar * h;  //bytes for yuv444 images
 	size_t heapRequired = 0;
-	heapRequired += frameSize8 * core.bufferCount;		//yuv input storage
-	heapRequired += frameSize8;						    //yuv out
-	heapRequired += frameSize8;						    //rgb out
-	heapRequired += 2ull * cudaData.strideFloat * h;        //filter buffers
-	heapRequired += cudaData.strideFloat * h * core.pyramidLevels * core.pyramidCount;		//pyramid of Y frames
-	heapRequired += cudaData.strideFloat4 * h * cudaData.outBufferCount;						//output buffer in floats
-	heapRequired += sizeof(CudaPointResult) * core.resultCount;							//array of results structure
+	heapRequired += frameSize8 * core.bufferCount;       //yuv input storage
+	heapRequired += frameSize8;						     //yuv out
+	heapRequired += frameSize8;						     //rgb out
+	heapRequired += 2ull * cudaData.strideFloat * h;     //filter buffers
+	heapRequired += cudaData.strideFloat * h * core.pyramidLevels * core.pyramidCount;     //pyramid of Y frames
+	heapRequired += cudaData.strideFloat4 * h * cudaData.outBufferCount;                   //output buffer in floats
+	heapRequired += sizeof(CudaPointResult) * core.resultCount;                            //array of results structure
 	heapRequired += 10ull * 1024 * 1024;
 
 	//set memory limit

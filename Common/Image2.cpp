@@ -54,8 +54,11 @@ ImageRGBplanar::ImageRGBplanar(int h, int w) :
 ImageRGBplanar::ImageRGBplanar() :
 	ImageRGBplanar(0, 0) {}
 
-std::vector<unsigned char> ImageRGBplanar::getColorData(const Color& color) const {
-	return color.getRGB();
+im::LocalColor<unsigned char> ImageRGBplanar::getLocalColor(const Color& color) const {
+	unsigned char r = (unsigned char) color.getChannel(0);
+	unsigned char g = (unsigned char) color.getChannel(1);
+	unsigned char b = (unsigned char) color.getChannel(2);
+	return { { r, g, b }, color.getAlpha()};
 }
 
 
@@ -222,8 +225,10 @@ ImageRGBA ImageYuv::toRGBA() const {
 	return out;
 }
 
-std::vector<unsigned char> ImageYuv::getColorData(const Color& color) const {
-	return color.getYUV();
+im::LocalColor<unsigned char> ImageYuv::getLocalColor(const Color& color) const {
+	unsigned char y, u, v;
+	im::rgb_to_yuv(color.getChannel(0), color.getChannel(1), color.getChannel(2), &y, &u, &v);
+	return { { y, u, v }, color.getAlpha() };
 }
 
 
@@ -319,9 +324,11 @@ ImageYuv ImageBGR::toYUV() const {
 	return out;
 }
 
-std::vector<unsigned char> ImageBGR::getColorData(const Color& color) const {
-	auto rgb = color.getRGB();
-	return { rgb[2], rgb[1], rgb[0] };
+im::LocalColor<unsigned char> ImageBGR::getLocalColor(const Color& color) const {
+	unsigned char r = (unsigned char) color.getChannel(0);
+	unsigned char g = (unsigned char) color.getChannel(1);
+	unsigned char b = (unsigned char) color.getChannel(2);
+	return { { b, g, r }, color.getAlpha() };
 }
 
 
@@ -373,8 +380,11 @@ bool ImageRGBA::saveAsColorBMP(const std::string& filename) const {
 	return os.good();
 }
 
-std::vector<unsigned char> ImageRGBA::getColorData(const Color& color) const {
-	return color.getRGB();
+im::LocalColor<unsigned char> ImageRGBA::getLocalColor(const Color& color) const {
+	unsigned char r = (unsigned char) color.getChannel(0);
+	unsigned char g = (unsigned char) color.getChannel(1);
+	unsigned char b = (unsigned char) color.getChannel(2);
+	return { { r, g, b }, color.getAlpha() };
 }
 
 

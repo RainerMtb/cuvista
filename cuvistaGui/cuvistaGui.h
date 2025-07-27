@@ -21,6 +21,7 @@
 #include <QMainWindow>
 #include <QFileDialog>
 #include <QThread>
+#include <QSettings>
 
 #include "MovieFrame.hpp"
 #include "MovieReader.hpp"
@@ -38,6 +39,7 @@ class cuvistaGui : public QMainWindow {
 
 public:
     cuvistaGui(QWidget *parent = nullptr);
+    ~cuvistaGui();
 
 public slots:
     void seek(double frac);
@@ -49,6 +51,7 @@ public slots:
     void showInfo();
 
 private:
+    QSettings mSettings = QSettings("RainerMtb", "cuvista");
     QImage mErrorImage = QImage(":/cuvistaGui/res/signs-01.png");
     QImage mWorkingImage = QImage(":/cuvistaGui/res/signs-02.png");
 
@@ -82,9 +85,10 @@ private:
     bool mOutputReady = false;
 
     void updateInputImage();
-    void setInputFile(const QString& filename);
+    void setInputFile(const QString& inputPath);
+    void addInputFile(const QString& inputPath);
     void showMessage(const QString& msg);
-    void setColorIcon(ClickLabel* btn, QColor& color);
+    void setBackgroundColor(QColor& color);
 };
 
 class InfoDialog : public QDialog {

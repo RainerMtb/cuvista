@@ -294,7 +294,7 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 				stackPosition = val;
 
 			} else {
-				throw AVException("invalid value for combining frames: " + next);
+				throw AVException("invalid value for stacking: " + next);
 			}
 
 		} else {
@@ -328,9 +328,7 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 		if (std::filesystem::equivalent(path1, path2, ec)) {
 			throw AVException("cannot use the same file for input and output");
 		}
-		if (pass == DeshakerPass::COMBINED || pass == DeshakerPass::CONSECUTIVE) {
-			checkFileForWriting(fileOutCheck, overwriteOutput);
-		}
+		checkFileForWriting(fileOutCheck, overwriteOutput);
 	}
 }
 
@@ -411,12 +409,11 @@ void MainData::validate(const MovieReader& reader) {
 
 	//check background color value
 	for (int i = 0; i < 3; i++) {
-		int col = backgroundColor.getRGBchannel(i);
+		int col = backgroundColor.getChannel(i);
 		if (col < 0 || col > 255) throw AVException("invalid background color value: " + std::to_string(col));
 	}
 	//set background yuv color vector
-	auto yuv = backgroundColor.getYUVfloats();
-	bgcol_yuv = { yuv[0], yuv[1], yuv[2] };
+	backgroundColor.toYUVfloat(&bgcol_yuv.y, &bgcol_yuv.u, &bgcol_yuv.v);
 
 	int pitchBase = 256;
 	cpupitch = (w + pitchBase - 1) / pitchBase * pitchBase;

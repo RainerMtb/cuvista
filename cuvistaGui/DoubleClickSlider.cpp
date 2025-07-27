@@ -16,22 +16,11 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
-#pragma once
+#include "DoubleClickSlider.h"
 
-class ProgressBase {
+DoubleClickSlider::DoubleClickSlider(QWidget* parent) :
+	QSlider(parent) {}
 
-public:
-	virtual void init() {}
-	virtual void update(double totalPercentage, bool force = false) = 0;
-	virtual void terminate() {}
-	virtual void writeMessage(const std::string& msg) {}
-	virtual void updateStatus(const std::string& msg) { writeMessage(msg); }
-	virtual ~ProgressBase() {}
-};
-
-
-class ProgressDefault : public ProgressBase {
-
-public:
-	void update(double totalPercentage, bool force = false) override {}
-};
+void DoubleClickSlider::mouseDoubleClickEvent(QMouseEvent* event) {
+	setSliderPosition(0);
+}

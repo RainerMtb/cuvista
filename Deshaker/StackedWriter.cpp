@@ -53,13 +53,13 @@ void StackedWriter::writeOutput(const FrameExecutor& executor) {
 	executor.mPool.addAndWait(fcn, 0, mData.h);
 
 	//combine images
+	auto color = mData.backgroundColor.getYUV();
 	for (int row = 0; row < mData.h * 3; row++) {
 		//source footage on left side
 		std::copy(in, in + mInputFrameScaled.w, dest);
 		//output frame on right side
 		std::copy(out, out + combinedFrame.w / 2, dest + combinedFrame.w / 2);
 		//middle 1% of width in background color
-		auto color = mData.backgroundColor.getYUV();
 		for (int col = combinedFrame.w * 99 / 200; col < combinedFrame.w * 101 / 200; col++) dest[col] = color[row / mData.h];
 
 		in += mInputFrameScaled.stride;

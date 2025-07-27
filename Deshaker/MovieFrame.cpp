@@ -96,7 +96,7 @@ void MovieFrameCombined::runLoop(std::shared_ptr<ProgressBase> progress, UserInp
 			if (mData.printHeader) mData.showIntro(executor->mDeviceInfo.getName(), mReader);
 			//init progress display
 			progress->init();
-			progress->writeMessage("processing frames...");
+			progress->updateStatus("Processing Frames...");
 			//read first frame from input into buffer
 			mReader.read(mBufferFrame);
 			mReader.startOfInput = false;
@@ -271,7 +271,7 @@ void MovieFrameConsecutive::runLoop(std::shared_ptr<ProgressBase> progress, User
 			//read first frame from input into buffer
 			//init progress display
 			progress->init();
-			progress->writeMessage("pass 1/2 - analyzing input...");
+			progress->updateStatus("Pass 1/2 - Analyzing Video...");
 			mReader.read(mBufferFrame);
 			mReader.startOfInput = false;
 
@@ -301,7 +301,7 @@ void MovieFrameConsecutive::runLoop(std::shared_ptr<ProgressBase> progress, User
 			//prepare for second pass, rewind reader and read first frame
 			mReader.rewind();
 			mReader.mStoreSidePackets = true;
-			progress->writeMessage("pass 2/2 - generating output...");
+			progress->updateStatus("Pass 2/2 - Generating Output...");
 			mReader.read(mBufferFrame);
 			currentPass = 2;
 			inputState = InputState::NONE;

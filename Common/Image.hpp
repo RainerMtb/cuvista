@@ -41,6 +41,11 @@ using ImageYuvData = ImageData<unsigned char>;
 
 namespace im {
 
+	template <class T> struct LocalColor {
+		std::array<T, 4> colorData;
+		double alpha;
+	};
+
 	enum class TextAlign {
 		TOP_LEFT,
 		TOP_CENTER,
@@ -73,12 +78,11 @@ namespace im {
 
 		int colorValue(T pixelValue) const;
 
-		void plot(double x, double y, double a, const std::vector<T>& colorData, double colorAlpha);
-		void plot(int x, int y, double a, const std::vector<T>& colorData, double colorAlpha);
+		void plot4(double cx, double cy, double dx, double dy, double a, const LocalColor<T>& localColor);
+		void plot(double x, double y, double a, const LocalColor<T>& localColor);
+		void plot(int x, int y, double a, const LocalColor<T>& localColor);
 		void plot(double x, double y, double a, const Color& color);
 		void plot(int x, int y, double a, const Color& color);
-
-		void plot4(double cx, double cy, double dx, double dy, double a, const Color& color);
 
 		void yuvToRgb(ImageData<unsigned char>& dest, std::vector<int> planes, 
 			ThreadPoolBase& pool = defaultPool) const;
@@ -86,7 +90,7 @@ namespace im {
 		void copyTo(ImageData<T>& dest, size_t r0, size_t c0, std::vector<int> srcPlanes, std::vector<int> destPlanes, 
 			ThreadPoolBase& pool = defaultPool) const;
 
-		virtual std::vector<T> getColorData(const Color& color) const;
+		virtual LocalColor<T> getLocalColor(const Color& color) const;
 
 	public:
 		ImageBase(int h, int w, int stride, int numPlanes);

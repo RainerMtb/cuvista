@@ -48,19 +48,23 @@ public:
 //planar image in rgb
 class ImageRGBplanar : public im::ImageBase<unsigned char> {
 
+protected:
+	im::LocalColor<unsigned char> getLocalColor(const Color& color) const override;
+
 public:
 	//allocate frame given height, width, and stride
 	ImageRGBplanar(int h, int w);
 
 	//default constructor produces invalid image
 	ImageRGBplanar();
-
-	std::vector<unsigned char> getColorData(const Color& color) const override;
 };
 
 
 //packed rgba
 class ImageRGBA : public im::ImagePacked<unsigned char> {
+
+protected:
+	im::LocalColor<unsigned char> getLocalColor(const Color& color) const override;
 
 public:
 	ImageRGBA(int h, int w, int stride, unsigned char* data);
@@ -74,13 +78,14 @@ public:
 	void copyTo(ImageRGBA& dest, size_t r0, size_t c0, ThreadPoolBase& pool = defaultPool) const;
 
 	bool saveAsColorBMP(const std::string& filename) const;
-
-	std::vector<unsigned char> getColorData(const Color& color) const override;
 };
 
 
 //planar yuv 8bit image
 class ImageYuv : public im::ImageBase<unsigned char> {
+
+protected:
+	im::LocalColor<unsigned char> getLocalColor(const Color& color) const override;
 
 public:
 	ImageYuv(int h, int w, int stride);
@@ -131,13 +136,14 @@ public:
 
 	//convert to ImageBGR and save to file, for repeated use BGR image should be preallocated
 	bool saveAsColorBMP(const std::string& filename) const;
-
-	std::vector<unsigned char> getColorData(const Color& color) const override;
 };
 
 
 //packed 8bit in order BGR
 class ImageBGR : public im::ImagePacked<unsigned char> {
+
+protected:
+	im::LocalColor<unsigned char> getLocalColor(const Color& color) const override;
 
 public:
 	ImageBGR(int h, int w);
@@ -149,8 +155,6 @@ public:
 	ImageYuv toYUV() const;
 
 	static ImageBGR readFromBMP(const std::string& filename);
-
-	std::vector<unsigned char> getColorData(const Color& color) const override;
 };
 
 

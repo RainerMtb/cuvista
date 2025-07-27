@@ -136,6 +136,7 @@ copy $(FFMPEG_PATH)\bin\*.dll $(SolutionDir)bin\$(Platform)\Deploy
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="ClickLabel.cpp" />
+    <ClCompile Include="DoubleClickSlider.cpp" />
     <ClCompile Include="Eula.cpp" />
     <ClCompile Include="ImageLabel.cpp" />
     <ClCompile Include="MessagePrinterGui.cpp" />
@@ -180,6 +181,9 @@ copy $(FFMPEG_PATH)\bin\*.dll $(SolutionDir)bin\$(Platform)\Deploy
   </ItemGroup>
   <ItemGroup>
     <Text Include="CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <QtMoc Include="DoubleClickSlider.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Condition="Exists('$(QtMsBuild)\qt.targets')">

@@ -293,6 +293,6 @@ void FrameResult::computeTransform(std::span<PointResult> results, ThreadPoolBas
 		for (PointContext& pc : mConsList) pc.ptr->isConsens = true;
 	}
 
-	resultStore.emplace_back(frameIndex, std::vector<PointResult>(results.begin(), results.end())); //-----------
+	//resultStore.emplace_back(frameIndex, std::vector<PointResult>(results.begin(), results.end())); //-----------
 	//std::cout << "frame " << frameIndex << ", " << mBestTransform << std::endl;
 }

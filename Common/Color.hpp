@@ -20,6 +20,7 @@
 
 #include <array>
 
+//store color information in RGB array with alpha value
 class Color {
 
 private:
@@ -42,28 +43,20 @@ public:
 	static Color CYAN;
 	static Color BLACK_SEMI;
 
-	static Color web(const std::string& webColor);
-
 	static Color rgbDouble(double red, double green, double blue);
 	static Color rgb(int red, int green, int blue);
 	static Color rgba(int red, int green, int blue, double alpha = 1.0);
-
+	static Color web(const std::string& webColor);
 	static Color yuv(unsigned char y, unsigned char u, unsigned char v);
-
 	static Color hsv(double h, double s, double v);
 
-	std::vector<unsigned char> getRGB() const;
 	std::vector<unsigned char> getYUV() const;
-	std::array<float, 3> getYUVfloats() const;
-
-	unsigned char getRed() const;
-	unsigned char getGreen() const;
-	unsigned char getBlue() const;
+	void toYUVfloat(float* y, float* u, float* v) const;
 
 	void setAlpha(double alpha);
 	double getAlpha() const;
 
-	int getRGBchannel(size_t index) const;
+	int getChannel(size_t index) const;
 };
 
 namespace im {

@@ -35,10 +35,10 @@ static DeshakerResult run(std::vector<std::string> argsList) {
 	DeshakerResult result = deshake(argsList, &oss);
 	std::string str = oss.str();
 	if (str.empty()) {
-		std::cout << "no output" << std::endl;
+		std::cout << "no console output" << std::endl;
 
 	} else {
-		std::cout << "output: " << std::endl << str << std::endl;
+		std::cout << "console output: " << std::endl << str << std::endl;
 	}
 	return result;
 }
@@ -71,8 +71,8 @@ int main() {
 
 	std::cout << "--- Images ---" << std::endl;
 	run("-frames 10 -i d:/VideoTest/04.ts -resim d:/VideoTest/out/images/test%02d.jpg -progress 0 -y");
-	run("-frames 5 -i d:/VideoTest/01.mp4 -o d:/VideoTest/out/images/im03d.bmp -progress 0 -y");
-	run("-device 2 -frames 5 -i d:/VideoTest/01.mp4 -o d:/VideoTest/out/images/im03d.jpg -progress 0 -y");
+	run("-frames 5 -i d:/VideoTest/01.mp4 -o d:/VideoTest/out/images/im%03d.bmp -progress 0 -y");
+	run("-device 2 -frames 5 -i d:/VideoTest/01.mp4 -o d:/VideoTest/out/images/im%03d.jpg -progress 0 -y");
 
 	std::cout << "--- Videos ---" << std::endl;
 	run("-i d:/VideoTest/example.mp4 -o d:/videoTest/out/example_cuda.mp4 -noheader -progress 0");

@@ -18,20 +18,16 @@
 
 #pragma once
 
-class ProgressBase {
+#include <QSlider>
+
+ //slider that resets on double click
+class DoubleClickSlider : public QSlider {
+    Q_OBJECT
 
 public:
-	virtual void init() {}
-	virtual void update(double totalPercentage, bool force = false) = 0;
-	virtual void terminate() {}
-	virtual void writeMessage(const std::string& msg) {}
-	virtual void updateStatus(const std::string& msg) { writeMessage(msg); }
-	virtual ~ProgressBase() {}
-};
+    DoubleClickSlider(QWidget* parent = nullptr);
 
+protected:
+    void mouseDoubleClickEvent(QMouseEvent* event) override;
 
-class ProgressDefault : public ProgressBase {
-
-public:
-	void update(double totalPercentage, bool force = false) override {}
 };
