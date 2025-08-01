@@ -30,14 +30,6 @@
 
 class MovieReader;
 
-enum class DeshakerPass {
-	NONE,
-	COMBINED,
-	CONSECUTIVE,
-	//FIRST_PASS,
-	//SECOND_PASS,
-};
-
 enum class OutputType {
 	NONE,
 	PIPE,
@@ -59,6 +51,11 @@ enum class DecideYNA {
 	YES,
 	NO,
 	ASK,
+};
+
+//pixels to crop from each side for region of interest in computing frame result
+struct RoiCrop {
+	int left, right, top, bottom;
 };
 
 class MainData : public CoreData {
@@ -136,9 +133,12 @@ public:
 		int wMin = 100, hMin = 100;
 		int levelsMin = 1, levelsMax = 6;
 		int irMin = 0, irMax = 3;
+		int modeMax = 6;
 	} limits;
 
+	RoiCrop roiCrop = { 0, 0, 0, 0 };
 	
+	int mode;
 	std::vector<DeviceInfoBase*> deviceList;
 	DeviceInfoCpu deviceInfoCpu;
 	DeviceInfoAvx deviceInfoAvx;
@@ -150,8 +150,6 @@ public:
 	std::optional<int> cpuThreadsRequired = std::nullopt;
 
 	std::shared_ptr<SamplerBase<PointContext>> sampler = std::make_shared<Sampler<PointContext, PseudoRandomSource>>();
-
-	DeshakerPass pass = DeshakerPass::COMBINED;
 
 	//output related
 	util::NullOutstream nullStream;
@@ -184,6 +182,7 @@ public:
 
 	std::chrono::steady_clock::time_point timePoint;
 
+	
 	//------------------------------------
 	// METHODS
 	//------------------------------------

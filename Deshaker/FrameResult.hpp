@@ -42,7 +42,7 @@ public:
 	FrameResult(MainData& data, ThreadPoolBase& threadPool);
 
 	//compute resulting transformation for this frame
-	void computeTransform(std::span<PointResult> results, ThreadPoolBase& threadPool, int64_t frameIndex, SamplerPtr sampler);
+	void computeTransform(std::span<PointResult> results, int64_t frameIndex);
 
 	//get the last computed treansform
 	const AffineTransform& getTransform() const;
@@ -52,6 +52,7 @@ public:
 
 private:
 	const MainData& mData;
+	ThreadPoolBase& mPool;
 	std::unique_ptr<AffineSolver> mAffineSolver;
 	AffineTransform mBestTransform;
 	std::vector<PointContext> mConsList, mList1, mList2;

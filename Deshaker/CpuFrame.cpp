@@ -29,15 +29,15 @@ CpuFrame::CpuFrame(MainData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame
 	assert(mDeviceInfo.type == DeviceType::CPU && "device type must be CPU here");
 
 	//buffer to hold input frames in yuv format
-	for (int i = 0; i < mData.bufferCount; i++) mYUV.emplace_back(mData.h, mData.w, mData.cpupitch);
+	for (int i = 0; i < data.bufferCount; i++) mYUV.emplace_back(mData.h, mData.w, mData.cpupitch);
 
 	//init pyramid structures
-	for (int i = 0; i < mData.pyramidCount; i++) mPyr.emplace_back(mData);
+	for (int i = 0; i < mData.pyramidCount; i++) mPyr.emplace_back(data);
 
 	//init storage for previous output frame to background colors
-	mPrevOut.push_back(Matf::values(mData.h, mData.w, mData.bgcol_yuv[0]));
-	mPrevOut.push_back(Matf::values(mData.h, mData.w, mData.bgcol_yuv[1]));
-	mPrevOut.push_back(Matf::values(mData.h, mData.w, mData.bgcol_yuv[2]));
+	mPrevOut.push_back(Matf::values(mData.h, mData.w, mData.bgcolorYuv[0]));
+	mPrevOut.push_back(Matf::values(mData.h, mData.w, mData.bgcolorYuv[1]));
+	mPrevOut.push_back(Matf::values(mData.h, mData.w, mData.bgcolorYuv[2]));
 
 	//buffer for output and pyramid creation
 	mBuffer.assign(3, Matf::allocate(mData.h, mData.w));
@@ -48,7 +48,7 @@ CpuFrame::CpuFrame(MainData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame
 }
 
 //construct data for one pyramid
-CpuFrame::CpuPyramid::CpuPyramid(CoreData& data) {
+CpuFrame::CpuPyramid::CpuPyramid(MainData& data) {
 	//allocate matrices for pyramid
 	for (int z = 0; z <= data.zMax; z++) {
 		int hz = data.h >> z;
@@ -61,6 +61,10 @@ CpuFrame::CpuPyramid::CpuPyramid(CoreData& data) {
 void CpuFrame::inputData(int64_t frameIndex, const ImageYuv& inputFrame) {
 	size_t idx = frameIndex % mYUV.size();
 	inputFrame.copyTo(mYUV[idx], mPool);
+}
+
+void CpuFrame::createPyramidTransformed(int64_t frameIndex, const Affine2D& trf) {
+
 }
 
 void CpuFrame::createPyramid(int64_t frameIndex) {
@@ -252,7 +256,7 @@ void CpuFrame::outputData(int64_t frameIndex, const Affine2D& trf) {
 		mYuvPlane.setValues([&] (size_t r, size_t c) { return input.at(z, r, c) * f; }, mPool);
 		//transform and evaluate pixels, write to out buffer
 		auto func1 = [&] (size_t r, size_t c) {
-			float bg = (mData.bgmode == BackgroundMode::COLOR ? mData.bgcol_yuv[z] : mPrevOut[z].at(r, c));
+			float bg = (mData.bgmode == BackgroundMode::COLOR ? mData.bgcolorYuv[z] : mPrevOut[z].at(r, c));
 			auto [x, y] = trf.transform(c, r); //pay attention to order of x and y
 			float result = mYuvPlane.interp2(float(x), float(y)).value_or(bg);
 			//if (z == 0 && r == 1049 && c == 842) {

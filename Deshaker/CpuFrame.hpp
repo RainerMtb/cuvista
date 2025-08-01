@@ -37,6 +37,7 @@ public:
 	CpuFrame(MainData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool);
 
 	void inputData(int64_t frameIndex, const ImageYuv& inputFrame) override;
+	void createPyramidTransformed(int64_t frameIndex, const Affine2D& trf) override;
 	void createPyramid(int64_t frameIndex) override;
 	void computeStart(int64_t frameIndex, std::vector<PointResult>& results) override;
 	void computeTerminate(int64_t frameIndex, std::vector<PointResult>& results) override;
@@ -64,7 +65,7 @@ private:
 		int64_t frameIndex = -1;
 		std::vector<Matf> mY;
 
-		CpuPyramid(CoreData& data);
+		CpuPyramid(MainData& data);
 	};
 
 	//frame input buffer, number of frames = frameBufferCount

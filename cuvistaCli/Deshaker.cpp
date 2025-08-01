@@ -91,10 +91,10 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 		writer->start();
 
 		//----------- create Frame Handler for selected loop
-		if (data.pass == DeshakerPass::COMBINED) {
+		if (data.mode == 0) {
 			frame = std::make_shared<MovieFrameCombined>(data, *reader, *writer);
 
-		} else if (data.pass == DeshakerPass::CONSECUTIVE) {
+		} else {
 			frame = std::make_shared<MovieFrameConsecutive>(data, *reader, *writer);
 		}
 
@@ -135,11 +135,11 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 	}
 
 	//setup progress output
-	if (data.progressType == ProgressType::MULTILINE) progress = std::make_shared<ProgressDisplayMultiLine>(*frame, data.console);
-	else if (data.progressType == ProgressType::REWRITE_LINE) progress = std::make_shared<ProgressDisplayRewriteLine>(*frame, data.console);
-	else if (data.progressType == ProgressType::NEW_LINE) progress = std::make_shared<ProgressDisplayNewLine>(*frame, data.console);
-	else if (data.progressType == ProgressType::GRAPH) progress = std::make_shared<ProgressDisplayGraph>(*frame, data.console);
-	else progress = std::make_shared<ProgressDisplayNone>(*frame);
+	if (data.progressType == ProgressType::MULTILINE) progress = std::make_shared<ProgressDisplayMultiLine>(data.console);
+	else if (data.progressType == ProgressType::REWRITE_LINE) progress = std::make_shared<ProgressDisplayRewriteLine>(data.console);
+	else if (data.progressType == ProgressType::NEW_LINE) progress = std::make_shared<ProgressDisplayNewLine>(data.console);
+	else if (data.progressType == ProgressType::GRAPH) progress = std::make_shared<ProgressDisplayGraph>(data.console);
+	else progress = std::make_shared<ProgressDisplayNone>();
 
 	// --------------------------------------------------------------
 	// --------------- main loop start ------------------------------
@@ -168,7 +168,6 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 		}
 
 	} else {
-		progress->update(true);
 		progress->terminate();
 	}
 

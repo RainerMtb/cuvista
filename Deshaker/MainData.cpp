@@ -127,13 +127,10 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 			//optical flow video
 			flowFile = next;
 
-		} else if (args.nextArg("pass", next)) {
-			int p = std::stoi(next);
-			if (p == 0) { 
-				pass = DeshakerPass::COMBINED; 
-			} else if (p == 12) { 
-				pass = DeshakerPass::CONSECUTIVE; 
-			} else throw AVException("invalid value for pass: " + next);
+		} else if (args.nextArg("mode", next)) {
+			int i = std::stoi(next);
+			if (i >= 0 && i <= limits.modeMax) mode = i;
+			else throw AVException("invalid value for mode: " + next);
 
 		} else if (args.nextArg("radius", next)) {
 			//temporal radius in seconds before and after current frame
@@ -261,6 +258,13 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 			//integration radius
 			ir = std::stoi(next);
 			iw = ir * 2 + 1;
+
+		} else if (args.nextArg("roicrop", next)) {
+			std::smatch matcher;
+			if (std::regex_match(next, matcher, std::regex("(\\d+):(\\d+):(\\d+):(\\d+)$")))
+				roiCrop = { std::stoi(matcher[1].str()), std::stoi(matcher[2].str()), std::stoi(matcher[3].str()), std::stoi(matcher[4].str()) };
+			else
+				throw AVException("invalid roicrop definition: " + next);
 
 		} else if (args.nextArg("codec", next)) {
 			auto item = mapStringToCodec.find(str_toupper(next));
@@ -413,19 +417,13 @@ void MainData::validate(const MovieReader& reader) {
 		if (col < 0 || col > 255) throw AVException("invalid background color value: " + std::to_string(col));
 	}
 	//set background yuv color vector
-	backgroundColor.toYUVfloat(&bgcol_yuv.y, &bgcol_yuv.u, &bgcol_yuv.v);
+	backgroundColor.toYUVfloat(&bgcolorYuv.y, &bgcolorYuv.u, &bgcolorYuv.v);
 
 	int pitchBase = 256;
 	cpupitch = (w + pitchBase - 1) / pitchBase * pitchBase;
 
 	//number of frames to buffer
 	this->radius = (int) std::round(radsec * reader.fps());
-	if (pass == DeshakerPass::COMBINED) {
-		this->bufferCount = 2 * radius + 2;
-	}
-	if (pass == DeshakerPass::CONSECUTIVE) {
-		this->bufferCount = 2;
-	}
 
 	//dynamic zoom fallback rate per frame
 	this->zoomFallback = 1.0 - zoomFallbackTotal / radius;

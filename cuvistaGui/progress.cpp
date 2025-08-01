@@ -79,28 +79,28 @@ void ProgressWindow::setBackgroundColor(QString style) {
 //-------- handle progess update ----------
 //-----------------------------------------
 
-void ProgressGui::update(double totalPercentage, bool force) {
+void ProgressGui::update(const ProgressInfo& progress, bool force) {
 	if (isDue(force)) {
-		mProgressWindow->sigProgress(totalPercentage);
+		mProgressWindow->sigProgress(progress.totalProgress);
 	}
 
 	auto timePointNow = std::chrono::steady_clock::now();
 	std::chrono::nanoseconds delta = timePointNow - mTimePoint;
 	bool imageDue = delta.count() / 1'000'000 > 250;
 
-	if (imageDue && frame.mReader.frameIndex > 0 && mProgressWindow->isVisible()) {
+	if (imageDue && progress.readIndex > 0 && mProgressWindow->isVisible()) {
 		mTimePoint = timePointNow;
-		uint64_t idx = frame.mReader.frameIndex - 1;
+		uint64_t idx = progress.readIndex - 1;
 		mExecutor.getInput(idx, mInput);
 		QImage im(mInput.data(), mInput.w, mInput.h, QImage::Format_RGBX8888);
-		mProgressWindow->sigUpdateInput(im, QString::fromStdString(frame.ptsForFrameAsString(idx)));
+		mProgressWindow->sigUpdateInput(im, QString::fromStdString(mExecutor.mFrame.ptsForFrameAsString(idx)));
 	}
-	if (imageDue && frame.mWriter.frameIndex > 0 && mProgressWindow->isVisible()) {
+	if (imageDue && progress.writeIndex > 0 && mProgressWindow->isVisible()) {
 		mTimePoint = timePointNow;
-		uint64_t idx = frame.mWriter.frameIndex - 1;
+		uint64_t idx = progress.writeIndex - 1;
 		mExecutor.getWarped(idx, mOutput);
 		QImage im(mOutput.data(), mOutput.w, mOutput.h, QImage::Format_RGBX8888);
-		mProgressWindow->sigUpdateOutput(im, QString::fromStdString(frame.ptsForFrameAsString(idx)));
+		mProgressWindow->sigUpdateOutput(im, QString::fromStdString(mExecutor.mFrame.ptsForFrameAsString(idx)));
 	}
 }
 

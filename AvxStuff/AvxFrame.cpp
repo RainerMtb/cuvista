@@ -30,9 +30,9 @@ AvxFrame::AvxFrame(CoreData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame
 	mPyr.assign(mData.pyramidCount, AvxMatf(mData.pyramidRowCount, pitch, 0.0f));
 	mYuvPlane = AvxMatf(mData.h, pitch, 0.0f);
 
-	mWarped.push_back(AvxMatf(mData.h, pitch, mData.bgcol_yuv[0]));
-	mWarped.push_back(AvxMatf(mData.h, pitch, mData.bgcol_yuv[1]));
-	mWarped.push_back(AvxMatf(mData.h, pitch, mData.bgcol_yuv[2]));
+	mWarped.push_back(AvxMatf(mData.h, pitch, mData.bgcolorYuv[0]));
+	mWarped.push_back(AvxMatf(mData.h, pitch, mData.bgcolorYuv[1]));
+	mWarped.push_back(AvxMatf(mData.h, pitch, mData.bgcolorYuv[2]));
 
 	mFilterBuffer = AvxMatf(mData.w, util::alignValue(mData.h, walign)); //transposed
 	mFilterResult = AvxMatf(mData.h, pitch);
@@ -49,6 +49,10 @@ AvxFrame::AvxFrame(CoreData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame
 void AvxFrame::inputData(int64_t frameIdx, const ImageYuv& inputFrame) {
 	size_t idx = frameIdx % mYUV.size();
 	inputFrame.copyTo(mYUV[idx], mPool);
+}
+
+void AvxFrame::createPyramidTransformed(int64_t frameIndex, const Affine2D& trf) {
+
 }
 
 void AvxFrame::createPyramid(int64_t frameIndex) {
@@ -88,7 +92,7 @@ void AvxFrame::outputData(int64_t frameIndex, const Affine2D& trf) {
 	//for planes Y, U, V
 	for (size_t z = 0; z < 3; z++) {
 		yuvToFloat(input, z, mYuvPlane);
-		if (mData.bgmode == BackgroundMode::COLOR) mWarped[z].fill(mData.bgcol_yuv[z]);
+		if (mData.bgmode == BackgroundMode::COLOR) mWarped[z].fill(mData.bgcolorYuv[z]);
 		warpBack(trf, mYuvPlane, mWarped[z]);
 		filter(mWarped[z], 0, mData.h, mData.w, mFilterBuffer, filterKernels[z]);
 		filter(mFilterBuffer, 0, mData.w, mData.h, mFilterResult, filterKernels[z]);

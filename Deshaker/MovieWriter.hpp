@@ -25,8 +25,8 @@
 #include "FrameExecutor.hpp"
 
 
-class MovieFrame;
-
+//-----------------------------------------------------------------------------------
+//important: each writer must increment frame counter when beeing called
 //-----------------------------------------------------------------------------------
 class MovieWriter : public WriterStats {
 
@@ -37,14 +37,12 @@ protected:
 		mData { data } {}
 
 public:
-	const MovieFrame* movieFrame = nullptr; //will be set in constructor of MovieFrame
-
 	virtual ~MovieWriter() = default;
 	virtual void open(EncodingOption videoCodec) {}
 	virtual void start() {}
 	virtual void writeInput(const FrameExecutor& executor) {}
 	virtual void prepareOutput(FrameExecutor& executor) {}
-	virtual void writeOutput(const FrameExecutor& executor) { frameIndex++; }
+	virtual void writeOutput(const FrameExecutor& executor) {}
 	virtual bool startFlushing() { return false; }
 	virtual bool flush() { return false; }
 };

@@ -29,13 +29,13 @@ CudaData cudaData;
 //-------------------------------------------------- HOST CODE ------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
-void handleStatus(cudaError_t status, std::string&& title) {
+static void handleStatus(cudaError_t status, std::string&& title) {
 	if (status != cudaSuccess) {
 		errorLogger().logError(title + ": " + cudaGetErrorString(status));
 	}
 }
 
-cudaTextureObject_t prepareComputeTexture(float* src, int w, int h, int pitch) {
+static cudaTextureObject_t prepareComputeTexture(float* src, int w, int h, int pitch) {
 	cudaResourceDesc resDesc {};
 	resDesc.resType = cudaResourceTypePitch2D;
 	resDesc.res.pitch2D.devPtr = src;
@@ -63,7 +63,7 @@ void ComputeTextures::create(int64_t idx, int64_t idxPrev, const CoreData& core,
 	Y[1] = prepareComputeTexture(ptrCur, core.w, core.pyramidRowCount, cudaData.strideFloat);
 }
 
-void ComputeTextures::destroy() {
+void ComputeTextures::destroy() const {
 	cudaDestroyTextureObject(Y[0]);
 	cudaDestroyTextureObject(Y[1]);
 }
@@ -103,9 +103,9 @@ bool checkKernelParameters(const CudaData& core, const cudaDeviceProp& cudaProps
 }
 
 //write data from device pointer to file for debugging
-template <class T> void writeDeviceDataToFile(const T* devData, size_t h, size_t wCount, size_t strideFloatN, const std::string& path) {
+template <class T> void writeDeviceDataToFile(const T* devData, size_t h, size_t wCount, size_t stride, const std::string& path) {
 	std::vector<T> hostData(h * wCount);
-	cudaMemcpy2D(hostData.data(), sizeof(T) * wCount, devData, sizeof(T) * strideFloatN, sizeof(T) * wCount, h, cudaMemcpyDeviceToHost);
+	cudaMemcpy2D(hostData.data(), sizeof(T) * wCount, devData, sizeof(T) * stride, sizeof(T) * wCount, h, cudaMemcpyDeviceToHost);
 	std::ofstream file(path, std::ios::binary);
 	file.write(reinterpret_cast<char*>(&h), sizeof(size_t));
 	file.write(reinterpret_cast<char*>(&wCount), sizeof(size_t));
@@ -296,7 +296,7 @@ void CudaExecutor::cudaInit(CoreData& core, int devIdx, const cudaDeviceProp& pr
 	allocSafe(&d_bufferV, cudaData.strideFloat * h);
 
 	//initialize background color in output buffer
-	float4 bgval = { core.bgcol_yuv[0], core.bgcol_yuv[1], core.bgcol_yuv[2] };
+	float4 bgval = { core.bgcolorYuv[0], core.bgcolorYuv[1], core.bgcolorYuv[2] };
 	std::vector<float4> bg(w * h, bgval);
 	//write to static background
 	size_t siz = w * sizeof(float4);
@@ -353,6 +353,11 @@ void CudaExecutor::inputData(int64_t frameIndex, const ImageYuv& inputFrame) {
 //----------------------------------
 //-------- PYRAMID
 //----------------------------------
+
+//create image pyramid
+void CudaExecutor::cudaCreatePyramidTransformed(int64_t frameIndex, const AffineCore& trf) {
+
+}
 
 //create image pyramid
 void CudaExecutor::createPyramid(int64_t frameIndex) {
@@ -485,6 +490,7 @@ void CudaExecutor::cudaOutputData(int64_t frameIndex, const AffineCore& trf) {
 	}
 	//warp input
 	cu::warp_back_32f_3(out.start, cudaData.strideFloat4N, out.warped, cudaData.strideFloat4N, w, h, trf, cs[1]);
+	//writeDeviceDataToFile(out.warped, h, w, cudaData.strideFloat4N, "f:/cuda.dat");
 	//first filter pass
 	cu::filter_32f_h_3(out.warped, out.filterH, cudaData.strideFloat4N, w, h, cs[1]);
 	//second filter pass
@@ -567,10 +573,12 @@ void getNvData(std::vector<unsigned char>& nv12, unsigned char* cudaNv12ptr) {
 	handleStatus(cudaMemcpy(nv12.data(), cudaNv12ptr, nv12.size(), cudaMemcpyDeviceToHost), "error getting nv12 data");
 }
 
+/*
 void cudaSynchronize() {
 	handleStatus(cudaDeviceSynchronize(), "error @synchronize #10");
 	handleStatus(cudaGetLastError(), "error @synchronize #20");
 }
+*/
 
 
 //----------------------------------

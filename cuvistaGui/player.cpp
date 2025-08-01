@@ -228,9 +228,9 @@ PlayerWriter::~PlayerWriter() {}
 //------------- Progress Class --------------------
 //-------------------------------------------------
 
-void PlayerProgress::update(double totalPercentage, bool force) {
-    int64_t idx = frame.mWriter.frameIndex - 1;
-    auto opstr = frame.mReader.ptsForFrameAsString(idx);
+void PlayerProgress::update(const ProgressInfo& progress, bool force) {
+    int64_t idx = progress.writeIndex - 1;
+    auto opstr = mExecutor.mFrame.mReader.ptsForFrameAsString(idx);
 
     //frame stats
     QString str = "";
@@ -240,7 +240,7 @@ void PlayerProgress::update(double totalPercentage, bool force) {
     QString status = "Playing...";
     if (mPlayer->isPaused) status = "Pausing...";
     else if (idx < 0) status = "Buffering...";
-    else if (frame.mWriter.frameIndex == frame.mReader.frameIndex) status = "Ending...";
+    else if (progress.writeIndex == progress.readIndex) status = "Ending...";
 
     //send signal to player window
     mPlayer->sigProgress(str, status);

@@ -34,7 +34,7 @@ int main() {
 	//cudaFMAD();
 	//cudaInvParallel();
 	//cudaInvTest(1, 32);
-	//cudaDifference();
+	cudaDifference();
 	//readAndWriteOneFrame();
 	//checkVersions();
 	//transform();
@@ -52,7 +52,7 @@ int main() {
 	//avxCompute();
 
 	//testZoom();
-	analyzeFrames();
+	//analyzeFrames();
 
 	//createTransformImages();
 }

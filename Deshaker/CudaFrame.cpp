@@ -28,6 +28,10 @@ CudaFrame::CudaFrame(MainData& data, DeviceInfoBase& deviceInfo, MovieFrame& fra
 	cudaInit(mData, device->cudaIndex, *device->props, mFrame.mBufferFrame);
 }
 
+void CudaFrame::createPyramidTransformed(int64_t frameIndex, const Affine2D& trf) {
+	cudaCreatePyramidTransformed(frameIndex, trf.toAffineCore());
+}
+
 void CudaFrame::outputData(int64_t frameIndex, const Affine2D& trf) {
 	cudaOutputData(frameIndex, trf.toAffineCore());
 }

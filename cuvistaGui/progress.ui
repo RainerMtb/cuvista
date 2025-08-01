@@ -176,7 +176,7 @@
       <item>
        <widget class="QLabel" name="lblStatus">
         <property name="text">
-         <string/>
+         <string>State</string>
         </property>
        </widget>
       </item>

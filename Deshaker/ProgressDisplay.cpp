@@ -16,10 +16,7 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
-#include <format>
 #include "ProgressDisplay.hpp"
-#include "MovieFrame.hpp"
-#include "MovieReader.hpp"
 
 bool ProgressDisplay::isDue(bool forceUpdate) {
 	auto t = std::chrono::steady_clock::now();

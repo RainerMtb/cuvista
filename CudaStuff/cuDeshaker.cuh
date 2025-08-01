@@ -49,6 +49,7 @@ public:
 		FrameExecutor(data, deviceInfo, frame, pool) {}
 
 	void inputData(int64_t frameIndex, const ImageYuv& inputFrame) override {}
+	void createPyramidTransformed(int64_t frameIndex, const Affine2D& trf) override {};
 	void createPyramid(int64_t frameIndex) override {};
 	void computeStart(int64_t frameIndex, std::vector<PointResult>& results) override {}
 	void computeTerminate(int64_t frameIndex, std::vector<PointResult>& results) override {}
@@ -90,13 +91,13 @@ struct CudaData {
 	int3 computeBlocks = {};
 	int3 computeThreads = {};
 
-	int strideChar = 0;     //row length in bytes for char values
-	int strideFloat = 0;	 //row lenhth in bytes for float values
-	int strideFloatN = 0;	 //number of float values in a row including padding
+	int strideChar = 0;      //row length in bytes for char values
+	int strideFloat = 0;     //row lenhth in bytes for float values
+	int strideFloatN = 0;    //number of float values in a row including padding
 	int strideFloat4 = 0;    //row length in bytes for float4 struct
 	int strideFloat4N = 0;   //number of float4 values
 
-	int outBufferCount = 6;     //number of images to hold as buffers for output generation
+	int outBufferCount = 6;  //number of images to hold as buffers for output generation
 };
 
 class CudaPointResult {
@@ -121,7 +122,7 @@ public:
 
 	__host__ void create(int64_t idx, int64_t idxPrev, const CoreData& core, float* pyrBase);
 
-	__host__ void destroy();
+	__host__ void destroy() const;
 };
 
 //parameters for kernel launch
@@ -206,11 +207,13 @@ public:
 	void getOutputYuv(int64_t frameIndex, ImageYuvData& image) override;
 	void getOutputRgba(int64_t frameIndex, ImageRGBA& image) override;
 	void getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) override;
-	void cudaGetTransformedOutput(float* data) const;
-	void cudaGetPyramid(int64_t frameIndex, float* data) const;
 	void getInput(int64_t frameIndex, ImageYuv& image) const override;
 	void getInput(int64_t frameIndex, ImageRGBA& image) const override;
 	void getWarped(int64_t frameIndex, ImageRGBA& image) override;
+
+	void cudaCreatePyramidTransformed(int64_t frameIndex, const AffineCore& trf);
+	void cudaGetTransformedOutput(float* data) const;
+	void cudaGetPyramid(int64_t frameIndex, float* data) const;
 };
 
 void kernelComputeCall(ComputeKernelParam param, ComputeTextures& tex, CudaPointResult* d_results);

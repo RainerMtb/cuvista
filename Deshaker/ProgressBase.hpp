@@ -18,11 +18,16 @@
 
 #pragma once
 
+struct ProgressInfo {
+	int64_t frameCount, readIndex, writeIndex, encodeIndex, outputBytesWritten;
+	double totalProgress;
+};
+
 class ProgressBase {
 
 public:
 	virtual void init() {}
-	virtual void update(double totalPercentage, bool force = false) = 0;
+	virtual void update(const ProgressInfo& progress, bool force = false) = 0;
 	virtual void terminate() {}
 	virtual void writeMessage(const std::string& msg) {}
 	virtual void updateStatus(const std::string& msg) { writeMessage(msg); }
@@ -33,5 +38,5 @@ public:
 class ProgressDefault : public ProgressBase {
 
 public:
-	void update(double totalPercentage, bool force = false) override {}
+	void update(const ProgressInfo& progress, bool force = false) override {}
 };

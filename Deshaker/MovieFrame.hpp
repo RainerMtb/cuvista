@@ -53,7 +53,7 @@ protected:
 		READ_FIRST,
 		READ_SECOND,
 		READ,
-		WRITE_INIT,
+		WRITE_PREPARE,
 		WRITE,
 		QUIT,
 		FLUSH,
@@ -68,6 +68,8 @@ protected:
 	};
 
 	const MainData& mData;
+
+	void progressUpdate(ProgressInfo& progressInfo, std::shared_ptr<ProgressBase> progress, double totalProgress, bool forceUpdate);
 
 public:
 	MovieReader& mReader;
@@ -84,9 +86,6 @@ public:
 	MovieFrame(const MovieFrame& other) = delete;
 	MovieFrame(MovieFrame&& other) = delete;
 	virtual ~MovieFrame();
-
-	// call transform calculation
-	virtual void computeTransform(int64_t frameIndex) final;
 
 	// read transforms from previous pass
 	virtual std::map<int64_t, TransformValues> readTransforms() final;
@@ -107,8 +106,7 @@ public:
 
 class MovieFrameCombined : public MovieFrame {
 public:
-	MovieFrameCombined(MainData& data, MovieReader& reader, MovieWriter& writer) :
-		MovieFrame(data, reader, writer) {}
+	MovieFrameCombined(MainData& data, MovieReader& reader, MovieWriter& writer);
 
 	void runLoop(std::shared_ptr<ProgressBase> progress, UserInput& input, std::shared_ptr<FrameExecutor> executor) override;
 };
@@ -116,8 +114,7 @@ public:
 
 class MovieFrameConsecutive : public MovieFrame {
 public:
-	MovieFrameConsecutive(MainData& data, MovieReader& reader, MovieWriter& writer) :
-		MovieFrame(data, reader, writer) {}
+	MovieFrameConsecutive(MainData& data, MovieReader& reader, MovieWriter& writer);
 
 	void runLoop(std::shared_ptr<ProgressBase> progress, UserInput& input, std::shared_ptr<FrameExecutor> executor) override;
 };

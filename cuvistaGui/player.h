@@ -99,11 +99,13 @@ class PlayerProgress : public ProgressDisplay {
 
 private:
     PlayerWindow* mPlayer;
+    FrameExecutor& mExecutor;
 
 public:
-    PlayerProgress(MainData& data, MovieFrame& frame, PlayerWindow* player) :
-        ProgressDisplay(frame, 0),
-        mPlayer { player } {}
+    PlayerProgress(MainData& data, PlayerWindow* player, FrameExecutor& executor) :
+        ProgressDisplay(0),
+        mPlayer { player },
+        mExecutor { executor } {}
 
-    void update(double totalPercentage, bool force) override;
+    void update(const ProgressInfo& progress, bool force) override;
 };

@@ -31,7 +31,8 @@ struct ClusterSizes {
 
 
 FrameResult::FrameResult(MainData& data, ThreadPoolBase& threadPool) :
-	mData { data }
+	mData { data },
+	mPool { threadPool }
 {
 
 	//create solver class
@@ -61,7 +62,7 @@ void FrameResult::reset() {
 	mBestTransform.reset();
 }
 
-void FrameResult::computeTransform(std::span<PointResult> results, ThreadPoolBase& threadPool, int64_t frameIndex, SamplerPtr sampler) {
+void FrameResult::computeTransform(std::span<PointResult> results, int64_t frameIndex) {
 	using namespace util;
 
 	const size_t cMinConsensPoints = 8;	              //min numbers of points for consensus set
@@ -78,11 +79,17 @@ void FrameResult::computeTransform(std::span<PointResult> results, ThreadPoolBas
 	mAffineSolver->reset();
 	mAffineSolver->frameIndex = frameIndex;
 
-	//only valid points
+	//filter considerable points by region of interest
 	mConsList.clear();
+	//consider region of interest
 	for (PointResult& pr : results) {
 		pr.isConsens = false;
-		if (pr.isValid()) {
+		pr.isConsidered = false;
+		double x = pr.x + mData.w / 2.0;
+		double y = pr.y + mData.h / 2.0;
+		const RoiCrop& roi = mData.roiCrop;
+		if (pr.isValid() && x > roi.left && x < mData.w - roi.right && y > roi.top && y < mData.h - roi.bottom) {
+			pr.isConsidered = true;
 			mConsList.emplace_back(pr);
 		}
 	}

@@ -571,7 +571,7 @@ void ResultImageWriter::writeImage(const AffineTransform& trf, std::span<PointRe
 	//draw blue lines first
 	auto func1 = [&] (size_t idx) {
 		const PointResult& pr = res[idx];
-		if (pr.isValid()) {
+		if (pr.isConsidered) {
 			double px = pr.x + mData.w / 2.0;
 			double py = pr.y + mData.h / 2.0;
 			double x2 = px + pr.u;
@@ -587,11 +587,11 @@ void ResultImageWriter::writeImage(const AffineTransform& trf, std::span<PointRe
 	//draw on top
 	//green line if point is consens
 	//red line if point is not consens
-	int numValid = 0, numConsens = 0;
+	int numConsidered = 0, numConsens = 0;
 	Color col;
 	for (const PointResult& pr : res) {
-		if (pr.isValid()) {
-			numValid++;
+		if (pr.isConsidered) {
+			numConsidered++;
 			double px = pr.x + mData.w / 2.0;
 			double py = pr.y + mData.h / 2.0;
 			double x2 = px + pr.u;
@@ -610,12 +610,11 @@ void ResultImageWriter::writeImage(const AffineTransform& trf, std::span<PointRe
 	}
 
 	//write text info
-	int textScale = bgr.h / 540;
-	double frac = numValid == 0 ? 0.0 : 100.0 * numConsens / numValid;
-	std::string s1 = std::format("index {}, consensus {}/{} ({:.1f}%)", idx, numConsens, numValid, frac);
-	bgr.writeText(s1, 0, bgr.h - textScale * 20, textScale, textScale, TextAlign::TOP_LEFT);
+	double frac = numConsidered == 0 ? 0.0 : 100.0 * numConsens / numConsidered;
+	std::string s1 = std::format("index {}, consensus {}/{} ({:.1f}%)", idx, numConsens, numConsidered, frac);
+	bgr.writeText(s1, 0, bgr.h - 10);
 	std::string s2 = std::format("transform dx={:.1f}, dy={:.1f}, scale={:.5f}, rot={:.1f}", trf.dX(), trf.dY(), trf.scale(), trf.rotMinutes());
-	bgr.writeText(s2, 0, bgr.h - textScale * 10, textScale, textScale, TextAlign::TOP_LEFT);
+	bgr.writeText(s2, 0, bgr.h);
 }
 
 void ResultImageWriter::writeInput(const FrameExecutor& executor) {

@@ -223,7 +223,7 @@ void flow() {
 		std::cout << "type " << int(type) << ", count " << num << " = " << 100.0 * num / pr.size() << "%" << std::endl;
 	}
 
-	frame.computeTransform(reader.frameIndex);
+	frame.mFrameResult.computeTransform(frame.mResultPoints, reader.frameIndex);
 	AffineTransform trf = frame.getTransform();
 	trf.toConsole("transform: ", 2);
 

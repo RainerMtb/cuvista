@@ -21,21 +21,17 @@
 #include <chrono>
 #include "ProgressBase.hpp"
 
-class MovieFrame;
-
 class ProgressDisplay : public ProgressBase {
 
 protected:
-	MovieFrame& frame;
 	std::chrono::milliseconds interval;
 	std::chrono::steady_clock::time_point timePoint;
 
-	ProgressDisplay(MovieFrame& frame, int interval) :
-		frame { frame },
+	ProgressDisplay(int interval) :
 		interval { interval } {}
 
-	ProgressDisplay(MovieFrame& frame) :
-		ProgressDisplay(frame, 0) {}
+	ProgressDisplay() :
+		ProgressDisplay(0) {}
 
 	bool isDue(bool forceUpdate);
 };

@@ -60,6 +60,13 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
         cmdArgs.clear();
     }
 
+    //modes list
+    ui.comboMode->addItem(QString("Combined Read and Write"));
+    ui.comboMode->addItem(QString("Consecutively Read and Write"));
+    for (int i = 2; i <= mData.limits.modeMax; i++) {
+        ui.comboMode->addItem(QString("Multi Pass - Read %1x").arg(i));
+    }
+
     //available devices
     for (int i = 0; i < mData.deviceList.size(); i++) {
         ui.comboDevice->addItem(QString::fromStdString(mData.deviceList[i]->getName()));
@@ -193,6 +200,14 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     int windowHeight = mSettings.value("qt/window/height", 700).toInt();
     move(windowPosX, windowPosY);
     resize(windowWidth, windowHeight);
+
+    //player window position
+    int playerPosX = mSettings.value("qt/player/posx", 50).toInt();
+    int playerPosY = mSettings.value("qt/player/posy", 50).toInt();
+    int playerWidth = mSettings.value("qt/player/width", 640).toInt();
+    int playerHeight = mSettings.value("qt/player/height", 480).toInt();
+    mPlayerWindow->move(playerPosX, playerPosY);
+    mPlayerWindow->resize(playerWidth, playerHeight);
 
     //other settings
     ui.chkOverwrite->setChecked(mSettings.value("qt/overwrite", false).toBool());
@@ -356,12 +371,11 @@ void cuvistaGui::stabilize() {
     mData.zoomMax = ui.chkDynamicZoom->isChecked() ? 1.0 + ui.spinZoomMax->value() / 100.0 : mData.zoomMin;
     mData.bgmode = ui.radioBlend->isChecked() ? BackgroundMode::BLEND : BackgroundMode::COLOR;
     if (ui.chkFrameLimit->isChecked()) mData.maxFrames = ui.spinFrameLimit->value();
-    mData.pass = DeshakerPass::NONE;
 
     using uchar = unsigned char;
     uchar rgb[] = { (uchar) mBackgroundColor.red(), (uchar) mBackgroundColor.green(), (uchar) mBackgroundColor.blue() };
     mData.backgroundColor = Color::rgb(rgb[0], rgb[1], rgb[2]);
-    mData.backgroundColor.toYUVfloat(&mData.bgcol_yuv.y, &mData.bgcol_yuv.u, &mData.bgcol_yuv.v);
+    mData.backgroundColor.toYUVfloat(&mData.bgcolorYuv.y, &mData.bgcolorYuv.u, &mData.bgcolorYuv.v);
 
     //rewind reader to beginning of input
     mReader.rewind();
@@ -395,12 +409,11 @@ void cuvistaGui::stabilize() {
     mWriter->open(mData.requestedEncoding);
 
     //select frame handler
-    if (ui.chkModeCombined->isChecked()) {
+    mData.mode = ui.comboMode->currentIndex();
+    if (mData.mode == 0) {
         mFrame = std::make_shared<MovieFrameCombined>(mData, mReader, *mWriter);
-        mData.bufferCount = 2 * mData.radius + 2;
     } else {
         mFrame = std::make_shared<MovieFrameConsecutive>(mData, mReader, *mWriter);
-        mData.bufferCount = 2;
     }
 
     //select frame executor class
@@ -408,14 +421,14 @@ void cuvistaGui::stabilize() {
 
     //set up output
     if (ui.chkPlayer->isChecked()) {
-        mProgress = std::make_shared<PlayerProgress>(mData, *mFrame, mPlayerWindow);
+        mProgress = std::make_shared<PlayerProgress>(mData, mPlayerWindow, *mExecutor);
 
     } else {
-        mProgress = std::make_shared<ProgressGui>(mData, *mFrame, mProgressWindow, *mExecutor);
+        mProgress = std::make_shared<ProgressGui>(mData, mProgressWindow, *mExecutor);
         mProgressWindow->updateInput(mWorkingImage, "");
         mProgressWindow->updateOutput(mWorkingImage, "");
         QPoint p = pos();
-        mProgressWindow->move(p.x() + 40, p.y() + 40); //on linux automatic positioning is bad
+        mProgressWindow->move(p.x() + 40, p.y() + 40); //position relativ to parent window
         mProgressWindow->show();
     }
 
@@ -579,10 +592,17 @@ cuvistaGui::~cuvistaGui() {
     mSettings.setValue("qt/color/green", mBackgroundColor.green());
     mSettings.setValue("qt/color/blue", mBackgroundColor.blue());
 
+    //main window
     mSettings.setValue("qt/window/posx", x());
     mSettings.setValue("qt/window/posy", y());
     mSettings.setValue("qt/window/width", width());
     mSettings.setValue("qt/window/height", height());
+
+    //player window
+    mSettings.setValue("qt/player/posx", mPlayerWindow->x());
+    mSettings.setValue("qt/player/posy", mPlayerWindow->y());
+    mSettings.setValue("qt/player/width", mPlayerWindow->width());
+    mSettings.setValue("qt/player/height", mPlayerWindow->height());
 
     mSettings.setValue("qt/overwrite", ui.chkOverwrite->isChecked());
     mSettings.setValue("qt/radius", ui.spinRadius->value());
@@ -592,6 +612,7 @@ cuvistaGui::~cuvistaGui() {
     mSettings.setValue("qt/limit/enable", ui.chkFrameLimit->isChecked());
     mSettings.setValue("qt/limit/value", ui.spinFrameLimit->value());
 
+    //recent files
     for (int idx = 0; idx < 6; idx++) {
         QString key = QString("qt/input%1").arg(idx);
         mSettings.setValue(key, ui.comboInputFile->itemText(idx));

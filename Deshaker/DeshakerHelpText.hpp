@@ -56,10 +56,11 @@ computing options:
                 default: auto; which is h265 on gpu / h264 on cpu
 
 mode of operation:
--pass 0         read and write in one single pass, requires large buffer
--pass 12        consecutively run first and then second pass
-                reads input twice, requires less buffer memory
+-mode 0         read and write in one single pass, fast, requires large buffer
+-mode 1         consecutively run read and write pass, requires less memory
+-mode n         multiple analysis passes, potentially improving stabilization
                 default: 0
+                maximum: 6
 
 other output options:
 -trf file       text file containing transformation data per frame
@@ -126,13 +127,16 @@ misc options:
 -showsummary    display summary statistics 
 -quiet          same as '-progress 0 -noheader -nosummary'
                 do not produce any output except error messages
+-version        display version identifier
 
 advanced computation parameters:
 -levels         number of pyramid levels, between 1 and 6
                 default: 3
--ir             integration radius
-                default: 3, maximum: 3
--version        display version identifier
+-ir             integration radius, between 1 and 3
+                default: 3
+-roicrop spec   pixels around each frame to be ignored for stabilization
+                specify four numbers seperated by colons
+                representing cropLeft:cropRight:cropTop:cropBottom
 
 keyboard input options at runtime:
 key [e]         stop reading input, write pending output, then terminate

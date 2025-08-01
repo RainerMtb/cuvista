@@ -196,7 +196,7 @@ void analyzeFrames() {
 
 		Color col;
 		for (const PointResult& pr : resultStore.results) {
-			if (pr.isValid()) {
+			if (pr.isConsidered) {
 				double px = pr.x + data.w / 2.0;
 				double py = pr.y + data.h / 2.0;
 				double x2 = px + pr.u;
@@ -260,7 +260,7 @@ void createTransformImages() {
 		//std::cout << "computing transform" << std::endl;
 		cpuframe.computeStart(reader.frameIndex, frame.mResultPoints);
 		cpuframe.computeTerminate(reader.frameIndex, frame.mResultPoints);
-		frame.computeTransform(i + 1LL);
+		frame.mFrameResult.computeTransform(frame.mResultPoints, i + 1LL);
 		const AffineTransform& trf = frame.getTransform();
 
 		//save pairwise output images

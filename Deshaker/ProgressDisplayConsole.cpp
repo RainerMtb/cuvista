@@ -17,13 +17,14 @@
  */
 
 #include <format>
+#include <algorithm>
+
 #include "ProgressDisplayConsole.hpp"
 #include "Util.hpp"
-#include "MovieFrame.hpp"
-#include "MovieReader.hpp"
+#include "SystemStuff.hpp"
 
-ProgressDisplayConsole::ProgressDisplayConsole(MovieFrame& frame, std::ostream* outstream, int interval) :
-	ProgressDisplay(frame, interval), 
+ProgressDisplayConsole::ProgressDisplayConsole(std::ostream* outstream, int interval) :
+	ProgressDisplay(interval), 
 	outstream { outstream } 
 {
 	outBuffer.precision(1);
@@ -36,17 +37,16 @@ void ProgressDisplayConsole::writeMessage(const std::string& str) {
 	*outstream << str << std::endl;
 }
 
-std::stringstream& ProgressDisplayConsole::buildMessageLine(double totalPercentage, std::stringstream& buffer) {
-	if (isfinite(totalPercentage))
-		buffer << "done " << totalPercentage << "% ";
-	if (frame.mReader.frameIndex > 0)
-		buffer << "frames in " << frame.mReader.frameIndex;
-	if (frame.mWriter.frameIndex > 0)
-		buffer << ", frames out " << frame.mWriter.frameIndex;
+std::stringstream& ProgressDisplayConsole::buildMessageLine(const ProgressInfo& progress, std::stringstream& buffer) {
+	if (isfinite(progress.totalProgress))
+		buffer << "done " << progress.totalProgress << "% ";
+	if (progress.readIndex > 0)
+		buffer << "frames in " << progress.readIndex;
+	if (progress.writeIndex > 0)
+		buffer << ", frames out " << progress.writeIndex;
 
-	std::unique_lock<std::mutex> lock(frame.mWriter.mStatsMutex);
-	if (frame.mWriter.outputBytesWritten > 0)
-		buffer << ", output written " << util::byteSizeToString(frame.mWriter.outputBytesWritten);
+	if (progress.outputBytesWritten > 0)
+		buffer << ", output written " << util::byteSizeToString(progress.outputBytesWritten);
 	return buffer;
 }
 
@@ -55,10 +55,10 @@ std::stringstream& ProgressDisplayConsole::buildMessageLine(double totalPercenta
 //---------------------------
 
 //print a new line to the console
-void ProgressDisplayNewLine::update(double totalPercentage, bool force) {
+void ProgressDisplayNewLine::update(const ProgressInfo& progress, bool force) {
 	if (isDue(force)) {
 		outBuffer.str("");
-		buildMessageLine(totalPercentage, outBuffer);
+		buildMessageLine(progress, outBuffer);
 		*outstream << outBuffer.str() << std::endl;
 	}
 }
@@ -68,11 +68,11 @@ void ProgressDisplayNewLine::update(double totalPercentage, bool force) {
 //---------------------------
 
 //rewrite one line on the console
-void ProgressDisplayRewriteLine::update(double totalPercentage, bool force) {
+void ProgressDisplayRewriteLine::update(const ProgressInfo& progress, bool force) {
 	if (isDue(force)) {
 		outBuffer.str("");
 		outBuffer << "\x0D\x1B[2K";
-		buildMessageLine(totalPercentage, outBuffer);
+		buildMessageLine(progress, outBuffer);
 		*outstream << outBuffer.str() << std::flush;
 	}
 }
@@ -97,8 +97,8 @@ void ProgressDisplayGraph::init() {
 }
 
 //printing stars in one line
-void ProgressDisplayGraph::update(double totalPercentage, bool force) {
-	double done = totalPercentage;
+void ProgressDisplayGraph::update(const ProgressInfo& progress, bool force) {
+	double done = progress.totalProgress;
 	if (done > 0 && done <= 100.0) {
 		int stars = int(0.01 * done * numStars);
 		for (; numPrinted < stars; numPrinted++) *outstream << "*";
@@ -106,7 +106,6 @@ void ProgressDisplayGraph::update(double totalPercentage, bool force) {
 }
 
 void ProgressDisplayGraph::terminate() {
-	for (; numPrinted < numStars; numPrinted++) *outstream << "*";
 	*outstream << "|" << std::endl;
 }
 
@@ -115,20 +114,18 @@ void ProgressDisplayGraph::terminate() {
 //------------------------------
 
 void ProgressDisplayMultiLine::init() {
-	*outstream << buildMessage() << std::flush;
+	*outstream << buildMessage({}) << std::flush;
 }
 
-void ProgressDisplayMultiLine::update(double totalPercentage, bool force) {
+void ProgressDisplayMultiLine::update(const ProgressInfo& progress, bool force) {
 	if (isDue(force)) {
-		*outstream << "\x1B[5A" << buildMessage() << std::flush;
+		*outstream << "\x1B[5A" << buildMessage(progress) << std::flush;
 	}
 }
 
 void ProgressDisplayMultiLine::writeMessage(const std::string& str) {
 	//set message
-	statusMessage = str;
-	//move curser up and reprint lines
-	*outstream << "\x1B[5A" << buildMessage() << std::flush;
+	mStatusMessage = str;
 }
 
 
@@ -152,14 +149,13 @@ std::string ProgressDisplayMultiLine::buildLine(int64_t frameIndex, int64_t fram
 	return line;
 }
 
-std::string ProgressDisplayMultiLine::buildMessage() {
-	std::unique_lock<std::mutex> lock(frame.mWriter.mStatsMutex);
+std::string ProgressDisplayMultiLine::buildMessage(const ProgressInfo& progress) {
 	int64_t graphLength = getConsoleWidth() - 25LL;
 	return std::format("\x0D\x1B[2K{}\n\x0D\x1B[2Kinput   {}\n\x0D\x1B[2Koutput  {}\n\x0D\x1B[2Kencoded {}\n\x0D\x1B[2Koutput written {}\n",
-		statusMessage,
-		buildLine(frame.mReader.frameIndex, frame.mReader.frameCount, graphLength),
-		buildLine(frame.mWriter.frameIndex, frame.mReader.frameCount, graphLength),
-		buildLine(frame.mWriter.frameEncoded, frame.mReader.frameCount, graphLength),
-		util::byteSizeToString(frame.mWriter.outputBytesWritten))
+		mStatusMessage,
+		buildLine(progress.readIndex, progress.frameCount, graphLength),
+		buildLine(progress.writeIndex, progress.frameCount, graphLength),
+		buildLine(progress.encodeIndex, progress.frameCount, graphLength),
+		util::byteSizeToString(progress.outputBytesWritten))
 		;
 }

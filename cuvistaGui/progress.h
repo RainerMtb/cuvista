@@ -63,13 +63,13 @@ private:
     FrameExecutor& mExecutor;
 
 public:
-    ProgressGui(MainData& data, MovieFrame& frame, ProgressWindow* progressWindow, FrameExecutor& executor) :
-        ProgressDisplay(frame, 50),
+    ProgressGui(MainData& data, ProgressWindow* progressWindow, FrameExecutor& executor) :
+        ProgressDisplay(50),
         mInput(data.h, data.w),
         mOutput(data.h, data.w),
         mProgressWindow { progressWindow },
         mExecutor { executor } {}
 
-    void update(double totalPercentage, bool force) override;
+    void update(const ProgressInfo& progress, bool force) override;
     void updateStatus(const std::string& msg) override;
 };

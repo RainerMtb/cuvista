@@ -43,6 +43,8 @@ public:
 	
 	//get frame data from reader into frame object
 	virtual void inputData(int64_t frameIndex, const ImageYuv& inputFrame) = 0;
+	//set up image pyramid using transformed input
+	virtual void createPyramidTransformed(int64_t frameIndex, const Affine2D& trf) = 0;
 	//set up image pyramid
 	virtual void createPyramid(int64_t frameIndex) = 0;
 	//start computation asynchronously for some part of a frame
