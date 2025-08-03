@@ -78,7 +78,7 @@ void readAndWriteOneFrame() {
 		reader.w = 1920;
 		reader.h = 1080;
 		data.validate(reader);
-		BaseWriter writer(data, reader);
+		OutputWriter writer(data, reader);
 		MovieFrame frame(data, reader, writer);
 		CudaFrame ex(data, *data.deviceList[2], frame, frame.mPool);
 
@@ -86,13 +86,13 @@ void readAndWriteOneFrame() {
 		frame.mBufferFrame.index = 0;
 		reader.frameIndex = 0;
 		ex.inputData(reader.frameIndex, frame.mBufferFrame);
-		ex.createPyramid(frame.mReader.frameIndex);
+		ex.createPyramid(frame.mReader.frameIndex, {}, false);
 
 		frame.mBufferFrame.readFromPGM("D:/VideoTest/v01.pgm");
 		frame.mBufferFrame.index = 1;
 		reader.frameIndex = 1;
 		ex.inputData(reader.frameIndex, frame.mBufferFrame);
-		ex.createPyramid(frame.mReader.frameIndex);
+		ex.createPyramid(frame.mReader.frameIndex, {}, false);
 		ex.computeStart(frame.mReader.frameIndex, frame.mResultPoints);
 		ex.computeTerminate(frame.mReader.frameIndex, frame.mResultPoints);
 
@@ -197,16 +197,16 @@ void flow() {
 	FFmpegReader reader;
 	reader.open(file);
 	data.validate(reader);
-	BaseWriter writer(data, reader);
+	OutputWriter writer(data, reader);
 	MovieFrame frame(data, reader, writer);
 	CpuFrame ex(data, *data.deviceList[0], frame, frame.mPool);
 	reader.read(frame.mBufferFrame);
 	ex.inputData(reader.frameIndex, frame.mBufferFrame);
-	ex.createPyramid(reader.frameIndex);
+	ex.createPyramid(reader.frameIndex, {}, false);
 
 	reader.read(frame.mBufferFrame);
 	ex.inputData(reader.frameIndex, frame.mBufferFrame);
-	ex.createPyramid(reader.frameIndex);
+	ex.createPyramid(reader.frameIndex, {}, false);
 
 	ex.computeStart(reader.frameIndex, frame.mResultPoints);
 	ex.computeTerminate(reader.frameIndex, frame.mResultPoints);

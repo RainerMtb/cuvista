@@ -38,11 +38,11 @@ static void runInit(MainData& data, std::unique_ptr<FrameExecutor>& ex, AffineTr
 	MovieReader& reader = ex->mFrame.mReader;
 	reader.read(ex->mFrame.mBufferFrame);
 	ex->inputData(reader.frameIndex, ex->mFrame.mBufferFrame);
-	ex->createPyramid(reader.frameIndex);
+	ex->createPyramid(reader.frameIndex, {}, false);
 
 	reader.read(ex->mFrame.mBufferFrame);
 	ex->inputData(reader.frameIndex, ex->mFrame.mBufferFrame);
-	ex->createPyramid(reader.frameIndex);
+	ex->createPyramid(reader.frameIndex, {}, false);
 
 	ex->computeStart(reader.frameIndex, ex->mFrame.mResultPoints);
 	ex->computeTerminate(reader.frameIndex, ex->mFrame.mResultPoints);
@@ -69,7 +69,7 @@ void filterCompare() {
 		FFmpegReader reader;
 		reader.open(file);
 		dataGpu.validate(reader);
-		BaseWriter writer(dataGpu, reader);
+		OutputWriter writer(dataGpu, reader);
 		MovieFrame frame(dataGpu, reader, writer);
 		gpu = std::make_unique<CudaFrame>(dataGpu, *dataGpu.deviceList[2], frame, frame.mPool);
 		runInit(dataGpu, gpu, trf);
@@ -83,7 +83,7 @@ void filterCompare() {
 		FFmpegReader reader;
 		reader.open(file);
 		dataCpu.validate(reader);
-		BaseWriter writer(dataCpu, reader);
+		OutputWriter writer(dataCpu, reader);
 		MovieFrame frame(dataGpu, reader, writer);
 		cpu = std::make_unique<CpuFrame>(dataCpu, *dataCpu.deviceList[0], frame, frame.mPool);
 		runInit(dataCpu, cpu, trf);

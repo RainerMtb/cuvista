@@ -275,7 +275,7 @@
          </property>
          <property name="maximumSize">
           <size>
-           <width>16777215</width>
+           <width>450</width>
            <height>16777215</height>
           </size>
          </property>
@@ -521,10 +521,22 @@
        </item>
        <item row="0" column="1">
         <widget class="QComboBox" name="comboMode">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
          <property name="minimumSize">
           <size>
            <width>180</width>
            <height>24</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>400</width>
+           <height>16777215</height>
           </size>
          </property>
         </widget>
@@ -702,7 +714,7 @@
             </size>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;indicates what section of input and output is used for stacking&lt;/p&gt;&lt;p&gt;left ... middle ... rightmost part of video&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;what section of input and output is used for stacking&lt;/p&gt;&lt;p&gt;far left ... middle ... far right of video&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="minimum">
             <number>-100</number>
@@ -740,7 +752,7 @@
        <item row="7" column="0">
         <widget class="QRadioButton" name="chkPlayer">
          <property name="toolTip">
-          <string>directly play stabilized video</string>
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;directly play stabilized video&lt;/p&gt;&lt;p&gt;requires Single Pass Mode&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="text">
           <string>Live Playback</string>

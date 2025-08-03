@@ -42,7 +42,7 @@ template <class T> Result runPyramid(MainData& data, int deviceIndex) {
 		reader.open("");
 		data.collectDeviceInfo();
 		data.validate(reader);
-		BaseWriter writer(data, reader);
+		OutputWriter writer(data, reader);
 
 		MovieFrameCombined frame(data, reader, writer);
 		std::unique_ptr<FrameExecutor> executor = std::make_unique<T>(data, *data.deviceList[deviceIndex], frame, frame.mPool);
@@ -51,11 +51,11 @@ template <class T> Result runPyramid(MainData& data, int deviceIndex) {
 		std::cout << "running " << name << std::endl;
 		reader.read(frame.mBufferFrame);
 		executor->inputData(reader.frameIndex, frame.mBufferFrame);
-		executor->createPyramid(reader.frameIndex);
+		executor->createPyramid(reader.frameIndex, {}, false);
 
 		reader.read(frame.mBufferFrame);
 		executor->inputData(reader.frameIndex, frame.mBufferFrame);
-		executor->createPyramid(reader.frameIndex);
+		executor->createPyramid(reader.frameIndex, {}, false);
 
 		executor->computeStart(reader.frameIndex, frame.mResultPoints);
 		executor->computeTerminate(reader.frameIndex, frame.mResultPoints);
@@ -170,6 +170,7 @@ void analyzeFrames() {
 	MainData data;
 	data.fileIn = inFile;
 	data.deviceRequested = true;
+	data.mode = 1;
 	std::vector<DeviceInfoCuda> cudaDevices = data.probeCuda();
 	data.collectDeviceInfo();
 	FFmpegReader reader;
@@ -177,7 +178,7 @@ void analyzeFrames() {
 	data.validate(reader);
 
 	int maxFrames = 200;
-	RawMemoryStoreWriter writer(data, reader, maxFrames);
+	RawMemoryStoreWriter writer(maxFrames);
 	std::shared_ptr<MovieFrame> frame = std::make_shared<MovieFrameConsecutive>(data, reader, writer);
 	std::shared_ptr<FrameExecutor> executor = std::make_shared<CudaFrame>(data, cudaDevices[0], *frame, frame->mPool);
 	frame->runLoop(executor);
@@ -188,7 +189,9 @@ void analyzeFrames() {
 	std::vector<FrameResultStore> resultStoreData(std::move_iterator(std::begin(lst)), std::move_iterator(std::end(lst)));
 
 	auto func = [&] (size_t idx) {
+		assert(inputFrames.size() > idx && "input frame not found");
 		ImageYuv& image = inputFrames[idx];
+		assert(resultStoreData.size() > size_t(image.index) && "resultStore not found");
 		const FrameResultStore& resultStore = resultStoreData[image.index];
 		assert(image.index == resultStore.frameIndex && "index mismatch");
 		image.setColorPlane(1, 128);
@@ -245,17 +248,17 @@ void createTransformImages() {
 		reader.frameCount = 2;
 		data.validate(reader);
 
-		BaseWriter writer(data, reader);
+		OutputWriter writer(data, reader);
 		MovieFrameConsecutive frame(data, reader, writer);
 		CpuFrame cpuframe(data, data.deviceInfoCpu, frame, frame.mPool);
 
 		reader.readImage(frame.mBufferFrame, im1);
 		cpuframe.inputData(reader.frameIndex, frame.mBufferFrame);
-		cpuframe.createPyramid(reader.frameIndex);
+		cpuframe.createPyramid(reader.frameIndex, {}, false);
 
 		reader.readImage(frame.mBufferFrame, im2);
 		cpuframe.inputData(reader.frameIndex, frame.mBufferFrame);
-		cpuframe.createPyramid(reader.frameIndex);
+		cpuframe.createPyramid(reader.frameIndex, {}, false);
 
 		//std::cout << "computing transform" << std::endl;
 		cpuframe.computeStart(reader.frameIndex, frame.mResultPoints);

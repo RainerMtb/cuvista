@@ -20,5 +20,5 @@
 
 int main(int argsCount, char** args) {
 	std::vector<std::string> argsInput(args + 1, args + argsCount);
-	return deshake(argsInput, &std::cout).statusCode;
+	return deshake(argsInput, &std::cout, {}).statusCode;
 }

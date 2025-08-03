@@ -139,7 +139,7 @@ void cudaDifference() {
 		reader.open("d:/VideoTest/02.mp4");
 		data.validate(reader);
 
-		BaseWriter writer(data, reader);
+		OutputWriter writer(data, reader);
 		MovieFrameConsecutive frame(data, reader, writer);
 		CpuFrame frameExecutor(data, data.deviceInfoCpu, frame, frame.mPool);
 
@@ -161,7 +161,7 @@ void cudaDifference() {
 		reader.open("d:/VideoTest/02.mp4");
 		data.validate(reader);
 
-		BaseWriter writer(data, reader);
+		OutputWriter writer(data, reader);
 		MovieFrameConsecutive frame(data, reader, writer);
 		CudaFrame frameExecutor(data, data.cudaInfo.devices[0], frame, frame.mPool);
 

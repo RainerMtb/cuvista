@@ -94,40 +94,50 @@ bool MovieWriterCollection::flush() {
 
 
 //-----------------------------------------------------------------------------------
-// Image Helpers
+// Raw Format Writers
 //-----------------------------------------------------------------------------------
 
-void BaseWriter::prepareOutput(FrameExecutor& executor) {
+void OutputWriter::prepareOutput(FrameExecutor& executor) {
 	executor.getOutputYuv(frameIndex, outputFrame);
 }
 
-void BaseWriter::writeOutput(const FrameExecutor& executor) {
+void OutputWriter::writeOutput(const FrameExecutor& executor) {
 	this->frameIndex++;
 }
 
+void RawMemoryStoreWriter::prepareOutput(FrameExecutor& executor) {
+	if (doWriteOutput) {
+		ImageYuv& outputFrame = outputFrames.emplace_back(executor.mData.h, executor.mData.w);
+		executor.getOutputYuv(frameIndex, outputFrame);
+		while (outputFrames.size() > maxFrameCount) outputFrames.pop_front();
+	}
+}
+
 void RawMemoryStoreWriter::writeOutput(const FrameExecutor& executor) {
-	outputFrames.push_back(outputFrame.copy());
-	while (outputFrames.size() > maxFrameCount) outputFrames.pop_front();
 	this->frameIndex++;
 }
 
 void RawMemoryStoreWriter::writeInput(const FrameExecutor& executor) {
-	ImageYuv image(mData.h, mData.w);
-	executor.getInput(inputFrameIndex, image);
-	image.index = inputFrameIndex;
-	inputFrames.push_back(image);
-	while (inputFrames.size() > maxFrameCount) inputFrames.pop_front();
-	this->inputFrameIndex++;
+	if (doWriteInput) {
+		ImageYuv image(executor.mData.h, executor.mData.w);
+		executor.getInput(inputFrameIndex, image);
+		image.index = inputFrameIndex;
+		inputFrames.push_back(image);
+		while (inputFrames.size() > maxFrameCount) inputFrames.pop_front();
+		this->inputFrameIndex++;
+	}
 }
 
 void RawMemoryStoreWriter::writeYuvFiles(const std::string& inputFile, const std::string& outputFile) {
-	std::vector<unsigned char> nv12(mData.w * mData.h * 3 / 2);
+	std::vector<unsigned char> nv12;
+	if (inputFrames.size() > 0) nv12.resize(inputFrames.front().w * inputFrames.front().h * 3 / 2);
+	if (outputFrames.size() > 0) nv12.resize(outputFrames.front().w * outputFrames.front().h * 3 / 2);
 	
 	std::ofstream osin(inputFile, std::ios::binary);
 	for (ImageYuv& image : outputFrames) {
 		std::string str = std::format(" frame {:04} ", image.index);
 		image.writeText(str, 0, image.h);
-		image.toNV12(nv12, mData.w);
+		image.toNV12(nv12);
 		osin.write(reinterpret_cast<char*>(nv12.data()), nv12.size());
 	}
 
@@ -135,7 +145,7 @@ void RawMemoryStoreWriter::writeYuvFiles(const std::string& inputFile, const std
 	for (ImageYuv& image : inputFrames) {
 		std::string str = std::format(" frame {:04} ", image.index);
 		image.writeText(str, 0, image.h);
-		image.toNV12(nv12, mData.w);
+		image.toNV12(nv12);
 		osout.write(reinterpret_cast<char*>(nv12.data()), nv12.size());
 	}
 }

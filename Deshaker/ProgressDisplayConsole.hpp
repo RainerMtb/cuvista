@@ -69,6 +69,7 @@ public:
 	ProgressDisplayRewriteLine(std::ostream* outstream) :
 		ProgressDisplayConsole(outstream) {}
 	
+	void init() override;
 	void update(const ProgressInfo& progress, bool force) override;
 	void terminate() override;
 	void writeMessage(const std::string& msg) override;
@@ -83,7 +84,7 @@ private:
 
 	int getConsoleWidth();
 	std::string buildMessage(const ProgressInfo& progress);
-	std::string buildLine(int64_t frameIndex, int64_t frameCount, int64_t graphLength);
+	std::string buildLine(int64_t frameIndex, int64_t frameCount, int64_t graphLength, double total);
 
 public:
 	ProgressDisplayMultiLine(std::ostream* outstream) :

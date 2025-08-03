@@ -34,7 +34,10 @@ namespace cu {
 	cudaError_t copy_32f_3(float4* src, int srcStep, float4* dest, int destStep, int w, int h, cudaStream_t cs = 0);
 	cudaError_t copy_32f_3(uchar* src, int srcStep, uchar* dest, int destStep, int w, int h, cudaStream_t cs = 0);
 
+	cudaError_t set_32f(float* dest, int destStep, int w, int h, int value, cudaStream_t cs = 0);
+
 	cudaError_t warp_back_32f_3(float4* src, int srcStep, float4* dest, int destStep, int w, int h, const AffineCore& trf, cudaStream_t cs = 0);
+	cudaError_t warp_back_32f(float* src, int srcStep, float* dest, int destStep, int w, int h, const AffineCore& trf, cudaStream_t cs = 0);
 
 	cudaError_t unsharp_32f_3(float4* base, float4* gauss, float4* dest, int step, int w, int h, cudaStream_t cs = 0);
 

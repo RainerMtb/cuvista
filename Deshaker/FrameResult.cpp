@@ -62,7 +62,7 @@ void FrameResult::reset() {
 	mBestTransform.reset();
 }
 
-void FrameResult::computeTransform(std::span<PointResult> results, int64_t frameIndex) {
+const AffineTransform& FrameResult::computeTransform(std::span<PointResult> results, int64_t frameIndex) {
 	using namespace util;
 
 	const size_t cMinConsensPoints = 8;	              //min numbers of points for consensus set
@@ -302,4 +302,5 @@ void FrameResult::computeTransform(std::span<PointResult> results, int64_t frame
 
 	//resultStore.emplace_back(frameIndex, std::vector<PointResult>(results.begin(), results.end())); //-----------
 	//std::cout << "frame " << frameIndex << ", " << mBestTransform << std::endl;
+	return mBestTransform;
 }

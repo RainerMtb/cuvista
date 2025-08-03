@@ -87,6 +87,9 @@ public:
 	//add transform to the trajectory list
 	void addTrajectoryTransform(const AffineTransform& transform);
 
+	//replace transform in the trajectory list
+	void setTrajectoryTransform(const AffineTransform& transform);
+
 	//compute smoothed transform for frame
 	void computeSmoothTransform(const MainData& data, int64_t frameIndex);
 
@@ -94,13 +97,16 @@ public:
 	void computeSmoothZoom(const MainData& data, int64_t frameIndex);
 
 	//get computed transform
-	const AffineTransform& getTransform(const MainData& data, int64_t frameWriteIndex);
+	const AffineTransform& getTransform(const MainData& data, int64_t frameIndex);
 
 	//load transforms from list into trajectory
 	void readTransforms(std::map<int64_t, TransformValues> transformsMap);
 
 	//trajectory count
 	int64_t size();
+
+	//reset for iteration
+	void reset();
 
 	//reserve trajectory size
 	void reserve(int64_t siz);

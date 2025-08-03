@@ -42,7 +42,7 @@ public:
 	FrameResult(MainData& data, ThreadPoolBase& threadPool);
 
 	//compute resulting transformation for this frame
-	void computeTransform(std::span<PointResult> results, int64_t frameIndex);
+	const AffineTransform& computeTransform(std::span<PointResult> results, int64_t frameIndex);
 
 	//get the last computed treansform
 	const AffineTransform& getTransform() const;

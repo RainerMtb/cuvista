@@ -74,8 +74,27 @@ void Trajectory::addTrajectoryTransform(const AffineTransform& transform) {
 	addTrajectoryTransform(transform.dX(), transform.dY(), transform.rot(), transform.frameIndex);
 }
 
+//set trajectory item with updated values
+void Trajectory::setTrajectoryTransform(const AffineTransform& transform) {
+	TrajectoryItem& item = mTrajectory[transform.frameIndex];
+	TrajectoryMat& mat = item.values;
+	mat.u() = transform.dX();
+	mat.v() = transform.dY();
+	mat.a() = transform.rot();
+	mCurrentSum += item.values;
+	item.sum = mCurrentSum;
+	item.isDuplicateFrame = transform.frameIndex > 0 && std::abs(mat.u()) < 0.5 && std::abs(mat.v()) < 0.5 && std::abs(mat.a()) < 0.001;
+	item.isComputed = false;
+}
+
 int64_t Trajectory::size() {
 	return mTrajectory.size();
+}
+
+void Trajectory::reset() {
+	mCurrentSum.u() = 0.0;
+	mCurrentSum.v() = 0.0;
+	mCurrentSum.a() = 0.0;
 }
 
 void Trajectory::reserve(int64_t siz) {
@@ -94,7 +113,7 @@ int64_t Trajectory::clamp(int64_t val, int64_t lo, int64_t hi) {
 	return std::clamp(val, lo, hi);
 }
 
-//compute average movements over current window
+//compute average movements over current window but do not set zoom
 void Trajectory::computeSmoothTransform(const MainData& data, int64_t frameIndex) {
 	double sig = data.radius * data.cSigmaParam;
 	double sumWeight = 0.0;
@@ -122,15 +141,16 @@ void Trajectory::computeSmoothTransform(const MainData& data, int64_t frameIndex
 		delta.setValues(ti.sum);
 		delta -= tempAvg;
 	}
-	ti.smoothed.setValues(delta);
+	//on repeated passes just add delta to old smoothing
+	ti.smoothed += delta;
 
 	//calculate zoom to fill frame
-	ti.zoomRequired = calcRequiredZoom(delta.u(), delta.v(), delta.a(), data.w, data.h);
+	ti.zoomRequired = calcRequiredZoom(ti.smoothed.u(), ti.smoothed.v(), ti.smoothed.a(), data.w, data.h);
 
 	ti.isComputed = true;
 }
 
-//smooth dynamic zooming
+//smooth dynamic zooming, but can be limited to effective static zoom
 void Trajectory::computeSmoothZoom(const MainData& data, int64_t frameIndex) {
 	TrajectoryItem& ti = mTrajectory[frameIndex];
 	double gradient = data.zoomFallback - 1.0;
@@ -144,18 +164,18 @@ void Trajectory::computeSmoothZoom(const MainData& data, int64_t frameIndex) {
 }
 
 //build AffineTransform from trajectory
-const AffineTransform& Trajectory::getTransform(const MainData& data, int64_t frameWriteIndex) {
-	TrajectoryItem& ti = mTrajectory[frameWriteIndex];
+const AffineTransform& Trajectory::getTransform(const MainData& data, int64_t frameIndex) {
+	TrajectoryItem& ti = mTrajectory[frameIndex];
 
 	//get transform to apply to image
 	mCurrentTransform.reset()
 		.addTranslation(data.w / 2.0, data.h / 2.0)          //translate to origin
 		.addRotation(ti.smoothed.a())                        //rotation
-		.addZoom(ti.zoom)                                    //zoom as set
+		.addZoom(ti.zoom)                                    //zoom as set in trajectory
 		.addTranslation(ti.smoothed.u(), ti.smoothed.v())    //computed translation to stabilize
 		.addTranslation(data.w / -2.0, data.h / -2.0)        //translate back to center
 		;
-	mCurrentTransform.frameIndex = frameWriteIndex;
+	mCurrentTransform.frameIndex = frameIndex;
 	return mCurrentTransform;
 }
 

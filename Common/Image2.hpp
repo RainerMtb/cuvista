@@ -105,6 +105,9 @@ public:
 	//convert to NV12 format and copy pixeldata to provided array
 	void toNV12(std::vector<unsigned char>& nv12, size_t strideNV12, ThreadPoolBase& pool = defaultPool) const;
 
+	//convert to NV12 format and copy pixeldata to provided array
+	void toNV12(std::vector<unsigned char>& nv12, ThreadPoolBase& pool = defaultPool) const;
+
 	//convert to NV12 format and return pixeldata
 	std::vector<unsigned char> toNV12(size_t strideNV12) const;
 

@@ -54,7 +54,7 @@ void runSelfTest(util::MessagePrinter& out, std::vector<DeviceInfoBase*> deviceL
 		MemoryFFmpegReader reader(movieData);
 		reader.open("");
 		data.validate(reader);
-		BaseWriter writer(data, reader);
+		OutputWriter writer(data, reader);
 		
 		//executor and frame
 		MovieFrameCombined frame(data, reader, writer);
@@ -64,11 +64,11 @@ void runSelfTest(util::MessagePrinter& out, std::vector<DeviceInfoBase*> deviceL
 		//std::cout << "reading" << std::endl;
 		reader.read(frame.mBufferFrame);
 		executor->inputData(reader.frameIndex, frame.mBufferFrame);
-		executor->createPyramid(reader.frameIndex);
+		executor->createPyramid(reader.frameIndex, {}, false);
 		//second frame
 		reader.read(frame.mBufferFrame);
 		executor->inputData(reader.frameIndex, frame.mBufferFrame);
-		executor->createPyramid(reader.frameIndex);
+		executor->createPyramid(reader.frameIndex, {}, false);
 		//compute
 		//std::cout << "computing" << std::endl;
 		executor->computeStart(reader.frameIndex, frame.mResultPoints);

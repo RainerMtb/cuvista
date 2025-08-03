@@ -138,7 +138,7 @@ public:
 
 	RoiCrop roiCrop = { 0, 0, 0, 0 };
 	
-	int mode;
+	int mode = 0;
 	std::vector<DeviceInfoBase*> deviceList;
 	DeviceInfoCpu deviceInfoCpu;
 	DeviceInfoAvx deviceInfoAvx;

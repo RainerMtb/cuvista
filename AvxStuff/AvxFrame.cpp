@@ -51,11 +51,7 @@ void AvxFrame::inputData(int64_t frameIdx, const ImageYuv& inputFrame) {
 	inputFrame.copyTo(mYUV[idx], mPool);
 }
 
-void AvxFrame::createPyramidTransformed(int64_t frameIndex, const Affine2D& trf) {
-
-}
-
-void AvxFrame::createPyramid(int64_t frameIndex) {
+void AvxFrame::createPyramid(int64_t frameIndex, const Affine2D& trf, bool warp) {
 	//util::ConsoleTimer ic("avx pyramid");
 	size_t pyrIdx = frameIndex % mPyr.size();
 	AvxMatf& Y = mPyr[pyrIdx];
@@ -64,13 +60,25 @@ void AvxFrame::createPyramid(int64_t frameIndex) {
 	//fill topmost level of pyramid
 	size_t yuvIdx = frameIndex % mYUV.size();
 	ImageYuv& yuv = mYUV[yuvIdx];
-	yuvToFloat(yuv, 0, Y);
-
-	//filter first level
 	int h = mData.h;
 	int w = mData.w;
-	filter(Y, 0, h, w, mFilterBuffer, filterKernels[0]);
-	filter(mFilterBuffer, 0, w, h, Y, filterKernels[0]);
+
+	if (warp) {
+		//convert to float
+		yuvToFloat(yuv, 0, mFilterResult);
+
+		//transform input
+		Y.fill(0.0f);
+		warpBack(trf, mFilterResult, Y);
+
+	} else {
+		//convert to float
+		yuvToFloat(yuv, 0, Y);
+
+		//filter first level
+		filter(Y, 0, h, w, mFilterBuffer, filterKernels[0]);
+		filter(mFilterBuffer, 0, w, h, Y, filterKernels[0]);
+	}
 
 	//create pyramid levels below by downsampling level above
 	int r = 0;

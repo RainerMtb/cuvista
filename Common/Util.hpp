@@ -77,10 +77,16 @@ namespace util {
 
     public:
         CRC64();
-        template <class T> CRC64& add(T data) { return addBytes(reinterpret_cast<unsigned char*>(&data), sizeof(T)); }
+
         CRC64& reset();
+
+        template <class T> CRC64& add(T data) { 
+            return addBytes(reinterpret_cast<unsigned char*>(&data), sizeof(T)); 
+        }
+
         CRC64& addBytes(std::span<const unsigned char> data);
         CRC64& addBytes(const unsigned char* data, size_t size);
+        
         uint64_t result() const;
         friend std::ostream& operator << (std::ostream& os, const CRC64& crc);
         bool operator == (const CRC64& other) const;

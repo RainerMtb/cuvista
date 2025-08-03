@@ -63,11 +63,7 @@ void CpuFrame::inputData(int64_t frameIndex, const ImageYuv& inputFrame) {
 	inputFrame.copyTo(mYUV[idx], mPool);
 }
 
-void CpuFrame::createPyramidTransformed(int64_t frameIndex, const Affine2D& trf) {
-
-}
-
-void CpuFrame::createPyramid(int64_t frameIndex) {
+void CpuFrame::createPyramid(int64_t frameIndex, const Affine2D& trf, bool warp) {
 	//util::ConsoleTimer ic("cpu pyramid");
 	size_t pyrIdx = frameIndex % mPyr.size();
 	CpuPyramid& frame = mPyr[pyrIdx];
@@ -78,11 +74,27 @@ void CpuFrame::createPyramid(int64_t frameIndex) {
 	ImageYuv& yuv = mYUV[yuvIdx];
 	float f = 1.0f / 255.0f;
 	Matf& y0 = frame.mY[0];
-	y0.setValues([&] (size_t r, size_t c) { return yuv.at(0, r, c) * f; }, mPool);
 
-	//filter first level of pyramid
-	y0.filter1D(filterKernels[0].k, filterKernels[0].siz, Matf::Direction::HORIZONTAL, mFilterBuffer, mPool);
-	mFilterBuffer.filter1D(filterKernels[0].k, filterKernels[0].siz, Matf::Direction::VERTICAL, y0, mPool);
+	if (warp) {
+		//convert uint8_t to float
+		mFilterBuffer.setValues([&] (size_t r, size_t c) { return yuv.at(0, r, c) * f; }, mPool);
+
+		//transform input
+		auto func1 = [&] (size_t r, size_t c) {
+			auto [x, y] = trf.transform(c, r); //pay attention to order of x and y
+			float result = mFilterBuffer.interp2(float(x), float(y)).value_or(0.0f);
+			return result;
+		};
+		y0.setValues(func1, mPool);
+
+	} else {
+		//convert uint8_t to float
+		y0.setValues([&] (size_t r, size_t c) { return yuv.at(0, r, c) * f; }, mPool);
+	
+		//filter first level of pyramid
+		y0.filter1D(filterKernels[0].k, filterKernels[0].siz, Matf::Direction::HORIZONTAL, mFilterBuffer, mPool);
+		mFilterBuffer.filter1D(filterKernels[0].k, filterKernels[0].siz, Matf::Direction::VERTICAL, y0, mPool);
+	}
 
 	//create pyramid levels below by downsampling level above
 	for (size_t z = 0; z < mData.zMax; z++) {

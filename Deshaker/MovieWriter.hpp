@@ -30,12 +30,6 @@
 //-----------------------------------------------------------------------------------
 class MovieWriter : public WriterStats {
 
-protected:
-	const MainData& mData; //main metadata structure
-
-	MovieWriter(MainData& data) :
-		mData { data } {}
-
 public:
 	virtual ~MovieWriter() = default;
 	virtual void open(EncodingOption videoCodec) {}
@@ -47,15 +41,28 @@ public:
 	virtual bool flush() { return false; }
 };
 
+
 //-----------------------------------------------------------------------------------
-class NullWriter : public MovieWriter {
+class MovieWriterBase : public MovieWriter {
+
+protected:
+	const MainData& mData;
+
+public:
+	MovieWriterBase(MainData& data) :
+		mData(data) {}
+};
+
+
+//-----------------------------------------------------------------------------------
+class NullWriter : public MovieWriterBase {
 
 protected:
 	MovieReader& mReader;
 
 public:
 	NullWriter(MainData& data, MovieReader& reader) :
-		MovieWriter(data),
+		MovieWriterBase(data),
 		mReader { reader } {}
 };
 
@@ -85,13 +92,13 @@ public:
 
 
 //-----------------------------------------------------------------------------------
-class BaseWriter : public NullWriter {
+class OutputWriter : public NullWriter {
 
 protected:
 	ImageYuv outputFrame; //frame to write in YUV444 format
 
 public:
-	BaseWriter(MainData& data, MovieReader& reader) :
+	OutputWriter(MainData& data, MovieReader& reader) :
 		NullWriter(data, reader),
 		outputFrame(data.h, data.w, data.cpupitch) {}
 
@@ -102,20 +109,24 @@ public:
 
 
 //-----------------------------------------------------------------------------------
-class RawMemoryStoreWriter : public BaseWriter {
+class RawMemoryStoreWriter : public MovieWriter {
 
 protected:
 	size_t maxFrameCount;
 	int inputFrameIndex = 0;
+	bool doWriteInput;
+	bool doWriteOutput;
 
 public:
 	std::list<ImageYuv> outputFrames;
 	std::list<ImageYuv> inputFrames;
 
-	RawMemoryStoreWriter(MainData& data, MovieReader& reader, size_t maxFrameCount = 500) :
-		BaseWriter(data, reader),
-		maxFrameCount { maxFrameCount } {}
+	RawMemoryStoreWriter(size_t maxFrameCount = 500, bool writeInput = true, bool writeOutput = true) :
+		maxFrameCount { maxFrameCount },
+		doWriteInput { writeInput },
+		doWriteOutput { writeOutput} {}
 
+	void prepareOutput(FrameExecutor& executor) override;
 	void writeOutput(const FrameExecutor& executor) override;
 	void writeInput(const FrameExecutor& executor) override;
 	
@@ -124,11 +135,11 @@ public:
 
 
 //-----------------------------------------------------------------------------------
-class ImageWriter : public BaseWriter {
+class ImageWriter : public OutputWriter {
 
 protected:
 	ImageWriter(MainData& data, MovieReader& reader) :
-		BaseWriter(data, reader) {}
+		OutputWriter(data, reader) {}
 
 	std::string makeFilename(const std::string& extension) const;
 
@@ -175,14 +186,14 @@ public:
 
 
 //-----------------------------------------------------------------------------------
-class RawWriter : public BaseWriter {
+class RawWriter : public OutputWriter {
 
 private:
 	std::ofstream file;
 
 public:
 	RawWriter(MainData& data, MovieReader& reader) :
-		BaseWriter(data, reader) {}
+		OutputWriter(data, reader) {}
 
 	void open(EncodingOption videoCodec) override;
 	void writeOutput(const FrameExecutor& executor) override;
@@ -190,11 +201,11 @@ public:
 
 
 //-----------------------------------------------------------------------------------
-class PipeWriter : public BaseWriter {
+class PipeWriter : public OutputWriter {
 
 public:
 	PipeWriter(MainData& data, MovieReader& reader) :
-		BaseWriter(data, reader) {}
+		OutputWriter(data, reader) {}
 
 	~PipeWriter() override;
 	void open(EncodingOption videoCodec) override;
@@ -326,11 +337,11 @@ public:
 
 
 //--------------- write transforms --------------------------------------------------
-class TransformsWriter : public MovieWriter, public TransformsFile {
+class TransformsWriter : public MovieWriterBase, public TransformsFile {
 
 public:
 	TransformsWriter(MainData& data) :
-		MovieWriter(data),
+		MovieWriterBase(data),
 		TransformsFile() {}
 
 	void start() override;
@@ -372,7 +383,7 @@ public:
 
 
 //--------------- write point results as large text file ----------------------------
-class ResultDetailsWriter : public MovieWriter {
+class ResultDetailsWriter : public MovieWriterBase {
 
 private:
 	std::string mDelim = ";";
@@ -382,7 +393,7 @@ private:
 
 public:
 	ResultDetailsWriter(MainData& data) :
-		MovieWriter(data) {}
+		MovieWriterBase(data) {}
 
 	static void write(std::span<PointResult> results, const std::string& filename);
 
@@ -392,7 +403,7 @@ public:
 
 
 //--------------- write individual images to show point results ---------------------
-class ResultImageWriter : public MovieWriter {
+class ResultImageWriter : public MovieWriterBase {
 
 private:
 	ImageYuv yuv;
@@ -400,7 +411,7 @@ private:
 
 public:
 	ResultImageWriter(MainData& data) :
-		MovieWriter(data),
+		MovieWriterBase(data),
 		yuv(data.h, data.w),
 		bgr(data.h, data.w) {}
 

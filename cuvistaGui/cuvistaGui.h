@@ -49,6 +49,10 @@ public slots:
     void doneFail(const std::string& str);
     void doneCancel(const std::string& str);
     void showInfo();
+    void showStatusMessage(const std::string& msg);
+
+signals:
+    void sigShowStatusMessage(const std::string& str);
 
 private:
     QSettings mSettings = QSettings("RainerMtb", "cuvista");
@@ -87,7 +91,6 @@ private:
     void updateInputImage();
     void setInputFile(const QString& inputPath);
     void addInputFile(const QString& inputPath);
-    void showMessage(const QString& msg);
     void setBackgroundColor(QColor& color);
 };
 

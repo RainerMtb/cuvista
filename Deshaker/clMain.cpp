@@ -258,11 +258,7 @@ void OpenClExecutor::inputData(int64_t frameIndex, const ImageYuv& inputFrame) {
 //-------- CREATE PYRAMID ----------
 //----------------------------------
 
-void OpenClExecutor::createPyramidTransformed(int64_t frameIndex, const Affine2D& trf) {
-
-}
-
-void OpenClExecutor::createPyramid(int64_t frameIndex) {
+void OpenClExecutor::createPyramid(int64_t frameIndex, const Affine2D& trf, bool warp) {
 	//util::ConsoleTimer ic("ocl pyramid");
 	int w = mData.w;
 	int h = mData.h;
@@ -272,12 +268,23 @@ void OpenClExecutor::createPyramid(int64_t frameIndex) {
 	try {
 		//convert yuv image to first level of Y pyramid
 		Image& im = clData.buffer[0].result;
-		Image& buf1 = clData.buffer[0].filterH;
-		scale_8u32f_1(clData.yuv[frIdx], im, clData);
+		Image& buf = clData.buffer[0].filterH;
 
-		//filter first level
-		filter_32f_h1(im, buf1, 0, clData);
-		filter_32f_v1(buf1, im, 0, clData);
+		if (warp) {
+			cl_float4 bg = { 0.0f, 0.0f, 0.0f, 0.0f };
+			clData.queue.enqueueFillImage(im, bg, Size2(), Size2(mData.w, mData.h));
+			scale_8u32f_1(clData.yuv[frIdx], buf, clData);
+			warp_back(buf, im, clData, trf.toArray());
+
+		} else {
+			//convert uint8_t to float
+			scale_8u32f_1(clData.yuv[frIdx], im, clData);
+
+			//filter first level
+			filter_32f_h1(im, buf, 0, clData);
+			filter_32f_v1(buf, im, 0, clData);
+		}
+		//copy into pyramid
 		clData.queue.enqueueCopyImage(im, clData.pyramid, Size3(), Size3(0, 0, pyrIdx), Size3(w, h, 1));
 
 		//lower levels of pyramid

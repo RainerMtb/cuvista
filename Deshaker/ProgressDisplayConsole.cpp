@@ -68,6 +68,10 @@ void ProgressDisplayNewLine::update(const ProgressInfo& progress, bool force) {
 //---------------------------
 
 //rewrite one line on the console
+void ProgressDisplayRewriteLine::init() {
+	*outstream << std::endl;
+}
+
 void ProgressDisplayRewriteLine::update(const ProgressInfo& progress, bool force) {
 	if (isDue(force)) {
 		outBuffer.str("");
@@ -82,7 +86,7 @@ void ProgressDisplayRewriteLine::terminate() {
 }
 
 void ProgressDisplayRewriteLine::writeMessage(const std::string& msg) {
-	*outstream << "\x0D\x1B[2K" << msg << std::endl;
+	*outstream << "\x0D\x1B[2K\x0D\x1B[1A" << msg << std::endl;
 }
 
 //---------------------------
@@ -133,9 +137,13 @@ int ProgressDisplayMultiLine::getConsoleWidth() {
 	return std::clamp(getSystemConsoleWidth(), 40, 200);
 }
 
-std::string ProgressDisplayMultiLine::buildLine(int64_t frameIndex, int64_t frameCount, int64_t graphLength) {
+std::string ProgressDisplayMultiLine::buildLine(int64_t frameIndex, int64_t frameCount, int64_t graphLength, double total) {
 	std::string line(graphLength + 15, ' ');
-	if (frameCount > 0) {
+	if (total > 0.0) {
+		int hashNum = int(total * graphLength / 100.0);
+		std::format_to(line.begin(), "     % [{}{}] {:4.0f}%", std::string(hashNum, '#'), std::string(graphLength - hashNum, '.'), total);
+
+	} else if (frameCount > 0) {
 		int64_t hashNum = std::clamp(graphLength * frameIndex / frameCount, int64_t(0), graphLength);
 		double percent = std::clamp(100.0 * frameIndex / frameCount, 0.0, 100.0);
 		std::format_to(line.begin(), "{:6d} [{}{}] {:4.0f}%", frameIndex, std::string(hashNum, '#'), std::string(graphLength - hashNum, '.'), percent);
@@ -151,11 +159,11 @@ std::string ProgressDisplayMultiLine::buildLine(int64_t frameIndex, int64_t fram
 
 std::string ProgressDisplayMultiLine::buildMessage(const ProgressInfo& progress) {
 	int64_t graphLength = getConsoleWidth() - 25LL;
-	return std::format("\x0D\x1B[2K{}\n\x0D\x1B[2Kinput   {}\n\x0D\x1B[2Koutput  {}\n\x0D\x1B[2Kencoded {}\n\x0D\x1B[2Koutput written {}\n",
+	return std::format("\x0D\x1B[2K{}\n\x0D\x1B[2KInput   {}\n\x0D\x1B[2KOutput  {}\n\x0D\x1B[2KTotal   {}\n\x0D\x1B[2Koutput written {}\n",
 		mStatusMessage,
-		buildLine(progress.readIndex, progress.frameCount, graphLength),
-		buildLine(progress.writeIndex, progress.frameCount, graphLength),
-		buildLine(progress.encodeIndex, progress.frameCount, graphLength),
+		buildLine(progress.readIndex, progress.frameCount, graphLength, -1.0),
+		buildLine(progress.writeIndex, progress.frameCount, graphLength, -1.0),
+		buildLine(0, 0, graphLength, progress.totalProgress),
 		util::byteSizeToString(progress.outputBytesWritten))
 		;
 }

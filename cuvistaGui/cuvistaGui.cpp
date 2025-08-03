@@ -61,11 +61,17 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     }
 
     //modes list
-    ui.comboMode->addItem(QString("Combined Read and Write"));
-    ui.comboMode->addItem(QString("Consecutively Read and Write"));
+    ui.comboMode->addItem(QString("Combined - Single Pass"));
+    ui.comboMode->addItem(QString("Two Pass - Analyze then Write"));
     for (int i = 2; i <= mData.limits.modeMax; i++) {
-        ui.comboMode->addItem(QString("Multi Pass - Read %1x").arg(i));
+        ui.comboMode->addItem(QString("Multi Pass - Analyze %1x").arg(i));
     }
+    auto fcnModeCheck = [&] (int index) {
+        //if (index > 0 && ui.chkPlayer->isChecked()) ui.chkPlayer->setChecked(false);
+        ui.chkPlayer->setEnabled(index == 0);
+        ui.chkPlayer->setCheckable(index == 0);
+    };
+    connect(ui.comboMode, &QComboBox::currentIndexChanged, this, fcnModeCheck);
 
     //available devices
     for (int i = 0; i < mData.deviceList.size(); i++) {
@@ -147,6 +153,9 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     //player window
     connect(mPlayerWindow, &PlayerWindow::sigProgress, mPlayerWindow, &PlayerWindow::progress);
     connect(mPlayerWindow, &PlayerWindow::cancel, &mInputHandler, &UserInputGui::cancel);
+
+    //status bar
+    connect(this, &cuvistaGui::sigShowStatusMessage, this, &cuvistaGui::showStatusMessage);
 
     //load recent files before activating combo box action
     for (int idx = 0; idx < 6; idx++) {
@@ -357,7 +366,6 @@ void cuvistaGui::stabilize() {
         return;
     }
 
-    statusBar()->showMessage(QString("stabilizing..."));
     mFileOutput = QFileInfo(outFile);
     mOutputDir = outFile;
 
@@ -434,6 +442,7 @@ void cuvistaGui::stabilize() {
 
     //set up worker thread
     auto fcn = [&] {
+        sigShowStatusMessage("stabilizing...");
         //init writer on executor thread
         mWriter->start();
         //run loop
@@ -478,7 +487,7 @@ void cuvistaGui::doneSuccess(const std::string& fileString, const std::string& s
     QFontMetrics metrics(mStatusLinkLabel->font());
     QString fileElided = metrics.elidedText(file, Qt::ElideMiddle, 300);
     QString labelText = QString("<a href='%1'>%2</a> %3").arg(file).arg(fileElided).arg(QString::fromStdString(str));
-    statusBar()->clearMessage(); //will show the label which was added in the constructor
+    statusBar()->clearMessage();
     mStatusLinkLabel->setText(labelText);
     mStatusLinkLabel->show();
 }
@@ -486,17 +495,16 @@ void cuvistaGui::doneSuccess(const std::string& fileString, const std::string& s
 void cuvistaGui::doneFail(const std::string& str) {
     QString msg = QString::fromStdString(str);
     QMessageBox::critical(this, QString("Error"), msg, QMessageBox::Ok);
-    showMessage(QString("Error: %1").arg(msg));
+    statusBar()->showMessage(QString("Error: %1").arg(msg));
     errorLogger().clearErrors();
 }
 
 void cuvistaGui::doneCancel(const std::string& str) {
-    showMessage(QString::fromStdString(str));
+    statusBar()->showMessage(QString::fromStdString(str));
 }
 
-void cuvistaGui::showMessage(const QString& msg) {
-    mProgressWindow->hide();
-    statusBar()->showMessage(msg);
+void cuvistaGui::showStatusMessage(const std::string& msg) {
+    statusBar()->showMessage(QString::fromStdString(msg));
 }
 
 void cuvistaGui::showInfo() {

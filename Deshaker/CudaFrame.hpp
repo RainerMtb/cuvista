@@ -25,7 +25,7 @@ class CudaFrame : public CudaExecutor {
 public:
 	CudaFrame(MainData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool);
 
-	void createPyramidTransformed(int64_t frameIndex, const Affine2D& trf) override;
+	void createPyramid(int64_t frameIndex, const Affine2D& trf, bool warp) override;
 	void outputData(int64_t frameIndex, const Affine2D& trf) override;
 	Mat<float> getPyramid(int64_t frameIndex) const override;
 	Mat<float> getTransformedOutput() const override;

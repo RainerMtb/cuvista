@@ -355,12 +355,7 @@ void CudaExecutor::inputData(int64_t frameIndex, const ImageYuv& inputFrame) {
 //----------------------------------
 
 //create image pyramid
-void CudaExecutor::cudaCreatePyramidTransformed(int64_t frameIndex, const AffineCore& trf) {
-
-}
-
-//create image pyramid
-void CudaExecutor::createPyramid(int64_t frameIndex) {
+void CudaExecutor::cudaCreatePyramid(int64_t frameIndex, const AffineCore& trf, bool warp) {
 	int w = mData.w;
 	int h = mData.h;
 
@@ -375,11 +370,17 @@ void CudaExecutor::createPyramid(int64_t frameIndex) {
 	//to keep track of things
 	pyramidIndizes[pyrIdx] = frameIndex;
 
-	//first level of pyramid
-	//Y data
-	cu::scale_8u32f(yuvStart, cudaData.strideChar, pyrStart, cudaData.strideFloatN, w, h);
-	cu::filter_32f_h(pyrStart, d_bufferH, cudaData.strideFloatN, w, h, 0);
-	cu::filter_32f_v(d_bufferH, pyrStart, cudaData.strideFloatN, w, h, 0);
+	//first level of pyramid Y data
+	if (warp) {
+		cu::set_32f(pyrStart, cudaData.strideFloatN, w, h, 0);
+		cu::scale_8u32f(yuvStart, cudaData.strideChar, d_bufferH, cudaData.strideFloatN, w, h);
+		cu::warp_back_32f(d_bufferH, cudaData.strideFloatN, pyrStart, cudaData.strideFloatN, w, h, trf);
+
+	} else {
+		cu::scale_8u32f(yuvStart, cudaData.strideChar, pyrStart, cudaData.strideFloatN, w, h);
+		cu::filter_32f_h(pyrStart, d_bufferH, cudaData.strideFloatN, w, h, 0);
+		cu::filter_32f_v(d_bufferH, pyrStart, cudaData.strideFloatN, w, h, 0);
+	}
 
 	//lower levels
 	float* src = pyrStart;

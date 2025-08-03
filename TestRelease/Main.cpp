@@ -27,12 +27,12 @@ static void printArgs(std::span<std::string> s) {
 	std::cout << std::endl;
 }
 
-static DeshakerResult run(std::vector<std::string> argsList) {
+static DeshakerResult run(std::vector<std::string> argsList, std::shared_ptr<MovieWriter> writer = {}) {
 	std::ostringstream oss;
 
 	std::cout << std::endl;
 	printArgs(argsList);
-	DeshakerResult result = deshake(argsList, &oss);
+	DeshakerResult result = deshake(argsList, &oss, writer);
 	std::string str = oss.str();
 	if (str.empty()) {
 		std::cout << "no console output" << std::endl;
@@ -43,8 +43,8 @@ static DeshakerResult run(std::vector<std::string> argsList) {
 	return result;
 }
 
-static DeshakerResult run(const std::string& argsLine) {
-	return run(util::splitString(argsLine, " "));
+static DeshakerResult run(const std::string& argsLine, std::shared_ptr<MovieWriter> writer = {}) {
+	return run(util::splitString(argsLine, " "), writer);
 }
 
 int main() {
@@ -54,7 +54,7 @@ int main() {
 	for (const auto& entry : std::filesystem::directory_iterator(fp)) {
 		if (entry.is_regular_file()) std::filesystem::remove(entry);
 	}
-
+	
 	std::cout << "--- Short Runs ---" << std::endl;
 	run("-frames 0 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/00.mp4 -noheader -progress 0 -y");
 	run("-frames 1 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/00.mp4 -noheader -progress 0 -y");
@@ -63,11 +63,11 @@ int main() {
 	run("-frames 40 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/00.mp4 -noheader -progress 0 -y");
 	run({ "-frames",  "40", "-i", "d:/VideoTest/example space.mp4", "-o", "d:/videoTest/out/00 space.mp4", "-noheader",  "-progress", "0", "-y" });
 
-	run("-pass 12 -frames 0 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/00.mp4 -noheader -progress 0 -y");
-	run("-pass 12 -frames 1 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/00.mp4 -noheader -progress 0 -y");
-	run("-pass 12 -frames 2 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/00.mp4 -noheader -progress 0 -y");
-	run("-pass 12 -frames 3 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/00.mp4 -noheader -progress 0 -y");
-	run("-pass 12 -frames 40 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/00.mp4 -noheader -progress 0 -y");
+	run("-mode 1 -frames 0 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/00.mp4 -noheader -progress 0 -y");
+	run("-mode 1 -frames 1 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/00.mp4 -noheader -progress 0 -y");
+	run("-mode 1 -frames 2 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/00.mp4 -noheader -progress 0 -y");
+	run("-mode 1 -frames 3 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/00.mp4 -noheader -progress 0 -y");
+	run("-mode 1 -frames 40 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/00.mp4 -noheader -progress 0 -y");
 
 	std::cout << "--- Images ---" << std::endl;
 	run("-frames 10 -i d:/VideoTest/04.ts -resim d:/VideoTest/out/images/test%02d.jpg -progress 0 -y");
@@ -109,25 +109,22 @@ int main() {
 	run("-device 2 -stack 0 -i d:/VideoTest/06.mp4 -o d:/videoTest/out/06_stack.mp4 -noheader -progress 0");
 	run("-device 2 -i d:/VideoTest/01.mp4 -o null -flow d:/videoTest/out/flow.mp4 -noheader -progress 0");
 
+	//-------------------------------------------------------------------------------
+
 	std::cout << "--- Check Equal Files ---" << std::endl;
 	std::vector<std::string> commands = {
-		"-device 0 -i d:/VideoTest/02short.mp4 -o d:/videoTest/out/check.00.yuv -quiet",
-		"-device 1 -i d:/VideoTest/02short.mp4 -o d:/videoTest/out/check.01.yuv -quiet",
-		"-device 2 -i d:/VideoTest/02short.mp4 -o d:/videoTest/out/check.02.yuv -quiet",
-		"-device 3 -i d:/VideoTest/02short.mp4 -o d:/videoTest/out/check.03.yuv -quiet"
-	};
-	std::vector<std::string> filenames = {
-		"d:/videoTest/out/check.00.yuv",
-		"d:/videoTest/out/check.01.yuv",
-		"d:/videoTest/out/check.02.yuv",
-		"d:/videoTest/out/check.03.yuv",
+		"-device 0 -i d:/VideoTest/02short.mp4 -o null -quiet",
+		"-device 1 -i d:/VideoTest/02short.mp4 -o null -quiet",
+		"-device 2 -i d:/VideoTest/02short.mp4 -o null -quiet",
+		"-device 3 -i d:/VideoTest/02short.mp4 -o null -quiet"
 	};
 
-	uint64_t crcTrajectory = 0xee4f4fd33e21b564;
-	uint64_t crcFile = 0x42ca17fa90208328;
+	uint64_t crcTrajectory = 0xcc66bbb8c0acc17c;
+	uint64_t crcFile = 0xa63021f0aec5d1f2;
 
 	for (size_t i = 0; i < commands.size(); i++) {
-		DeshakerResult result = run(commands[i]);
+		std::shared_ptr<RawMemoryStoreWriter> externalWriter = std::make_shared<RawMemoryStoreWriter>(250, false, true);
+		DeshakerResult result = run(commands[i], externalWriter);
 
 		util::CRC64 crc;
 		for (const TrajectoryItem& ti : result.trajectory) {
@@ -153,13 +150,16 @@ int main() {
 				<< std::boolalpha << ", crc match: " << match << "\x1b[0m" << std::endl;
 		}
 
-
 		util::CRC64 crcyuv;
-		std::string filename = filenames[i];
-		std::vector<unsigned char> data(std::filesystem::file_size(filename));
-		std::ifstream infile(filename, std::ios::binary);
-		infile.read(reinterpret_cast<char*>(data.data()), data.size());
-		crcyuv.addBytes(data.data(), data.size());
+		for (const ImageYuv& image : externalWriter->outputFrames) {
+			for (int z = 0; z < 3; z++) {
+				for (int r = 0; r < image.h; r++) {
+					for (int c = 0; c < image.w; c++) {
+						crcyuv.add(image.at(z, r, c));
+					}
+				}
+			}
+		}
 
 		{
 			bool match = crcFile == crcyuv;
@@ -167,6 +167,37 @@ int main() {
 			std::cout << color << std::hex << "yuv file crc expected: " << crcFile << ", actual crc: " << crcyuv
 				<< std::boolalpha << ", crc match: " << match << "\x1b[0m" << std::endl;
 		}
+	}
+
+	//------------------------------------------------------------------------------------
+	std::cout << "--- Check Mode 2 ---" << std::endl;
+	std::vector<std::string> commandsMode2 = {
+		"-device 0 -i d:/VideoTest/02short.mp4 -o null -quiet -mode 2",
+		"-device 1 -i d:/VideoTest/02short.mp4 -o null -quiet -mode 2",
+		"-device 2 -i d:/VideoTest/02short.mp4 -o null -quiet -mode 2",
+		"-device 3 -i d:/VideoTest/02short.mp4 -o null -quiet -mode 2"
+	};
+
+	for (size_t i = 0; i < commandsMode2.size(); i++) {
+		std::shared_ptr<RawMemoryStoreWriter> externalWriter = std::make_shared<RawMemoryStoreWriter>(250, false, true);
+		DeshakerResult result = run(commandsMode2[i], externalWriter);
+
+		uint64_t crcExpected = 0xfbbb91f16571d7e5;
+		util::CRC64 crcOutput;
+		for (const ImageYuv& image : externalWriter->outputFrames) {
+			for (int z = 0; z < 3; z++) {
+				for (int r = 0; r < image.h; r++) {
+					for (int c = 0; c < image.w; c++) {
+						crcOutput.add(image.at(z, r, c));
+					}
+				}
+			}
+		}
+
+		bool match = crcExpected == crcOutput;
+		std::string color = match ? "\x1b[1;32m" : "\x1b[1;31m";
+		std::cout << color << std::hex << "yuv file crc expected: " << crcExpected << ", actual crc: " << crcOutput
+			<< std::boolalpha << ", crc match: " << match << "\x1b[0m" << std::dec << std::endl;
 	}
 
 	return 0;

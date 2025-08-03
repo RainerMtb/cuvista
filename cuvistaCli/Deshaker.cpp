@@ -23,14 +23,11 @@ std::ostream& printError(std::ostream& os, const std::string& msg1) {
 	return os << "\x1B[1;31m" << msg1 << "\x1B[0m" << std::endl;
 }
 
-DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console) {
+DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console, std::shared_ptr<MovieWriter> externalWriter) {
 	std::set_terminate([] {
 		printError(std::cout, "error: std::terminate was called");
 		std::exit(100);
 	});
-
-	//set command line arguments for debugging
-	//argsInput = { "-frames", "10", "-i", "d:/VideoTest/02.mp4", "-o", "c:/temp/im%04d.jpg", "-y"}; //debugging
 
 	//main program start
 	MainData data;
@@ -70,7 +67,7 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 		else if (data.videoOutputType == OutputType::VIDEO_FILE && data.selectedEncoding.device == EncodingDevice::NVENC)
 			mainWriter = std::make_shared<CudaFFmpegWriter>(data, *reader);
 		else
-			mainWriter = std::make_shared<BaseWriter>(data, *reader);
+			mainWriter = std::make_shared<OutputWriter>(data, *reader);
 
 		writer = std::make_unique<MovieWriterCollection>(data, *reader, mainWriter);
 
@@ -86,6 +83,9 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 		}
 		if (!data.flowFile.empty()) {
 			writer->addWriter(std::make_unique<OpticalFlowWriter>(data, *reader));
+		}
+		if (externalWriter) {
+			writer->addWriter(externalWriter);
 		}
 		writer->open(data.requestedEncoding);
 		writer->start();

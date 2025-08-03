@@ -49,8 +49,7 @@ public:
 		FrameExecutor(data, deviceInfo, frame, pool) {}
 
 	void inputData(int64_t frameIndex, const ImageYuv& inputFrame) override {}
-	void createPyramidTransformed(int64_t frameIndex, const Affine2D& trf) override {};
-	void createPyramid(int64_t frameIndex) override {};
+	void createPyramid(int64_t frameIndex, const Affine2D& trf, bool warp) override {};
 	void computeStart(int64_t frameIndex, std::vector<PointResult>& results) override {}
 	void computeTerminate(int64_t frameIndex, std::vector<PointResult>& results) override {}
 	void getOutputYuv(int64_t frameIndex, ImageYuvData& image) override {}
@@ -200,7 +199,6 @@ public:
 
 	void cudaInit(CoreData& core, int devIdx, const cudaDeviceProp& prop, ImageYuv& yuvFrame);
 	void inputData(int64_t frameIndex, const ImageYuv& inputFrame) override;
-	void createPyramid(int64_t frameIndex) override;
 	void computeStart(int64_t frameIndex, std::vector<PointResult>& results) override;
 	void computeTerminate(int64_t frameIndex, std::vector<PointResult>& results) override;
 	void cudaOutputData(int64_t frameIndex, const AffineCore& trf);
@@ -211,7 +209,7 @@ public:
 	void getInput(int64_t frameIndex, ImageRGBA& image) const override;
 	void getWarped(int64_t frameIndex, ImageRGBA& image) override;
 
-	void cudaCreatePyramidTransformed(int64_t frameIndex, const AffineCore& trf);
+	void cudaCreatePyramid(int64_t frameIndex, const AffineCore& trf, bool warp);
 	void cudaGetTransformedOutput(float* data) const;
 	void cudaGetPyramid(int64_t frameIndex, float* data) const;
 };

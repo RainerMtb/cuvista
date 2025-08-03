@@ -158,6 +158,17 @@ __global__ void kernel_warp_back_3(cudaTextureObject_t texObj, cuMatf4 dest, Aff
 	}
 }
 
+__global__ void kernel_warp_back(cudaTextureObject_t texObj, cuMatf dest, AffineCore trf) {
+	double x = blockIdx.x * blockDim.x + threadIdx.x;
+	double y = blockIdx.y * blockDim.y + threadIdx.y;
+
+	float xx = (float) (__fma_rz(x, trf.m00, __fma_rz(y, trf.m01, trf.m02)));
+	float yy = (float) (__fma_rz(x, trf.m10, __fma_rz(y, trf.m11, trf.m12)));
+	if (x < dest.w && y < dest.h && xx >= 0.0f && xx <= dest.w - 1 && yy >= 0.0f && yy <= dest.h - 1) {
+		dest.at(y, x) = tex2Dinterp(texObj, xx, yy);
+	}
+}
+
 __global__ void kernel_filter_3(cudaTextureObject_t texObj, cuMatf4 dest, int ks, int dx, int dy) {
 	uint x = blockIdx.x * blockDim.x + threadIdx.x;
 	uint y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -386,8 +397,20 @@ cudaError_t cu::scale_8u32f(uchar* src, int srcStep, float* dest, int destStep, 
 	return cudaGetLastError();
 }
 
+cudaError_t cu::warp_back_32f(float* src, int srcStep, float* dest, int destStep, int w, int h, const AffineCore& trf, cudaStream_t cs) {
+	KernelContext ki = prepareTexture(src, srcStep, w, h);
+	cuMatf destMat(dest, h, w, destStep);
+	kernel_warp_back << <ki.blocks, ki.threads, 0, cs >> > (ki.texture, destMat, trf);
+	cudaDestroyTextureObject(ki.texture);
+	return cudaGetLastError();
+}
+
 cudaError_t cu::copy_32f_3(uchar* src, int srcStep, uchar* dest, int destStep, int w, int h, cudaStream_t cs) {
 	return cudaMemcpy2DAsync(dest, destStep, src, srcStep, w, h, cudaMemcpyDefault, cs);
+}
+
+cudaError_t cu::set_32f(float* dest, int destStep, int w, int h, int value, cudaStream_t cs) {
+	return cudaMemset2DAsync(dest, destStep * sizeof(float), value, w * sizeof(float), h, cs);
 }
 
 cudaError_t cu::filter_32f_h(float* src, float* dest, int srcStep, int w, int h, size_t filterKernelIndex, cudaStream_t cs) {
