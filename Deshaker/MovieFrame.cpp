@@ -342,8 +342,8 @@ void MovieFrameConsecutive::runLoop(std::shared_ptr<ProgressBase> progress, User
 			executor->createPyramid(idx, trf, true);
 			executor->computeStart(idx, mResultPoints);
 			executor->computeTerminate(idx, mResultPoints);
-			mFrameResult.computeTransform(mResultPoints, idx);
-			mTrajectory.setTrajectoryTransform(mFrameResult.getTransform());
+			const AffineTransform& newTransform = mFrameResult.computeTransform(mResultPoints, idx);
+			mTrajectory.setTrajectoryTransform(newTransform);
 			mWriter.writeInput(*executor);
 			f.wait();
 

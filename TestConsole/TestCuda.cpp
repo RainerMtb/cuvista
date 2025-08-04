@@ -129,22 +129,29 @@ void cudaInvParallel() {
 	std::cout << "parallel result: " << (isok ? "ok" : "fail") << ", runtime " << time.count() / 1000.0 << " ms" << std::endl;
 }
 
-void cudaDifference() {
+void cudaTextureRead() {
 	ImageYuv im1, im2;
+	ImageYuv input(1080, 1920);
+	for (int r = 0; r < input.h; r++) {
+		for (int c = 0; c < input.w; c++) {
+			input.at(0, r, c) = (unsigned char) (r);
+		}
+	}
 
 	{
 		MainData data;
+		NullReader reader;
+		reader.w = 1920;
+		reader.h = 1080;
+		reader.frameCount = 1;
 		data.collectDeviceInfo();
-		FFmpegReader reader;
-		reader.open("d:/VideoTest/02.mp4");
 		data.validate(reader);
 
 		OutputWriter writer(data, reader);
 		MovieFrameConsecutive frame(data, reader, writer);
 		CpuFrame frameExecutor(data, data.deviceInfoCpu, frame, frame.mPool);
 
-		for (int i = 0; i < 6; i++)	reader.read(frame.mBufferFrame);
-		frameExecutor.inputData(0, frame.mBufferFrame);
+		frameExecutor.inputData(0, input);
 
 		AffineTransform trf;
 		trf.setParam(0.952379970131, 0.001367827033, 33.316623121580, 26.105044749792);
@@ -155,18 +162,19 @@ void cudaDifference() {
 
 	{
 		MainData data;
+		NullReader reader;
+		reader.w = 1920;
+		reader.h = 1080;
+		reader.frameCount = 1;
 		data.probeCuda();
 		data.collectDeviceInfo();
-		FFmpegReader reader;
-		reader.open("d:/VideoTest/02.mp4");
 		data.validate(reader);
 
 		OutputWriter writer(data, reader);
 		MovieFrameConsecutive frame(data, reader, writer);
 		CudaFrame frameExecutor(data, data.cudaInfo.devices[0], frame, frame.mPool);
 
-		for (int i = 0; i < 6; i++)	reader.read(frame.mBufferFrame);
-		frameExecutor.inputData(0, frame.mBufferFrame);
+		frameExecutor.inputData(0, input);
 
 		AffineTransform trf;
 		trf.setParam(0.952379970131, 0.001367827033, 33.316623121580, 26.105044749792);

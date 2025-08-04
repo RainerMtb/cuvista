@@ -154,9 +154,10 @@ When done, run ```cuvista -info``` to see available devices and run a test
 
 ## Future Ideas
 - Improve performance and robustness of stabilization - very likely mutually exclusive goals
-- Maybe supporting multiple GPUs - dont know if anyone would need that though
-- Maybe porting to Mac and Apple Silicon
+- Maybe supporting multiple GPUs for shared execution - dont know if anyone would need that though
 - Maybe look into more advanced algorithms for stabilization
+- Maybe provide some API to the stabilization
+- Maybe porting to Mac and Apple Silicon
 
  
 ## Built and Tested on following Tools and versions

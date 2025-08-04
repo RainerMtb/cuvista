@@ -34,7 +34,7 @@ int main() {
 	//cudaFMAD();
 	//cudaInvParallel();
 	//cudaInvTest(1, 32);
-	//cudaDifference();
+	//cudaTextureRead();
 	//readAndWriteOneFrame();
 	//checkVersions();
 	//transform();

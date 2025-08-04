@@ -104,6 +104,7 @@ bool checkKernelParameters(const CudaData& core, const cudaDeviceProp& cudaProps
 
 //write data from device pointer to file for debugging
 template <class T> void writeDeviceDataToFile(const T* devData, size_t h, size_t wCount, size_t stride, const std::string& path) {
+	cudaDeviceSynchronize();
 	std::vector<T> hostData(h * wCount);
 	cudaMemcpy2D(hostData.data(), sizeof(T) * wCount, devData, sizeof(T) * stride, sizeof(T) * wCount, h, cudaMemcpyDeviceToHost);
 	std::ofstream file(path, std::ios::binary);
@@ -491,7 +492,7 @@ void CudaExecutor::cudaOutputData(int64_t frameIndex, const AffineCore& trf) {
 	}
 	//warp input
 	cu::warp_back_32f_3(out.start, cudaData.strideFloat4N, out.warped, cudaData.strideFloat4N, w, h, trf, cs[1]);
-	//writeDeviceDataToFile(out.warped, h, w, cudaData.strideFloat4N, "f:/cuda.dat");
+	//writeDeviceDataToFile(out.start, h, w, cudaData.strideFloat4N, "f:/cuda.dat");
 	//first filter pass
 	cu::filter_32f_h_3(out.warped, out.filterH, cudaData.strideFloat4N, w, h, cs[1]);
 	//second filter pass

@@ -91,7 +91,13 @@ template <class T> KernelContext prepareTexture(T* src, int srcStep, int texw, i
 }
 
 
-//--------------- kernels
+//--------------- device functions
+
+__device__ void output(float4 val, uchar* nv12, int idx, float* u, float* v) {
+	nv12[idx] = (uchar) rintf(val.x * 255.0f);
+	*u += val.y;
+	*v += val.z;
+}
 
 __device__ void yuv_to_rgba_func(float yf, float uf, float vf, uchar* r, uchar* g, uchar* b, uchar* a) {
 	*r = (uchar) rint(cu::clamp(yf + (1.370705f * (vf - 128.0f)), 0.0f, 255.0f));
@@ -104,23 +110,28 @@ __device__ float interp(float f00, float f01, float f10, float f11, float dx, fl
 	return (1.0f - dx) * (1.0f - dy) * f00 + (1.0f - dx) * dy * f10 + dx * (1.0f - dy) * f01 + dx * dy * f11;
 }
 
-__device__ float tex2Dinterp(cudaTextureObject_t tex, float dx, float dy) {
-	float f00 = tex2D<float>(tex, dx, dy);
-	float f01 = tex2D<float>(tex, dx + 1, dy);
-	float f10 = tex2D<float>(tex, dx, dy + 1);
-	float f11 = tex2D<float>(tex, dx + 1, dy + 1);
-	dx = dx - floorf(dx);
-	dy = dy - floorf(dy);
-	return interp(f00, f01, f10, f11, dx, dy);
+__device__ float tex2Dinterp(cudaTextureObject_t tex, float x, float y) {
+	// attention: floor(x + 1) is not necessarily equal to floor(x) + 1
+	// example:   int(1023.9994f + 1.0f) is actually 1025
+	// therefore first flooring, then incrementing for the next vertex
+	float flx = floorf(x);
+	float fly = floorf(y);
+	float f00 = tex2D<float>(tex, flx, fly);
+	float f01 = tex2D<float>(tex, flx + 1, fly);
+	float f10 = tex2D<float>(tex, flx, fly + 1);
+	float f11 = tex2D<float>(tex, flx + 1, fly + 1);
+	return interp(f00, f01, f10, f11, x - flx, y - fly);
 }
 
-__device__ float4 tex2Dinterp_3(cudaTextureObject_t tex, float dx, float dy) {
-	float4 f00 = tex2D<float4>(tex, dx, dy);
-	float4 f01 = tex2D<float4>(tex, dx + 1, dy);
-	float4 f10 = tex2D<float4>(tex, dx, dy + 1);
-	float4 f11 = tex2D<float4>(tex, dx + 1, dy + 1);
-	dx = dx - floorf(dx);
-	dy = dy - floorf(dy);
+__device__ float4 tex2Dinterp_3(cudaTextureObject_t tex, float x, float y) {
+	float flx = floorf(x);
+	float fly = floorf(y);
+	float dx = x - flx;
+	float dy = y - fly;
+	float4 f00 = tex2D<float4>(tex, flx, fly);
+	float4 f01 = tex2D<float4>(tex, flx + 1, fly);
+	float4 f10 = tex2D<float4>(tex, flx, fly + 1);
+	float4 f11 = tex2D<float4>(tex, flx + 1, fly + 1);
 	return { 
 		interp(f00.x, f01.x, f10.x, f11.x, dx, dy), 
 		interp(f00.y, f01.y, f10.y, f11.y, dx, dy), 
@@ -129,7 +140,7 @@ __device__ float4 tex2Dinterp_3(cudaTextureObject_t tex, float dx, float dy) {
 }
 
 
-//------------ KERNELS
+//------------ KERNELS FOR FLOAT4
 
 __global__ void kernel_scale_8u32f_3(cudaTextureObject_t texObj, cuMatf4 dest) {
 	uint x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -145,27 +156,14 @@ __global__ void kernel_scale_8u32f_3(cudaTextureObject_t texObj, cuMatf4 dest) {
 }
 
 __global__ void kernel_warp_back_3(cudaTextureObject_t texObj, cuMatf4 dest, AffineCore trf) {
-	double x = blockIdx.x * blockDim.x + threadIdx.x;
-	double y = blockIdx.y * blockDim.y + threadIdx.y;
+	uint x = blockIdx.x * blockDim.x + threadIdx.x;
+	uint y = blockIdx.y * blockDim.y + threadIdx.y;
 
-	//float xx = x * trf.m00 + y + trf.m01 * trf.m02;
-	//float yy = x * trf.m10 + y + trf.m11 * trf.m12;
 	float xx = (float) (__fma_rz(x, trf.m00, __fma_rz(y, trf.m01, trf.m02)));
 	float yy = (float) (__fma_rz(x, trf.m10, __fma_rz(y, trf.m11, trf.m12)));
 	if (x < dest.w && y < dest.h && xx >= 0.0f && xx <= dest.w - 1 && yy >= 0.0f && yy <= dest.h - 1) {
 		//dest.at(y, x) = tex2D<float>(texObj, xx + 0.5f, yy + 0.5f); //linear interpolation does not match
 		dest.at(y, x) = tex2Dinterp_3(texObj, xx, yy);
-	}
-}
-
-__global__ void kernel_warp_back(cudaTextureObject_t texObj, cuMatf dest, AffineCore trf) {
-	double x = blockIdx.x * blockDim.x + threadIdx.x;
-	double y = blockIdx.y * blockDim.y + threadIdx.y;
-
-	float xx = (float) (__fma_rz(x, trf.m00, __fma_rz(y, trf.m01, trf.m02)));
-	float yy = (float) (__fma_rz(x, trf.m10, __fma_rz(y, trf.m11, trf.m12)));
-	if (x < dest.w && y < dest.h && xx >= 0.0f && xx <= dest.w - 1 && yy >= 0.0f && yy <= dest.h - 1) {
-		dest.at(y, x) = tex2Dinterp(texObj, xx, yy);
 	}
 }
 
@@ -203,6 +201,8 @@ __global__ void kernel_unsharp_3(float4* base, float4* gauss, float4* dest, int 
 	}
 }
 
+//------------ KERNELS FOR SINGLE PLANES
+
 __global__ void kernel_output_host(float4* src, int srcStep, uchar* dest, int destStep, int w, int h) {
 	uint x = blockIdx.x * blockDim.x + threadIdx.x;
 	uint y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -216,12 +216,6 @@ __global__ void kernel_output_host(float4* src, int srcStep, uchar* dest, int de
 		idx += h * destStep;
 		dest[idx] = (uchar) rintf(yuv.z * 255.0f);
 	}
-}
-
-__device__ void output(float4 val, uchar* nv12, int idx, float* u, float* v) {
-	nv12[idx] = (uchar) rintf(val.x * 255.0f);
-	*u += val.y;
-	*v += val.z;
 }
 
 __global__ void kernel_output_nvenc(float4* src, int srcStep, uchar* cudaNv12ptr, int cudaPitch, int w, int h) {
@@ -283,6 +277,17 @@ __global__ void kernel_remap_downsize(cudaTextureObject_t texObj, cuMatf dest, c
 	if (x < dest.w && y < dest.h) {
 		//dest.at(y, x) = tex2D<float>(texObj, x * 2 + 1, y * 2 + 1); //linear interpolation
 		dest.at(y, x) = tex2Dinterp(texObj, x * 2.0f + 0.5f, y * 2.0f + 0.5f);
+	}
+}
+
+__global__ void kernel_warp_back(cudaTextureObject_t texObj, cuMatf dest, AffineCore trf) {
+	uint x = blockIdx.x * blockDim.x + threadIdx.x;
+	uint y = blockIdx.y * blockDim.y + threadIdx.y;
+
+	float xx = (float) (__fma_rz(x, trf.m00, __fma_rz(y, trf.m01, trf.m02)));
+	float yy = (float) (__fma_rz(x, trf.m10, __fma_rz(y, trf.m11, trf.m12)));
+	if (x < dest.w && y < dest.h && xx >= 0.0f && xx <= dest.w - 1 && yy >= 0.0f && yy <= dest.h - 1) {
+		dest.at(y, x) = tex2Dinterp(texObj, xx, yy);
 	}
 }
 

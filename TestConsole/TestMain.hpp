@@ -49,7 +49,7 @@ void cudaInvPerformanceTest();
 void cudaInvEqualityTest();
 void cudaInvParallel();
 void cudaInvTest(size_t s1, size_t s2);
-void cudaDifference();
+void cudaTextureRead();
 
 void openClInvTest(size_t s1, size_t s2);
 void openClInvGroupTest(int w1, int w2);

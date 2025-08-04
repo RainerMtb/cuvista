@@ -63,7 +63,7 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     //modes list
     ui.comboMode->addItem(QString("Combined - Single Pass"));
     ui.comboMode->addItem(QString("Two Pass - Analyze then Write"));
-    for (int i = 2; i <= mData.limits.modeMax; i++) {
+    for (int i = 2; i <= 4; i++) {
         ui.comboMode->addItem(QString("Multi Pass - Analyze %1x").arg(i));
     }
     auto fcnModeCheck = [&] (int index) {

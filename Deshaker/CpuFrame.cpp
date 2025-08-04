@@ -271,15 +271,12 @@ void CpuFrame::outputData(int64_t frameIndex, const Affine2D& trf) {
 			float bg = (mData.bgmode == BackgroundMode::COLOR ? mData.bgcolorYuv[z] : mPrevOut[z].at(r, c));
 			auto [x, y] = trf.transform(c, r); //pay attention to order of x and y
 			float result = mYuvPlane.interp2(float(x), float(y)).value_or(bg);
-			//if (z == 0 && r == 1049 && c == 842) {
-			//	float result = mYuvPlane.interp2(float(x), float(y)).value_or(bg);
-			//	std::printf(" cpu %.14f %.14f %.14f %.14f\n", float(x), float(y), mYuvPlane.at(r, c), result);
-			//}
 			return result;
 		};
 		Matf& buf = mBuffer[z];
 		buf.setValues(func1, mPool);
 		mPrevOut[z].setData(buf);
+		//if (z == 0) mYuvPlane.saveAsBinary("f:/cpu.dat");
 
 		//unsharp masking
 		//Mat gauss = buf.filter2D(MainData::FILTER[z], &mPool);

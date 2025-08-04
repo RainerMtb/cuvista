@@ -145,14 +145,16 @@ __kernel void warp_back(__read_only image2d_t src, __write_only image2d_t dest, 
 	float xx = (float) (fma(x, trf.s0, fma(y, trf.s1, trf.s2)));
 	float yy = (float) (fma(x, trf.s3, fma(y, trf.s4, trf.s5)));
 	if (xx >= 0.0f && xx <= w - 1 && yy >= 0.0f && yy <= h - 1) {
-		float4 f00 = read_imagef(src, sampler, (float2)(xx, yy));
-		float4 f01 = read_imagef(src, sampler, (float2)(xx + 1, yy));
-		float4 f10 = read_imagef(src, sampler, (float2)(xx, yy + 1));
-		float4 f11 = read_imagef(src, sampler, (float2)(xx + 1, yy + 1));
-		float dx = xx - floor(xx);
-		float dy = yy - floor(yy);
+		float flx = floor(xx);
+		float fly = floor(yy);
+		float dx = xx - flx;
+		float dy = yy - fly;
+		float4 f00 = read_imagef(src, sampler, (float2)(flx,     fly));
+		float4 f01 = read_imagef(src, sampler, (float2)(flx + 1, fly));
+		float4 f10 = read_imagef(src, sampler, (float2)(flx,     fly + 1));
+		float4 f11 = read_imagef(src, sampler, (float2)(flx + 1, fly + 1));
 
-		//matching result with cpu code only when separating sums
+		//matching result with cpu code
 		float4 val = (1.0f - dx) * (1.0f - dy) * f00 + (1.0f - dx) * dy * f10 + dx * (1.0f - dy) * f01 + dx * dy * f11;
 		write_imagef(dest, (int2)(x, y), val);
 	}
