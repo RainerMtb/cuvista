@@ -20,11 +20,8 @@
 
 #include <vector>
 #include <string>
+#include <map>
 #include <memory>
-
-class MainData;
-class FrameExecutor;
-class MovieFrame;
 
 enum class Codec {
 	AUTO,
@@ -39,6 +36,29 @@ enum class EncodingDevice {
 	CPU,
 };
 
+inline std::map<std::string, Codec> mapStringToCodec = {
+	{"AUTO", Codec::AUTO},
+	{"H264", Codec::H264},
+	{"H265", Codec::H265},
+	{"AV1", Codec::AV1},
+};
+inline std::map<Codec, std::string> mapCodecToString = {
+	{Codec::AUTO, "AUTO"},
+	{Codec::H264, "H264"},
+	{Codec::H265, "H265"},
+	{Codec::AV1, "AV1"},
+};
+inline std::map<std::string, EncodingDevice> mapStringToDevice = {
+	{"AUTO", EncodingDevice::AUTO},
+	{"NVENC", EncodingDevice::NVENC},
+	{"CPU", EncodingDevice::CPU},
+};
+inline std::map<EncodingDevice, std::string> mapDeviceToString = {
+	{EncodingDevice::AUTO, "AUTO"},
+	{EncodingDevice::NVENC, "NVENC"},
+	{EncodingDevice::CPU, "CPU"},
+};
+
 struct EncodingOption {
 	EncodingDevice device;
 	Codec codec;
@@ -51,6 +71,10 @@ enum class DeviceType {
 	AVX,
 	UNKNOWN,
 };
+
+class MainData;
+class FrameExecutor;
+class MovieFrame;
 
 class DeviceInfoBase {
 public:

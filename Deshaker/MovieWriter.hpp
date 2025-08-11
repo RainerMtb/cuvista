@@ -295,18 +295,16 @@ class StackedWriter : public FFmpegWriter {
 
 private:
 	int mWidthTotal;
-	double mStackPosition;
 	ImageYuv mInputFrame;
 	ImageYuv mInputFrameScaled;
 	ImageYuv mOutputFrame;
 
 public:
-	StackedWriter(MainData& data, MovieReader& reader, double stackPosition) :
+	StackedWriter(MainData& data, MovieReader& reader) :
 		FFmpegWriter(data, reader, 1),
-		mWidthTotal { data.w * 3 / 2 },
-		mStackPosition { stackPosition },
+		mWidthTotal { 2 * (data.w - data.stackCrop.left - data.stackCrop.right) },
 		mInputFrame(data.h, data.w, data.cpupitch),
-		mInputFrameScaled(data.h, data.w * 3 / 4),
+		mInputFrameScaled(data.h, data.w - data.stackCrop.left - data.stackCrop.right),
 		mOutputFrame(data.h, data.w, data.cpupitch) {}
 
 	void open(EncodingOption videoCodec) override;

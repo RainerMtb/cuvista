@@ -45,7 +45,7 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     mMovieDir = QStandardPaths::locate(QStandardPaths::MoviesLocation, QString(), QStandardPaths::LocateDirectory);
     mInputDir = mMovieDir;
     mOutputDir = mMovieDir;
-    ui.labelVersion->setText(qformat("Version {}", CUVISTA_VERSION));
+    ui.labelStatus->setText(qformat("Version {}", CUVISTA_VERSION));
 
     mData.console = &mData.nullStream;
     mData.printHeader = false;
@@ -53,12 +53,7 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     mData.probeOpenCl();
     mData.collectDeviceInfo();
 
-    //clear stored settings on cmd option /resetgui
     QStringList cmdArgs = QCoreApplication::arguments();
-    if (cmdArgs.size() == 2 && cmdArgs.at(1) == "/resetgui") {
-        mSettings.clear();
-        cmdArgs.clear();
-    }
 
     //modes list
     ui.comboMode->addItem(QString("Combined - Single Pass"));
@@ -85,7 +80,7 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
         std::vector<EncodingOption>& options = mData.deviceList[index]->encodingOptions;
         for (EncodingOption e : options) {
             QVariant qv = QVariant::fromValue(e);
-            QString qs = qformat("{} - {}", mData.mapDeviceToString[e.device], mData.mapCodecToString[e.codec]);
+            QString qs = qformat("{} - {}", mapDeviceToString[e.device], mapCodecToString[e.codec]);
 
             ui.comboEncoding->addItem(qs, qv);
         }
@@ -131,9 +126,6 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     auto fcnEnable = [&] (Qt::CheckState state) { ui.spinZoomMax->setEnabled(state == Qt::CheckState::Checked); };
     connect(ui.chkDynamicZoom, &QCheckBox::checkStateChanged, this, fcnEnable);
 
-    //set statusbar
-    statusBar()->showMessage(mDefaultMessage);
-
     //seek input
     connect(ui.imageInput, &ImageLabel::mouseClicked, this, &cuvistaGui::seek);
 
@@ -142,6 +134,9 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
 
     //info button
     connect(ui.btnInfo, &QPushButton::clicked, this, &cuvistaGui::showInfo);
+
+    //reset gui
+    connect(ui.btnReset, &QPushButton::clicked, this, &cuvistaGui::resetGui);
 
     //progress handler
     connect(mProgressWindow, &ProgressWindow::cancel, &mInputHandler, &UserInputGui::cancel);
@@ -191,15 +186,11 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     }
     
     //label to show file link in status bar upon success
-    mStatusLinkLabel = new QLabel(this);
-    mStatusLinkLabel->setTextFormat(Qt::RichText);
-    mStatusLinkLabel->setIndent(5);
     auto fileOpener = [] (const QString& file) {
         QUrl qurl = QUrl::fromLocalFile(file);
         QDesktopServices::openUrl(qurl);
     };
-    connect(mStatusLinkLabel, &QLabel::linkActivated, this, fileOpener);
-    statusBar()->addWidget(mStatusLinkLabel);
+    connect(ui.labelStatus, &QLabel::linkActivated, this, fileOpener);
 
     //stored settings
     //window position and size
@@ -235,6 +226,7 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
 void cuvistaGui::setInputFile(const QString& inputPath) {
     //qDebug() << "input" << inputPath;
     ui.comboAudioTrack->clear();
+    ui.comboAudioTrack->addItem("No Audio");
     mInputReady = false;
     
     try {
@@ -258,8 +250,6 @@ void cuvistaGui::setInputFile(const QString& inputPath) {
             throw AVException(errorLogger().getErrorMessage());
         }
 
-        statusBar()->showMessage({});
-
         //info about streams
         std::string str;
         for (StreamContext& sc : mReader.mInputStreams) {
@@ -276,14 +266,13 @@ void cuvistaGui::setInputFile(const QString& inputPath) {
                 ui.comboAudioTrack->addItem(qstr, QVariant::fromValue(&sc));
             }
         }
+
+        ui.comboAudioTrack->setCurrentIndex(ui.comboAudioTrack->count() > 1 ? 1 : 0);
         ui.texInput->setPlainText(QString::fromStdString(str).trimmed());
-        bool hasAudio = ui.comboAudioTrack->count() > 0;
-        ui.chkPlayAudio->setEnabled(hasAudio);
-        ui.chkPlayAudio->setChecked(hasAudio);
 
     } catch (const AVException& ex) {
         ui.imageInput->setImage(mErrorImage);
-        ui.statusbar->showMessage(QString(ex.what()));
+        ui.labelStatus->setText(QString(ex.what()));
         ui.texInput->setPlainText("");
     }
 
@@ -323,7 +312,7 @@ void cuvistaGui::updateInputImage() {
 void cuvistaGui::stabilize() {
     //check if input is present
     if (mFileInput.fileName().isEmpty() || mInputReady == false) {
-        statusBar()->showMessage(mDefaultMessage);
+        ui.labelStatus->setText({});
         return; //nothing to do
     }
 
@@ -335,7 +324,7 @@ void cuvistaGui::stabilize() {
         QString fileFilter("Video Files (*.mp4 *.mkv);;All Files (*.*)");
         outFile = QFileDialog::getSaveFileName(this, QString("Select Video file to save"), mOutputDir, fileFilter, &mOutputFilterSelected, op);
         if (outFile.isEmpty()) {
-            statusBar()->showMessage(mDefaultMessage);
+            ui.labelStatus->setText({});
             return;
         }
     }
@@ -344,7 +333,7 @@ void cuvistaGui::stabilize() {
     if (ui.chkSequence->isChecked()) {
         outFile = QFileDialog::getExistingDirectory(this, QString("Select Output Folder"), mOutputDir);
         if (outFile.isEmpty()) {
-            statusBar()->showMessage(mDefaultMessage);
+            ui.labelStatus->setText({});
             return;
         }
 
@@ -355,6 +344,7 @@ void cuvistaGui::stabilize() {
             QString msgTitle = "Confirm File Overwrite";
             QString msgText = QString("File %1 exists,\noverwrite this and subsequent files?").arg(qstr);
             if (QMessageBox::warning(this, msgTitle, msgText, QMessageBox::Yes | QMessageBox::No) == QMessageBox::No) {
+                ui.labelStatus->setText({});
                 return;
             }
         }
@@ -363,6 +353,7 @@ void cuvistaGui::stabilize() {
     //check if input and output point to same file
     if (mFileInput.canonicalFilePath() == mFileOutput.canonicalFilePath()) {
         QMessageBox::critical(this, QString("Invalid File Selection"), QString("Please select different files\nfor input and output"), QMessageBox::Ok);
+        ui.labelStatus->setText({});
         return;
     }
 
@@ -393,13 +384,15 @@ void cuvistaGui::stabilize() {
     mInputHandler.mIsCancelled = false;
     //audio track to play
     int audioStreamIndex = -1;
-    if (ui.chkPlayAudio->isChecked() && ui.comboAudioTrack->count() > 0) {
+    if (ui.comboAudioTrack->currentIndex() > 0) {
         audioStreamIndex = ui.comboAudioTrack->currentData().value<StreamContext*>()->inputStream->index;
     }
+    //crop setting for stack
+    mData.stackCrop = { ui.spinStackLeft->value(), ui.spinStackRight->value() };
 
     //select writer
     if (ui.chkStack->isChecked())
-        mWriter = std::make_shared<StackedWriter>(mData, mReader, ui.slideStack->value() / 100.0);
+        mWriter = std::make_shared<StackedWriter>(mData, mReader);
     else if (ui.chkSequence->isChecked() && ui.comboImageType->currentData().value<OutputType>() == OutputType::SEQUENCE_BMP)
         mWriter = std::make_shared<BmpImageWriter>(mData, mReader);
     else if (ui.chkSequence->isChecked() && ui.comboImageType->currentData().value<OutputType>() == OutputType::SEQUENCE_JPG)
@@ -484,27 +477,25 @@ void cuvistaGui::doneSuccess(const std::string& fileString, const std::string& s
     mProgressWindow->hide();
     QString file = QString::fromStdString(fileString);
     QUrl url = QUrl::fromLocalFile(file);
-    QFontMetrics metrics(mStatusLinkLabel->font());
+    QFontMetrics metrics(ui.labelStatus->font());
     QString fileElided = metrics.elidedText(file, Qt::ElideMiddle, 300);
     QString labelText = QString("<a href='%1'>%2</a> %3").arg(file).arg(fileElided).arg(QString::fromStdString(str));
-    statusBar()->clearMessage();
-    mStatusLinkLabel->setText(labelText);
-    mStatusLinkLabel->show();
+    ui.labelStatus->setText(labelText);
 }
 
 void cuvistaGui::doneFail(const std::string& str) {
     QString msg = QString::fromStdString(str);
     QMessageBox::critical(this, QString("Error"), msg, QMessageBox::Ok);
-    statusBar()->showMessage(QString("Error: %1").arg(msg));
+    ui.labelStatus->setText(QString("Error: %1").arg(msg));
     errorLogger().clearErrors();
 }
 
 void cuvistaGui::doneCancel(const std::string& str) {
-    statusBar()->showMessage(QString::fromStdString(str));
+    ui.labelStatus->setText(QString::fromStdString(str));
 }
 
 void cuvistaGui::showStatusMessage(const std::string& msg) {
-    statusBar()->showMessage(QString::fromStdString(msg));
+    ui.labelStatus->setText(QString::fromStdString(msg));
 }
 
 void cuvistaGui::showInfo() {
@@ -575,7 +566,7 @@ void cuvistaGui::showInfo() {
 }
 
 //show selected color
-void cuvistaGui::setBackgroundColor(QColor& color) {
+void cuvistaGui::setBackgroundColor(const QColor& color) {
     mBackgroundColor = color;
     
     QString style = qformat("background-color: rgb({}, {}, {})", color.red(), color.green(), color.blue());
@@ -592,6 +583,29 @@ void InfoDialog::closeEvent(QCloseEvent* event) {
     worker->wait();
     worker->deleteLater();
     event->accept();
+}
+
+//reset gui options to defaults
+void cuvistaGui::resetGui() {
+    setBackgroundColor(QColor::fromRgb(0, 150, 0));
+
+    if (ui.comboInputFile->count() > 0) {
+        QString item = ui.comboInputFile->currentText();
+        ui.comboInputFile->insertItem(0, item);
+        ui.comboInputFile->setCurrentIndex(0);
+        while (ui.comboInputFile->count() > 1) ui.comboInputFile->removeItem(1);
+    }
+
+    mPlayerWindow->move(50, 50);
+    mProgressWindow->resize(640, 480);
+
+    ui.chkOverwrite->setChecked(false);
+    ui.spinRadius->setValue(0.5);
+    ui.spinZoomMin->setValue(5);
+    ui.spinZoomMax->setValue(15);
+    ui.chkDynamicZoom->setChecked(true);
+    ui.chkFrameLimit->setChecked(false);
+    ui.spinFrameLimit->setValue(500);
 }
 
 //destructor stores settings

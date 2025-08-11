@@ -52,8 +52,8 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 
 		//----------- create appropriate MovieWriter
 		std::shared_ptr<MovieWriter> mainWriter;
-		if (data.stackPosition)
-			mainWriter = std::make_shared<StackedWriter>(data, *reader, *data.stackPosition);
+		if (data.videoOutputType == OutputType::STACKING)
+			mainWriter = std::make_shared<StackedWriter>(data, *reader);
 		else if (data.videoOutputType == OutputType::PIPE)
 			mainWriter = std::make_shared<PipeWriter>(data, *reader);
 		else if (data.videoOutputType == OutputType::SEQUENCE_BMP)

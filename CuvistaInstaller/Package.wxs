@@ -8,6 +8,7 @@
 		>
 
 		<MajorUpgrade
+			Schedule="afterInstallExecute"
 			AllowDowngrades="no"
             AllowSameVersionUpgrades="no"
             Disallow="no"
@@ -30,14 +31,9 @@
 			Value="icon.ico"
 			/>
 
-		<Feature Id="Main">
-			<ComponentGroupRef Id="AppComponents" />
-			<ComponentGroupRef Id="FilesToCopy" />
-		</Feature>
-
 		<DirectoryRef Id="INSTALLFOLDER">
 			<Merge
-				Id="VCRedist"
+				Id="VCRedistMerge"
 				SourceFile="C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Redist\MSVC\v143\MergeModules\Microsoft_VC143_CRT_x64.msm"
 				Language="0"
 				/>
@@ -48,7 +44,12 @@
 			Title="Visual C++ 2022 Runtime"
 			AllowAdvertise="no"
 			Display="hidden">
-			<MergeRef Id="VCRedist"/>
+			<MergeRef Id="VCRedistMerge"/>
+		</Feature>
+		
+		<Feature Id="Main">
+			<ComponentGroupRef Id="AppComponents"/>
+			<ComponentGroupRef Id="FilesToCopy"/>
 		</Feature>
 	</Package>
 </Wix>

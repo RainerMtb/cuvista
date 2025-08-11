@@ -32,16 +32,15 @@ void StackedWriter::writeOutput(const FrameExecutor& executor) {
 	executor.getInput(frameIndex, mInputFrame);
 
 	int bufferIndex = 0;
-	int offset = int(mData.w * (1 + mStackPosition) / 8);
 	ImageYuv& combinedFrame = imageBuffer[bufferIndex];
 	unsigned char* in = mInputFrameScaled.data();
-	unsigned char* out = mOutputFrame.data() + offset;
+	unsigned char* out = mOutputFrame.data() + mData.stackCrop.left;
 	unsigned char* dest = combinedFrame.data();
 
-	//scale input by min zoom, scaled image is already 3/4 the width
+	//scale mInputFrame by min zoom and write to mInputFrameScaled
 	auto fcn = [&] (size_t r) {
 		for (int c = 0; c < mInputFrameScaled.w; c++) {
-			double x = (c - mData.w / 2.0) / mData.zoomMin + mData.w / 2.0 + offset;
+			double x = (c - mData.w / 2.0) / mData.zoomMin + mData.w / 2.0 + mData.stackCrop.left;
 			double y = (r - mData.h / 2.0) / mData.zoomMin + mData.h / 2.0;
 			if (x >= 0.0 && x <= mData.w && y >= 0.0 && y <= mData.h) {
 				mInputFrameScaled.at(0, r, c) = mInputFrame.sample(0, x, y);

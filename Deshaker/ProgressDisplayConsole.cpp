@@ -18,6 +18,7 @@
 
 #include <format>
 #include <algorithm>
+#include <cmath>
 
 #include "ProgressDisplayConsole.hpp"
 #include "Util.hpp"
@@ -38,7 +39,7 @@ void ProgressDisplayConsole::writeMessage(const std::string& str) {
 }
 
 std::stringstream& ProgressDisplayConsole::buildMessageLine(const ProgressInfo& progress, std::stringstream& buffer) {
-	if (isfinite(progress.totalProgress))
+	if (std::isfinite(progress.totalProgress))
 		buffer << "done " << progress.totalProgress << "% ";
 	if (progress.readIndex > 0)
 		buffer << "frames in " << progress.readIndex;

@@ -7,18 +7,30 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Affine2D.hpp" />
-    <ClInclude Include="CholeskyDecompositor.hpp" />
     <ClInclude Include="CoreMat.hpp" />
-    <ClInclude Include="Decompositor.hpp" />
-    <ClInclude Include="LUDecompositor.hpp" />
     <ClInclude Include="Mat.hpp" />
     <ClInclude Include="MatIterator.hpp" />
     <ClInclude Include="MatInverter.hpp" />
     <ClInclude Include="OutputLine.hpp" />
-    <ClInclude Include="QRDecompositor.hpp" />
-    <ClInclude Include="QRDecompositorUD.hpp" />
     <ClInclude Include="SubMat.hpp" />
-    <ClInclude Include="SVDecompositor.hpp" />
+    <ClInclude Include="CholeskyDecompositor.hpp">
+      <Filter>Decomposition</Filter>
+    </ClInclude>
+    <ClInclude Include="Decompositor.hpp">
+      <Filter>Decomposition</Filter>
+    </ClInclude>
+    <ClInclude Include="LUDecompositor.hpp">
+      <Filter>Decomposition</Filter>
+    </ClInclude>
+    <ClInclude Include="QRDecompositor.hpp">
+      <Filter>Decomposition</Filter>
+    </ClInclude>
+    <ClInclude Include="QRDecompositorUD.hpp">
+      <Filter>Decomposition</Filter>
+    </ClInclude>
+    <ClInclude Include="SVDecompositor.hpp">
+      <Filter>Decomposition</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CoreMat.cpp" />

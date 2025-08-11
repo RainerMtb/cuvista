@@ -1,18 +1,19 @@
 <RCC>
-    <qresource prefix="/cuvistaGui">
-        <file>res/cuvista_black.png</file>
-        <file>res/06_pause-solid.png</file>
-        <file>res/07_rotate-left-solid.png</file>
-        <file>res/01_file-video-solid.png</file>
-        <file>res/02_floppy-disk-solid.png</file>
-        <file>res/03_info-circle.png</file>
-        <file>res/04_play-solid.png</file>
-        <file>res/05_stop-solid.png</file>
-        <file>res/signs-01.png</file>
-        <file>res/signs-02.png</file>
-        <file>res/splash.png</file>
-        <file>res/License.md</file>
-        <file>res/09_speaker_off.png</file>
-        <file>res/09_speaker_on.png</file>
-    </qresource>
+  <qresource prefix="/cuvistaGui">
+    <file>res/10_arrow.png</file>
+    <file>res/cuvista_black.png</file>
+    <file>res/06_pause-solid.png</file>
+    <file>res/07_rotate-left-solid.png</file>
+    <file>res/01_file-video-solid.png</file>
+    <file>res/02_floppy-disk-solid.png</file>
+    <file>res/03_info-circle.png</file>
+    <file>res/04_play-solid.png</file>
+    <file>res/05_stop-solid.png</file>
+    <file>res/signs-01.png</file>
+    <file>res/signs-02.png</file>
+    <file>res/splash.png</file>
+    <file>res/License.md</file>
+    <file>res/09_speaker_off.png</file>
+    <file>res/09_speaker_on.png</file>
+  </qresource>
 </RCC>

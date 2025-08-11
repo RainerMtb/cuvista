@@ -91,17 +91,24 @@ std::ostream& operator << (std::ostream& os, const DeviceInfoOpenCl& info) {
 	os << "OpenCL C Version:     " << info.versionC / 1000 << "." << info.versionC % 1000 << std::endl;
 	os << "Compute Units:        " << info.device->getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>() << std::endl;
 	os << "Max Image Size:       " << w << " x " << h << std::endl;
+
 	return os;
 }
 
 std::ostream& operator << (std::ostream& os, const DeviceInfoCuda& info) {
 	os << "Device Name:          " << info.props->name << std::endl;
 	os << "Compute Version:      " << info.props->major << "." << info.props->minor << std::endl;
-	os << "Clock Rate:           " << info.props->clockRate / 1000 << " Mhz" << std::endl;
 	os << "Total Global Memory:  " << info.props->totalGlobalMem / 1024 / 1024 << " Mb" << std::endl;
 	os << "Multiprocessor count: " << info.props->multiProcessorCount << std::endl;
 	os << "Max Texture Size:     " << info.props->maxTexture2D[0] << " x " << info.props->maxTexture2D[1] << std::endl;
 	os << "Shared Mem per Block: " << info.props->sharedMemPerBlock / 1024 << " kb" << std::endl;
+	
+	os << "Nvenc Encoders:       ";
+	for (const EncodingOption& eo : info.encodingOptions) {
+		if (eo.device == EncodingDevice::NVENC) os << mapCodecToString[eo.codec] << " ";
+	}
+	os << std::endl;
+
 	return os;
 }
 

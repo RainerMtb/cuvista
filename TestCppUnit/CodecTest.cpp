@@ -43,10 +43,8 @@ private:
 		CUresult res;
 
 		//set up cuda encoder
-		NvEncoder nvenc(0);
-		nvenc.init();
-
 		uint8_t crf = 10;
+		NvEncoder nvenc(0);
 		nvenc.createEncoder(w, h, 10, 1, 5, crf, NV_ENC_CODEC_HEVC_GUID);
 
 		//set up a frame in nv12 format

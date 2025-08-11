@@ -82,7 +82,8 @@ void NvEncoder::init() {
 	handleResult(cuCtxGetCurrent(&mCuContext), "cannot get device context");
 	if (mCuContext == NULL) {
 		handleResult(cuDeviceGet(&dev, mCudaIndex), "cannot get device");
-		handleResult(cuCtxCreate_v2(&mCuContext, 0, dev), "cannot create device context");
+		CUctxCreateParams params = {};
+		handleResult(cuCtxCreate_v4(&mCuContext, &params, 0, dev), "cannot create device context"); //changing api for cuda 13.0
 	}
 
 	//open session
@@ -264,7 +265,7 @@ void NvEncoder::getEncodedPackets(std::vector<NV_ENC_OUTPUT_PTR>& outputBuffer, 
 
 void NvEncoder::encodeFrame(std::list<NvPacket>& nvPackets) {
 	int32_t i = mFrameToSend % mEncoderBufferSize;
-	cuCtxPushCurrent_v2(mCuContext);
+	cuCtxPushCurrent(mCuContext);
 
 	//util::ConsoleTimer ct("encode");
 	NV_ENC_MAP_INPUT_RESOURCE mapInputResource = { NV_ENC_MAP_INPUT_RESOURCE_VER };
@@ -292,7 +293,7 @@ void NvEncoder::encodeFrame(std::list<NvPacket>& nvPackets) {
 	} else {
 		throw AVException("cannot encode frame, status=" + std::to_string(stat));
 	}
-	cuCtxPopCurrent_v2(nullptr);
+	cuCtxPopCurrent(nullptr);
 }
 
 
@@ -317,7 +318,7 @@ NvPacket NvEncoder::getBufferedFrame() {
 
 
 void NvEncoder::destroyEncoder() {
-	cuCtxPushCurrent_v2(mCuContext);
+	cuCtxPushCurrent(mCuContext);
 
 	//clear input buffers
 	for (size_t i = 0; i < registeredResources.size(); i++) {
@@ -347,6 +348,7 @@ void NvEncoder::destroyEncoder() {
 		encFuncList.nvEncDestroyEncoder(mEncoder);
 	}
 
+	cuCtxPopCurrent(nullptr);
 	//do not destroy while cuda is still executing, will result in errors in destructor of CudaExecutor
 	//cuCtxDestroy_v2(cuctx);
 }

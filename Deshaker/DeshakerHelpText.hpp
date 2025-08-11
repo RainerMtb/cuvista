@@ -75,12 +75,8 @@ other output options:
 
 -frames n       maximum number of frames to encode
                 default: all the frames there are
--stack x        horizontally stack source and stabilized frames for comparison
-                3/4 of input and 3/4 of output width are put together
-                parameter value must be between -1.0 and 1.0
-                value specifies which part of images is shown
-                -1.0 takes leftmost part, 1.0 shows the far right of frames
-                default: 0
+-stack l:r      horizontally stack source and stabilized frames for comparison
+                parameter l:r defines pixels to crop from left and right
 
 quality and performance settings:
 -radius sec     the temporal radius within which frames will be considered for 
@@ -134,10 +130,11 @@ advanced computation parameters:
                 default: 3
 -ir             integration radius, between 1 and 3
                 default: 3
--roicrop spec   pixels around each frame to be ignored for stabilization
-                specify four numbers seperated by colons
-                representing cropLeft:cropRight:cropTop:cropBottom
-
+-roicrop h:v    specify region of interest for analyzation
+                number of pixels to crop separated by colon
+                representing cropHorizontal:cropVertical
+                default 0:0
+                
 keyboard input options at runtime:
 key [e]         stop reading input, write pending output, then terminate
 key [q]         stop reading and writing, gracefully terminate output

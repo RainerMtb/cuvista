@@ -24,27 +24,42 @@ struct TransformValues {
 	double s, dx, dy, da;
 };
 
-class TrajectoryMat : public Matd {
+class TrajectoryValues {
+
 public:
-	TrajectoryMat();
-	TrajectoryMat(double u, double v, double a);
+	double u, v, a;
 
-	double& u();
-	double& v();
-	double& a();
+	TrajectoryValues();
+	TrajectoryValues(double x);
+	TrajectoryValues(double u, double v, double a);
 
-	double u() const;
-	double v() const;
-	double a() const;
+	TrajectoryValues& set(double u, double v, double a);
+	TrajectoryValues& set(const TrajectoryValues& other);
+
+	bool operator == (const TrajectoryValues& other) const;
+
+	TrajectoryValues operator + (const TrajectoryValues& other);
+	TrajectoryValues& operator += (const TrajectoryValues& other);
+
+	TrajectoryValues operator - (const TrajectoryValues& other);
+	TrajectoryValues& operator -= (const TrajectoryValues& other);
+
+	TrajectoryValues operator * (const TrajectoryValues& other);
+	TrajectoryValues& operator *= (const TrajectoryValues& other);
+
+	TrajectoryValues operator / (const TrajectoryValues& other);
+	TrajectoryValues& operator /= (const TrajectoryValues& other);
 };
 
-struct TrajectoryItem {
+class TrajectoryItem {
+
+public:
 	//values calculated from previous frame to this frame
-	TrajectoryMat values;
+	TrajectoryValues values;
 	//accumulated values up to this frame
-	TrajectoryMat sum;
+	TrajectoryValues sum;
 	//smoothed values
-	TrajectoryMat smoothed;
+	TrajectoryValues smoothed;
 	//frame is identical to previous frame
 	bool isDuplicateFrame;
 	//frame index for debugging
@@ -65,14 +80,14 @@ private:
 	//holds all trajectory items, grows with each frame
 	std::vector<TrajectoryItem> mTrajectory;
 	//temporary mats
-	TrajectoryMat tempAvg;
-	TrajectoryMat tempSum;
-	TrajectoryMat delta;
+	TrajectoryValues tempAvg;
+	TrajectoryValues tempSum;
+	TrajectoryValues delta;
 
 	//current output transform
 	AffineTransform mCurrentTransform;
 	//accumulated values up to most recent frame
-	TrajectoryMat mCurrentSum;
+	TrajectoryValues mCurrentSum;
 	//accumulated zoom value for the previous frame
 	double mCurrentZoom = 1.0;
 

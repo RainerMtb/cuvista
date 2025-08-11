@@ -63,6 +63,7 @@ public:
 	Matf getTransformedOutput() const override { return Matf(); }
 
 	void cudaInit(CoreData& core, int devIdx, const cudaDeviceProp& prop, ImageYuv& yuvFrame) {}
+	void cudaCreatePyramid(int64_t frameIndex, const AffineCore& trf, bool warp) {}
 	void cudaOutputData(int64_t frameIndex, const AffineCore& trf) {}
 	void cudaGetTransformedOutput(float* data) const {}
 	void cudaGetPyramid(int64_t frameIndex, float* data) const {}

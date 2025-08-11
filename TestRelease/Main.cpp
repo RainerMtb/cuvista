@@ -106,7 +106,7 @@ int main() {
 	run("-device 2 -i d:/VideoTest/07.mp4 -o d:/videoTest/out/07.ocl.mkv -noheader -progress 0");
 
 	std::cout << "--- Misc ---" << std::endl;
-	run("-device 2 -stack 0 -i d:/VideoTest/06.mp4 -o d:/videoTest/out/06_stack.mp4 -noheader -progress 0");
+	run("-device 2 -stack 384:384 -i d:/VideoTest/06.mp4 -o d:/videoTest/out/06_stack.mp4 -noheader -progress 0");
 	run("-device 2 -i d:/VideoTest/01.mp4 -o null -flow d:/videoTest/out/flow.mp4 -noheader -progress 0");
 
 	//-------------------------------------------------------------------------------
@@ -128,15 +128,15 @@ int main() {
 
 		util::CRC64 crc;
 		for (const TrajectoryItem& ti : result.trajectory) {
-			crc.add(ti.values.u());
-			crc.add(ti.values.v());
-			crc.add(ti.values.a());
-			crc.add(ti.smoothed.u());
-			crc.add(ti.smoothed.v());
-			crc.add(ti.smoothed.a());
-			crc.add(ti.sum.u());
-			crc.add(ti.sum.v());
-			crc.add(ti.sum.a());
+			crc.add(ti.values.u);
+			crc.add(ti.values.v);
+			crc.add(ti.values.a);
+			crc.add(ti.smoothed.u);
+			crc.add(ti.smoothed.v);
+			crc.add(ti.smoothed.a);
+			crc.add(ti.sum.u);
+			crc.add(ti.sum.v);
+			crc.add(ti.sum.a);
 			crc.add(ti.isDuplicateFrame);
 			crc.add(ti.frameIndex);
 			crc.add(ti.zoom);

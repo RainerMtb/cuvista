@@ -37,6 +37,7 @@ enum class OutputType {
 	RAW_YUV_FILE,
 	SEQUENCE_BMP,
 	SEQUENCE_JPG,
+	STACKING,
 };
 
 enum class ProgressType {
@@ -53,9 +54,14 @@ enum class DecideYNA {
 	ASK,
 };
 
-//pixels to crop from each side for region of interest in computing frame result
+//pixels to ignore for region of interest in computing frame result
 struct RoiCrop {
-	int left, right, top, bottom;
+	int horizontal, vertical;
+};
+
+//pixels to crop when stacking
+struct StackCrop {
+	int left, right;
 };
 
 class MainData : public CoreData {
@@ -103,29 +109,6 @@ private:
 	bool checkFileForWriting(const std::string& file, DecideYNA permission) const;
 
 public:
-	std::map<std::string, Codec> mapStringToCodec = {
-		{"AUTO", Codec::AUTO},
-		{"H264", Codec::H264},
-		{"H265", Codec::H265},
-		{"AV1", Codec::AV1},
-	};
-	std::map<Codec, std::string> mapCodecToString = {
-		{Codec::AUTO, "AUTO"},
-		{Codec::H264, "H264"},
-		{Codec::H265, "H265"},
-		{Codec::AV1, "AV1"},
-	};
-	std::map<std::string, EncodingDevice> mapStringToDevice = {
-		{"AUTO", EncodingDevice::AUTO},
-		{"NVENC", EncodingDevice::NVENC},
-		{"CPU", EncodingDevice::CPU},
-	};
-	std::map<EncodingDevice, std::string> mapDeviceToString = {
-		{EncodingDevice::AUTO, "AUTO"},
-		{EncodingDevice::NVENC, "NVENC"},
-		{EncodingDevice::CPU, "CPU"},
-	};
-
 	struct ValueLimits {
 		double radsecMin = 0.1, radsecMax = 10.0;
 		double imZoomMin = 0.1, imZoomMax = 10.0;
@@ -136,7 +119,8 @@ public:
 		int modeMax = 6;
 	} limits;
 
-	RoiCrop roiCrop = { 0, 0, 0, 0 };
+	RoiCrop roiCrop = { 0, 0 };
+	StackCrop stackCrop = { 0, 0 };
 	
 	int mode = 0;
 	std::vector<DeviceInfoBase*> deviceList;
@@ -159,7 +143,6 @@ public:
 	OutputType videoOutputType = OutputType::NONE;
 	DecideYNA overwriteOutput = DecideYNA::ASK;
 	std::optional<uint8_t> crf = std::nullopt;
-	std::optional<double> stackPosition = std::nullopt;
 
 	bool printHeader = true;
 	bool printSummary = true;

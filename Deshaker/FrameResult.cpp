@@ -88,7 +88,7 @@ const AffineTransform& FrameResult::computeTransform(std::span<PointResult> resu
 		double x = pr.x + mData.w / 2.0;
 		double y = pr.y + mData.h / 2.0;
 		const RoiCrop& roi = mData.roiCrop;
-		if (pr.isValid() && x > roi.left && x < mData.w - roi.right && y > roi.top && y < mData.h - roi.bottom) {
+		if (pr.isValid() && x > roi.horizontal && x < mData.w - roi.horizontal && y > roi.vertical && y < mData.h - roi.vertical) {
 			pr.isConsidered = true;
 			mConsList.emplace_back(pr);
 		}

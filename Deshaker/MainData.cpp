@@ -261,8 +261,8 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 
 		} else if (args.nextArg("roicrop", next)) {
 			std::smatch matcher;
-			if (std::regex_match(next, matcher, std::regex("(\\d+):(\\d+):(\\d+):(\\d+)$")))
-				roiCrop = { std::stoi(matcher[1].str()), std::stoi(matcher[2].str()), std::stoi(matcher[3].str()), std::stoi(matcher[4].str()) };
+			if (std::regex_match(next, matcher, std::regex("(\\d+):(\\d+)$")))
+				roiCrop = { std::stoi(matcher[1].str()), std::stoi(matcher[2].str()) };
 			else
 				throw AVException("invalid roicrop definition: " + next);
 
@@ -293,12 +293,13 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 		 	else throw AVException("invalid random generator selection: " + next);
 
 		} else if (args.nextArg("stack", next)) {
-			double val = std::stod(next);
-			if (val >= -1.0 && val <= 1.0) {
-				stackPosition = val;
+			std::smatch matcher;
+			if (std::regex_match(next, matcher, std::regex("(\\d+):(\\d+)$"))) {
+				stackCrop = { std::stoi(matcher[1].str()), std::stoi(matcher[2].str()) };
+				videoOutputType = OutputType::STACKING;
 
 			} else {
-				throw AVException("invalid value for stacking: " + next);
+				throw AVException("invalid parameter for stacking: " + next);
 			}
 
 		} else {

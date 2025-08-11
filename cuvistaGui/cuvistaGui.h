@@ -49,6 +49,7 @@ public slots:
     void doneFail(const std::string& str);
     void doneCancel(const std::string& str);
     void showInfo();
+    void resetGui();
     void showStatusMessage(const std::string& msg);
 
 signals:
@@ -82,8 +83,6 @@ private:
     FFmpegReader mReader;
 
     QColor mBackgroundColor;
-    QString mDefaultMessage = QString("select file for input, then click 'stabilize'...");
-    QLabel* mStatusLinkLabel;
 
     bool mInputReady = false;
     bool mOutputReady = false;
@@ -91,7 +90,7 @@ private:
     void updateInputImage();
     void setInputFile(const QString& inputPath);
     void addInputFile(const QString& inputPath);
-    void setBackgroundColor(QColor& color);
+    void setBackgroundColor(const QColor& color);
 };
 
 class InfoDialog : public QDialog {
