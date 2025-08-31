@@ -49,6 +49,7 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
 
     mData.console = &mData.nullStream;
     mData.printHeader = false;
+    mData.printSummary = false;
     mData.probeCuda();
     mData.probeOpenCl();
     mData.collectDeviceInfo();
@@ -77,7 +78,7 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     auto fcnEncoding = [&] (int index) {
         ui.comboEncoding->clear();
 
-        std::vector<EncodingOption>& options = mData.deviceList[index]->encodingOptions;
+        std::span<EncodingOption> options = mData.deviceList[index]->encodingOptions;
         for (EncodingOption e : options) {
             QVariant qv = QVariant::fromValue(e);
             QString qs = qformat("{} - {}", mapDeviceToString[e.device], mapCodecToString[e.codec]);
@@ -118,16 +119,14 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     ui.spinRadius->setMaximum(mData.limits.radsecMax);
     ui.spinZoomMin->setMinimum(mData.limits.imZoomMin * 100 - 100);
     ui.spinZoomMin->setMaximum(mData.limits.imZoomMax * 100 - 100);
-    ui.spinZoomMin->setValue(std::round(mData.zoomMin * 100 - 100));
     ui.spinZoomMax->setMinimum(mData.limits.imZoomMin * 100 - 100);
     ui.spinZoomMax->setMaximum(mData.limits.imZoomMax * 100 - 100);
-    ui.spinZoomMax->setValue(std::round(mData.zoomMax * 100 - 100));
 
     auto fcnEnable = [&] (Qt::CheckState state) { ui.spinZoomMax->setEnabled(state == Qt::CheckState::Checked); };
     connect(ui.chkDynamicZoom, &QCheckBox::checkStateChanged, this, fcnEnable);
 
     //seek input
-    connect(ui.imageInput, &ImageLabel::mouseClicked, this, &cuvistaGui::seek);
+    connect(ui.imageInput, &ImageLabelInput::mouseClicked, this, &cuvistaGui::seek);
 
     //start stabilizing
     connect(ui.btnStart, &QPushButton::clicked, this, &cuvistaGui::stabilize);
@@ -166,6 +165,9 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
         ui.comboInputFile->setToolTip(str);
     };
     connect(ui.comboInputFile, &QComboBox::currentTextChanged, this, fcnSelectFile);
+
+    //file open via drop event
+    connect(ui.imageInput, &ImageLabelInput::fileDropped, this, &cuvistaGui::addInputFile);
 
     //file for reading
     auto fcnOpenFile = [&] () {
@@ -268,6 +270,7 @@ void cuvistaGui::setInputFile(const QString& inputPath) {
         }
 
         ui.comboAudioTrack->setCurrentIndex(ui.comboAudioTrack->count() > 1 ? 1 : 0);
+        ui.labelStatus->setText(qformat("Version {}", CUVISTA_VERSION));
         ui.texInput->setPlainText(QString::fromStdString(str).trimmed());
 
     } catch (const AVException& ex) {
@@ -287,6 +290,9 @@ void cuvistaGui::addInputFile(const QString& inputPath) {
         ui.comboInputFile->setCurrentIndex(0);
         if (idx > -1) {
             ui.comboInputFile->removeItem(idx + 1);
+        }
+        if (ui.comboInputFile->count() > 6) {
+            ui.comboInputFile->removeItem(6);
         }
     }
 }
@@ -310,9 +316,10 @@ void cuvistaGui::updateInputImage() {
 //-------------------------
 
 void cuvistaGui::stabilize() {
+    ui.labelStatus->setText("");
+    
     //check if input is present
     if (mFileInput.fileName().isEmpty() || mInputReady == false) {
-        ui.labelStatus->setText({});
         return; //nothing to do
     }
 
@@ -324,7 +331,6 @@ void cuvistaGui::stabilize() {
         QString fileFilter("Video Files (*.mp4 *.mkv);;All Files (*.*)");
         outFile = QFileDialog::getSaveFileName(this, QString("Select Video file to save"), mOutputDir, fileFilter, &mOutputFilterSelected, op);
         if (outFile.isEmpty()) {
-            ui.labelStatus->setText({});
             return;
         }
     }
@@ -333,7 +339,6 @@ void cuvistaGui::stabilize() {
     if (ui.chkSequence->isChecked()) {
         outFile = QFileDialog::getExistingDirectory(this, QString("Select Output Folder"), mOutputDir);
         if (outFile.isEmpty()) {
-            ui.labelStatus->setText({});
             return;
         }
 
@@ -344,7 +349,6 @@ void cuvistaGui::stabilize() {
             QString msgTitle = "Confirm File Overwrite";
             QString msgText = QString("File %1 exists,\noverwrite this and subsequent files?").arg(qstr);
             if (QMessageBox::warning(this, msgTitle, msgText, QMessageBox::Yes | QMessageBox::No) == QMessageBox::No) {
-                ui.labelStatus->setText({});
                 return;
             }
         }
@@ -353,7 +357,6 @@ void cuvistaGui::stabilize() {
     //check if input and output point to same file
     if (mFileInput.canonicalFilePath() == mFileOutput.canonicalFilePath()) {
         QMessageBox::critical(this, QString("Invalid File Selection"), QString("Please select different files\nfor input and output"), QMessageBox::Ok);
-        ui.labelStatus->setText({});
         return;
     }
 
@@ -508,7 +511,7 @@ void cuvistaGui::showInfo() {
     std::string strGitHub = "https://github.com/RainerMtb/cuvista";
     QString headerText = qformat(
         "CUVISTA - Cuda Video Stabilizer, Version {}<br>"
-        "Copyright (c) 2024 Rainer Bitschi <a href='mailto:{}'>{}</a> <a href='{}'>{}</a><br>"
+        "Copyright (c) 2025 Rainer Bitschi <a href='mailto:{}'>{}</a> <a href='{}'>{}</a><br>"
         "License GNU GPLv3+: GNU GPL version 3 or later<br>"
         "Gui compiled with Qt version {}, running on version {}",
         CUVISTA_VERSION, strEmail, strEmail, strGitHub, strGitHub, QT_VERSION_STR, qVersion());

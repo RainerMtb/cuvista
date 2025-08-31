@@ -49,7 +49,7 @@ computing options:
                 default: highest index available
 -device cpu     same as -device 0
 -encoder xxx    device to use for video encoding
-                options: auto, nvenc, cpu
+                options: auto, nvenc, ffmpeg
                 default: auto; prefer nvenc when available
 -codec xxx      video codec to use for encoding
                 options: auto, h264, h265

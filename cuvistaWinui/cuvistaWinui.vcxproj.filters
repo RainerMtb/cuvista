@@ -1,0 +1,111 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ApplicationDefinition Include="App.xaml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Page Include="MainWindow.xaml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Midl Include="MainWindow.idl" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="pch.cpp" />
+    <ClCompile Include="$(GeneratedFilesDir)module.g.cpp">
+      <Filter>Generated</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="pch.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Assets\Wide310x150Logo.scale-200.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\StoreLogo.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\Square150x150Logo.scale-200.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\Square44x44Logo.targetsize-24_altform-unplated.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\Square44x44Logo.scale-200.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\SplashScreen.scale-200.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\LockScreenLogo.scale-200.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\01_file-video-solid.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\03_info-circle.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\07_rotate-left-solid.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\10_arrow.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\cuvista_black.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\signs-02.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\signs-01.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\splash.png">
+      <Filter>Assets</Filter>
+    </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Assets">
+      <UniqueIdentifier>{53074f83-f77d-43eb-96f8-78ae8196db99}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="externDLL">
+      <UniqueIdentifier>{0e4f6070-5ffa-4970-b42d-e4d63facc1e8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Generated">
+      <UniqueIdentifier>{01be2107-37fc-45ee-9240-669d49038687}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <Manifest Include="app.manifest" />
+  </ItemGroup>
+  <ItemGroup>
+    <AppxManifest Include="Package.appxmanifest" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+    <None Include="$(FFMPEG_PATH)\bin\avcodec-61.dll">
+      <Filter>externDLL</Filter>
+    </None>
+    <None Include="$(FFMPEG_PATH)\bin\avformat-61.dll">
+      <Filter>externDLL</Filter>
+    </None>
+    <None Include="$(FFMPEG_PATH)\bin\avutil-59.dll">
+      <Filter>externDLL</Filter>
+    </None>
+    <None Include="$(FFMPEG_PATH)\bin\swresample-5.dll">
+      <Filter>externDLL</Filter>
+    </None>
+    <None Include="$(FFMPEG_PATH)\bin\swscale-8.dll">
+      <Filter>externDLL</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Natvis Include="$(MSBuildThisFileDirectory)..\..\natvis\wil.natstepfilter">
+      <Filter>Generated</Filter>
+    </Natvis>
+    <Natvis Include="$(MSBuildThisFileDirectory)..\..\natvis\wil.natvis">
+      <Filter>Generated</Filter>
+    </Natvis>
+  </ItemGroup>
+</Project>

@@ -31,7 +31,7 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 12.9.props" />
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 13.0.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -64,13 +64,13 @@
     </Link>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
-      <CodeGeneration>compute_52,sm_52;compute_60,sm_60;compute_70,sm_70;compute_80,sm_80;compute_90,sm_90;compute_100,sm_100;compute_120,sm_120</CodeGeneration>
       <Include>$(SolutionDir)Common</Include>
       <AdditionalOptions>-fmad=false -std=c++17 -Wno-deprecated-gpu-targets</AdditionalOptions>
       <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
       <AdditionalDeps>
       </AdditionalDeps>
       <CompileOut>$(SolutionDir)bin_inter\$(ProjectName)\$(Platform)\$(Configuration)\%(Filename)%(Extension).obj</CompileOut>
+      <CodeGeneration>compute_75,sm_75;compute_80,sm_80;compute_89,sm_89;compute_90,sm_90;compute_100,sm_100;compute_110,sm_110;compute_120,sm_120;compute_121,sm_121</CodeGeneration>
     </CudaCompile>
     <CudaLink />
     <CudaLink>
@@ -95,7 +95,6 @@
     </Link>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
-      <CodeGeneration>compute_52,sm_52;compute_60,sm_60;compute_70,sm_70;compute_80,sm_80;compute_90,sm_90;compute_100,sm_100;compute_120,sm_120</CodeGeneration>
       <Runtime>InheritFromHost</Runtime>
       <HostDebugInfo>true</HostDebugInfo>
       <Optimization>O2</Optimization>
@@ -105,6 +104,7 @@
       <AdditionalDeps>
       </AdditionalDeps>
       <CompileOut>$(SolutionDir)bin_inter\$(ProjectName)\$(Platform)\$(Configuration)\%(Filename)%(Extension).obj</CompileOut>
+      <CodeGeneration>compute_75,sm_75;compute_80,sm_80;compute_89,sm_89;compute_90,sm_90;compute_100,sm_100;compute_110,sm_110;compute_120,sm_120;compute_121,sm_121</CodeGeneration>
     </CudaCompile>
     <CudaLink />
     <CudaLink>
@@ -134,6 +134,6 @@
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 12.9.targets" />
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 13.0.targets" />
   </ImportGroup>
 </Project>

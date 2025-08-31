@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>680</width>
-    <height>887</height>
+    <height>910</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -135,7 +135,7 @@
             </size>
            </property>
            <property name="acceptDrops">
-            <bool>false</bool>
+            <bool>true</bool>
            </property>
            <property name="readOnly">
             <bool>true</bool>
@@ -148,7 +148,7 @@
             <number>0</number>
            </property>
            <item>
-            <widget class="ImageLabel" name="imageInput">
+            <widget class="ImageLabelInput" name="imageInput">
              <property name="sizePolicy">
               <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
                <horstretch>1</horstretch>
@@ -160,6 +160,9 @@
                <width>300</width>
                <height>150</height>
               </size>
+             </property>
+             <property name="acceptDrops">
+              <bool>true</bool>
              </property>
              <property name="styleSheet">
               <string notr="true">background:lightgreen;</string>
@@ -1063,10 +1066,16 @@
       <item>
        <widget class="QLabel" name="labelStatus">
         <property name="sizePolicy">
-         <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
+         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
           <horstretch>1</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>200</width>
+          <height>0</height>
+         </size>
         </property>
         <property name="text">
          <string>Version xx</string>
@@ -1210,14 +1219,14 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>ImageLabel</class>
-   <extends>QLabel</extends>
-   <header>ImageLabel.h</header>
-  </customwidget>
-  <customwidget>
    <class>ClickLabel</class>
    <extends>QLabel</extends>
    <header>ClickLabel.h</header>
+  </customwidget>
+  <customwidget>
+   <class>ImageLabelInput</class>
+   <extends>QLabel</extends>
+   <header>ImageLabel.h</header>
   </customwidget>
  </customwidgets>
  <tabstops>
@@ -1254,7 +1263,7 @@
  </resources>
  <connections/>
  <buttongroups>
-  <buttongroup name="buttonGroupBackground"/>
   <buttongroup name="buttonGroupOutput"/>
+  <buttongroup name="buttonGroupBackground"/>
  </buttongroups>
 </ui>

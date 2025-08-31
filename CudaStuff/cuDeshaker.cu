@@ -20,6 +20,8 @@
 #include "cuNPP.cuh"
 #include "Image.hpp"
 
+#include <algorithm>
+
 //parameter structure
 //all values must be initialized to be used as __constant__ variable in device code, no constructor calls
 __constant__ CoreData d_core;

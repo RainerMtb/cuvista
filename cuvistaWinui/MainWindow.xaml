@@ -1,0 +1,236 @@
+<?xml version="1.0" encoding="utf-8"?>
+ <!--
+ * This file is part of CUVISTA - Cuda Video Stabilizer
+ * Copyright (c) 2023 Rainer Bitschi cuvista@a1.net
+ *
+ * This program is free software : you can redistribute it and /or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.If not, see<http://www.gnu.org/licenses/> .
+ */
+-->
+
+<Window
+    x:Class="cuvistaWinui.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:cuvistaWinui"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Title="Cuvista - Cuda Video Stabilizer">
+
+    <Window.SystemBackdrop>
+        <MicaBackdrop></MicaBackdrop>
+    </Window.SystemBackdrop>
+    
+    <!-- there is no Window.Resources, must define in main grid, why the hell -->
+    
+    <!-- Main -->
+    <Grid x:Name="rootPanel" Margin="8" RowSpacing="8" RowDefinitions="*, auto, auto, auto">
+
+        <Grid.Resources>
+            <!-- define color picker flyout -->
+            <Flyout x:Name="colorFlyout" x:Key="ColorFlyoutKey">
+                <StackPanel Orientation="Vertical">
+                    <ColorPicker x:Name="colorPicker" Orientation="Vertical"/>
+                    <StackPanel Orientation="Horizontal" Spacing="16" HorizontalAlignment="Right">
+                        <Button Content="Ok" Click="btnColorOk"/>
+                        <Button Content="Cancel" Click="btnColorCancel"/>
+                    </StackPanel>
+                </StackPanel>
+            </Flyout>
+
+            <Image x:Name="imageError" Source="/Assets/signs-01.png"/>
+            <Image x:Name="imageWorking" Source="/Assets/signs-02.png"/>
+
+        </Grid.Resources>
+
+        <!-- ContentDialog is not a resource (?) -->
+        <ContentDialog x:Name="infoDialog" Closing="infoDialogClosing">
+            <StackPanel Spacing="8">
+                <TextBlock IsTextSelectionEnabled="True">
+                    <Run x:Name="infoRunHeader"/>
+                    <Hyperlink x:Name="infoLinkEmail"/>
+                    <Run Text=" "/>
+                    <Hyperlink x:Name="infoLinkGit"/>
+                    <Run x:Name="infoRunFooter"/>
+                </TextBlock>
+
+                <ScrollViewer x:Name="infoScroller" VerticalScrollBarVisibility="Visible" Height="350">
+                    <TextBox x:Name="infoBox" FontFamily="Consolas" FontSize="12" AcceptsReturn="True" IsReadOnly="True"/>
+                </ScrollViewer>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="16">
+                    <Button x:Name="btnInfoTest" Content="Run Test" Click="btnInfoTestClick"/>
+                    <Button x:Name="btnInfoClose" Content="Close" Click="btnInfoCloseClick"/>
+                </StackPanel>
+            </StackPanel>
+        </ContentDialog>
+
+        <!-- Input -->
+        <Grid RowDefinitions="auto, *"
+              RowSpacing="8"
+              Padding="4">
+
+            <!-- Input Button and recent files -->
+            <Grid ColumnDefinitions="auto, *" Height="32" ColumnSpacing="16">
+
+                <Button x:Name="btnOpen" Click="btnOpenClick">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Image Stretch="Uniform"/>
+                        <TextBlock Text="Input" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                    </StackPanel>
+                </Button>
+                <ComboBox x:Name="comboInputFile" Grid.Column="1" HorizontalAlignment="Stretch" SelectionChanged="setInputFile"/>
+            </Grid>
+
+            <!-- Text and Image -->
+            <Grid Grid.Row="1"
+                  ColumnSpacing="8"
+                  RowDefinitions="*, 16"
+                  ColumnDefinitions="*, *">
+
+                <TextBox x:Name="texInput" Grid.RowSpan="2" AcceptsReturn="True" IsReadOnly="True" 
+                         ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                         ScrollViewer.VerticalScrollBarVisibility="Visible"
+                         FontSize="12" AllowDrop="True" Drop="dropFile" DragOver="dragFile"></TextBox>
+                <Grid x:Name="imageBackground" Grid.Column="1" Tapped="imageBackgroundClick">
+                    <Image x:Name="imageInput" Stretch="Uniform" Source="/Assets/TestImage.png" AllowDrop="True" Drop="dropFile" DragOver="dragFile"></Image>
+                </Grid>
+                <ProgressBar x:Name="inputPosition" Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="100"></ProgressBar>
+            </Grid>
+        </Grid>
+
+        <!-- Settings -->
+        <Grid Grid.Row="1"
+              RowDefinitions="32, 32, 32, 32, 32"
+              ColumnDefinitions="auto, *"
+              RowSpacing="12"
+              ColumnSpacing="16"
+              BorderBrush="Gray"
+              BorderThickness="1"
+              CornerRadius="4"
+              Padding="8">
+
+            <TextBlock Grid.Row="0" Text="Stabilization Mode:" VerticalAlignment="Center" FontWeight="SemiBold"/>
+            <ComboBox x:Name="comboMode" Grid.Row="0" Grid.Column="1" MinWidth="300"/>
+
+            <TextBlock Grid.Row="1" Text="Stabilization Device:" VerticalAlignment="Center" FontWeight="SemiBold"/>
+            <ComboBox x:Name="comboDevice" Grid.Row="1" Grid.Column="1" MinWidth="300" HorizontalAlignment="Stretch" SelectionChanged="comboDeviceChanged"/>
+
+            <TextBlock Grid.Row="2" Text="Temporal Radius:" VerticalAlignment="Center" FontWeight="SemiBold"/>
+            <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                <NumberBox x:Name="spinRadius" Width="110"  Value="0.5" SmallChange="0.1" SpinButtonPlacementMode="Compact"/>
+                <TextBlock Text="Seconds" VerticalAlignment="Center"/>
+            </StackPanel>
+
+            <TextBlock Grid.Row="3" Text="Image Zoom:" VerticalAlignment="Center" FontWeight="SemiBold"/>
+            <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                <NumberBox x:Name="spinZoomMin" Width="110"  Value="0.05" SmallChange="0.01" LargeChange="0.05" SpinButtonPlacementMode="Compact"/>
+                <TextBlock Text="Minimum" VerticalAlignment="Center"/>
+                <CheckBox x:Name="chkDynamicZoom" Content="Dynamic Zoom up to" VerticalAlignment="Center" Margin="20, 0, 0, 0" 
+                          IsChecked="True" Click="dynZoomClick"/>
+                <NumberBox x:Name="spinZoomMax" Width="110"  Value="0.15" SmallChange="0.01" LargeChange="0.05" SpinButtonPlacementMode="Compact"/>
+            </StackPanel>
+
+            <TextBlock Grid.Row="4" Text="Background Fill:" VerticalAlignment="Center" FontWeight="SemiBold"/>
+            <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                <RadioButton x:Name="radioBlend" GroupName="grpBackground" Content="Blend Frames" IsChecked="True"/>
+                <RadioButton x:Name="radioColor" GroupName="grpBackground" Content="Fixed Color" Margin="20, 0, 0, 0"/>
+                <Grid x:Name="lblColor" Width="36" Height="24" 
+                      BorderThickness="1" BorderBrush="Gray" 
+                      FlyoutBase.AttachedFlyout="{StaticResource ColorFlyoutKey}" 
+                      Tapped="lblColorClick">
+                </Grid>
+            </StackPanel>
+        </Grid>
+
+        <!-- Output -->
+        <Grid Grid.Row="2"
+              RowDefinitions="32, 32, 32, 2, 32, 32"
+              ColumnDefinitions="auto, *"
+              RowSpacing="12"
+              ColumnSpacing="16"
+              BorderBrush="Gray"
+              BorderThickness="1"
+              CornerRadius="4"
+              Padding="8">
+
+            <!-- Output Encoding Video -->
+            <RadioButton Grid.Row="0" GroupName="grpOutput" x:Name="chkEncode" Content="Encode Video" FontWeight="SemiBold" IsChecked="True"/>
+            <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="16">
+                <Image Width="24"  Stretch="Uniform" Source="/Assets/10_arrow.png"></Image>
+                <TextBlock Text="Encoder and Format" VerticalAlignment="Center"></TextBlock>
+                <ComboBox x:Name="comboEncoding" MinWidth="200">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="local:EncodingOptionXaml">
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <TextBlock Text="{x:Bind Device}"/>
+                                <TextBlock Text="-"/>
+                                <TextBlock Text="{x:Bind Codec}"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+            </StackPanel>
+
+            <!-- Output Encoding Images -->
+            <RadioButton Grid.Row="1" GroupName="grpOutput" x:Name="chkSequence" Content="Image Sequence" FontWeight="SemiBold"/>
+            <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="16">
+                <Image Width="24"  Stretch="Uniform" Source="/Assets/10_arrow.png"></Image>
+                <TextBlock Text="Format" VerticalAlignment="Center"></TextBlock>
+                <ComboBox x:Name="comboImageType" MinWidth="200"></ComboBox>
+            </StackPanel>
+
+            <!-- Output Stacked -->
+            <RadioButton Grid.Row="2" GroupName="grpOutput" x:Name="chkStack" Content="Side by Side" FontWeight="SemiBold"/>
+            <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Spacing="16">
+                <Image Width="24"  Stretch="Uniform" Source="/Assets/10_arrow.png"></Image>
+                <TextBlock Text="Pixel to Crop on Left" VerticalAlignment="Center"></TextBlock>
+                <NumberBox Width="110" Value="0" SmallChange="1" LargeChange="5" SpinButtonPlacementMode="Compact"></NumberBox>
+                <TextBlock Text="on Right" VerticalAlignment="Center"></TextBlock>
+                <NumberBox Width="110" Value="0" SmallChange="1" LargeChange="5" SpinButtonPlacementMode="Compact"></NumberBox>
+            </StackPanel>
+
+            <CheckBox Grid.Row="4" Content="Always Overwrite" VerticalAlignment="Center" FontWeight="SemiBold"></CheckBox>
+
+            <CheckBox Grid.Row="5" Content="Limit Output" VerticalAlignment="Center" FontWeight="SemiBold"></CheckBox>
+            <StackPanel Grid.Row="5" Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                <NumberBox Width="110"  Value="500" SmallChange="1" LargeChange="10" SpinButtonPlacementMode="Compact"></NumberBox>
+                <TextBlock Text="Frames" VerticalAlignment="Center"></TextBlock>
+            </StackPanel>
+        </Grid>
+
+        <!-- Buttons -->
+        <Grid Grid.Row="3"
+              Height="32"
+              ColumnSpacing="16"
+              Margin="4, 0"
+              ColumnDefinitions="*, auto, auto, auto">
+
+            <TextBlock x:Name="lblStatus" VerticalAlignment="Center"></TextBlock>
+            <Button x:Name="btnStart" Grid.Column="1" Click="btnStartClick">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Image Source="/Assets/cuvista_black.png" Stretch="Uniform"/>
+                    <TextBlock Text="Stabilize" VerticalAlignment="Center" FontWeight="SemiBold"></TextBlock>
+                </StackPanel>
+            </Button>
+            <Button x:Name="btnInfo" Grid.Column="2" Click="btnInfoClick">
+                <Image Source="/Assets/03_info-circle.png" Stretch="Uniform"/>
+            </Button>
+            <Button x:Name="btnReset" Grid.Column="3" Click="btnResetClick">
+                <Image Source="/Assets/07_rotate-left-solid.png" Stretch="Uniform"/>
+            </Button>
+        </Grid>
+    </Grid>
+
+</Window>

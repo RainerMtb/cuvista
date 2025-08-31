@@ -51,6 +51,7 @@ public slots:
     void showInfo();
     void resetGui();
     void showStatusMessage(const std::string& msg);
+    void addInputFile(const QString& inputPath);
 
 signals:
     void sigShowStatusMessage(const std::string& str);
@@ -89,7 +90,6 @@ private:
 
     void updateInputImage();
     void setInputFile(const QString& inputPath);
-    void addInputFile(const QString& inputPath);
     void setBackgroundColor(const QColor& color);
 };
 

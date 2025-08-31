@@ -343,9 +343,9 @@ void MainData::collectDeviceInfo() {
 
 	//cpu encoders
 	std::vector<EncodingOption> cpuEncoders = {
-		{EncodingDevice::CPU, Codec::H264},
-		{EncodingDevice::CPU, Codec::H265},
-		{EncodingDevice::CPU, Codec::AV1},
+		{EncodingDevice::FFMPEG, Codec::H264},
+		{EncodingDevice::FFMPEG, Codec::H265},
+		{EncodingDevice::FFMPEG, Codec::AV1},
 	};
 
 	//CPU device
@@ -438,7 +438,7 @@ void MainData::validate(const MovieReader& reader) {
 	}
 	if (requestedEncoding.device == EncodingDevice::AUTO) {
 		if (deviceList[deviceSelected]->type == DeviceType::CUDA) selectedEncoding.device = EncodingDevice::NVENC;
-		else selectedEncoding.device = EncodingDevice::CPU;
+		else selectedEncoding.device = EncodingDevice::FFMPEG;
 	} else {
 		selectedEncoding.device = requestedEncoding.device;
 	}

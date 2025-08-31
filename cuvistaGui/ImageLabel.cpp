@@ -18,6 +18,8 @@
 
 #include "ImageLabel.h"
 #include <QDebug>
+#include <QDrag>
+#include <QMimeData>
 
 ImageLabel::ImageLabel(QWidget* parent) : 
     QLabel(parent) 
@@ -52,7 +54,28 @@ void ImageLabel::resizeEvent(QResizeEvent* event) {
     resizePixmap();
 }
 
-void ImageLabel::mousePressEvent(QMouseEvent* event) {
+//-----------------------------------
+
+ImageLabelInput::ImageLabelInput(QWidget* parent) :
+    ImageLabel(parent)
+{}
+
+void ImageLabelInput::mousePressEvent(QMouseEvent* event) {
     double frac = 1.0 * event->position().x() / width();
     mouseClicked(frac);
+}
+
+void ImageLabelInput::dragEnterEvent(QDragEnterEvent* event) {
+    if (event->mimeData()->hasUrls()) {
+        event->acceptProposedAction();
+    }
+}
+
+void ImageLabelInput::dropEvent(QDropEvent* event) {
+    if (event->mimeData()->hasUrls()) {
+        QUrl url = event->mimeData()->urls().first();
+        QString str = url.toLocalFile();
+        qDebug() << "drop " << str;
+        fileDropped(str);
+    }
 }

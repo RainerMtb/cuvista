@@ -62,7 +62,7 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 			mainWriter = std::make_shared<JpegImageWriter>(data, *reader);
 		else if (data.videoOutputType == OutputType::RAW_YUV_FILE)
 			mainWriter = std::make_shared<RawWriter>(data, *reader);
-		else if (data.videoOutputType == OutputType::VIDEO_FILE && data.selectedEncoding.device == EncodingDevice::CPU)
+		else if (data.videoOutputType == OutputType::VIDEO_FILE && data.selectedEncoding.device == EncodingDevice::FFMPEG)
 			mainWriter = std::make_shared<FFmpegWriter>(data, *reader);
 		else if (data.videoOutputType == OutputType::VIDEO_FILE && data.selectedEncoding.device == EncodingDevice::NVENC)
 			mainWriter = std::make_shared<CudaFFmpegWriter>(data, *reader);

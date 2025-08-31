@@ -33,7 +33,7 @@ enum class Codec {
 enum class EncodingDevice {
 	AUTO,
 	NVENC,
-	CPU,
+	FFMPEG,
 };
 
 inline std::map<std::string, Codec> mapStringToCodec = {
@@ -51,12 +51,12 @@ inline std::map<Codec, std::string> mapCodecToString = {
 inline std::map<std::string, EncodingDevice> mapStringToDevice = {
 	{"AUTO", EncodingDevice::AUTO},
 	{"NVENC", EncodingDevice::NVENC},
-	{"CPU", EncodingDevice::CPU},
+	{"FFMPEG", EncodingDevice::FFMPEG},
 };
 inline std::map<EncodingDevice, std::string> mapDeviceToString = {
 	{EncodingDevice::AUTO, "AUTO"},
 	{EncodingDevice::NVENC, "NVENC"},
-	{EncodingDevice::CPU, "CPU"},
+	{EncodingDevice::FFMPEG, "FFMPEG"},
 };
 
 struct EncodingOption {

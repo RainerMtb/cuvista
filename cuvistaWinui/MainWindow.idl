@@ -1,0 +1,15 @@
+namespace cuvistaWinui
+{
+    [default_interface]
+    runtimeclass MainWindow : Microsoft.UI.Xaml.Window
+    {
+        MainWindow();
+    }
+
+    runtimeclass EncodingOptionXaml
+    {
+        EncodingOptionXaml();
+        String Device { get; };
+        String Codec { get; };
+    }
+}

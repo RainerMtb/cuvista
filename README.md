@@ -5,7 +5,7 @@ Check the projects [GitHub Page](https://rainermtb.github.io/cuvista)
 
 A simple, easy to use Application to stabilize shaky video footage preferably using GPU acceleration via Cuda or OpenCL. The software will run on CPU power alone, which will be significantly slower but produces the exact same outcome.
 
-I put in great effort to ensure that on all platforms the stabilization results are absolutely equal. By that I mean floating point equal, to the bit. So far I tested on Windows 11 and Ubuntu 24.04 with MSVC and GCC compilers.
+I put in great effort to ensure that on all platforms the stabilization results are absolutely equal. By that I mean floating point equal, to the bit.
 
 There is no AI involved, just math, algorithms and brain power.
 
@@ -53,7 +53,7 @@ The build script will look for Qt6 and include the Gui executable when found. Te
 
 
 ## Building on Windows
-Tested on Windows 11
+Tested on Windows 11 and MSVC
 
 ### Dependencies
 Get ffmeg with shared libraries https://www.ffmpeg.org/download.html#build-windows  
@@ -69,7 +69,7 @@ cd build
 ```
 prepare the locations of Cuda, Qt and FFMPEG and provide them to cmake. Also see notes above. Better use forward slashes ```/``` to separate folders. Adapt locations to your system:
 ```
-cmake .. -D CMAKE_PREFIX_PATH=C:/CUDA/version;C:/Qt/6.9.1/msvc2022_64 -D FFMPEG_PATH=C:/ffmpeg --fresh
+cmake .. -D CMAKE_PREFIX_PATH=C:/CUDA/version;C:/Qt/6.9.2/msvc2022_64 -D FFMPEG_PATH=C:/ffmpeg --fresh
 cmake --build . --config Release
 ```
 Upon successfull completion you will get the files
@@ -88,34 +88,32 @@ When done, run ```cuvista -info``` to see available devices and run a test
 
 
 ## Building on Linux
-Tested on Ubuntu 24.04
+Tested on Ubuntu 25.04
 
 ### Dependencies
 
 #### Cuda
 Optionally get Cuda https://developer.nvidia.com/cuda-downloads and follow instructions there  
 
-With Cuda you will also need Nvidia Video encoder - I wonder why ***that library*** carries the name ffmpeg...
+When using Cuda you will also need Nvidia Video encoder - I wonder why ***that library*** carries the name ffmpeg...
 ```
 sudo apt install -y libffmpeg-nvenc-dev
 ```
 
 #### Qt6
-Optionally get Qt6, see https://www.qt.io/download-qt-installer. 
+Optionally get Qt6 to build a Gui, see https://www.qt.io/download-qt-installer. 
 To get the necessary components on the command line
 ```
 wget https://download.qt.io/official_releases/online_installers/qt-online-installer-linux-x64-online.run
 chmod +x qt-online-installer-linux-x64-online.run
-./qt-online-installer-linux-x64-online.run install qt.qt6.691.linux_gcc_64 qt.qt6.691.addons.qtmultimedia
+./qt-online-installer-linux-x64-online.run install qt.qt6.692.linux_gcc_64 qt.qt6.692.addons.qtmultimedia
 ```
-You might also need
+This will then require
 ```
 sudo apt install -y libxkbcommon-dev libglu1-mesa-dev
 ```
 
 #### More Libraries
-Get additional components if not already available on your system
-
 Cmake, the build tool:
 ```
 sudo apt install -y cmake
@@ -124,7 +122,7 @@ FFmpeg shared libraries:
 ```
 sudo apt install -y libavcodec-dev libavdevice-dev libavfilter-dev libavformat-dev libavutil-dev libswresample-dev libswscale-dev
 ```
-In case PkgConfig is missing:
+PkgConfig is used to check ffmpeg components:
 ```
 sudo apt install -y pkg-config
 ```
@@ -139,7 +137,7 @@ cd build
 ```
 Adapt the location of Cuda and  Qt to your system and execute the build process. Also see notes above.
 ```
-export CMAKE_PREFIX_PATH=~/Qt/6.9.1/gcc_64:/usr/local/cuda
+export CMAKE_PREFIX_PATH=~/Qt/6.9.2/gcc_64:/usr/local/cuda
 cmake .. --fresh
 cmake --build . --parallel
 ```
@@ -162,10 +160,10 @@ When done, run ```cuvista -info``` to see available devices and run a test
  
 ## Built and Tested on following Tools and versions
 - Windows 11 64bit
-- Ubuntu 24.04
+- Ubuntu 25.04
 - Visual Studio 2022
-- Nvidia Cuda 12.9.1
+- Nvidia Cuda 13.0
 - Nvidia Video Codec SDK 13.0.19
 - FFmpeg 7.1
-- Qt 6.9.1
-- Cmake 3.30.6
+- Qt 6.9.2
+- Cmake later than 3.28

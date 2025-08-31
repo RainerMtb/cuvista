@@ -16,48 +16,4 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
-#pragma once
-
-#include <QLabel>
-#include <QMouseEvent>
-#include "Image2.hpp"
-
-class ImageLabel : public QLabel {
-	Q_OBJECT
-
-private:
-	QPixmap pm;
-
-public:
-	ImageLabel(QWidget* parent = nullptr);
-
-	void resizePixmap();
-
-	void setImage(const ImagePPM& ppm);
-
-	void setImage(const QPixmap& pm);
-
-	void setImage(QImage im);
-
-	void setImage(const ImageYuv& im);
-
-	void resizeEvent(QResizeEvent* event) override;
-};
-
-class ImageLabelInput : public ImageLabel {
-	Q_OBJECT
-
-signals:
-	void mouseClicked(double pos);
-
-	void fileDropped(QString inputPath);
-
-public:
-	ImageLabelInput(QWidget* parent = nullptr);
-
-	void mousePressEvent(QMouseEvent* event) override;
-
-	void dragEnterEvent(QDragEnterEvent* event) override;
-
-	void dropEvent(QDropEvent* event) override;
-};
+#include "pch.h"

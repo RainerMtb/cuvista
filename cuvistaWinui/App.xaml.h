@@ -18,46 +18,17 @@
 
 #pragma once
 
-#include <QLabel>
-#include <QMouseEvent>
-#include "Image2.hpp"
+#include "App.xaml.g.h"
 
-class ImageLabel : public QLabel {
-	Q_OBJECT
+namespace winrt::cuvistaWinui::implementation
+{
+    struct App : AppT<App>
+    {
+        App();
 
-private:
-	QPixmap pm;
+        void OnLaunched(const Microsoft::UI::Xaml::LaunchActivatedEventArgs& args);
 
-public:
-	ImageLabel(QWidget* parent = nullptr);
-
-	void resizePixmap();
-
-	void setImage(const ImagePPM& ppm);
-
-	void setImage(const QPixmap& pm);
-
-	void setImage(QImage im);
-
-	void setImage(const ImageYuv& im);
-
-	void resizeEvent(QResizeEvent* event) override;
-};
-
-class ImageLabelInput : public ImageLabel {
-	Q_OBJECT
-
-signals:
-	void mouseClicked(double pos);
-
-	void fileDropped(QString inputPath);
-
-public:
-	ImageLabelInput(QWidget* parent = nullptr);
-
-	void mousePressEvent(QMouseEvent* event) override;
-
-	void dragEnterEvent(QDragEnterEvent* event) override;
-
-	void dropEvent(QDropEvent* event) override;
-};
+    private:
+        winrt::Microsoft::UI::Xaml::Window window = nullptr;
+    };
+}
