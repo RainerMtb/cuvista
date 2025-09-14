@@ -36,13 +36,13 @@ public:
 		int stride = w + 12;
 		ImageYuv yuv(h, w, stride);
 		yuv.setColor(Color::yuv(50, 10, 20));
-		std::vector<unsigned char> nv12(w * h * 3 / 2);
-		yuv.toNV12(nv12, w);
+		ImageNV12 nv12(h, w, stride);
+		yuv.toNV12(nv12);
 
 		ImageYuv dest(h, w, stride);
-		dest.fromNV12(nv12, w);
+		nv12.toYuv(dest);
 
-		Assert::AreEqual(yuv, dest);
+		Assert::AreEqual(yuv, dest, L"different images");
 	}
 
 	TEST_METHOD(base64_test1) {

@@ -78,6 +78,31 @@
        </spacer>
       </item>
       <item>
+       <widget class="QLabel" name="lblRealtime">
+        <property name="maximumSize">
+         <size>
+          <width>24</width>
+          <height>24</height>
+         </size>
+        </property>
+        <property name="toolTip">
+         <string>Cannot Stabilize in Realtime</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="pixmap">
+         <pixmap resource="cuvistaGui.qrc">:/cuvistaGui/res/signs-01.png</pixmap>
+        </property>
+        <property name="scaledContents">
+         <bool>true</bool>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignmentFlag::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QLabel" name="label_1">
         <property name="text">
          <string>Frame:</string>

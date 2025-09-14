@@ -109,16 +109,6 @@ private:
 	bool checkFileForWriting(const std::string& file, DecideYNA permission) const;
 
 public:
-	struct ValueLimits {
-		double radsecMin = 0.1, radsecMax = 10.0;
-		double imZoomMin = 0.1, imZoomMax = 10.0;
-		int radiusMin = 1, radiusMax = 500;
-		int wMin = 100, hMin = 100;
-		int levelsMin = 1, levelsMax = 6;
-		int irMin = 0, irMax = 3;
-		int modeMax = 6;
-	} limits;
-
 	RoiCrop roiCrop = { 0, 0 };
 	StackCrop stackCrop = { 0, 0 };
 	
@@ -133,7 +123,7 @@ public:
 	DeviceInfoNull deviceInfoNull;
 	std::optional<int> cpuThreadsRequired = std::nullopt;
 
-	std::shared_ptr<SamplerBase<PointContext>> sampler = std::make_shared<Sampler<PointContext, PseudoRandomSource>>();
+	std::shared_ptr<SamplerBase<PointContext>> sampler = std::make_shared<UrbgSampler<PointContext, PseudoRandomSource>>();
 
 	//output related
 	util::NullOutstream nullStream;
@@ -161,7 +151,7 @@ public:
 	double cSigmaParam = 1.25;
 
 	int64_t maxFrames = std::numeric_limits<int32_t>::max();
-	Color backgroundColor = Color::rgb(0, 150, 0);
+	Color backgroundColor = Color::rgb(defaults.bgColorRed, defaults.bgColorGreen, defaults.bgColorBlue);
 
 	std::chrono::steady_clock::time_point timePoint;
 

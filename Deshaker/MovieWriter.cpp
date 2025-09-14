@@ -107,9 +107,17 @@ void OutputWriter::writeOutput(const FrameExecutor& executor) {
 
 void RawMemoryStoreWriter::prepareOutput(FrameExecutor& executor) {
 	if (doWriteOutput) {
-		ImageYuv& outputFrame = outputFrames.emplace_back(executor.mData.h, executor.mData.w);
-		executor.getOutputYuv(frameIndex, outputFrame);
-		while (outputFrames.size() > maxFrameCount) outputFrames.pop_front();
+		ImageYuv& frameYuv = outputFramesYuv.emplace_back(executor.mData.h, executor.mData.w);
+		executor.getOutputYuv(frameIndex, frameYuv);
+		while (outputFramesYuv.size() > maxFrameCount) outputFramesYuv.pop_front();
+
+		ImageRGBA& frameRgba = outputFramesRgba.emplace_back(executor.mData.h, executor.mData.w);
+		executor.getOutputRgba(frameIndex, frameRgba);
+		while (outputFramesRgba.size() > maxFrameCount) outputFramesRgba.pop_front();
+
+		ImageBGRA& frameBgra = outputFramesBgra.emplace_back(executor.mData.h, executor.mData.w);
+		executor.getOutputBgra(frameIndex, frameBgra);
+		while (outputFramesBgra.size() > maxFrameCount) outputFramesBgra.pop_front();
 	}
 }
 
@@ -129,24 +137,22 @@ void RawMemoryStoreWriter::writeInput(const FrameExecutor& executor) {
 }
 
 void RawMemoryStoreWriter::writeYuvFiles(const std::string& inputFile, const std::string& outputFile) {
-	std::vector<unsigned char> nv12;
-	if (inputFrames.size() > 0) nv12.resize(inputFrames.front().w * inputFrames.front().h * 3 / 2);
-	if (outputFrames.size() > 0) nv12.resize(outputFrames.front().w * outputFrames.front().h * 3 / 2);
-	
 	std::ofstream osin(inputFile, std::ios::binary);
-	for (ImageYuv& image : outputFrames) {
+	for (ImageYuv& image : outputFramesYuv) {
+		static ImageNV12 nv12(image.h, image.w, image.w);
 		std::string str = std::format(" frame {:04} ", image.index);
 		image.writeText(str, 0, image.h);
 		image.toNV12(nv12);
-		osin.write(reinterpret_cast<char*>(nv12.data()), nv12.size());
+		osin.write(reinterpret_cast<char*>(nv12.addr(0, 0, 0)), nv12.sizeInBytes());
 	}
 
 	std::ofstream osout(outputFile, std::ios::binary);
 	for (ImageYuv& image : inputFrames) {
+		static ImageNV12 nv12(image.h, image.w, image.w);
 		std::string str = std::format(" frame {:04} ", image.index);
 		image.writeText(str, 0, image.h);
 		image.toNV12(nv12);
-		osout.write(reinterpret_cast<char*>(nv12.data()), nv12.size());
+		osout.write(reinterpret_cast<char*>(nv12.addr(0, 0, 0)), nv12.sizeInBytes());
 	}
 }
 
@@ -203,7 +209,7 @@ void BmpImageWriter::prepareOutput(FrameExecutor& executor) {
 void BmpImageWriter::writeOutput(const FrameExecutor& executor) {
 	std::string fname = makeFilename("bmp");
 	worker = std::jthread([&, fname] { image.saveAsColorBMP(fname); });
-	outputBytesWritten += image.stridedByteSize();
+	outputBytesWritten += image.sizeInBytes();
 	this->frameIndex++;
 }
 
@@ -363,6 +369,12 @@ void TransformsWriter::writeInput(const FrameExecutor& executor) {
 // Optical Flow Video
 //-----------------------------------------------------------------------------------
 
+OpticalFlowWriter::OpticalFlowWriter(MainData& data, MovieReader& reader) :
+	FFmpegWriter(data, reader, 1),
+	imageInterpolated(data.h, data.w),
+	imageResults(data.iyCount, data.ixCount)
+{}
+
 void OpticalFlowWriter::vectorToColor(double dx, double dy, unsigned char* r, unsigned char* g, unsigned char* b) {
 	const double f = 20.0;
 	double hue = std::atan2(dy, dx) / std::numbers::pi * 180.0 + 180.0;
@@ -433,7 +445,7 @@ void OpticalFlowWriter::start(const std::string& sourceName, AVPixelFormat pixfm
 }
 
 void OpticalFlowWriter::writeFlow(const MovieFrame& frame) {
-	std::vector<unsigned char> colorGray = { 128, 128, 128 };
+	std::vector<unsigned char> colorGray = { 128, 128, 128, 255 };
 
 	//convert vectors to hsv color values and then to rgb planar image
 	std::vector<PointResult> results = frame.mResultPoints;

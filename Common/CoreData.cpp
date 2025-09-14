@@ -17,13 +17,15 @@
  */
 
 #include <cmath>
+#include <cassert>
 #include "CoreData.hpp"
 
 float Triplet::operator [] (size_t idx) const {
+	assert(idx < 3 && "invalid index");
 	if (idx == 0) return y;
 	if (idx == 1) return u;
 	if (idx == 2) return v;
-	throw std::runtime_error("invalid index");
+	return std::numeric_limits<float>::quiet_NaN();
 }
 
 bool PointResult::isValid() const {

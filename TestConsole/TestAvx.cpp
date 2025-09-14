@@ -63,3 +63,12 @@ void avxCompute() {
 		}
 	}
 }
+
+void avxTest() {
+	std::cout << "test" << std::endl;
+	__m512 x = _mm512_setr_ps(-2.0f, -1.0f, -0.1f, 0.0f, 0.1f, 1.0f, 2.0f, 5.0f, 255.0f, 255.5f, 256.0f, 257.0f, 260.0f, 300.0f, 512.0f, 1024.0f);
+	uint8_t data[16] = {};
+	_mm512_mask_cvtsepi32_storeu_epi8(data, 0xFFFF, _mm512_cvtps_epi32(x));
+	for (int i = 0; i < 16; i++) std::cout << int(data[i]) << " ";
+	std::cout << std::endl;
+}

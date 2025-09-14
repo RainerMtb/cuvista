@@ -20,9 +20,11 @@
 
 #include "Image.hpp"
 
-class ImagePPM;
+class ImageBaseRgb;
 class ImageBGR;
 class ImageRGBA;
+class ImageBGRA;
+class ImageNV12;
 
 
 //image from CoreMat
@@ -31,9 +33,7 @@ class ImageYuvMatFloat : public im::ImageMatShared<float> {
 public:
 	ImageYuvMatFloat(int h, int w, int stride, float* y, float* u, float* v);
 
-	ImagePPM& toPPM(ImagePPM& dest, ThreadPoolBase& pool = defaultPool) const;
-
-	ImageRGBA& toRGBA(ImageRGBA& dest, ThreadPoolBase& pool = defaultPool) const;
+	void toBaseRgb(ImageBaseRgb& dest, ThreadPoolBase& pool = defaultPool) const;
 };
 
 
@@ -45,43 +45,7 @@ public:
 };
 
 
-//planar image in rgb
-class ImageRGBplanar : public im::ImageBase<unsigned char> {
-
-protected:
-	im::LocalColor<unsigned char> getLocalColor(const Color& color) const override;
-
-public:
-	//allocate frame given height, width, and stride
-	ImageRGBplanar(int h, int w);
-
-	//default constructor produces invalid image
-	ImageRGBplanar();
-};
-
-
-//packed rgba
-class ImageRGBA : public im::ImagePacked<unsigned char> {
-
-protected:
-	im::LocalColor<unsigned char> getLocalColor(const Color& color) const override;
-
-public:
-	ImageRGBA(int h, int w, int stride, unsigned char* data);
-
-	ImageRGBA(int h, int w, int stride);
-
-	ImageRGBA(int h, int w);
-
-	ImageRGBA();
-
-	void copyTo(ImageRGBA& dest, size_t r0, size_t c0, ThreadPoolBase& pool = defaultPool) const;
-
-	bool saveAsColorBMP(const std::string& filename) const;
-};
-
-
-//planar yuv 8bit image
+//planar YUV 8bit image
 class ImageYuv : public im::ImageBase<unsigned char> {
 
 protected:
@@ -96,44 +60,29 @@ public:
 
 	ImageYuv();
 
+	ImageType type() const override;
+
 	virtual unsigned char* data();
 
 	virtual const unsigned char* data() const;
 
 	ImageYuv copy() const;
 
-	//convert to NV12 format and copy pixeldata to provided array
-	void toNV12(std::vector<unsigned char>& nv12, size_t strideNV12, ThreadPoolBase& pool = defaultPool) const;
-
-	//convert to NV12 format and copy pixeldata to provided array
-	void toNV12(std::vector<unsigned char>& nv12, ThreadPoolBase& pool = defaultPool) const;
-
-	//convert to NV12 format and return pixeldata
-	std::vector<unsigned char> toNV12(size_t strideNV12) const;
-
 	//convert to NV12 format
-	std::vector<unsigned char> toNV12() const;
-
-	//convert NV12 array into YuvFrame
-	ImageYuv& fromNV12(const std::vector<unsigned char>& nv12, size_t strideNV12);
-
-	//convert to planar RGB format
-	ImageRGBplanar& toRGB(ImageRGBplanar& dest, ThreadPoolBase& pool = defaultPool) const;
-
-	ImageRGBplanar toRGB() const;
+	void toNV12(ImageNV12& dest, ThreadPoolBase& pool = defaultPool) const;
 
 	//convert to BGR format for bmp files
-	ImageBGR& toBGR(ImageBGR& dest, ThreadPoolBase& pool = defaultPool) const;
+	ImageBaseRgb& toBaseRgb(ImageBaseRgb& dest, ThreadPoolBase& pool = defaultPool) const;
 
 	ImageBGR toBGR() const;
 
-	ImagePPM& toPPM(ImagePPM& dest, ThreadPoolBase& pool = defaultPool) const;
-
-	ImagePPM toPPM() const;
-
-	ImageRGBA& toRGBA(ImageRGBA& dest, ThreadPoolBase& pool = defaultPool) const;
-
 	ImageRGBA toRGBA() const;
+
+	ImageBGRA toBGRA() const;
+
+	ImageNV12 toNV12(int strideNV12, ThreadPoolBase& pool = defaultPool) const;
+
+	ImageNV12 toNV12() const;
 
 	void readFromPGM(const std::string& filename);
 
@@ -142,45 +91,128 @@ public:
 };
 
 
-//packed 8bit in order BGR
-class ImageBGR : public im::ImagePacked<unsigned char> {
+//image as NV12 data
+class ImageNV12 : public im::ImageBase<unsigned char> {
+
+private:
+	size_t addrOffset(size_t idx, size_t r, size_t c) const;
+
+public:
+	ImageNV12(int h, int w, int stride);
+
+	ImageNV12();
+
+	ImageType type() const override;
+
+	unsigned char* addr(size_t idx, size_t r, size_t c) override;
+
+	const unsigned char* addr(size_t idx, size_t r, size_t c) const override;
+
+	void toYuv(ImageYuv& dest, ThreadPoolBase& pool = defaultPool) const;
+
+	ImageYuv toYuv() const;
+};
+
+
+//planer YUV in float
+class ImageYuvFloat : public im::ImageBase<float> {
 
 protected:
+	im::LocalColor<float> getLocalColor(const Color& color) const override;
+
+public:
+	ImageYuvFloat(int h, int w, int stride);
+
+	ImageYuvFloat();
+
+	ImageYuv& toYuv(ImageYuv& dest, ThreadPoolBase& pool = defaultPool) const;
+
+	ImageBaseRgb& toBaseRgb(ImageBaseRgb& dest, ThreadPoolBase& pool = defaultPool) const;
+
+	void toNV12(ImageNV12& dest, ThreadPoolBase& pool = defaultPool) const;
+};
+
+
+class ImageBaseRgb : public im::ImagePacked<unsigned char> {
+
+protected:
+	ImageBaseRgb(int h, int w, int stride, int numPlanes, int arraysize);
+
+	ImageBaseRgb(int h, int w, int stride, int numPlanes, unsigned char* data, int arraysize);
+
 	im::LocalColor<unsigned char> getLocalColor(const Color& color) const override;
 
 public:
+	virtual std::vector<int> indexRgba() const = 0;
+
+	void copyTo(ImageBaseRgb& dest, size_t r0 = 0, size_t c0 = 0, ThreadPoolBase& pool = defaultPool) const;
+
+	bool saveAsColorBMP(const std::string& filename) const;
+
+	bool saveAsPPM(const std::string& filename) const;
+};
+
+
+//packed rgba
+class ImageRGBA : public ImageBaseRgb {
+
+protected:
+	std::vector<int> indexRgba() const {
+		return { 0, 1, 2, 3 };
+	}
+
+public:
+	ImageRGBA(int h, int w, int stride, unsigned char* data);
+
+	ImageRGBA(int h, int w, int stride);
+
+	ImageRGBA(int h, int w);
+
+	ImageRGBA();
+
+	ImageType type() const override;
+};
+
+
+//packed bgra
+class ImageBGRA : public ImageBaseRgb {
+
+protected:
+	std::vector<int> indexRgba() const {
+		return { 2, 1, 0, 3 };
+	}
+
+public:
+	ImageBGRA(int h, int w, int stride, unsigned char* data);
+
+	ImageBGRA(int h, int w, int stride);
+
+	ImageBGRA(int h, int w);
+
+	ImageBGRA();
+
+	ImageType type() const override;
+};
+
+
+//packed 8bit in order BGR
+class ImageBGR : public ImageBaseRgb {
+
+protected:
+	std::vector<int> indexRgba() const {
+		return { 2, 1, 0 };
+	}
+
+public:
+	ImageBGR(int h, int w, int stride, unsigned char* data);
+
+	ImageBGR(int h, int w, int stride);
+
 	ImageBGR(int h, int w);
 
 	ImageBGR();
 
-	bool saveAsColorBMP(const std::string& filename) const;
-
 	ImageYuv toYUV() const;
 
 	static ImageBGR readFromBMP(const std::string& filename);
-};
-
-
-class ImagePPM : public im::ImagePacked<unsigned char> {
-
-public:
-	static inline int headerSize = 19;
-
-	ImagePPM(int h, int w);
-
-	ImagePPM();
-
-	const unsigned char* data() const override;
-
-	unsigned char* data() override;
-
-	size_t stridedSize() const override;
-
-	size_t stridedByteSize() const override;
-
-	const unsigned char* header() const;
-
-	bool saveAsPPM(const std::string& filename) const;
-
-	bool saveAsColorBMP(const std::string& filename) const;
 };

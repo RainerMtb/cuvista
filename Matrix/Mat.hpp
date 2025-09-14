@@ -538,7 +538,7 @@ public:
 		util::CRC64 crc64;
 		for (size_t r = 0; r < rows(); r++) {
 			for (size_t c = 0; c < cols(); c++) {
-				crc64.add(at(r, c));
+				crc64.addDirect(at(r, c));
 			}
 		}
 		return crc64.result();

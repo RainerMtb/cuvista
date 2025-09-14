@@ -106,14 +106,14 @@ void runSelfTest(util::MessagePrinter& out, std::vector<DeviceInfoBase*> deviceL
 		}
 		util::CRC64 crc64;
 		for (const PointResult& pr : frame.mResultPoints) {
-			crc64.add(pr.result); 
-			crc64.add(pr.idx);
-			crc64.add(pr.ix0);
-			crc64.add(pr.iy0);
-			crc64.add(pr.x);
-			crc64.add(pr.y);
-			crc64.add(pr.u);
-			crc64.add(pr.v);
+			crc64.addDirect(pr.result); 
+			crc64.addDirect(pr.idx);
+			crc64.addDirect(pr.ix0);
+			crc64.addDirect(pr.iy0);
+			crc64.addDirect(pr.x);
+			crc64.addDirect(pr.y);
+			crc64.addDirect(pr.u);
+			crc64.addDirect(pr.v);
 		}
 		if (uint64_t crc = crc64.result(); crc != crcResult) {
 			out.print("FAIL result ");

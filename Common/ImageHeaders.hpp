@@ -29,11 +29,6 @@
 
 namespace im {
 
-	template <class T> struct NullDeleter {
-
-		void operator () (T* ptr) const {}
-	};
-
 	class ImageHeader {
 
 	protected:
@@ -75,6 +70,19 @@ namespace im {
 
 	public:
 		PgmHeader(int w, int h) :
+			h { h },
+			w { w } {}
+
+		void writeHeader(std::ofstream& os) const override;
+	};
+
+	class PpmHeader : public ImageHeader {
+
+	protected:
+		int h, w;
+
+	public:
+		PpmHeader(int w, int h) :
 			h { h },
 			w { w } {}
 

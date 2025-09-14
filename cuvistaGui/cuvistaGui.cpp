@@ -25,7 +25,7 @@
 #include <QScrollBar>
 
 #include "cuvistaGui.h"
-#include "MessagePrinterGui.h"
+#include "CustomTextEdit.h"
 #include "SelfTest.hpp"
 #include "UserInputGui.hpp"
 #include "MovieFrame.hpp"
@@ -54,7 +54,8 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     mData.probeOpenCl();
     mData.collectDeviceInfo();
 
-    QStringList cmdArgs = QCoreApplication::arguments();
+    mInputImagePlaceholder.fill(Qt::transparent);
+    ui.imageInput->setImage(mInputImagePlaceholder);
 
     //modes list
     ui.comboMode->addItem(QString("Combined - Single Pass"));
@@ -115,12 +116,12 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     ui.comboImageType->addItem("JPG", QVariant::fromValue(OutputType::SEQUENCE_JPG));
 
     //limits
-    ui.spinRadius->setMinimum(mData.limits.radsecMin);
-    ui.spinRadius->setMaximum(mData.limits.radsecMax);
-    ui.spinZoomMin->setMinimum(mData.limits.imZoomMin * 100 - 100);
-    ui.spinZoomMin->setMaximum(mData.limits.imZoomMax * 100 - 100);
-    ui.spinZoomMax->setMinimum(mData.limits.imZoomMin * 100 - 100);
-    ui.spinZoomMax->setMaximum(mData.limits.imZoomMax * 100 - 100);
+    ui.spinRadius->setMinimum(defaults.radsecMin);
+    ui.spinRadius->setMaximum(defaults.radsecMax);
+    ui.spinZoomMin->setMinimum(defaults.imZoomMin * 100 - 100);
+    ui.spinZoomMin->setMaximum(defaults.imZoomMax * 100 - 100);
+    ui.spinZoomMax->setMinimum(defaults.imZoomMin * 100 - 100);
+    ui.spinZoomMax->setMaximum(defaults.imZoomMax * 100 - 100);
 
     auto fcnEnable = [&] (Qt::CheckState state) { ui.spinZoomMax->setEnabled(state == Qt::CheckState::Checked); };
     connect(ui.chkDynamicZoom, &QCheckBox::checkStateChanged, this, fcnEnable);
@@ -168,6 +169,7 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
 
     //file open via drop event
     connect(ui.imageInput, &ImageLabelInput::fileDropped, this, &cuvistaGui::addInputFile);
+    connect(ui.texInput, &DropTextEdit::fileDropped, this, &cuvistaGui::addInputFile);
 
     //file for reading
     auto fcnOpenFile = [&] () {
@@ -178,6 +180,7 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
 
     //load files from command line argument
     //load input file
+    QStringList cmdArgs = QCoreApplication::arguments();
     if (cmdArgs.size() > 1) {
         addInputFile(cmdArgs.at(1));
     }
@@ -213,12 +216,12 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
 
     //other settings
     ui.chkOverwrite->setChecked(mSettings.value("qt/overwrite", false).toBool());
-    ui.spinRadius->setValue(mSettings.value("qt/radius", mData.radsec).toDouble());
-    ui.spinZoomMin->setValue(mSettings.value("qt/zoom/min", std::round(mData.zoomMin * 100 - 100)).toInt());
-    ui.spinZoomMax->setValue(mSettings.value("qt/zoom/max", std::round(mData.zoomMax * 100 - 100)).toInt());
+    ui.spinRadius->setValue(mSettings.value("qt/radius", defaults.radsec).toDouble());
+    ui.spinZoomMin->setValue(mSettings.value("qt/zoom/min", std::round(defaults.zoomMin * 100 - 100)).toInt());
+    ui.spinZoomMax->setValue(mSettings.value("qt/zoom/max", std::round(defaults.zoomMax * 100 - 100)).toInt());
     ui.chkDynamicZoom->setChecked(mSettings.value("qt/zoom/dynamic", true).toBool());
     ui.chkFrameLimit->setChecked(mSettings.value("qt/limit/enable", false).toBool());
-    ui.spinFrameLimit->setValue(mSettings.value("qt/limit/value", 500).toInt());
+    ui.spinFrameLimit->setValue(mSettings.value("qt/limit/value", defaults.frameLimit).toInt());
 }
 
 //-------------------------
@@ -226,6 +229,7 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
 //-------------------------
 
 void cuvistaGui::setInputFile(const QString& inputPath) {
+    if (inputPath.isEmpty()) return;
     //qDebug() << "input" << inputPath;
     ui.comboAudioTrack->clear();
     ui.comboAudioTrack->addItem("No Audio");
@@ -237,31 +241,33 @@ void cuvistaGui::setInputFile(const QString& inputPath) {
         mReader.open(inputPath.toStdString());
         mInputYUV = ImageYuv(mReader.h, mReader.w);
 
-        mReader.read(mInputYUV); //read first image
+        //read first image
+        mReader.read(mInputYUV);
 
         if (errorLogger().hasNoError()) {
-            mReader.read(mInputYUV); //try to read again for second image
-        }
+            //try to read again for second image
+            mReader.read(mInputYUV);
 
-        if (errorLogger().hasNoError()) {
-            mInputReady = true;
-            seek(0.1);
+            //set up converter to BGR for display in UI
+            mInputBGR = ImageBGR(mReader.h, mReader.w);
+            mInputImage = QImage(mInputBGR.data(), mReader.w, mReader.h, mReader.w * 3ull, QImage::Format_BGR888);
+            updateInputImage();
         }
 
         if (errorLogger().hasError()) {
             throw AVException(errorLogger().getErrorMessage());
+
+        } else {
+            mInputReady = true;
         }
 
         //info about streams
         std::string str;
         for (StreamContext& sc : mReader.mInputStreams) {
             StreamInfo info = sc.inputStreamInfo();
-            str += std::format("- stream {}\ntype: {}, codec: {}, duration: {}\n", 
-                sc.inputStream->index, info.streamType, info.codec, info.durationString);
+            str += info.inputStreamSummary();
             if (sc.inputStream->index == mReader.videoStream->index) {
-                std::string frameCount = mReader.frameCount == 0 ? "unknown" : std::to_string(mReader.frameCount);
-                str += std::format("video {} x {} px @{:.3f} fps ({}:{})\nvideo frames: {}\n",
-                    mReader.w, mReader.h, mReader.fps(), mReader.fpsNum, mReader.fpsDen, frameCount);
+                str += mReader.videoStreamSummary();
             }
             if (info.mediaType == AVMEDIA_TYPE_AUDIO) {
                 QString qstr = qformat("Track {}: {}", sc.inputStream->index, info.codec);
@@ -269,7 +275,8 @@ void cuvistaGui::setInputFile(const QString& inputPath) {
             }
         }
 
-        ui.comboAudioTrack->setCurrentIndex(ui.comboAudioTrack->count() > 1 ? 1 : 0);
+        seek(0.1);
+        ui.comboAudioTrack->setCurrentIndex(ui.comboAudioTrack->count() > 1);
         ui.labelStatus->setText(qformat("Version {}", CUVISTA_VERSION));
         ui.texInput->setPlainText(QString::fromStdString(str).trimmed());
 
@@ -308,7 +315,8 @@ void cuvistaGui::seek(double frac) {
 }
 
 void cuvistaGui::updateInputImage() {
-    ui.imageInput->setImage(mInputYUV);
+    mInputYUV.toBaseRgb(mInputBGR);
+    ui.imageInput->setImage(mInputImage);
 }
 
 //-------------------------
@@ -590,25 +598,24 @@ void InfoDialog::closeEvent(QCloseEvent* event) {
 
 //reset gui options to defaults
 void cuvistaGui::resetGui() {
-    setBackgroundColor(QColor::fromRgb(0, 150, 0));
-
-    if (ui.comboInputFile->count() > 0) {
-        QString item = ui.comboInputFile->currentText();
-        ui.comboInputFile->insertItem(0, item);
-        ui.comboInputFile->setCurrentIndex(0);
-        while (ui.comboInputFile->count() > 1) ui.comboInputFile->removeItem(1);
-    }
+    setBackgroundColor(QColor::fromRgb(defaults.bgColorRed, defaults.bgColorGreen, defaults.bgColorBlue));
 
     mPlayerWindow->move(50, 50);
     mProgressWindow->resize(640, 480);
 
     ui.chkOverwrite->setChecked(false);
-    ui.spinRadius->setValue(0.5);
-    ui.spinZoomMin->setValue(5);
-    ui.spinZoomMax->setValue(15);
+    ui.spinRadius->setValue(defaults.radsec);
+    ui.spinZoomMin->setValue(defaults.zoomMin * 100.0 - 100.0);
+    ui.spinZoomMax->setValue(defaults.zoomMin * 100.0 - 100.0);
     ui.chkDynamicZoom->setChecked(true);
     ui.chkFrameLimit->setChecked(false);
-    ui.spinFrameLimit->setValue(500);
+    ui.spinFrameLimit->setValue(defaults.frameLimit);
+
+    mReader.close();
+    ui.texInput->clear();
+    ui.comboInputFile->clear();
+    ui.imageInput->setImage(mInputImagePlaceholder);
+    ui.inputPosition->setValue(0.0);
 }
 
 //destructor stores settings
@@ -638,8 +645,14 @@ cuvistaGui::~cuvistaGui() {
     mSettings.setValue("qt/limit/value", ui.spinFrameLimit->value());
 
     //recent files
-    for (int idx = 0; idx < 6; idx++) {
+    int idx = 0;
+    for (; idx < ui.comboInputFile->count(); idx++) {
         QString key = QString("qt/input%1").arg(idx);
-        mSettings.setValue(key, ui.comboInputFile->itemText(idx));
+        QString file = ui.comboInputFile->itemText(idx);
+        mSettings.setValue(key, file);
+    }
+    for (; idx < 6; idx++) {
+        QString key = QString("qt/input%1").arg(idx);
+        mSettings.setValue(key, "");
     }
 }

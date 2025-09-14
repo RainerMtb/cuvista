@@ -16,25 +16,18 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
-#include "ImageLabel.h"
+#include "CustomImageLabel.h"
 #include <QDebug>
 #include <QDrag>
 #include <QMimeData>
+#include <QMouseEvent>
 
-ImageLabel::ImageLabel(QWidget* parent) : 
-    QLabel(parent) 
-{
-    pm = QPixmap(100, 100);
-    pm.fill(Qt::transparent);
-}
+ImageLabel::ImageLabel(QWidget* parent) :
+    QLabel(parent)
+{}
 
 void ImageLabel::resizePixmap() {
     QLabel::setPixmap(pm.scaled(width(), height(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
-}
-
-void ImageLabel::setImage(const ImagePPM& ppm) {
-    pm.loadFromData(ppm.data(), ppm.stridedSize(), "PPM");
-    resizePixmap();
 }
 
 void ImageLabel::setImage(const QPixmap& pm) {
@@ -44,10 +37,6 @@ void ImageLabel::setImage(const QPixmap& pm) {
 
 void ImageLabel::setImage(QImage im) {
     setImage(QPixmap::fromImage(im));
-}
-
-void ImageLabel::setImage(const ImageYuv& im) {
-    setImage(QImage(im.toBGR().data(), im.w, im.h, im.w * 3ull, QImage::Format_BGR888));
 }
 
 void ImageLabel::resizeEvent(QResizeEvent* event) {
@@ -67,7 +56,8 @@ void ImageLabelInput::mousePressEvent(QMouseEvent* event) {
 
 void ImageLabelInput::dragEnterEvent(QDragEnterEvent* event) {
     if (event->mimeData()->hasUrls()) {
-        event->acceptProposedAction();
+        event->setDropAction(Qt::DropAction::LinkAction);
+        event->accept();
     }
 }
 
@@ -75,7 +65,7 @@ void ImageLabelInput::dropEvent(QDropEvent* event) {
     if (event->mimeData()->hasUrls()) {
         QUrl url = event->mimeData()->urls().first();
         QString str = url.toLocalFile();
-        qDebug() << "drop " << str;
+        //qDebug() << "drop " << str;
         fileDropped(str);
     }
 }

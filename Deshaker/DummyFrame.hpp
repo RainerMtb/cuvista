@@ -33,9 +33,10 @@ public:
 	void computeStart(int64_t frameIndex, std::vector<PointResult>& results) override {};
 	void computeTerminate(int64_t frameIndex, std::vector<PointResult>& results) override {};
 	void outputData(int64_t frameIndex, const Affine2D& trf) override;
-	void getOutputYuv(int64_t frameIndex, ImageYuvData& image) override;
+	void getOutputYuv(int64_t frameIndex, ImageYuv& image) override;
 	void getOutputRgba(int64_t frameIndex, ImageRGBA& image) override;
-	void getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) override;
+	void getOutputBgra(int64_t frameIndex, ImageBGRA& image) override;
+	void getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) override;
 	Mat<float> getTransformedOutput() const override;
 	Mat<float> getPyramid(int64_t frameIndex) const override;
 	void getInput(int64_t frameIndex, ImageYuv& image) const override;

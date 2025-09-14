@@ -32,6 +32,7 @@ private:
 	void writePacketToFile(const NvPacket& nvpkt, bool terminate);
 	void writePacketsToFile(std::list<NvPacket> nvpkts, bool terminate);
 	void encodePackets();
+	ImageNV12 outputNV12;
 
 public:
 	CudaFFmpegWriter(MainData& data, MovieReader& reader);

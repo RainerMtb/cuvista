@@ -118,7 +118,7 @@ void cl::probeRuntime(OpenClInfo& info) {
 				//std::vector<cl_name_version> extensions = dev.getInfo<CL_DEVICE_EXTENSIONS_WITH_VERSION>(); //Missing before version 3.0.
 
 				//we have a valid device
-				DeviceInfoOpenCl devInfo(DeviceType::OPEN_CL, maxPixel);
+				DeviceInfoOpenCl devInfo(maxPixel);
 				devInfo.device = std::make_shared<Device>(dev);
 				devInfo.versionDevice = versionDevice;
 				devInfo.versionC = versionC;
@@ -138,7 +138,7 @@ void cl::probeRuntime(OpenClInfo& info) {
 
 //set up device to use
 void OpenClExecutor::init() {
-	assert(mDeviceInfo.type == DeviceType::OPEN_CL && "device type must be OpenCL here");
+	assert(mDeviceInfo.getType() == DeviceType::OPEN_CL && "device type must be OpenCL here");
 	const DeviceInfoOpenCl* devInfo = static_cast<const DeviceInfoOpenCl*>(&mDeviceInfo);
 
 	try {
@@ -221,6 +221,7 @@ void OpenClExecutor::init() {
 		clData.kernels.unsharp = Kernel(program, "unsharp");
 		clData.kernels.yuv8u_to_rgba = Kernel(program, "yuv8u_to_rgba");
 		clData.kernels.yuv32f_to_rgba = Kernel(program, "yuv32f_to_rgba");
+		clData.kernels.yuv32f_to_bgra = Kernel(program, "yuv32f_to_bgra");
 		clData.kernels.scrap = Kernel(program, "scrap");
 		clData.kernels.compute = Kernel(program, "compute");
 
@@ -404,7 +405,7 @@ void OpenClExecutor::outputData(int64_t frameIndex, const Affine2D& trf) {
 	}
 }
 
-void OpenClExecutor::getOutputYuv(int64_t frameIndex, ImageYuvData& image) {
+void OpenClExecutor::getOutputYuv(int64_t frameIndex, ImageYuv& image) {
 	try {
 		//convert to YUV444 for output
 		scale_32f8u_3(clData.out[4], clData.yuvOut, mData.cpupitch, clData);
@@ -434,7 +435,17 @@ void OpenClExecutor::getOutputRgba(int64_t frameIndex, ImageRGBA& image) {
 	}
 }
 
-void OpenClExecutor::getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) {
+void OpenClExecutor::getOutputBgra(int64_t frameIndex, ImageBGRA& image) {
+	try {
+		yuv_to_rgba(clData.kernels.yuv32f_to_bgra, clData.out[4], image.plane(0), clData, image.width(), image.height());
+		image.setIndex(frameIndex);
+
+	} catch (const Error& err) {
+		errorLogger().logError("OpenCL output error: ", err.what());
+	}
+}
+
+void OpenClExecutor::getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) {
 	throw std::runtime_error("not supported");
 }
 

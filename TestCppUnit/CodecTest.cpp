@@ -47,18 +47,17 @@ private:
 		NvEncoder nvenc(0);
 		nvenc.createEncoder(w, h, 10, 1, 5, crf, NV_ENC_CODEC_HEVC_GUID);
 
-		//set up a frame in nv12 format
 		ImageYuv inputFrame(h, w, nvenc.cudaPitch);
 		inputFrame.setColorPlane(0, y);
 		inputFrame.setColorPlane(1, u);
 		inputFrame.setColorPlane(2, v);
 		//inputFrame.writeText("test", 20, 20, 5, 5, im::TextAlign::TOP_LEFT);
 
-		size_t siz = 3LL * h * nvenc.cudaPitch / 2;
-		std::vector<unsigned char> inputNV12(siz);
-		inputFrame.toNV12(inputNV12, nvenc.cudaPitch);
+		//set up a frame in nv12 format
+		ImageNV12 inputNV12(h, w, nvenc.cudaPitch);
+		inputFrame.toNV12(inputNV12);
 		CUdeviceptr devptr = (CUdeviceptr) nvenc.getNextInputFramePtr();
-		res = cuMemcpyHtoD_v2(devptr, inputNV12.data(), siz);
+		res = cuMemcpyHtoD_v2(devptr, inputNV12.addr(0, 0, 0), inputNV12.sizeInBytes());
 		Assert::IsTrue(res == CUDA_SUCCESS, toWString(res).c_str());
 
 		//encode into packet
@@ -99,12 +98,12 @@ private:
 		ImageYuv outputFrame(h, w, nvenc.cudaPitch);
 		SwsContext* scaler = sws_getContext(w, h, ctx->pix_fmt, w, h, AV_PIX_FMT_YUV444P, SWS_BILINEAR, NULL, NULL, NULL);
 		uint8_t* frame_buffer[] = {(uint8_t*) outputFrame.plane(0), (uint8_t*) outputFrame.plane(1), (uint8_t*) outputFrame.plane(2), nullptr};
-		int stride = (int) nvenc.cudaPitch;
+		int stride = nvenc.cudaPitch;
 		int linesizes[] = { stride, stride, stride, 0 };
 		sws_scale(scaler, av_frame->data, av_frame->linesize, 0, av_frame->height, frame_buffer, linesizes);
 
-		//inputFrame.saveAsColorBMP("f:/test_in.bmp");
-		//outputFrame.saveAsColorBMP("f:/test_out.bmp");
+		//inputFrame.saveAsColorBMP("f:/input.bmp");
+		//outputFrame.saveAsColorBMP("f:/output.bmp");
 
 		//compare input and output
 		double avg = inputFrame.compareTo(outputFrame);

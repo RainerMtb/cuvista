@@ -16,19 +16,33 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
-#include "MessagePrinterGui.h"
+#pragma once
 
-void MessagePrinterGui::print(const std::string& str) {
-    appendText(QString::fromStdString(str));
-}
+#include <vector>
+#include <string>
 
-void MessagePrinterGui::printNewLine() {
-    appendText("\n");
-}
+enum class ImageType {
+	BASE,
+	YUV444,
+	NV12,
+	BGRA,
+	RGBA,
+	SHARED,
+	UNKNOWN,
+};
 
-void ScrollingTextEdit::appendText(const QString& str) {
-    //qDebug() << str;
-    QString qstr = toPlainText() + str;
-    setPlainText(qstr);
-    moveCursor(QTextCursor::End);
-}
+template <class T> class ImageData {
+public:
+	virtual T* addr(size_t idx, size_t r, size_t c) = 0;
+	virtual const T* addr(size_t idx, size_t r, size_t c) const = 0;
+	virtual int planes() const = 0;
+	virtual int height() const = 0;
+	virtual int width() const = 0;
+	virtual int strideInBytes() const = 0;
+	virtual int sizeInBytes() const = 0;
+	virtual std::vector<T> rawBytes() const = 0;
+	virtual ImageType type() const = 0;
+
+	virtual void setIndex(int64_t frameIndex) = 0;
+	virtual bool saveAsBMP(const std::string& filename, T scale = 1) const = 0;
+};

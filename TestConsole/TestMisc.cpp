@@ -251,7 +251,7 @@ void testSampler() {
 	std::vector<int> samples(4);
 
 	//std::shared_ptr<SamplerBase<int>> sampler = std::make_shared<Sampler<int, std::random_device>>();
-	std::shared_ptr<SamplerBase<int>> sampler = std::make_shared<Sampler<int, PseudoRandomSource>>();
+	std::shared_ptr<SamplerBase<int>> sampler = std::make_shared<UrbgSampler<int, PseudoRandomSource>>();
 
 	for (int i = 0; i < 3; i++) {
 		sampler->sample(data, samples);

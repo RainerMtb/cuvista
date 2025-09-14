@@ -78,13 +78,14 @@ class MovieFrame;
 
 class DeviceInfoBase {
 public:
-	DeviceType type;
 	std::vector<EncodingOption> encodingOptions;
 	int64_t maxPixel;
 
-	DeviceInfoBase(DeviceType type, int64_t maxPixel)
-		: type { type }, maxPixel { maxPixel } {}
+	DeviceInfoBase(int64_t maxPixel)
+		: maxPixel { maxPixel } 
+	{}
 
+	virtual DeviceType getType() const = 0;
 	virtual std::string getName() const = 0;
 	virtual std::string getNameShort() const = 0;
 	virtual std::shared_ptr<FrameExecutor> create(MainData& data, MovieFrame& frame) = 0;

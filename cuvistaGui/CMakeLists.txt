@@ -17,10 +17,9 @@ qt_add_executable(cuvistaGui
     player.cpp
     progress.cpp
     UserInputGui.cpp
-    ImageLabel.cpp
     ClickLabel.cpp
-    DoubleClickSlider.cpp
-    MessagePrinterGui.cpp
+    CustomImageLabel.cpp
+    CustomTextEdit.cpp
 )
 
 target_include_directories(cuvistaGui PRIVATE "${PROJECT_SOURCE_DIR}/Deshaker")

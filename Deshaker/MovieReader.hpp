@@ -48,6 +48,7 @@ public:
 	std::optional<std::string> ptsForFrameAsString(int64_t frameIndex);
 	std::optional<int64_t> ptsForFrameAsMillis(int64_t frameIndex);
 	double ptsForFrame(int64_t frameIndex);
+	std::string videoStreamSummary() const;
 
 protected:
 	int sideDataMaxSize = 20 * 1024 * 1024;

@@ -123,17 +123,6 @@ namespace winrt::cuvistaWinui::implementation {
         //select highest device, set encoding options
         comboDevice().SelectedIndex(siz - 1);
 
-        //load file when given as command line argument or when file was ddropped on the app icon
-        LPWSTR cmd = GetCommandLineW();
-        int numArgs;
-        LPWSTR* cmdArgs = CommandLineToArgvW(cmd, &numArgs);
-        if (numArgs > 1) {
-            std::filesystem::path fpath = cmdArgs[1];
-            if (std::filesystem::exists(fpath)) {
-                addInputFile(hstring(cmdArgs[1]));
-            }
-        }
-
         //set background color
         auto localValues = mLocalSettings.Values();
         uint8_t colorRed = localValues.Lookup(L"colorRed").try_as<uint8_t>().value_or(mData.backgroundColor.getChannel(0));
@@ -164,30 +153,68 @@ namespace winrt::cuvistaWinui::implementation {
         spinZoomMax().NumberFormatter(percentFormatter);
 
         //limits
-        spinRadius().Minimum(mData.limits.radsecMin);
-        spinRadius().Maximum(mData.limits.radsecMax);
-        spinZoomMin().Minimum(mData.limits.imZoomMin - 1.0);
-        spinZoomMin().Maximum(mData.limits.imZoomMax - 1.0);
-        spinZoomMax().Minimum(mData.limits.imZoomMin - 1.0);
-        spinZoomMax().Maximum(mData.limits.imZoomMax - 1.0);
+        spinRadius().Minimum(defaults.radsecMin);
+        spinRadius().Maximum(defaults.radsecMax);
+        spinZoomMin().Minimum(defaults.imZoomMin - 1.0);
+        spinZoomMin().Maximum(defaults.imZoomMax - 1.0);
+        spinZoomMax().Minimum(defaults.imZoomMin - 1.0);
+        spinZoomMax().Maximum(defaults.imZoomMax - 1.0);
 
-        /*
-        * ---------------------------
-        */
+        //load recent files list without opening files
+        for (int idx = 0; idx < 6; idx++) {
+            hstring id = L"input" + to_hstring(idx);
+            hstring recentFile = localValues.Lookup(id).try_as<hstring>().value_or(L"");
+            if (recentFile.empty() == false) comboInputFile().Items().Append(box_value(recentFile));
+        }
 
-        int w = 700;
-        int h = 800;
-        SizeInt32 rect = { w, h };
-        AppWindow().Resize(rect);
+        //load file when given as command line argument or when file was dropped on the app icon
+        LPWSTR cmd = GetCommandLineW();
+        int numArgs;
+        LPWSTR* cmdArgs = CommandLineToArgvW(cmd, &numArgs);
+        if (numArgs > 1) {
+            std::filesystem::path fpath = cmdArgs[1];
+            if (std::filesystem::exists(fpath)) {
+                addInputFile(hstring(cmdArgs[1]));
+            }
+        }
 
+        //stored settings
+        int windowX = localValues.Lookup(L"windowX").try_as<int>().value_or(50);
+        int windowY = localValues.Lookup(L"windowY").try_as<int>().value_or(50);
+        int windowWidth = localValues.Lookup(L"windowWidth").try_as<int>().value_or(700);
+        int windowHeight = localValues.Lookup(L"windowHeight").try_as<int>().value_or(800);
+        AppWindow().MoveAndResize({ windowX, windowY, windowWidth, windowHeight });
+
+        //min size
         OverlappedPresenter op = AppWindow().Presenter().as<OverlappedPresenter>();
-        op.PreferredMinimumWidth(w);
-        op.PreferredMinimumHeight(h);
+        op.PreferredMinimumWidth(700);
+        op.PreferredMinimumHeight(700);
 
-        texInput().Text(to_hstring("sfsdf \nsdfrgfd \ngdfgdf gdf \ngdfgd\n sfsdfs\nssfsd sdfsd sdf\n sdfqgerh \nerhdehd\ndffdgd\ndfgfdg\ndfgfdg"));
-
-        int posx = localValues.Lookup(L"posx").try_as<int>().value_or(10);
+        //more settings
+        chkOverwrite().IsChecked(localValues.Lookup(L"overwrite").try_as<bool>().value_or(false));
+        spinRadius().Value(localValues.Lookup(L"radius").try_as<double>().value_or(defaults.radsec));
+        spinZoomMin().Value(localValues.Lookup(L"zoomMin").try_as<double>().value_or(defaults.zoomMin - 1.0));
+        spinZoomMax().Value(localValues.Lookup(L"zoomMax").try_as<double>().value_or(defaults.zoomMax - 1.0));
+        chkDynamicZoom().IsChecked(localValues.Lookup(L"zoomDynamic").try_as<bool>().value_or(true));
+        chkFrameLimit().IsChecked(localValues.Lookup(L"limitEnabled").try_as<bool>().value_or(false));
+        spinFrameLimit().Value(localValues.Lookup(L"limitValue").try_as<double>().value_or(defaults.frameLimit));
     }
+
+    void MainWindow::imageInputLoaded(const IInspectable& sender, const RoutedEventArgs& args) {
+        //debugPrint("image loaded");
+        //mInputImageSource.SetBitmapAsync(mInputImageBitmapPlaceholder);
+        //imageInput().Source(mInputImageSource);
+        imageInput().Source(mInputImageBitmapPlaceholder);
+    }
+
+    void MainWindow::seek(double frac) {
+        //debugPrint("seek " + std::to_string(frac));
+        if (mInputReady && mReader.seek(frac) && mReader.read(mInputYUV)) {
+            updateInputImage();
+            inputPosition().Value(frac * 100.0);
+        }
+    }
+
 
     //-------------------------------------------------------------------------
     //-------------------- Event Handlers -------------------------------------
@@ -228,6 +255,7 @@ namespace winrt::cuvistaWinui::implementation {
         //debugPrint("ok");
         setBackgroundColor(colorPicker().Color());
         colorFlyout().Hide();
+        radioColor().IsChecked(true);
     }
 
     void MainWindow::btnColorCancel(const IInspectable& sender, const RoutedEventArgs& args) {
@@ -237,20 +265,14 @@ namespace winrt::cuvistaWinui::implementation {
 
     void MainWindow::lblColorClick(const IInspectable& sender, const Input::TappedRoutedEventArgs& args) {
         //debugPrint("color picker");
-        colorPicker().Color(mColor);
+        colorPicker().Color(mBackgroundColor);
         Controls::Primitives::FlyoutBase::ShowAttachedFlyout(sender.as<FrameworkElement>());
     }
 
     void MainWindow::imageBackgroundClick(const IInspectable& sender, const Input::TappedRoutedEventArgs& args) {
         winrt::Windows::Foundation::Point p = args.GetPosition(imageBackground());
-        double fraction = 100.0 * p.X / imageBackground().ActualWidth();
-        debugPrint("seek " + std::to_string(fraction));
-        inputPosition().Value(fraction);
-    }
-
-    void MainWindow::dynZoomClick(const IInspectable& sender, const RoutedEventArgs& args) {
-        //debugPrint("dynamic zoom");
-        spinZoomMax().IsEnabled(chkDynamicZoom().IsChecked().GetBoolean());
+        double fraction = 1.0 * p.X / imageBackground().ActualWidth();
+        seek(fraction);
     }
 
     winrt::fire_and_forget MainWindow::btnInfoClick(const IInspectable& sender, const RoutedEventArgs& args) {
@@ -287,10 +309,6 @@ namespace winrt::cuvistaWinui::implementation {
         //debugPrint("done");
     }
 
-    void MainWindow::btnResetClick(const IInspectable& sender, const RoutedEventArgs& args) {
-
-    }
-
     void MainWindow::btnInfoTestClick(const IInspectable& sender, const RoutedEventArgs& args) {
         btnInfoTest().IsEnabled(false);
         mFuture = std::async(std::launch::async, runSelfTest, std::ref(*this), mData.deviceList);
@@ -321,7 +339,69 @@ namespace winrt::cuvistaWinui::implementation {
     //-------------------------------------------------------------------------
 
     void MainWindow::setInputFile(const IInspectable& sender, const Controls::SelectionChangedEventArgs& args) {
-        debugPrint("set input");
+        hstring inputPath = L"";
+        if (args.AddedItems().Size() > 0) {
+            inputPath = args.AddedItems().First().Current().as<hstring>();
+        }
+        if (inputPath.empty()) {
+            return;
+        }
+        debugPrint(L"set input '" + inputPath + L"'");
+
+        mInputReady = false;
+
+        try {
+            mReader.close();
+            errorLogger().clearErrors();
+            mReader.open(to_string(inputPath));
+            mInputYUV = ImageYuv(mReader.h, mReader.w);
+
+            mReader.read(mInputYUV); //read first image
+
+            if (errorLogger().hasNoError()) {
+                mReader.read(mInputYUV); //try to read again for second image
+                mInputImageBitmap = Media::Imaging::WriteableBitmap(mReader.w, mReader.h);
+                Windows::Storage::Streams::IBuffer pixelBuffer = mInputImageBitmap.PixelBuffer();
+                mInputBGRA = ImageBGRA(mReader.h, mReader.w, pixelBuffer.Length() / mReader.h, pixelBuffer.data());
+                imageInput().Source(mInputImageBitmap);
+                updateInputImage();
+            }
+
+            if (errorLogger().hasError()) {
+                throw AVException(errorLogger().getErrorMessage());
+
+            } else {
+                mInputReady = true;
+            }
+
+            //info about streams
+            std::string str;
+            for (StreamContext& sc : mReader.mInputStreams) {
+                str += sc.inputStreamInfo().inputStreamSummary();
+                if (sc.inputStream->index == mReader.videoStream->index) {
+                    str += mReader.videoStreamSummary();
+                }
+            }
+            size_t pos = str.size() - 1;
+            while (pos > 0 && str[pos] == '\n') {
+                str[pos] = '\0';
+                pos--;
+            }
+
+            seek(0.1);
+            lblStatus().Text(hformat("Version {}", CUVISTA_VERSION));
+            texInput().Text(to_hstring(str));
+
+        } catch (const AVException& ex) {
+            imageInput().Source(imageError().Source());
+            lblStatus().Text(to_hstring(ex.what()));
+            texInput().Text(L"");
+        }
+    }
+
+    void MainWindow::updateInputImage() {
+        mInputYUV.toBaseRgb(mInputBGRA);
+        mInputImageBitmap.Invalidate();
     }
 
     //-------------------------------------------------------------------------
@@ -348,7 +428,7 @@ namespace winrt::cuvistaWinui::implementation {
 
     void MainWindow::addInputFile(hstring file) {
         if (file.size() > 0) {
-            debugPrint(L"open file '" + file + L"'");
+            //debugPrint(L"add file '" + file + L"'");
             auto item = winrt::box_value(file);
             uint32_t idx;
             bool isFound = comboInputFile().Items().IndexOf(item, idx);
@@ -364,25 +444,82 @@ namespace winrt::cuvistaWinui::implementation {
     }
 
     void MainWindow::setBackgroundColor(Windows::UI::Color color) {
-        mColor = color;
-        Media::SolidColorBrush brush(mColor);
+        mBackgroundColor = color;
+        Media::SolidColorBrush brush(mBackgroundColor);
         imageBackground().Background(brush);
         lblColor().Background(brush);
     }
 
     void MainWindow::print(const std::string& str) {
-        appendText(str);
+        infoBoxAppendText(str);
     }
 
     void MainWindow::printNewLine() {
-        appendText("\n");
+        infoBoxAppendText("\n");
     }
 
-    void MainWindow::appendText(std::string str) {
+    void MainWindow::infoBoxAppendText(std::string str) {
         mInfoBoxString = mInfoBoxString + to_hstring(str);
         mDispatcher.TryEnqueue([&, str = mInfoBoxString] {
             infoBox().Text(str);
             infoScroller().ScrollToVerticalOffset(infoScroller().ScrollableHeight());
         });
+    }
+
+    void MainWindow::btnResetClick(const IInspectable& sender, const RoutedEventArgs& args) {
+        setBackgroundColor(Windows::UI::ColorHelper::FromArgb(255, defaults.bgColorRed, defaults.bgColorGreen, defaults.bgColorBlue));
+
+        chkOverwrite().IsChecked(false);
+        spinRadius().Value(defaults.radsec);
+        spinZoomMin().Value(defaults.zoomMin - 1.0);
+        spinZoomMax().Value(defaults.zoomMax - 1.0);
+        chkDynamicZoom().IsChecked(true);
+        chkFrameLimit().IsChecked(false);
+        spinFrameLimit().Value(defaults.frameLimit);
+
+        mReader.close();
+        texInput().Text(L"");
+        comboInputFile().Items().Clear();
+        inputPosition().Value(0.0);
+        imageInput().Source(mInputImageBitmapPlaceholder);
+    }
+
+    //-------------------------------------------------------------------------
+    //-------------------- Destructor -----------------------------------------
+    //-------------------------------------------------------------------------
+
+    void MainWindow::windowClosedEvent(const IInspectable& sender, const WindowEventArgs& args) {
+        //debugPrint("closed");
+        auto localValues = mLocalSettings.Values();
+        localValues.Insert(L"colorRed", box_value(mBackgroundColor.R));
+        localValues.Insert(L"colorGreen", box_value(mBackgroundColor.G));
+        localValues.Insert(L"colorBlue", box_value(mBackgroundColor.B));
+
+        PointInt32 pos = AppWindow().Position();
+        localValues.Insert(L"windowX", box_value(pos.X));
+        localValues.Insert(L"windowY", box_value(pos.Y));
+        SizeInt32 siz = AppWindow().Size();
+        localValues.Insert(L"windowWidth", box_value(siz.Width));
+        localValues.Insert(L"windowHeight", box_value(siz.Height));
+
+        localValues.Insert(L"overwrite", box_value(chkOverwrite().IsChecked()));
+        localValues.Insert(L"radius", box_value(spinRadius().Value()));
+        localValues.Insert(L"zoomMin", box_value(spinZoomMin().Value()));
+        localValues.Insert(L"zoomMax", box_value(spinZoomMax().Value()));
+        localValues.Insert(L"zoomDynamic", box_value(chkDynamicZoom().IsChecked()));
+        localValues.Insert(L"limitEnabled", box_value(chkFrameLimit().IsChecked()));
+        localValues.Insert(L"limitValue", box_value(spinFrameLimit().Value()));
+
+        Controls::ItemCollection recentFiles = comboInputFile().Items();
+        uint32_t idx = 0;
+        for (; idx < recentFiles.Size(); idx++) {
+            hstring id = L"input" + to_hstring(idx);
+            IInspectable file = recentFiles.GetAt(idx);
+            localValues.Insert(id, box_value(file));
+        }
+        for (; idx < 6; idx++) {
+            hstring id = L"input" + to_hstring(idx);
+            localValues.Insert(id, box_value(L""));
+        }
     }
 }

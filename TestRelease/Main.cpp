@@ -56,18 +56,18 @@ int main() {
 	}
 	
 	std::cout << "--- Short Runs ---" << std::endl;
-	run("-frames 0 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/00.mp4 -noheader -progress 0 -y");
-	run("-frames 1 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/00.mp4 -noheader -progress 0 -y");
-	run("-frames 2 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/00.mp4 -noheader -progress 0 -y");
-	run("-frames 3 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/00.mp4 -noheader -progress 0 -y");
-	run("-frames 40 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/00.mp4 -noheader -progress 0 -y");
-	run({ "-frames",  "40", "-i", "d:/VideoTest/example space.mp4", "-o", "d:/videoTest/out/00 space.mp4", "-noheader",  "-progress", "0", "-y" });
+	run("-frames 0 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/000.mp4 -noheader -progress 0 -y");
+	run("-frames 1 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/001.mp4 -noheader -progress 0 -y");
+	run("-frames 2 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/002.mp4 -noheader -progress 0 -y");
+	run("-frames 3 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/003.mp4 -noheader -progress 0 -y");
+	run("-frames 40 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/004.mp4 -noheader -progress 0 -y");
+	run({ "-frames",  "40", "-i", "d:/VideoTest/example space.mp4", "-o", "d:/videoTest/out/000 space.mp4", "-noheader",  "-progress", "0", "-y" });
 
-	run("-mode 1 -frames 0 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/00.mp4 -noheader -progress 0 -y");
-	run("-mode 1 -frames 1 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/00.mp4 -noheader -progress 0 -y");
-	run("-mode 1 -frames 2 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/00.mp4 -noheader -progress 0 -y");
-	run("-mode 1 -frames 3 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/00.mp4 -noheader -progress 0 -y");
-	run("-mode 1 -frames 40 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/00.mp4 -noheader -progress 0 -y");
+	run("-mode 1 -frames 0 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/005.mp4 -noheader -progress 0 -y");
+	run("-mode 1 -frames 1 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/006.mp4 -noheader -progress 0 -y");
+	run("-mode 1 -frames 2 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/007.mp4 -noheader -progress 0 -y");
+	run("-mode 1 -frames 3 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/008.mp4 -noheader -progress 0 -y");
+	run("-mode 1 -frames 40 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/009.mp4 -noheader -progress 0 -y");
 
 	std::cout << "--- Images ---" << std::endl;
 	run("-frames 10 -i d:/VideoTest/04.ts -resim d:/VideoTest/out/images/test%02d.jpg -progress 0 -y");
@@ -109,7 +109,15 @@ int main() {
 	run("-device 2 -stack 384:384 -i d:/VideoTest/06.mp4 -o d:/videoTest/out/06_stack.mp4 -noheader -progress 0");
 	run("-device 2 -i d:/VideoTest/01.mp4 -o null -flow d:/videoTest/out/flow.mp4 -noheader -progress 0");
 
+	std::cout << "--- Encode Nvenc ---" << std::endl;
+	run("-i d:/VideoTest/example.mp4 -o d:/videoTest/out/nvenc00.mp4 -device 0 -encoder nvenc -quiet");
+	run("-i d:/VideoTest/example.mp4 -o d:/videoTest/out/nvenc01.mp4 -device 1 -encoder nvenc -quiet");
+	
 	//-------------------------------------------------------------------------------
+
+	std::string ansiGreen = "\x1b[1;32m";
+	std::string ansiRed = "\x1b[1;31m";
+	std::string ansiClear = "\x1b[0m";
 
 	std::cout << "--- Check Equal Files ---" << std::endl;
 	std::vector<std::string> commands = {
@@ -119,53 +127,66 @@ int main() {
 		"-device 3 -i d:/VideoTest/02short.mp4 -o null -quiet"
 	};
 
-	uint64_t crcTrajectory = 0xcc66bbb8c0acc17c;
-	uint64_t crcFile = 0xa63021f0aec5d1f2;
-
 	for (size_t i = 0; i < commands.size(); i++) {
 		std::shared_ptr<RawMemoryStoreWriter> externalWriter = std::make_shared<RawMemoryStoreWriter>(250, false, true);
 		DeshakerResult result = run(commands[i], externalWriter);
 
 		util::CRC64 crc;
 		for (const TrajectoryItem& ti : result.trajectory) {
-			crc.add(ti.values.u);
-			crc.add(ti.values.v);
-			crc.add(ti.values.a);
-			crc.add(ti.smoothed.u);
-			crc.add(ti.smoothed.v);
-			crc.add(ti.smoothed.a);
-			crc.add(ti.sum.u);
-			crc.add(ti.sum.v);
-			crc.add(ti.sum.a);
-			crc.add(ti.isDuplicateFrame);
-			crc.add(ti.frameIndex);
-			crc.add(ti.zoom);
-			crc.add(ti.zoomRequired);
+			crc.addDirect(ti.values.u);
+			crc.addDirect(ti.values.v);
+			crc.addDirect(ti.values.a);
+			crc.addDirect(ti.smoothed.u);
+			crc.addDirect(ti.smoothed.v);
+			crc.addDirect(ti.smoothed.a);
+			crc.addDirect(ti.sum.u);
+			crc.addDirect(ti.sum.v);
+			crc.addDirect(ti.sum.a);
+			crc.addDirect(ti.isDuplicateFrame);
+			crc.addDirect(ti.frameIndex);
+			crc.addDirect(ti.zoom);
+			crc.addDirect(ti.zoomRequired);
 		}
 
 		{
-			bool match = crcTrajectory == crc;
-			std::string color = match ? "\x1b[1;32m" : "\x1b[1;31m";
-			std::cout << color << std::hex << "trajectory crc expected: " << crcTrajectory << ", actual crc: " << crc
-				<< std::boolalpha << ", crc match: " << match << "\x1b[0m" << std::endl;
-		}
-
-		util::CRC64 crcyuv;
-		for (const ImageYuv& image : externalWriter->outputFrames) {
-			for (int z = 0; z < 3; z++) {
-				for (int r = 0; r < image.h; r++) {
-					for (int c = 0; c < image.w; c++) {
-						crcyuv.add(image.at(z, r, c));
-					}
-				}
-			}
+			uint64_t crcExpected = 0xcc66bbb8c0acc17c;
+			bool match = crcExpected == crc;
+			std::string color = match ? ansiGreen : ansiRed;
+			std::cout << color << std::hex << "trajectory crc expected: " << crcExpected << ", actual crc: " << crc
+				<< std::boolalpha << ", crc match: " << match << ansiClear << std::endl;
 		}
 
 		{
-			bool match = crcFile == crcyuv;
-			std::string color = match ? "\x1b[1;32m" : "\x1b[1;31m";
-			std::cout << color << std::hex << "yuv file crc expected: " << crcFile << ", actual crc: " << crcyuv
-				<< std::boolalpha << ", crc match: " << match << "\x1b[0m" << std::endl;
+			//check yuv
+			uint64_t crcExpectedYuv = 0xa63021f0aec5d1f2;
+			util::CRC64 crcyuv;
+			for (const ImageYuv& image : externalWriter->outputFramesYuv) crcyuv.add(image);
+
+			bool match = crcExpectedYuv == crcyuv;
+			std::cout << (match ? ansiGreen : ansiRed) << std::hex << "output yuv expected: " << crcExpectedYuv << ", actual crc: " << crcyuv
+				<< std::boolalpha << ", crc match: " << match << ansiClear << std::endl;
+		}
+
+		{
+			//check rgba
+			uint64_t crcExpectedRgba = 0xf3fadbd45fd0fa72;
+			util::CRC64 crcrgba;
+			for (const ImageRGBA& image : externalWriter->outputFramesRgba) crcrgba.add(image);
+
+			bool match = crcExpectedRgba == crcrgba;
+			std::cout << (match ? ansiGreen : ansiRed) << std::hex << "output rgba expected: " << crcExpectedRgba << ", actual crc: " << crcrgba
+				<< std::boolalpha << ", crc match: " << match << ansiClear << std::endl;
+		}
+
+		{
+			//check bgra
+			uint64_t crcExpectedBgra = 0x27485038224bedab;
+			util::CRC64 crcbgra;
+			for (const ImageBGRA& image : externalWriter->outputFramesBgra) crcbgra.add(image);
+
+			bool match = crcExpectedBgra == crcbgra;
+			std::cout << (match ? ansiGreen : ansiRed) << std::hex << "output bgra expected: " << crcExpectedBgra << ", actual crc: " << crcbgra
+				<< std::boolalpha << ", crc match: " << match << ansiClear << std::endl;
 		}
 	}
 
@@ -184,20 +205,11 @@ int main() {
 
 		uint64_t crcExpected = 0xfbbb91f16571d7e5;
 		util::CRC64 crcOutput;
-		for (const ImageYuv& image : externalWriter->outputFrames) {
-			for (int z = 0; z < 3; z++) {
-				for (int r = 0; r < image.h; r++) {
-					for (int c = 0; c < image.w; c++) {
-						crcOutput.add(image.at(z, r, c));
-					}
-				}
-			}
-		}
+		for (const ImageYuv& image : externalWriter->outputFramesYuv) crcOutput.add(image);
 
 		bool match = crcExpected == crcOutput;
-		std::string color = match ? "\x1b[1;32m" : "\x1b[1;31m";
-		std::cout << color << std::hex << "yuv file crc expected: " << crcExpected << ", actual crc: " << crcOutput
-			<< std::boolalpha << ", crc match: " << match << "\x1b[0m" << std::dec << std::endl;
+		std::cout << (match ? ansiGreen : ansiRed) << std::hex << "yuv file crc expected: " << crcExpected << ", actual crc: " << crcOutput
+			<< std::boolalpha << ", crc match: " << match << ansiClear << std::dec << std::endl;
 	}
 
 	return 0;

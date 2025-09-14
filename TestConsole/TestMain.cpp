@@ -20,9 +20,8 @@
 
 int main() {
 	std::cout << "----------------------------" << std::endl << "TestMain:" << std::endl;
-	//imageOutput();
 	//qrdec();
-	//draw("f:/drawing.bmp"); 
+	draw("f:/drawing.bmp"); 
 	//filterCompare();
 	//matPerf();
 	//matTest();
@@ -50,9 +49,10 @@ int main() {
 	//testSampler();
 	//compareFramesPlatforms();
 	//avxCompute();
+	//avxTest();
 
 	//testZoom();
-	analyzeFrames();
+	//analyzeFrames();
 
 	//createTransformImages();
 }

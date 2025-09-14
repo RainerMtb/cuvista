@@ -228,7 +228,7 @@
   <customwidget>
    <class>ImageLabel</class>
    <extends>QLabel</extends>
-   <header>ImageLabel.h</header>
+   <header>CustomImageLabel.h</header>
   </customwidget>
  </customwidgets>
  <resources>

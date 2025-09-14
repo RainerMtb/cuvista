@@ -17,87 +17,73 @@
  */
 
 #include "Image.hpp"
+#include "ImageHeaders.hpp"
 #include "Util.hpp"
 #include "CharMap.hpp"
 
 #include <cmath>
+#include <cassert>
 #include <algorithm>
 #include <numeric>
 #include <map>
 
-template <class T> im::ImageBase<T>::ImageBase(int h, int w, int stride, int numPlanes) :
+using namespace im;
+
+template <class T> struct NullDeleter {
+	void operator () (T* ptr) const {}
+};
+
+template <class T> ImageBase<T>::ImageBase(int h, int w, int stride, int numPlanes) :
 	h { h },
 	w { w },
 	stride { stride },
 	numPlanes { numPlanes },
-	imageSize { 1ull * h * stride * numPlanes },
-	arrays { std::make_shared<T[]>(imageSize) } 
+	arraySizes { h * stride * numPlanes },
+	arrays { std::make_shared<T[]>(arraySizes[0])}
 {
 	assert(h >= 0 && w >= 0 && "invalid dimensions");
 	assert(stride >= w && "stride must be equal or greater to width");
 }
 
-template <class T> im::ImageBase<T>::ImageBase(int h, int w, int stride, int numPlanes, std::vector<std::shared_ptr<T[]>> arrays, size_t imageSize) :
+template <class T> ImageBase<T>::ImageBase(int h, int w, int stride, int numPlanes, std::vector<std::shared_ptr<T[]>> arrays, std::vector<int> arraySizes) :
 	h { h },
 	w { w },
 	stride { stride },
 	numPlanes { numPlanes },
-	imageSize { imageSize },
+	arraySizes { arraySizes },
 	arrays { arrays }
 {
 	assert(h >= 0 && w >= 0 && "invalid dimensions");
 	assert(stride >= w && "stride must be equal or greater to width");
 }
 
-template <class T> void im::ImageBase<T>::setPixel(size_t row, size_t col, std::vector<T> colors) {
+template <class T> ImageBase<T>::ImageBase() :
+	ImageBase(0, 0, 0, 0) 
+{}
+
+template <class T> ImageType ImageBase<T>::type() const {
+	return ImageType::BASE;
+}
+
+template <class T> void ImageBase<T>::setPixel(size_t row, size_t col, std::vector<T> colors) {
 	assert(numPlanes == colors.size() && "image plane count does not match number of color values");
 	for (int i = 0; i < numPlanes; i++) {
 		at(i, row, col) = colors[i];
 	}
 }
 
-template <class T> T* im::ImageBase<T>::addr(size_t idx, size_t r, size_t c) {
+template <class T> T* ImageBase<T>::addr(size_t idx, size_t r, size_t c) {
 	assert(r < h && "row index out of range");
 	assert(c < w && "column index out of range");
 	assert(idx < numPlanes && "plane index out of range");
 	return arrays[0].get() + idx * h * stride + r * stride + c;
 }
 
-template <class T> const T* im::ImageBase<T>::addr(size_t idx, size_t r, size_t c) const {
+template <class T> const T* ImageBase<T>::addr(size_t idx, size_t r, size_t c) const {
 	assert(r < h && "row index out of range");
 	assert(c < w && "column index out of range");
 	assert(idx < numPlanes && "plane index out of range");
 	return arrays[0].get() + idx * h * stride + r * stride + c;
-}
-
-template <class T> size_t im::ImageBase<T>::stridedSize() const {
-	return imageSize;
-}
-
-template <class T> size_t im::ImageBase<T>::stridedByteSize() const {
-	return stridedSize() * sizeof(T);
-}
-
-template <class T> uint64_t im::ImageBase<T>::crc() const {
-	util::CRC64 crc64;
-	for (size_t z = 0; z < numPlanes; z++) {
-		for (size_t r = 0; r < h; r++) {
-			for (size_t c = 0; c < w; c++) {
-				crc64.add(at(z, r, c));
-			}
-		}
-	}
-	return crc64.result();
-}
-
-template <> uint64_t im::ImageBase<unsigned char>::crc() const {
-	util::CRC64 crc64;
-	for (size_t z = 0; z < numPlanes; z++) {
-		for (size_t r = 0; r < h; r++) {
-			crc64.addBytes(addr(z, r, 0), w);
-		}
-	}
-	return crc64.result();
 }
 
 template <class T> T* im::ImageBase<T>::plane(size_t idx) {
@@ -108,53 +94,58 @@ template <class T> const T* im::ImageBase<T>::plane(size_t idx) const {
 	return addr(idx, 0, 0);
 }
 
-template <class T> int im::ImageBase<T>::planes() const {
+template <class T> uint64_t ImageBase<T>::crc() const {
+	util::CRC64 crc64;
+	return crc64.add(*this).result();
+}
+
+template <class T> int ImageBase<T>::planes() const {
 	return numPlanes;
 }
 
-template <class T> int im::ImageBase<T>::height() const {
+template <class T> int ImageBase<T>::height() const {
 	return h;
 }
 
-template <class T> int im::ImageBase<T>::width() const {
+template <class T> int ImageBase<T>::width() const {
 	return w;
 }
 
-template <class T> int im::ImageBase<T>::strideInBytes() const {
+template <class T> int ImageBase<T>::strideInBytes() const {
 	return stride * sizeof(T);
 }
 
-template <class T> void im::ImageBase<T>::setIndex(int64_t frameIndex) {
+template <class T> void ImageBase<T>::setIndex(int64_t frameIndex) {
 	index = frameIndex;
 }
 
 //access one pixel on plane idx and row / col
-template <class T> T& im::ImageBase<T>::at(size_t idx, size_t r, size_t c) {
+template <class T> T& ImageBase<T>::at(size_t idx, size_t r, size_t c) {
 	return *addr(idx, r, c);
 }
 
 //read access one pixel on plane idx and row / col
-template <class T> const T& im::ImageBase<T>::at(size_t idx, size_t r, size_t c) const {
+template <class T> const T& ImageBase<T>::at(size_t idx, size_t r, size_t c) const {
 	return *addr(idx, r, c);
 }
 
-template <class T> int im::ImageBase<T>::colorValue(T pixelValue) const {
+template <class T> int ImageBase<T>::colorValue(T pixelValue) const {
 	return pixelValue;
 }
 
-template <> int im::ImageBase<float>::colorValue(float pixelValue) const {
+template <> int ImageBase<float>::colorValue(float pixelValue) const {
 	return int(pixelValue * 255.0f);
 }
 
-template <> int im::ImageBase<double>::colorValue(double pixelValue) const {
+template <> int ImageBase<double>::colorValue(double pixelValue) const {
 	return int(pixelValue * 255.0);
 }
 
-template <class T> bool im::ImageBase<T>::operator == (const ImageBase<T>& other) const {
+template <class T> bool ImageBase<T>::operator == (const ImageBase<T>& other) const {
 	return compareTo(other) == 0.0;
 }
 
-template <class T> double im::ImageBase<T>::compareTo(const ImageBase<T>& other) const {
+template <class T> double ImageBase<T>::compareTo(const ImageBase<T>& other) const {
 	double out = nan("");
 	if (h == other.h && w == other.w) {
 		//count differences
@@ -181,11 +172,11 @@ template <class T> double im::ImageBase<T>::compareTo(const ImageBase<T>& other)
 	return out;
 }
 
-template <class T> im::LocalColor<T> im::ImageBase<T>::getLocalColor(const Color& color) const {
+template <class T> LocalColor<T> ImageBase<T>::getLocalColor(const Color& color) const {
 	return {};
 }
 
-template <class T> void im::ImageBase<T>::setColorPlane(int plane, T colorValue) {
+template <class T> void ImageBase<T>::setColorPlane(int plane, T colorValue) {
 	for (size_t r = 0; r < h; r++) {
 		for (size_t c = 0; c < w; c++) {
 			at(plane, r, c) = colorValue;
@@ -193,24 +184,25 @@ template <class T> void im::ImageBase<T>::setColorPlane(int plane, T colorValue)
 	}
 }
 
-template <class T> void im::ImageBase<T>::setColor(const Color& color) {
-	im::LocalColor<T> localColor = getLocalColor(color);
+template <class T> void ImageBase<T>::setColor(const Color& color) {
+	LocalColor<T> localColor = getLocalColor(color);
 	for (int z = 0; z < numPlanes; z++) {
 		setColorPlane(z, localColor.colorData[z]);
 	}
 }
 
-template <class T> void im::ImageBase<T>::yuvToRgb(ImageData<unsigned char>& dest, std::vector<int> planes, ThreadPoolBase& pool) const {
+template <class T> void ImageBase<T>::yuvToRgb(ImageData<unsigned char>& dest, const std::vector<int>& planes, ThreadPoolBase& pool) const {
 	assert(w == dest.width() && h == dest.height() && numPlanes <= dest.planes() && "dimensions mismatch");
 	auto func = [&] (size_t r) {
 		for (int c = 0; c < w; c++) {
 			yuv_to_rgb(at(0, r, c), at(1, r, c), at(2, r, c), dest.addr(planes[0], r, c), dest.addr(planes[1], r, c), dest.addr(planes[2], r, c));
+			if (planes.size() == 4) *dest.addr(planes[3], r, c) = 0xFF;
 		}
 	};
 	pool.addAndWait(func, 0, h);
 }
 
-template <class T> void im::ImageBase<T>::copyTo(ImageData<T>& dest, size_t r0, size_t c0, 
+template <class T> void ImageBase<T>::copyTo(ImageData<T>& dest, size_t r0, size_t c0, 
 	std::vector<int> srcPlanes, std::vector<int> destPlanes, ThreadPoolBase& pool) const {
 
 	assert(w + c0 <= dest.width() && h + r0 <= dest.height() && planes() == dest.planes() && "dimensions mismatch");
@@ -224,35 +216,35 @@ template <class T> void im::ImageBase<T>::copyTo(ImageData<T>& dest, size_t r0, 
 	dest.setIndex(index);
 }
 
-template <class T> void im::ImageBase<T>::copyTo(ImageData<T>& dest, std::vector<int> srcPlanes, std::vector<int> destPlanes, ThreadPoolBase& pool) const {
+template <class T> void ImageBase<T>::copyTo(ImageData<T>& dest, std::vector<int> srcPlanes, std::vector<int> destPlanes, ThreadPoolBase& pool) const {
 	copyTo(dest, 0, 0, srcPlanes, destPlanes, pool);
 }
 
-template <class T> void im::ImageBase<T>::copyTo(ImageData<T>& dest, size_t r0, size_t c0, ThreadPoolBase& pool) const {
+template <class T> void ImageBase<T>::copyTo(ImageData<T>& dest, size_t r0, size_t c0, ThreadPoolBase& pool) const {
 	std::vector<int> p(planes());
 	std::iota(p.begin(), p.end(), 0);
 	copyTo(dest, r0, c0, p, p, pool);
 }
 
-template <class T> void im::ImageBase<T>::copyTo(ImageData<T>& dest, ThreadPoolBase& pool) const {
+template <class T> void ImageBase<T>::copyTo(ImageData<T>& dest, ThreadPoolBase& pool) const {
 	copyTo(dest, 0, 0, pool);
 }
 
 
 //------------------------
-//write text
+// write text
 //------------------------
 
-template <class T> void im::ImageBase<T>::writeText(std::string_view text, int x, int y) {
+template <class T> void ImageBase<T>::writeText(std::string_view text, int x, int y) {
 	int scale = std::min(w, h) / 600 + 1;
 	writeText(text, x, y, scale, scale, TextAlign::BOTTOM_LEFT);
 }
 
-template <class T> void im::ImageBase<T>::writeText(std::string_view text, int x, int y, int sx, int sy, TextAlign alignment) {
+template <class T> void ImageBase<T>::writeText(std::string_view text, int x, int y, int sx, int sy, TextAlign alignment) {
 	writeText(text, x, y, sx, sy, alignment, Color::WHITE, Color::BLACK_SEMI);
 }
 
-template <class T> void im::ImageBase<T>::writeText(std::string_view text, int x, int y, int sx, int sy,
+template <class T> void ImageBase<T>::writeText(std::string_view text, int x, int y, int sx, int sy,
 	TextAlign alignment, const Color& fg, const Color& bg) {
 
 	//compute alignment
@@ -300,10 +292,10 @@ template <class T> void im::ImageBase<T>::writeText(std::string_view text, int x
 
 
 //------------------------
-//drawing funtions
+// drawing funtions
 //------------------------
 
-template <class T> void im::ImageBase<T>::plot(int x, int y, double a, const LocalColor<T>& localColor) {
+template <class T> void ImageBase<T>::plot(int x, int y, double a, const LocalColor<T>& localColor) {
 	double alpha = a * localColor.alpha;
 	if (x >= 0 && x < w && y >= 0 && y < h) {
 		for (int z = 0; z < numPlanes && z < localColor.colorData.size(); z++) {
@@ -313,34 +305,34 @@ template <class T> void im::ImageBase<T>::plot(int x, int y, double a, const Loc
 	}
 }
 
-template <class T> void im::ImageBase<T>::plot(double x, double y, double a, const LocalColor<T>& localColor) {
+template <class T> void ImageBase<T>::plot(double x, double y, double a, const LocalColor<T>& localColor) {
 	plot(int(x), int(y), a, localColor);
 }
 
-template <class T> void im::ImageBase<T>::plot(int x, int y, double a, const Color& color) {
+template <class T> void ImageBase<T>::plot(int x, int y, double a, const Color& color) {
 	plot(x, y, a, getLocalColor(color));
 }
 
-template <class T> void im::ImageBase<T>::plot(double x, double y, double a, const Color& color) {
+template <class T> void ImageBase<T>::plot(double x, double y, double a, const Color& color) {
 	plot(int(x), int(y), a, getLocalColor(color));
 }
 
-template <class T> void im::ImageBase<T>::plot4(double cx, double cy, double dx, double dy, double a, const LocalColor<T>& localColor) {
+template <class T> void ImageBase<T>::plot4(double cx, double cy, double dx, double dy, double a, const LocalColor<T>& localColor) {
 	plot(cx + dx, cy + dy, a, localColor);
 	plot(cx - dx, cy + dy, a, localColor);
 	plot(cx + dx, cy - dy, a, localColor);
 	plot(cx - dx, cy - dy, a, localColor);
 }
 
-template <class T> double im::ImageBase<T>::fpart(double d) {
+template <class T> double ImageBase<T>::fpart(double d) {
 	return d - floor(d);
 }
 
-template <class T> double im::ImageBase<T>::rfpart(double d) {
+template <class T> double ImageBase<T>::rfpart(double d) {
 	return 1.0 - fpart(d);
 }
 
-template <class T> void im::ImageBase<T>::drawLine(double x0, double y0, double x1, double y1, const Color& color, double alpha) {
+template <class T> void ImageBase<T>::drawLine(double x0, double y0, double x1, double y1, const Color& color, double alpha) {
 	/*
 	Xiaolin Wu's line algorithm
 	https://en.wikipedia.org/wiki/Xiaolin_Wu%27s_line_algorithm
@@ -412,7 +404,7 @@ template <class T> void im::ImageBase<T>::drawLine(double x0, double y0, double 
 	}
 }
 
-template <class T> void im::ImageBase<T>::drawEllipse(double cx, double cy, double rx, double ry, const Color& color, bool fill) {
+template <class T> void ImageBase<T>::drawEllipse(double cx, double cy, double rx, double ry, const Color& color, bool fill) {
 	double rx2 = util::sqr(rx);
 	double ry2 = util::sqr(ry);
 	double h = sqrt(rx2 + ry2);
@@ -460,15 +452,15 @@ template <class T> void im::ImageBase<T>::drawEllipse(double cx, double cy, doub
 	}
 }
 
-template <class T> void im::ImageBase<T>::drawCircle(double cx, double cy, double r, const Color& color, bool fill) {
+template <class T> void ImageBase<T>::drawCircle(double cx, double cy, double r, const Color& color, bool fill) {
 	drawEllipse(cx, cy, r, r, color, fill);
 }
 
-template <class T> void im::ImageBase<T>::drawMarker(double cx, double cy, const Color& color, double radius, MarkerType type) {
+template <class T> void ImageBase<T>::drawMarker(double cx, double cy, const Color& color, double radius, MarkerType type) {
 	drawMarker(cx, cy, color, radius, radius, type);
 }
 
-template <class T> void im::ImageBase<T>::drawMarker(double cx, double cy, const Color& color, double rx, double ry, MarkerType type) {
+template <class T> void ImageBase<T>::drawMarker(double cx, double cy, const Color& color, double rx, double ry, MarkerType type) {
 	using namespace util;
 
 	const int steps = 8;
@@ -502,7 +494,7 @@ template <class T> void im::ImageBase<T>::drawMarker(double cx, double cy, const
 	}
 
 	//color information
-	im::LocalColor col = getLocalColor(color);
+	LocalColor col = getLocalColor(color);
 
 	for (auto& [idx, a] : alpha) {
 		int iy = idx / stride;
@@ -513,24 +505,8 @@ template <class T> void im::ImageBase<T>::drawMarker(double cx, double cy, const
 	}
 }
 
-template <class T> void im::ImageBase<T>::scaleByTwo(ImageBase<T>& dest) const {
-	for (size_t z = 0; z < arrays.size(); z++) {
-		scaleByTwo(z, dest, z);
-	}
-}
-
-template <class T> void im::ImageBase<T>::scaleByTwo(size_t srcPlane, ImageBase<T>& dest, size_t destPlane) const {
-	for (int r = 0; r < dest.h; r++) {
-		for (int c = 0; c < dest.w; c++) {
-			double py = (0.5 + r) * this->h / dest.h - 0.5;
-			double px = (0.5 + c) * this->w / dest.w - 0.5;
-			dest.at(destPlane, r, c) = this->sample(srcPlane, px, py);
-		}
-	}
-}
-
-template <class T> T im::ImageBase<T>::sample(size_t plane, double x, double y) const {
-	double cx = std::clamp(x, 0.0, w - 1.0), cy = std::clamp(y, 0.0, h - 1.0);
+template <class T> T ImageBase<T>::sample(size_t plane, double x, double y, double x0, double x1, double y0, double y1) const {
+	double cx = std::clamp(x, x0, x1), cy = std::clamp(y, y0, y1);
 	double flx = std::floor(cx), fly = std::floor(cy);
 	double dx = cx - flx, dy = cy - fly;
 	size_t ix = size_t(flx), iy = size_t(fly);
@@ -544,26 +520,32 @@ template <class T> T im::ImageBase<T>::sample(size_t plane, double x, double y) 
 	return (T) result;
 }
 
-template <class T> std::vector<T> im::ImageBase<T>::rawBytes() const {
-	std::vector<T> data(h * w * numPlanes);
-	size_t idx = 0;
-	for (int i = 0; i < numPlanes; i++) {
-		for (int r = 0; r < h; r++) {
-			for (int c = 0; c < w; c++) {
-				data[idx] = at(i, r, c);
-				idx++;
-			}
-		}
+template <class T> T ImageBase<T>::sample(size_t plane, double x, double y) const {
+	return sample(plane, x, y, 0.0, w - 1.0, 0.0, h - 1.0);
+}
+
+template <class T> std::vector<T> ImageBase<T>::rawBytes() const {
+	std::vector<T> data(sizeInBytes());
+	T* dest = data.data();
+	for (int i : arraySizes) {
+		std::copy(arrays[i].get(), arrays[i].get() + arraySizes[i], dest);
+		dest += arraySizes[i];
 	}
 	return data;
 }
 
-template <class T> bool im::ImageBase<T>::saveAsBMP(const std::string& filename, T scale) const {
+template <class T> int ImageBase<T>::sizeInBytes() const {
+	int siz = 0;
+	for (int i : arraySizes) siz += i;
+	return siz;
+}
+
+template <class T> bool ImageBase<T>::saveAsBMP(const std::string& filename, T scale) const {
 	std::ofstream os(filename, std::ios::binary);
 	int h = this->h;
 	int w = this->w;
 
-	im::BmpGrayHeader(w, h * numPlanes).writeHeader(os);
+	BmpGrayHeader(w, h * numPlanes).writeHeader(os);
 	size_t stridedWidth = util::alignValue(w, 4);
 	std::vector<char> data(stridedWidth);
 
@@ -578,9 +560,9 @@ template <class T> bool im::ImageBase<T>::saveAsBMP(const std::string& filename,
 	return os.good();
 }
 
-template <class T> bool im::ImageBase<T>::saveAsPGM(const std::string& filename, T scale) const {
+template <class T> bool ImageBase<T>::saveAsPGM(const std::string& filename, T scale) const {
 	std::ofstream os(filename, std::ios::binary);
-	im::PgmHeader(w, h).writeHeader(os);
+	PgmHeader(w, h).writeHeader(os);
 	std::vector<char> data(w);
 
 	for (int i = 0; i < numPlanes; i++) {
@@ -593,77 +575,37 @@ template <class T> bool im::ImageBase<T>::saveAsPGM(const std::string& filename,
 }
 
 
-
 //------------------------
 // packed image
 //------------------------
 
-template <class T> im::ImagePacked<T>::ImagePacked(int h, int w, int stride, int numPlanes, int arraysize) :
-	ImageBase<T>(h, w, stride, numPlanes, { std::make_shared<T[]>(arraysize) }, arraysize) {}
+template <class T> ImagePacked<T>::ImagePacked(int h, int w, int stride, int numPlanes, int arraysize) :
+	ImageBase<T>(h, w, stride, numPlanes, { std::make_shared<T[]>(arraysize) }, { arraysize })
+{}
 
-template <class T> im::ImagePacked<T>::ImagePacked(int h, int w, int stride, int numPlanes, T* data, int arraysize) :
-	ImageBase<T>(h, w, stride, numPlanes, { {data, NullDeleter<T>()} }, arraysize) {}
+template <class T> ImagePacked<T>::ImagePacked(int h, int w, int stride, int numPlanes, T* data, int arraysize) :
+	ImageBase<T>(h, w, stride, numPlanes, { {data, NullDeleter<T>()} }, { arraysize })
+{}
 
-template <class T> T* im::ImagePacked<T>::addr(size_t idx, size_t r, size_t c) {
+template <class T> T* ImagePacked<T>::addr(size_t idx, size_t r, size_t c) {
 	assert(r < this->h && c < this->w && idx < this->numPlanes && "invalid pixel address");
 	return this->data() + r * this->stride + c * this->numPlanes + idx;
 }
 
-template <class T> const T* im::ImagePacked<T>::addr(size_t idx, size_t r, size_t c) const {
+template <class T> const T* ImagePacked<T>::addr(size_t idx, size_t r, size_t c) const {
 	assert(r < this->h && c < this->w && idx < this->numPlanes && "invalid pixel address");
 	return this->data() + r * this->stride + c * this->numPlanes + idx;
 }
 
-template <class T> T* im::ImagePacked<T>::data() {
+template <class T> T* ImagePacked<T>::data() {
 	return this->arrays.at(0).get();
 }
 
-template <class T> const T* im::ImagePacked<T>::data() const {
+template <class T> const T* ImagePacked<T>::data() const {
 	return this->arrays.at(0).get();
 }
 
-template <class T> uint64_t im::ImagePacked<T>::crc() const {
-	util::CRC64 crc64;
-	for (size_t r = 0; r < this->h; r++) {
-		for (size_t c = 0; c < this->w; c++) {
-			for (size_t z = 0; z < this->numPlanes; z++) {
-				crc64.add(this->at(z, r, c));
-			}
-		}
-	}
-	return crc64.result();
-}
-
-template <> uint64_t im::ImagePacked<unsigned char>::crc() const {
-	util::CRC64 crc64;
-	for (size_t r = 0; r < this->h; r++) {
-		crc64.addBytes(addr(0, r, 0), 1ull * this->w * this->numPlanes);
-	}
-	return crc64.result();
-}
-
-template <class T> void im::ImagePacked<T>::copyTo(ImageBase<T>& dest) const {
-	assert(this->w == dest.w && this->h == dest.h && this->stride <= dest.stride && "invalid dimensions");
-	size_t linesize = this->w * this->numPlanes;
-	for (size_t r = 0; r < this->h; r++) {
-		std::copy(addr(0, r, 0), addr(0, r, 0) + linesize, dest.addr(0, r, 0));
-	}
-	dest.index = this->index;
-}
-
-template <class T> void im::ImagePacked<T>::copyTo(ImageBase<T>& dest, std::vector<int> srcPlanes, std::vector<int> destPlanes) const {
-	assert(this->w == dest.w && this->h == dest.h && this->stride <= dest.stride && srcPlanes.size() == destPlanes.size() && "invalid dimensions");
-	for (size_t r = 0; r < this->h; r++) {
-		for (size_t c = 0; c < this->w; c++) {
-			for (int i = 0; i < srcPlanes.size(); i++) {
-				dest.at(destPlanes[i], r, c) = this->at(srcPlanes[i], r, c);
-			}
-		}
-	}
-	dest.index = this->index;
-}
-
-template <class T> std::vector<T> im::ImagePacked<T>::rawBytes() const {
+template <class T> std::vector<T> ImagePacked<T>::rawBytes() const {
 	int linesiz = this->w * this->numPlanes;
 	std::vector<T> data(this->h * linesiz);
 	T* dest = data.data();
@@ -681,31 +623,36 @@ template <class T> std::vector<T> im::ImagePacked<T>::rawBytes() const {
 // Image from shared Mat
 //------------------------
 
+template <class T> ImageMatShared<T>::ImageMatShared(int h, int w, int stride, T* mat) :
+	ImageBase<T>(h, w, stride, 1, { { mat, NullDeleter<T>() } }, { h * stride })
+{}
 
-template <class T> im::ImageMatShared<T>::ImageMatShared(int h, int w, int stride, T* mat) :
-	ImageBase<T>(h, w, stride, 1, { { mat, NullDeleter<T>() } }, h* stride) {}
+template <class T> ImageMatShared<T>::ImageMatShared(int h, int w, int stride, T* y, T* u, T* v) :
+	ImageBase<T>(h, w, stride, 3, { { y, NullDeleter<T>() }, { u, NullDeleter<T>() }, { v, NullDeleter<T>() } }, { h * stride, h * stride, h * stride })
+{}
 
-template <class T> im::ImageMatShared<T>::ImageMatShared(int h, int w, int stride, T* y, T* u, T* v) :
-	ImageBase<T>(h, w, stride, 3, { { y, NullDeleter<T>() }, { u, NullDeleter<T>() }, { v, NullDeleter<T>() } }, 3 * h * stride) {}
-
-template <class T> T* im::ImageMatShared<T>::addr(size_t idx, size_t r, size_t c) {
+template <class T> T* ImageMatShared<T>::addr(size_t idx, size_t r, size_t c) {
 	assert(r < this->h && c < this->w && idx < this->numPlanes && "invalid pixel address");
 	return this->arrays[idx].get() + r * this->stride + c;
 }
 
-template <class T> const T* im::ImageMatShared<T>::addr(size_t idx, size_t r, size_t c) const {
+template <class T> const T* ImageMatShared<T>::addr(size_t idx, size_t r, size_t c) const {
 	assert(r < this->h && c < this->w && idx < this->numPlanes && "invalid pixel address");
 	return this->arrays[idx].get() + r * this->stride + c;
 }
 
+template <class T> ImageType ImageMatShared<T>::type() const {
+	return ImageType::SHARED;
+}
+
 
 //------------------------------------------------
-//explicitly instantiate Image specializations
+// explicitly instantiate Image specializations
 //------------------------------------------------
 
-template class im::ImageBase<float>;
-template class im::ImageBase<unsigned char>;
-template class im::ImagePacked<float>;
-template class im::ImagePacked<unsigned char>;
-template class im::ImageMatShared<float>;
-template class im::ImageMatShared<unsigned char>;
+template class ImageBase<float>;
+template class ImageBase<unsigned char>;
+template class ImagePacked<float>;
+template class ImagePacked<unsigned char>;
+template class ImageMatShared<float>;
+template class ImageMatShared<unsigned char>;

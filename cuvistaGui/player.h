@@ -52,6 +52,7 @@ signals:
     void cancel();
     void sigProgress(QString str, QString status);
     void sigUpdate(const QVideoFrame& frame);
+    void sigLate(bool isLate);
     void sigVolume(int volume);
 
 public slots:

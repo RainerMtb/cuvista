@@ -27,9 +27,9 @@ extern "C" {
 //CpuFrame
 class DeviceInfoCpu : public DeviceInfoBase {
 public:
-	DeviceInfoCpu() :
-		DeviceInfoBase(DeviceType::CPU, 16384) {}
+	DeviceInfoCpu();
 
+	DeviceType getType() const override;
 	std::string getName() const override;
 	std::string getNameShort() const override;
 	std::shared_ptr<FrameExecutor> create(MainData& data, MovieFrame& frame) override;
@@ -39,9 +39,9 @@ public:
 //AvxFrame
 class DeviceInfoAvx : public DeviceInfoBase {
 public:
-	DeviceInfoAvx() :
-		DeviceInfoBase(DeviceType::AVX, 16384) {}
+	DeviceInfoAvx();
 
+	DeviceType getType() const override;
 	std::string getName() const override;
 	std::string getNameShort() const override;
 	std::shared_ptr<FrameExecutor> create(MainData& data, MovieFrame& frame) override;
@@ -58,9 +58,9 @@ public:
 	int pitch = 0;
 	std::vector<std::string> extensions;
 
-	DeviceInfoOpenCl(DeviceType type, int64_t maxPixel) :
-		DeviceInfoBase(type, maxPixel) {}
+	DeviceInfoOpenCl(int64_t maxPixel);
 
+	DeviceType getType() const override;
 	std::string getName() const override;
 	std::string getNameShort() const override;
 	std::shared_ptr<FrameExecutor> create(MainData& data, MovieFrame& frame) override;
@@ -84,9 +84,9 @@ public:
 	std::shared_ptr<NvEncoder> nvenc;
 	int cudaIndex = 0;
 
-	DeviceInfoCuda(DeviceType type, int64_t maxPixel) :
-		DeviceInfoBase(type, maxPixel) {}
+	DeviceInfoCuda(int64_t maxPixel);
 
+	DeviceType getType() const override;
 	std::string getName() const override;
 	std::string getNameShort() const override;
 	std::shared_ptr<FrameExecutor> create(MainData& data, MovieFrame& frame) override;
@@ -124,9 +124,9 @@ public:
 //Null Device
 class DeviceInfoNull : public DeviceInfoBase {
 public:
-	DeviceInfoNull() :
-		DeviceInfoBase(DeviceType::UNKNOWN, 0) {}
+	DeviceInfoNull();
 
+	DeviceType getType() const override;
 	std::string getName() const override;
 	std::string getNameShort() const override;
 	std::shared_ptr<FrameExecutor> create(MainData& data, MovieFrame& frame) override;

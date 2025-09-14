@@ -89,7 +89,7 @@ public:
 };
 
 
-template <class T, class URBG> class Sampler : public SamplerBase<T> {
+template <class T, class URBG> class UrbgSampler : public SamplerBase<T> {
 
 private:
     URBG urbg;

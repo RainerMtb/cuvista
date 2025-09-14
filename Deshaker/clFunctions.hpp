@@ -95,6 +95,7 @@ namespace cl {
 			Kernel unsharp;
 			Kernel yuv8u_to_rgba;
 			Kernel yuv32f_to_rgba;
+			Kernel yuv32f_to_bgra;
 			Kernel scrap;
 			Kernel compute;
 		} kernels;

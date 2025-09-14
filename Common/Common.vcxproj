@@ -91,7 +91,7 @@
     <ClCompile Include="Color.cpp" />
     <ClCompile Include="Image.cpp" />
     <ClCompile Include="Image2.cpp" />
-    <ClCompile Include="ImageUtil.cpp" />
+    <ClCompile Include="ImageHeaders.cpp" />
     <ClCompile Include="ThreadPoolBase.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -100,12 +100,13 @@
     <ClInclude Include="DeviceInfoBase.hpp" />
     <ClInclude Include="ErrorLogger.hpp" />
     <ClInclude Include="FrameExecutor.hpp" />
+    <ClInclude Include="ImageData.hpp" />
     <ClInclude Include="Util.hpp" />
     <ClInclude Include="CharMap.hpp" />
     <ClInclude Include="Color.hpp" />
     <ClInclude Include="Image.hpp" />
     <ClInclude Include="Image2.hpp" />
-    <ClInclude Include="ImageUtil.hpp" />
+    <ClInclude Include="ImageHeaders.hpp" />
     <ClInclude Include="ThreadPoolBase.h" />
   </ItemGroup>
   <ItemGroup>

@@ -58,21 +58,18 @@
     <ClCompile Include="ClickLabel.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ImageLabel.cpp">
+    <ClCompile Include="CustomImageLabel.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="MessagePrinterGui.cpp">
+    <ClCompile Include="CustomTextEdit.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="UserInputGui.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="DoubleClickSlider.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <QtMoc Include="ImageLabel.h">
+    <QtMoc Include="CustomImageLabel.h">
       <Filter>Header Files</Filter>
     </QtMoc>
     <QtMoc Include="progress.h">
@@ -90,10 +87,7 @@
     <QtMoc Include="UserInputGui.hpp">
       <Filter>Header Files</Filter>
     </QtMoc>
-    <QtMoc Include="MessagePrinterGui.h">
-      <Filter>Header Files</Filter>
-    </QtMoc>
-    <QtMoc Include="DoubleClickSlider.h">
+    <QtMoc Include="CustomTextEdit.h">
       <Filter>Header Files</Filter>
     </QtMoc>
   </ItemGroup>

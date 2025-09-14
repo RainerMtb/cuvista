@@ -21,6 +21,7 @@
 #include "Image.hpp"
 
 #include <algorithm>
+#include <fstream>
 
 //parameter structure
 //all values must be initialized to be used as __constant__ variable in device code, no constructor calls
@@ -188,7 +189,7 @@ void CudaExecutor::cudaInit(CoreData& core, int devIdx, const cudaDeviceProp& pr
 
 	//pin memory of transfer object
 	registeredMemPtr = yuvFrame.data();
-	handleStatus(cudaHostRegister(registeredMemPtr, yuvFrame.stridedByteSize(), cudaHostRegisterDefault), "error @init #2");
+	handleStatus(cudaHostRegister(registeredMemPtr, yuvFrame.sizeInBytes(), cudaHostRegisterDefault), "error @init #2");
 
 	const size_t h = core.h;
 	const size_t w = core.w;
@@ -503,7 +504,7 @@ void CudaExecutor::cudaOutputData(int64_t frameIndex, const AffineCore& trf) {
 	cu::unsharp_32f_3(out.warped, out.filterV, out.final, cudaData.strideFloat4N, w, h, cs[1]);
 }
 
-void CudaExecutor::getOutputYuv(int64_t frameIndex, ImageYuvData& image) {
+void CudaExecutor::getOutputYuv(int64_t frameIndex, ImageYuv& image) {
 	cu::outputHost(out.final, cudaData.strideFloat4N, d_yuvOut, cudaData.strideChar, mData.w, mData.h, cs[1]);
 	for (int planeSize = cudaData.strideChar * mData.h, i = 0; i < 3; i++) {
 		cu::copy_32f_3(d_yuvOut + i * planeSize, cudaData.strideChar, image.addr(i, 0, 0), image.strideInBytes(), mData.w, mData.h, cs[1]);
@@ -521,8 +522,16 @@ void CudaExecutor::getOutputRgba(int64_t frameIndex, ImageRGBA& image) {
 	handleStatus(cudaGetLastError(), "error @output #93");
 }
 
-void CudaExecutor::getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) {
-	cu::outputNvenc(out.final, cudaData.strideFloat4N, cudaNv12ptr, cudaPitch, mData.w, mData.h, cs[1]);
+void CudaExecutor::getOutputBgra(int64_t frameIndex, ImageBGRA& image) {
+	cu::yuv_to_bgra(out.final, cudaData.strideFloat4N, d_rgba, -1, mData.w, mData.h, cs[1]);
+	handleStatus(cudaMemcpyAsync(image.plane(0), d_rgba, 4ull * mData.w * mData.h, cudaMemcpyDefault, cs[1]), "error @output #94");
+	image.setIndex(frameIndex);
+	handleStatus(cudaStreamSynchronize(cs[1]), "error @output #92");
+	handleStatus(cudaGetLastError(), "error @output #93");
+}
+
+void CudaExecutor::getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) {
+	cu::outputNvenc(out.final, cudaData.strideFloat4N, cudaNv12ptr, image.stride, mData.w, mData.h, cs[1]);
 	handleStatus(cudaStreamSynchronize(cs[1]), "error @output #95");
 	handleStatus(cudaGetLastError(), "error @output #96");
 }
@@ -569,8 +578,8 @@ void CudaExecutor::getWarped(int64_t frameIndex, ImageRGBA& image) {
 }
 
 
-void encodeNvData(const std::vector<unsigned char>& nv12, unsigned char* nvencPtr) {
-	handleStatus(cudaMemcpy(nvencPtr, nv12.data(), nv12.size(), cudaMemcpyHostToDevice), "error @simple encode #1 cannot copy to device");
+void encodeNvData(const ImageNV12& image, unsigned char* nvencPtr) {
+	handleStatus(cudaMemcpy(nvencPtr, image.addr(0, 0, 0), image.sizeInBytes(), cudaMemcpyHostToDevice), "error @simple encode #1 cannot copy to device");
 }
 
 void getNvData(std::vector<unsigned char>& nv12, unsigned char* cudaNv12ptr) {

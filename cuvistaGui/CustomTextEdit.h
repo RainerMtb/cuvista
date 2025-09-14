@@ -18,9 +18,8 @@
 
 #pragma once
 
-#include <QPlainTextEdit>
-#include <QDebug>
 #include "Util.hpp"
+#include <QPlainTextEdit>
 
 class MessagePrinterGui : public QObject, public util::MessagePrinter {
     Q_OBJECT
@@ -42,6 +41,20 @@ public slots:
     void appendText(const QString& str);
 
 public:
-    ScrollingTextEdit(QWidget* parent) : 
-        QPlainTextEdit(parent) {}
+    ScrollingTextEdit(QWidget* parent = nullptr);
+};
+
+
+class DropTextEdit : public QPlainTextEdit {
+    Q_OBJECT
+
+public:
+    DropTextEdit(QWidget* parent = nullptr);
+
+    void dragEnterEvent(QDragEnterEvent* event) override;
+    void dragMoveEvent(QDragMoveEvent* event) override;
+    void dropEvent(QDropEvent* event) override;
+
+signals:
+    void fileDropped(QString inputPath);
 };

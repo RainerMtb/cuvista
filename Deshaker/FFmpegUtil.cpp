@@ -137,5 +137,15 @@ StreamInfo StreamContext::inputStreamInfo() const {
         tstr = "unknown";
 
     AVCodecParameters* param = inputStream->codecpar;
-    return { av_get_media_type_string(param->codec_type), avcodec_get_name(param->codec_id), tstr, param->codec_type };
+    return { 
+        av_get_media_type_string(param->codec_type), 
+        avcodec_get_name(param->codec_id), 
+        tstr, 
+        param->codec_type, 
+        inputStream->index 
+    };
+}
+
+std::string StreamInfo::inputStreamSummary() const {
+    return std::format("- stream {}\ntype: {}, codec: {}, duration: {}\n", index, streamType, codec, durationString);
 }

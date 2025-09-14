@@ -52,11 +52,13 @@ public:
 	//prepare data for output to writer
 	virtual void outputData(int64_t frameIndex, const Affine2D& trf) = 0;
 	//prepare data for encoding on cpu
-	virtual void getOutputYuv(int64_t frameIndex, ImageYuvData& image) = 0;
+	virtual void getOutputYuv(int64_t frameIndex, ImageYuv& image) = 0;
 	//prepare data for encoding on cpu
 	virtual void getOutputRgba(int64_t frameIndex, ImageRGBA& image) = 0;
+	//prepare data for encoding on cpu
+	virtual void getOutputBgra(int64_t frameIndex, ImageBGRA& image) = 0;
 	//prepare data for encoding on cuda
-	virtual void getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) = 0;
+	virtual void getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) = 0;
 	//get transformed image as Mat<float> where YUV color planes are stacked vertically
 	virtual Mat<float> getTransformedOutput() const = 0;
 	//get image pyramid as single Mat<float> where images are stacked vertically from large to small

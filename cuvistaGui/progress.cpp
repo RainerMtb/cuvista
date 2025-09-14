@@ -19,6 +19,7 @@
 #include "progress.h"
 #include "MovieFrame.hpp"
 #include "MovieReader.hpp"
+#include <QCloseEvent>
 
 ProgressWindow::ProgressWindow(QWidget* parent) :
 	QMainWindow(parent)

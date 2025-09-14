@@ -129,7 +129,7 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 
 		} else if (args.nextArg("mode", next)) {
 			int i = std::stoi(next);
-			if (i >= 0 && i <= limits.modeMax) mode = i;
+			if (i >= 0 && i <= defaults.modeMax) mode = i;
 			else throw AVException("invalid value for mode: " + next);
 
 		} else if (args.nextArg("radius", next)) {
@@ -287,9 +287,9 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 			dummyFrame = true;
 
 		 } else if (args.nextArg("rng", next)) {
-		 	if (std::stoi(next) == 1) sampler = std::make_shared<Sampler<PointContext, PseudoRandomSource>>();
-		 	else if (std::stoi(next) == 2) sampler = std::make_shared<Sampler<PointContext, std::random_device>>();
-		 	else if (std::stoi(next) == 3) sampler = std::make_shared<Sampler<PointContext, std::default_random_engine>>();
+		 	if (std::stoi(next) == 1) sampler = std::make_shared<UrbgSampler<PointContext, PseudoRandomSource>>();
+		 	else if (std::stoi(next) == 2) sampler = std::make_shared<UrbgSampler<PointContext, std::random_device>>();
+		 	else if (std::stoi(next) == 3) sampler = std::make_shared<UrbgSampler<PointContext, std::default_random_engine>>();
 		 	else throw AVException("invalid random generator selection: " + next);
 
 		} else if (args.nextArg("stack", next)) {
@@ -437,27 +437,27 @@ void MainData::validate(const MovieReader& reader) {
 		deviceSelected = deviceList.size() - 1;
 	}
 	if (requestedEncoding.device == EncodingDevice::AUTO) {
-		if (deviceList[deviceSelected]->type == DeviceType::CUDA) selectedEncoding.device = EncodingDevice::NVENC;
+		if (deviceList[deviceSelected]->getType() == DeviceType::CUDA) selectedEncoding.device = EncodingDevice::NVENC;
 		else selectedEncoding.device = EncodingDevice::FFMPEG;
 	} else {
 		selectedEncoding.device = requestedEncoding.device;
 	}
 
 	//check certain values ranges for sanity
-	if (radsec < limits.radsecMin || radsec > limits.radsecMax) throw AVException("invalid temporal radius: " + std::to_string(radsec));
-	if (radius < limits.radiusMin || radius > limits.radiusMax) throw AVException("invalid image radius: " + std::to_string(radius));
-	if (w < limits.wMin) throw AVException("invalid input video width: " + std::to_string(w));
-	if (h < limits.hMin) throw AVException("invalid input video height: " + std::to_string(h));
+	if (radsec < defaults.radsecMin || radsec > defaults.radsecMax) throw AVException("invalid temporal radius: " + std::to_string(radsec));
+	if (radius < defaults.radiusMin || radius > defaults.radiusMax) throw AVException("invalid image radius: " + std::to_string(radius));
+	if (w < defaults.wMin) throw AVException("invalid input video width: " + std::to_string(w));
+	if (h < defaults.hMin) throw AVException("invalid input video height: " + std::to_string(h));
 	size_t mp = deviceList[deviceSelected]->maxPixel;
 	if (w > mp) throw AVException("frame width exceeds maximum of " + std::to_string(mp) + " px");
 	if (h > mp) throw AVException("frame height exceeds maximum of " + std::to_string(mp) + " px");
 	if (w % 2 != 0 || h % 2 != 0) throw AVException("width and height must be factors of two");
 	if (zoomMin > zoomMax) throw AVException("invalid zoom values, max zoom must be greater min zoom");
-	if (zoomMin < limits.imZoomMin || zoomMin > limits.imZoomMax) throw AVException("invalid zoom value");
-	if (zoomMax < limits.imZoomMin || zoomMax > limits.imZoomMax) throw AVException("invalid zoom value");
+	if (zoomMin < defaults.imZoomMin || zoomMin > defaults.imZoomMax) throw AVException("invalid zoom value");
+	if (zoomMax < defaults.imZoomMin || zoomMax > defaults.imZoomMax) throw AVException("invalid zoom value");
 
-	if (zCount < limits.levelsMin || zCount > limits.levelsMax) throw AVException("invalid pyramid levels: " + std::to_string(pyramidLevels));
-	if (ir < limits.irMin || ir > limits.irMax) throw AVException("invalid integration radius: " + std::to_string(ir));
+	if (zCount < defaults.levelsMin || zCount > defaults.levelsMax) throw AVException("invalid pyramid levels: " + std::to_string(pyramidLevels));
+	if (ir < defaults.irMin || ir > defaults.irMax) throw AVException("invalid integration radius: " + std::to_string(ir));
 
 	//check ffmpeg versions
 	//if (ffmpeg_check_versions() == false) {

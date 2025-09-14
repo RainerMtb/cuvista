@@ -18,26 +18,9 @@
 
 #pragma once
 
-#include "ImageUtil.hpp"
 #include "ThreadPoolBase.h"
+#include "ImageData.hpp"
 #include "Color.hpp"
-
-template <class T> class ImageData {
-public:
-	virtual T* addr(size_t idx, size_t r, size_t c) = 0;
-	virtual const T* addr(size_t idx, size_t r, size_t c) const = 0;
-	virtual T* plane(size_t idx) = 0;
-	virtual const T* plane(size_t idx) const = 0;
-	virtual int planes() const = 0;
-	virtual int height() const = 0;
-	virtual int width() const = 0;
-	virtual int strideInBytes() const = 0;
-	virtual void setIndex(int64_t frameIndex) = 0;
-	virtual bool saveAsBMP(const std::string& filename, T scale = 1) const = 0;
-	virtual std::vector<T> rawBytes() const = 0;
-};
-
-using ImageYuvData = ImageData<unsigned char>;
 
 namespace im {
 
@@ -71,7 +54,8 @@ namespace im {
 		int h, w, stride, numPlanes;
 
 	protected:
-		size_t imageSize;
+		//size_t imageSize;
+		std::vector<int> arraySizes;
 		std::vector<std::shared_ptr<T[]>> arrays;
 
 		static inline ThreadPoolBase defaultPool;
@@ -84,8 +68,7 @@ namespace im {
 		void plot(double x, double y, double a, const Color& color);
 		void plot(int x, int y, double a, const Color& color);
 
-		void yuvToRgb(ImageData<unsigned char>& dest, std::vector<int> planes, 
-			ThreadPoolBase& pool = defaultPool) const;
+		void yuvToRgb(ImageData<unsigned char>& dest, const std::vector<int>& planes, ThreadPoolBase& pool = defaultPool) const;
 
 		void copyTo(ImageData<T>& dest, size_t r0, size_t c0, std::vector<int> srcPlanes, std::vector<int> destPlanes, 
 			ThreadPoolBase& pool = defaultPool) const;
@@ -93,12 +76,13 @@ namespace im {
 		virtual LocalColor<T> getLocalColor(const Color& color) const;
 
 	public:
+		ImageBase(int h, int w, int stride, int numPlanes, std::vector<std::shared_ptr<T[]>> arrays, std::vector<int> arraySizes);
+
 		ImageBase(int h, int w, int stride, int numPlanes);
 
-		ImageBase(int h, int w, int stride, int numPlanes, std::vector<std::shared_ptr<T[]>> arrays, size_t imageSize);
+		ImageBase();
 
-		ImageBase() :
-			ImageBase(0, 0, 0, 0, {}, 0) {}
+		ImageType type() const override;
 
 		virtual ~ImageBase() = default;
 
@@ -106,15 +90,11 @@ namespace im {
 
 		const T* addr(size_t idx, size_t r, size_t c) const override;
 
-		virtual size_t stridedSize() const;
+		T* plane(size_t idx);
 
-		virtual size_t stridedByteSize() const;
+		const T* plane(size_t idx) const;
 
 		virtual uint64_t crc() const;
-
-		T* plane(size_t idx) override;
-
-		const T* plane(size_t idx) const override;
 
 		int planes() const override;
 
@@ -172,13 +152,15 @@ namespace im {
 
 		void copyTo(ImageData<T>& dest, ThreadPoolBase& pool = defaultPool) const;
 
+		int sizeInBytes() const override;
+
 		std::vector<T> rawBytes() const override;
 
+		//sample clamped to area
+		T sample(size_t plane, double x, double y, double x0, double x1, double y0, double y1) const;
+
+		//sample clamped to image bounds
 		T sample(size_t plane, double x, double y) const;
-
-		void scaleByTwo(size_t srcPlane, ImageBase<T>& dest, size_t destPlane) const;
-
-		void scaleByTwo(ImageBase<T>& dest) const;
 
 		bool saveAsBMP(const std::string& filename, T scale = 1) const;
 
@@ -206,16 +188,10 @@ namespace im {
 
 		virtual const T* data() const;
 
-		uint64_t crc() const override;
-
-		void copyTo(ImageBase<T>& dest) const;
-
-		void copyTo(ImageBase<T>& dest, std::vector<int> srcPlanes, std::vector<int> destPlanes) const;
-
 		std::vector<T> rawBytes() const override;
 	};
 
-
+	
 	template <class T> class ImageMatShared : public ImageBase<T> {
 
 	public:
@@ -223,8 +199,12 @@ namespace im {
 
 		ImageMatShared(int h, int w, int stride, T* y, T* u, T* v);
 
+		ImageType type() const override;
+
 		T* addr(size_t idx, size_t r, size_t c) override;
 
 		const T* addr(size_t idx, size_t r, size_t c) const;
 	};
 }
+
+using Image8 = im::ImageBase<unsigned char>;

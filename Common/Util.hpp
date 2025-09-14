@@ -24,6 +24,8 @@
 #include <span>
 #include <ostream>
 
+#include "ImageData.hpp"
+
 //misc stuff
 namespace util {
 
@@ -75,22 +77,37 @@ namespace util {
         uint64_t crc;
         uint64_t table[256];
 
+        CRC64& addBytes(const unsigned char* data, size_t size);
+
     public:
         CRC64();
 
         CRC64& reset();
 
-        template <class T> CRC64& add(T data) { 
-            return addBytes(reinterpret_cast<unsigned char*>(&data), sizeof(T)); 
+        template <class T> CRC64& addDirect(T data) { 
+            return addBytes(reinterpret_cast<const unsigned char*>(&data), sizeof(T)); 
         }
 
-        CRC64& addBytes(std::span<const unsigned char> data);
-        CRC64& addBytes(const unsigned char* data, size_t size);
+        CRC64& addDirect(std::span<const unsigned char> data) { 
+            return addBytes(data.data(), data.size()); 
+        }
+
+        template <class T> CRC64& add(const ImageData<T>& image) {
+            for (int z = 0; z < image.planes(); z++) {
+                for (int r = 0; r < image.height(); r++) {
+                    for (int c = 0; c < image.width(); c++) {
+                        addBytes(reinterpret_cast<const unsigned char*>(image.addr(z, r, c)), sizeof(T));
+                    }
+                }
+            }
+            return *this;
+        }
         
         uint64_t result() const;
-        friend std::ostream& operator << (std::ostream& os, const CRC64& crc);
+
         bool operator == (const CRC64& other) const;
         bool operator == (uint64_t crc) const;
+        friend std::ostream& operator << (std::ostream& os, const CRC64& crc);
     };
 
 

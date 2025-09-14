@@ -25,7 +25,7 @@ AvxFrame::AvxFrame(CoreData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame
 	walign { 32 },
 	pitch { util::alignValue(data.w, walign) } 
 {
-	assert(mDeviceInfo.type == DeviceType::AVX && "device type must be AVX here");
+	assert(mDeviceInfo.getType() == DeviceType::AVX && "device type must be AVX here");
 	for (int i = 0; i < mData.bufferCount; i++) mYUV.emplace_back(mData.h, mData.w, mData.cpupitch);
 	mPyr.assign(mData.pyramidCount, AvxMatf(mData.pyramidRowCount, pitch, 0.0f));
 	mYuvPlane = AvxMatf(mData.h, pitch, 0.0f);
@@ -108,20 +108,25 @@ void AvxFrame::outputData(int64_t frameIndex, const Affine2D& trf) {
 	}
 }
 
-void AvxFrame::getOutputYuv(int64_t frameIndex, ImageYuvData& image) {
+void AvxFrame::getOutputYuv(int64_t frameIndex, ImageYuv& image) {
 	write(image);
 	image.setIndex(frameIndex);
 }
 
 void AvxFrame::getOutputRgba(int64_t frameIndex, ImageRGBA& image) {
-	yuvToRgba(mOutput[0].data(), mOutput[1].data(), mOutput[2].data(), mData.h, mData.w, pitch, image);
+	//util::ConsoleTimer ic("avx output rgba");
+	yuvToRgb(mOutput[0].data(), mOutput[1].data(), mOutput[2].data(), mData.h, mData.w, pitch, image);
 	image.setIndex(frameIndex);
 }
 
-void AvxFrame::getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) {
-	static std::vector<unsigned char> nv12(cudaPitch * mData.h * 3 / 2);
-	write(nv12, cudaPitch);
-	encodeNvData(nv12, cudaNv12ptr);
+void AvxFrame::getOutputBgra(int64_t frameIndex, ImageBGRA& image) {
+	yuvToRgb(mOutput[0].data(), mOutput[1].data(), mOutput[2].data(), mData.h, mData.w, pitch, image);
+	image.setIndex(frameIndex);
+}
+
+void AvxFrame::getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) {
+	write(image);
+	encodeNvData(image, cudaNv12ptr);
 }
 
 Matf AvxFrame::getTransformedOutput() const {
@@ -129,7 +134,7 @@ Matf AvxFrame::getTransformedOutput() const {
 }
 
 void AvxFrame::getWarped(int64_t frameIndex, ImageRGBA& image) {
-	yuvToRgba(mWarped[0].data(), mWarped[1].data(), mWarped[2].data(), mData.h, mData.w, pitch, image);
+	yuvToRgb(mWarped[0].data(), mWarped[1].data(), mWarped[2].data(), mData.h, mData.w, pitch, image);
 }
 
 Matf AvxFrame::getPyramid(int64_t index) const {
@@ -139,7 +144,7 @@ Matf AvxFrame::getPyramid(int64_t index) const {
 void AvxFrame::getInput(int64_t frameIndex, ImageRGBA& image) const {
 	size_t idx = frameIndex % mYUV.size();
 	const ImageYuv& yuv = mYUV[idx];
-	yuvToRgba(yuv.plane(0), yuv.plane(1), yuv.plane(2), mData.h, mData.w, yuv.stride, image);
+	yuvToRgb(yuv.plane(0), yuv.plane(1), yuv.plane(2), mData.h, mData.w, yuv.stride, image);
 }
 
 void AvxFrame::getInput(int64_t index, ImageYuv& image) const {
@@ -570,34 +575,32 @@ void AvxFrame::unsharp(const AvxMatf& warped, AvxMatf& gauss, float unsharp, Avx
 	mPool.wait();
 }
 
-void AvxFrame::write(ImageYuvData& dest) {
+void AvxFrame::write(ImageYuv& dest) {
 	for (int z = 0; z < 3; z++) {
 		for (int r = 0; r < mData.h; r++) {
 			for (int c = 0; c < mData.w; c += 16) {
 				V16f out = mOutput[z].addr(r, c);
 				__m512i chars32 = _mm512_cvt_roundps_epi32(out * 255.0f, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
-				__m128i chars8 = _mm512_cvtepi32_epi8(chars32);
-				_mm_storeu_epi8(dest.addr(z, r, c), chars8);
+				_mm512_mask_cvtusepi32_storeu_epi8(dest.addr(z, r, c), 0xFFFF, chars32);
 			}
 		}
 	}
 }
 
-void AvxFrame::write(std::span<unsigned char> nv12, int cudaPitch) {
+void AvxFrame::write(ImageNV12& image) {
 	//util::ConsoleTimer ic("avx write nv12");
 	//Y-Plane
 	for (int r = 0; r < mData.h; r++) {
-		unsigned char* dest = nv12.data() + r * cudaPitch;
+		unsigned char* dest = image.addr(0, r, 0);
 		for (int c = 0; c < mData.w; c += 16) {
 			V16f out = mOutput[0].addr(r, c);
 			__m512i chars32 = _mm512_cvt_roundps_epi32(out * 255.0f, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
-			__m128i chars8 = _mm512_cvtepi32_epi8(chars32);
-			_mm_storeu_epi8(dest + c, chars8);
+			_mm512_mask_cvtusepi32_storeu_epi8(dest + c, 0xFFFF, chars32);
 		}
 	}
 
 	//U-V-Planes
-	unsigned char* dest = nv12.data() + mData.h * cudaPitch;
+	unsigned char* dest = image.addr(0, 0, 0) + image.h * image.stride;
 	for (int rr = 0; rr < mData.h / 2; rr++) {
 		int r = rr * 2;
 		__m512i a, b, x, sumU, sumV, sum;
@@ -629,33 +632,39 @@ void AvxFrame::write(std::span<unsigned char> nv12, int cudaPitch) {
 			_mm_storeu_epi8(dest + c, uv8);
 		}
 
-		dest += cudaPitch;
+		dest += image.stride;
 	}
 }
 
 //from uchar yuv to uchar rgb
-void AvxFrame::yuvToRgba(const unsigned char* y, const unsigned char* u, const unsigned char* v, int h, int w, int stride, ImageRGBA& dest) const {
+void AvxFrame::yuvToRgb(const uchar* y, const uchar* u, const uchar* v, int h, int w, int stride, ImageBaseRgb& dest) const {
+	auto vidx = dest.indexRgba();
+	V16f factorU = { fu[vidx[0]], fu[vidx[1]], fu[vidx[2]], fu[vidx[3]] };
+	V16f factorV = { fv[vidx[0]], fv[vidx[1]], fv[vidx[2]], fv[vidx[3]] };
+
 	for (int r = 0; r < h; r++) {
 		for (int c = 0; c < w; c += 4) {
 			V4f vecy = y + r * stride + c;
 			V4f vecu = u + r * stride + c;
 			V4f vecv = v + r * stride + c;
-			__m128i rgba = avx::yuvToRgbaPacked(vecy, vecu, vecv);
-			_mm_storeu_epi8(dest.addr(0, r, c), rgba);
+			avx::yuvToRgbaPacked(vecy, vecu, vecv, dest.addr(0, r, c), factorU, factorV);
 		}
 	}
 }
 
 //from float yuv to uchar rgb
-void AvxFrame::yuvToRgba(const float* y, const float* u, const float* v, int h, int w, int stride, ImageRGBA& dest) const {
+void AvxFrame::yuvToRgb(const float* y, const float* u, const float* v, int h, int w, int stride, ImageBaseRgb& dest) const {
+	auto vidx = dest.indexRgba();
+	V16f factorU = { fu[vidx[0]], fu[vidx[1]], fu[vidx[2]], fu[vidx[3]] };
+	V16f factorV = { fv[vidx[0]], fv[vidx[1]], fv[vidx[2]], fv[vidx[3]] };
+
 	V4f f = 255.0f;
 	for (int r = 0; r < h; r++) {
 		for (int c = 0; c < w; c += 4) {
 			V4f vecy = y + r * stride + c;
 			V4f vecu = u + r * stride + c;
 			V4f vecv = v + r * stride + c;
-			__m128i rgba = avx::yuvToRgbaPacked(vecy * f, vecu * f, vecv * f);
-			_mm_storeu_epi8(dest.addr(0, r, c), rgba);
+			avx::yuvToRgbaPacked(vecy * f, vecu * f, vecv * f, dest.addr(0, r, c), factorU, factorV);
 		}
 	}
 }

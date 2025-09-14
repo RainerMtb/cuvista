@@ -19,7 +19,7 @@
 #pragma once
 
 #include "FFmpegUtil.hpp"
-#include "Image2.hpp"
+#include "ImageData.hpp"
 
 //Image using ffmpeg frame buffer
 class ImageYuvFFmpeg : public ImageData<uint8_t> {
@@ -34,8 +34,6 @@ public:
 
     uint8_t* addr(size_t idx, size_t r, size_t c) override;
     const uint8_t* addr(size_t idx, size_t r, size_t c) const override;
-    uint8_t* plane(size_t idx) override;
-    const uint8_t* plane(size_t idx) const override;
     int planes() const override;
     int height() const override;
     int width() const override;

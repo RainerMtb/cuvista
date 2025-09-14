@@ -222,7 +222,7 @@ void analyzeFrames() {
 	writer.writeYuvFiles(outputFile, inputFile);
 
 	std::cout << std::endl << "input frames " << writer.inputFrames.size() << " " << inputFile << std::endl;
-	std::cout << "output frames " << writer.outputFrames.size() << " " << outputFile << std::endl;
+	std::cout << "output frames " << writer.outputFramesYuv.size() << " " << outputFile << std::endl;
 }
 
 

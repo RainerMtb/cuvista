@@ -35,6 +35,7 @@ void debugPrint(const std::string& str);
 namespace winrt::cuvistaWinui::implementation {
     
     using namespace winrt::Microsoft::UI::Xaml;
+    using namespace Windows::Graphics::Imaging;
 
     struct EncodingOptionXaml : EncodingOptionXamlT<EncodingOptionXaml> {
 
@@ -80,19 +81,35 @@ namespace winrt::cuvistaWinui::implementation {
         void setInputFile(const IInspectable& sender, const Controls::SelectionChangedEventArgs& args);
 
         void comboDeviceChanged(const IInspectable& sender, const Controls::SelectionChangedEventArgs& args);
-        void dynZoomClick(const IInspectable& sender, const RoutedEventArgs& args);
+
+        void imageInputLoaded(const IInspectable& sender, const RoutedEventArgs& args);
 
         void print(const std::string& str) override;
         void printNewLine() override;
 
+        void windowClosedEvent(const IInspectable& sender, const WindowEventArgs& args);
+
     private:
-        Windows::UI::Color mColor;
+        Windows::UI::Color mBackgroundColor;
         Windows::Storage::ApplicationDataContainer mLocalSettings = Windows::Storage::ApplicationData::Current().LocalSettings();
         Windows::Storage::Pickers::PickerLocationId mInputDir;
         Windows::Storage::Pickers::PickerLocationId mOutputDir;
         Microsoft::UI::Dispatching::DispatcherQueue mDispatcher = Microsoft::UI::Dispatching::DispatcherQueue::GetForCurrentThread();
 
         MainData mData;
+        ImageYuv mInputYUV;
+        ImageBGRA mInputBGRA;
+        FFmpegReader mReader;
+
+        bool mInputReady = false;
+        bool mOutputReady = false;
+
+        //SoftwareBitmap mInputImageBitmapPlaceholder = SoftwareBitmap(BitmapPixelFormat::Bgra8, 100, 100, BitmapAlphaMode::Premultiplied);
+        //SoftwareBitmap mInputImageBitmap = mInputImageBitmapPlaceholder;
+        //Media::Imaging::SoftwareBitmapSource mInputImageSource;
+        Media::Imaging::WriteableBitmap mInputImageBitmapPlaceholder = Media::Imaging::WriteableBitmap(100, 100);
+        Media::Imaging::WriteableBitmap mInputImageBitmap = mInputImageBitmapPlaceholder;
+
         hstring mInfoBoxString;
         std::future<void> mFuture = std::async([&] {});
 
@@ -102,10 +119,13 @@ namespace winrt::cuvistaWinui::implementation {
         };
 
         void setBackgroundColor(Windows::UI::Color color);
-
         void addInputFile(hstring file);
 
-        void appendText(std::string str);
+        void seek(double frac);
+        void updateInputImage();
+
+        void infoBoxAppendText(std::string str);
+    public:
     };
 }
 

@@ -54,4 +54,6 @@ namespace cu {
 
 	cudaError_t yuv_to_rgba(uchar* src, int srcStep, uchar* dest, int destStep, int w, int h, cudaStream_t cs = 0);
 	cudaError_t yuv_to_rgba(float4* src, int srcStep, uchar* dest, int destStep, int w, int h, cudaStream_t cs = 0);
+	
+	cudaError_t yuv_to_bgra(float4* src, int srcStep, uchar* dest, int destStep, int w, int h, cudaStream_t cs = 0);
 }

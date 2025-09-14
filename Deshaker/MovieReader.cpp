@@ -59,6 +59,11 @@ std::optional<std::string> MovieReader::ptsForFrameAsString(int64_t frameIndex) 
     }
 }
 
+std::string MovieReader::videoStreamSummary() const {
+    std::string str = frameCount == 0 ? "unknown" : std::to_string(frameCount);
+    return std::format("video {} x {} px @{:.3f} fps ({}:{})\nvideo frames: {}\n", w, h, fps(), fpsNum, fpsDen, str);
+}
+
 
 //----------------------------------
 //-------- Placeholder Class -------

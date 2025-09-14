@@ -121,7 +121,7 @@
        <item>
         <layout class="QHBoxLayout" name="inputHbox" stretch="1,1">
          <item>
-          <widget class="QPlainTextEdit" name="texInput">
+          <widget class="DropTextEdit" name="texInput">
            <property name="sizePolicy">
             <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
              <horstretch>1</horstretch>
@@ -272,7 +272,7 @@
          </property>
          <property name="minimumSize">
           <size>
-           <width>150</width>
+           <width>180</width>
            <height>24</height>
           </size>
          </property>
@@ -556,7 +556,7 @@
          </property>
          <property name="maximumSize">
           <size>
-           <width>400</width>
+           <width>450</width>
            <height>16777215</height>
           </size>
          </property>
@@ -1226,7 +1226,12 @@
   <customwidget>
    <class>ImageLabelInput</class>
    <extends>QLabel</extends>
-   <header>ImageLabel.h</header>
+   <header>CustomImageLabel.h</header>
+  </customwidget>
+  <customwidget>
+   <class>DropTextEdit</class>
+   <extends>QPlainTextEdit</extends>
+   <header>CustomTextEdit.h</header>
   </customwidget>
  </customwidgets>
  <tabstops>
@@ -1263,7 +1268,7 @@
  </resources>
  <connections/>
  <buttongroups>
-  <buttongroup name="buttonGroupOutput"/>
   <buttongroup name="buttonGroupBackground"/>
+  <buttongroup name="buttonGroupOutput"/>
  </buttongroups>
 </ui>

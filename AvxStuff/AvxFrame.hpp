@@ -39,9 +39,10 @@ public:
 	void computeStart(int64_t frameIndex, std::vector<PointResult>& results) override;
 	void computeTerminate(int64_t frameIndex, std::vector<PointResult>& results) override;
 	void outputData(int64_t frameIndex, const Affine2D& trf) override;
-	void getOutputYuv(int64_t frameIndex, ImageYuvData& image) override;
+	void getOutputYuv(int64_t frameIndex, ImageYuv& image) override;
 	void getOutputRgba(int64_t frameIndex, ImageRGBA& image) override;
-	void getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) override;
+	void getOutputBgra(int64_t frameIndex, ImageBGRA& image) override;
+	void getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) override;
 	Matf getTransformedOutput() const override;
 	Matf getPyramid(int64_t frameIndex) const override;
 	void getInput(int64_t frameIndex, ImageYuv& image) const override;
@@ -57,15 +58,21 @@ private:
 	std::vector<AvxMatf> mOutput;
 	AvxMatf mFilterBuffer, mFilterResult, mYuvPlane;
 
+	using uchar = unsigned char;
+
 	std::vector<std::vector<V16f>> filterKernels = {
 		{ 0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f },
 		{ 0.0f,    0.25f, 0.5f,   0.25f, 0.0f    },
 		{ 0.0f,    0.25f, 0.5f,   0.25f, 0.0f    }
 	};
 
+	//factors for conversion yuv to rgb
+	std::vector<float> fu = { 0.0f, -0.337633f, 1.732446f, 0.0f };
+	std::vector<float> fv = { 1.370705f, -0.698001f, 0.0f, 0.0f };
+
 	void unsharp(const AvxMatf& warped, AvxMatf& gauss, float unsharp, AvxMatf& out);
-	void write(ImageYuvData& dest);
-	void write(std::span<unsigned char> nv12, int cudaPitch);
+	void write(ImageYuv& dest);
+	void write(ImageNV12& image);
 	void downsample(const float* srcptr, int h, int w, int stride, float* destptr, int destStride);
 	void filter(const AvxMatf& src, int r0, int h, int w, AvxMatf& dest, std::span<V16f> ks);
 
@@ -76,8 +83,8 @@ private:
 	V16f interpolate(V16f f00, V16f f10, V16f f01, V16f f11, V16f dx, V16f dy, V16f dx1, V16f dy1);
 
 	void yuvToFloat(const ImageYuv& yuv, size_t plane, AvxMatf& dest);
-	void yuvToRgba(const unsigned char* y, const unsigned char* u, const unsigned char* v, int h, int w, int stride, ImageRGBA& dest) const;
-	void yuvToRgba(const float* y, const float* u, const float* v, int h, int w, int stride, ImageRGBA& dest) const;
+	void yuvToRgb(const uchar* y, const uchar* u, const uchar* v, int h, int w, int stride, ImageBaseRgb& dest) const;
+	void yuvToRgb(const float* y, const float* u, const float* v, int h, int w, int stride, ImageBaseRgb& dest) const;
 
 	V8d sd(int c1, int c2, int y0, int x0, const AvxMatf& Y);
 };

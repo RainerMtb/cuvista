@@ -18,9 +18,8 @@
 
 #pragma once
 
-#include <QLabel>
-#include <QMouseEvent>
 #include "Image2.hpp"
+#include <QLabel>
 
 class ImageLabel : public QLabel {
 	Q_OBJECT
@@ -33,13 +32,9 @@ public:
 
 	void resizePixmap();
 
-	void setImage(const ImagePPM& ppm);
-
 	void setImage(const QPixmap& pm);
 
 	void setImage(QImage im);
-
-	void setImage(const ImageYuv& im);
 
 	void resizeEvent(QResizeEvent* event) override;
 };
@@ -58,6 +53,5 @@ public:
 	void mousePressEvent(QMouseEvent* event) override;
 
 	void dragEnterEvent(QDragEnterEvent* event) override;
-
 	void dropEvent(QDropEvent* event) override;
 };

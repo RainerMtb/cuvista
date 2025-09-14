@@ -63,6 +63,8 @@ void pinvTest();
 void compareInv();
 
 void avxCompute();
+void avxTest();
+
 void testZoom();
 void testSampler();
 void createTransformImages();

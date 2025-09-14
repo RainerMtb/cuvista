@@ -18,9 +18,10 @@
 
 #include <format>
 #include <stdexcept>
-#include <cstring>
+#include <cmath>
 #include <iostream>
 
+#include "ImageHeaders.hpp"
 #include "Image2.hpp"
 #include "Util.hpp"
 #include "Color.hpp"
@@ -29,37 +30,12 @@
 ImageYuvMatFloat::ImageYuvMatFloat(int h, int w, int stride, float* y, float* u, float* v) :
 	ImageMatShared(h, w, stride, y, u, v) {}
 
-ImagePPM& ImageYuvMatFloat::toPPM(ImagePPM& dest, ThreadPoolBase& pool) const {
-	yuvToRgb(dest, { 0, 1, 2 }, pool);
-	return dest;
-}
-
-ImageRGBA& ImageYuvMatFloat::toRGBA(ImageRGBA& dest, ThreadPoolBase& pool) const {
-	dest.setColorPlane(3, 0xFF);
-	yuvToRgb(dest, { 0, 1, 2 }, pool);
-	return dest;
+void ImageYuvMatFloat::toBaseRgb(ImageBaseRgb& dest, ThreadPoolBase& pool) const {
+	yuvToRgb(dest, dest.indexRgba(), pool);
 }
 
 ImageMatYuv8::ImageMatYuv8(int h, int w, int stride, uint8_t* y, uint8_t* u, uint8_t* v) :
 	ImageMatShared(h, w, stride, y, u, v) {}
-
-
-//------------------------
-// RGB planar image stuff
-//------------------------
-
-ImageRGBplanar::ImageRGBplanar(int h, int w) :
-	ImageBase(h, w, w, 3) {}
-
-ImageRGBplanar::ImageRGBplanar() :
-	ImageRGBplanar(0, 0) {}
-
-im::LocalColor<unsigned char> ImageRGBplanar::getLocalColor(const Color& color) const {
-	unsigned char r = (unsigned char) color.getChannel(0);
-	unsigned char g = (unsigned char) color.getChannel(1);
-	unsigned char b = (unsigned char) color.getChannel(2);
-	return { { r, g, b }, color.getAlpha()};
-}
 
 
 //------------------------
@@ -78,6 +54,10 @@ ImageYuv::ImageYuv(int h, int w) :
 ImageYuv::ImageYuv() :
 	ImageYuv(0, 0, 0) {}
 
+ImageType ImageYuv::type() const {
+	return ImageType::YUV444;
+}
+
 unsigned char* ImageYuv::data() {
 	return arrays.at(0).get();
 }
@@ -88,7 +68,7 @@ const unsigned char* ImageYuv::data() const {
 
 ImageYuv ImageYuv::copy() const {
 	ImageYuv copyImage(h, w, stride);
-	std::copy(arrays[0].get(), arrays[0].get() + imageSize, copyImage.arrays[0].get());
+	std::copy(arrays[0].get(), arrays[0].get() + arraySizes[0], copyImage.arrays[0].get());
 	copyImage.index = index;
 	return copyImage;
 }
@@ -123,116 +103,258 @@ void ImageYuv::readFromPGM(const std::string& filename) {
 	}
 }
 
-ImageYuv& ImageYuv::fromNV12(const std::vector<unsigned char>& nv12, size_t strideNV12) {
-	//read U and V into temporary image
-	int h2 = h / 2;
-	int w2 = w / 2;
-	ImageBase<unsigned char> uv(h2, w2, w2, 2);
-	for (int z = 0; z < 2; z++) {
-		for (int r = 0; r < h2; r++) {
-			for (int c = 0; c < w2; c++) {
-				uv.at(z, r, c) = nv12[h * strideNV12 + r * strideNV12 + c * 2ull + z];
-			}
-		}
-	}
-
-	//upscale temporary uv into U and V planes here
-	uv.scaleByTwo(0, *this, 1);
-	uv.scaleByTwo(1, *this, 2);
-
-	//copy Y plane over
-	for (int r = 0; r < h; r++) {
-		for (int c = 0; c < w; c++) {
-			at(0, r, c) = nv12[r * strideNV12 + c];
-		}
-	}
-	return *this;
-}
-
-void ImageYuv::toNV12(std::vector<unsigned char>& nv12, size_t strideNV12, ThreadPoolBase& pool) const {
+void ImageYuv::toNV12(ImageNV12& dest, ThreadPoolBase& pool) const {
 	//copy Y plane
-	unsigned char* dest = nv12.data();
 	for (int r = 0; r < h; r++) {
-		std::copy(addr(0, r, 0), addr(0, r, 0) + w, dest);
-		dest += strideNV12;
+		std::copy(addr(0, r, 0), addr(0, r, 0) + w, dest.addr(0, r, 0));
 	}
 
 	//interleave U and V plane, simple bilinear downsampling
-	unsigned char* outptr = nv12.data() + h * strideNV12;
-	for (size_t z = 0; z < 2; z++) {
-		const unsigned char* inptr = plane(z + 1); //U and V plane of input data
+	for (size_t z = 1; z < 3; z++) {
+		const unsigned char* inptr = plane(z); //U and V plane of input data
 		auto fcn = [&] (size_t r) {
 			for (size_t c = 0; c < w / 2; c++) {
 				size_t idx = r * 2 * stride + c * 2;
-				int sum = (int) inptr[idx] + inptr[idx + 1] + inptr[idx + stride] + inptr[idx + stride + 1];
-				outptr[r * strideNV12 + c * 2 + z] = sum / 4;
+				int sum = int(inptr[idx]) + int(inptr[idx + 1]) + int(inptr[idx + stride]) + int(inptr[idx + stride + 1]);
+				dest.at(z, r, c) = sum / 4;
 			}
 		};
 		pool.addAndWait(fcn, 0, h / 2);
 	}
 }
 
-void ImageYuv::toNV12(std::vector<unsigned char>& nv12, ThreadPoolBase& pool) const {
-	toNV12(nv12, w, pool);
-}
-
-std::vector<unsigned char> ImageYuv::toNV12(size_t strideNV12) const {
-	std::vector<unsigned char> data(strideNV12 * h * 3 / 2);
-	toNV12(data, strideNV12);
-	return data;
-}
-
-std::vector<unsigned char> ImageYuv::toNV12() const {
-	return toNV12(w);
-}
-
-ImageRGBplanar& ImageYuv::toRGB(ImageRGBplanar& dest, ThreadPoolBase& pool) const {
-	yuvToRgb(dest, { 0, 1, 2 }, pool);
-	return dest;
-}
-
-ImageRGBplanar ImageYuv::toRGB() const {
-	ImageRGBplanar out(h, w);
-	return toRGB(out);
-}
-
-ImageBGR& ImageYuv::toBGR(ImageBGR& dest, ThreadPoolBase& pool) const {
-	yuvToRgb(dest, { 2, 1, 0 }, pool);
+ImageBaseRgb& ImageYuv::toBaseRgb(ImageBaseRgb& dest, ThreadPoolBase& pool) const {
+	yuvToRgb(dest, dest.indexRgba(), pool);
 	return dest;
 }
 
 ImageBGR ImageYuv::toBGR() const {
 	ImageBGR out(h, w);
-	return toBGR(out);
-}
-
-ImagePPM& ImageYuv::toPPM(ImagePPM& dest, ThreadPoolBase& pool) const {
-	assert(h == dest.h && w == dest.w && "dimensions mismatch");
-	yuvToRgb(dest, { 0, 1, 2 }, pool);
-	return dest;
-}
-
-ImagePPM ImageYuv::toPPM() const {
-	ImagePPM out(h, w);
-	return toPPM(out);
-}
-
-ImageRGBA& ImageYuv::toRGBA(ImageRGBA& dest, ThreadPoolBase& pool) const {
-	dest.setColorPlane(3, 0xFF);
-	yuvToRgb(dest, { 0, 1, 2 }, pool);
-	return dest;
+	toBaseRgb(out);
+	return out;
 }
 
 ImageRGBA ImageYuv::toRGBA() const {
 	ImageRGBA out(h, w);
-	toRGBA(out);
+	toBaseRgb(out);
+	return out;
+}
+
+ImageBGRA ImageYuv::toBGRA() const {
+	ImageBGRA out(h, w);
+	toBaseRgb(out);
 	return out;
 }
 
 im::LocalColor<unsigned char> ImageYuv::getLocalColor(const Color& color) const {
-	unsigned char y, u, v;
-	im::rgb_to_yuv(color.getChannel(0), color.getChannel(1), color.getChannel(2), &y, &u, &v);
-	return { { y, u, v }, color.getAlpha() };
+	im::LocalColor<unsigned char> out = {};
+	im::rgb_to_yuv(color.getChannel(0), color.getChannel(1), color.getChannel(2), &out.colorData[0], &out.colorData[1], &out.colorData[2]);
+	out.alpha = color.getAlpha();
+	return out;
+}
+
+
+//------------------------
+// NV12 class
+//------------------------
+
+
+ImageNV12::ImageNV12(int h, int w, int stride) :
+	ImageBase<unsigned char>(h, w, stride, 3, { std::make_shared<unsigned char[]>(h * stride * 3 / 2) }, { h * stride * 3 / 2 })
+{}
+
+ImageNV12::ImageNV12() :
+	ImageNV12(0, 0, 0)
+{}
+
+ImageNV12 ImageYuv::toNV12(int strideNV12, ThreadPoolBase& pool) const {
+	ImageNV12 out(h, w, strideNV12);
+	toNV12(out, pool);
+	return out;
+}
+
+ImageNV12 ImageYuv::toNV12() const {
+	return toNV12(w, defaultPool);
+}
+
+void ImageNV12::toYuv(ImageYuv& dest, ThreadPoolBase& pool) const {
+	//copy Y plane over
+	for (int r = 0; r < h; r++) {
+		std::copy(addr(0, r, 0), addr(0, r, 0) + w, dest.addr(0, r, 0));
+	}
+
+	//upscale temporary uv into U and V planes here
+	int h2 = h / 2;
+	int w2 = w / 2;
+	for (size_t z = 1; z < 3; z++) {
+		for (int r = 0; r < h; r++) {
+			for (int c = 0; c < w; c++) {
+				double py = (0.5 + r) * h2 / h - 0.5;
+				double px = (0.5 + c) * w2 / w - 0.5;
+				dest.at(z, r, c) = sample(z, px, py, 0.0, w2 - 1.0, 0.0, h2 - 1.0);
+			}
+		}
+	}
+}
+
+ImageYuv ImageNV12::toYuv() const {
+	ImageYuv out(h, w, stride);
+	toYuv(out);
+	return out;
+}
+
+ImageType ImageNV12::type() const {
+	return ImageType::NV12;
+}
+
+size_t ImageNV12::addrOffset(size_t idx, size_t r, size_t c) const {
+	assert((idx == 0 && r < h && c < w) || (idx > 0 && idx < numPlanes && r < h / 2 && c < w / 2) && "invalid pixel address");
+	return idx == 0 ? r * stride + c : (h + r) * stride + c * 2 + idx - 1;
+}
+
+unsigned char* ImageNV12::addr(size_t idx, size_t r, size_t c) {
+	return arrays[0].get() + addrOffset(idx, r, c);
+}
+
+const unsigned char* ImageNV12::addr(size_t idx, size_t r, size_t c) const {
+	return arrays[0].get() + addrOffset(idx, r, c);
+}
+
+
+//------------------------
+// YUV float stuff
+//------------------------
+
+
+ImageYuvFloat::ImageYuvFloat(int h, int w, int stride) :
+	ImageBase(h, w, stride, 3)
+{}
+
+ImageYuvFloat::ImageYuvFloat() :
+	ImageYuvFloat(0, 0, 0)
+{}
+
+im::LocalColor<float> ImageYuvFloat::getLocalColor(const Color& color) const {
+	float y, u, v;
+	color.toYUVfloat(&y, &u, &v);
+	return { { y, u, v, }, color.getAlpha() };
+}
+
+ImageYuv& ImageYuvFloat::toYuv(ImageYuv& dest, ThreadPoolBase& pool) const {
+	for (size_t z = 0; z < 3; z++) {
+		auto func = [&] (size_t r) {
+			for (size_t c = 0; c < w; c++) {
+				dest.at(z, r, c) = (unsigned char) std::rint(at(z, r, c) * 255.0f);
+			}
+		};
+		pool.addAndWait(func, 0, h);
+	}
+	return dest;
+}
+
+ImageBaseRgb& ImageYuvFloat::toBaseRgb(ImageBaseRgb& dest, ThreadPoolBase& pool) const {
+	yuvToRgb(dest, dest.indexRgba(), pool);
+	return dest;
+}
+
+void ImageYuvFloat::toNV12(ImageNV12& dest, ThreadPoolBase& pool) const {
+	//copy Y plane
+	auto fcn = [&] (size_t r) {
+		for (size_t c = 0; c < w; c++) {
+			dest.at(0, r, c) = (unsigned char) std::rint(at(0, r, c) * 255.0f);
+		}
+	};
+	pool.addAndWait(fcn, 0, h);
+
+	//interleave U and V plane, simple bilinear downsampling
+	for (size_t z = 1; z < 3; z++) {
+		const float* inptr = addr(z, 0, 0); //U and V plane of input data
+		auto fcn = [&] (size_t r) {
+			for (size_t c = 0; c < w / 2; c++) {
+				size_t idx = r * 2 * stride + c * 2;
+				float sum = inptr[idx] + inptr[idx + 1] + inptr[idx + stride] + inptr[idx + stride + 1];
+				dest.at(z, r, c) = (unsigned char) std::rint(sum / 4.0f * 255.0f);
+			}
+		};
+		pool.addAndWait(fcn, 0, h / 2);
+	}
+}
+
+
+//------------------------
+// Base RGB implementation
+//------------------------
+
+
+ImageBaseRgb::ImageBaseRgb(int h, int w, int stride, int numPlanes, int arraysize) :
+	ImagePacked<unsigned char>(h, w, stride, numPlanes, arraysize)
+{}
+
+ImageBaseRgb::ImageBaseRgb(int h, int w, int stride, int numPlanes, unsigned char* data, int arraysize) :
+	ImagePacked<unsigned char>(h, w, stride, numPlanes, data, arraysize)
+{}
+
+im::LocalColor<unsigned char> ImageBaseRgb::getLocalColor(const Color& color) const {
+	im::LocalColor<unsigned char> local = {};
+	for (size_t idx = 0; idx < indexRgba().size(); idx++) {
+		int channelIndex = indexRgba().at(idx);
+		local.colorData[idx] = color.getChannel(channelIndex);
+	}
+	local.alpha = color.getAlpha();
+	return local;
+}
+
+void ImageBaseRgb::copyTo(ImageBaseRgb& dest, size_t r0, size_t c0, ThreadPoolBase& pool) const {
+	assert(c0 + w <= dest.w && r0 + h <= dest.h && "dimensions mismatch");
+	for (int c = 0; c < w; c++) {
+		for (int r = 0; r < h; r++) {
+			int srcAlpha = numPlanes < 4 ? 255 : at(indexRgba().at(3), r, c);
+			int destAlpha = 255 - srcAlpha;
+			for (int idx = 0; idx < 3; idx++) {
+				int srcidx = indexRgba().at(dest.indexRgba().at(idx));
+				uint8_t& ptr = dest.at(idx, r0 + r, c0 + c);
+				ptr = (at(srcidx, r, c) * srcAlpha + ptr * destAlpha) / 255;
+			}
+		}
+	}
+}
+
+bool ImageBaseRgb::saveAsColorBMP(const std::string& filename) const {
+	std::ofstream os(filename, std::ios::binary);
+	im::BmpColorHeader(w, h).writeHeader(os);
+	int stridedWidth = util::alignValue(w * 3, 4);
+	std::vector<char> imageRow(stridedWidth);
+
+	int ir = indexRgba().at(0);
+	int ig = indexRgba().at(1);
+	int ib = indexRgba().at(2);
+	for (int r = h - 1; r >= 0; r--) {
+		unsigned char* ptr = (unsigned char*) imageRow.data();
+		for (int c = 0; c < w; c++) {
+			*ptr++ = at(ib, r, c);
+			*ptr++ = at(ig, r, c);
+			*ptr++ = at(ir, r, c);
+		}
+		os.write(imageRow.data(), imageRow.size());
+	}
+	return os.good();
+}
+
+bool ImageBaseRgb::saveAsPPM(const std::string& filename) const {
+	std::ofstream os(filename, std::ios::binary);
+	im::PpmHeader(w, h).writeHeader(os);
+	std::vector<unsigned char> row(w * 3);
+	for (int r = 0; r < h; r++) {
+		int pos = 0;
+		for (int c = 0; c < w; c++) {
+			for (int idx = 0; idx < 3; idx++) {
+				int colorIdx = indexRgba().at(idx);
+				row[pos++] = at(colorIdx, r, c);
+			}
+		}
+		os.write(reinterpret_cast<char*>(row.data()), row.size());
+	}
+	return os.good();
 }
 
 
@@ -240,35 +362,34 @@ im::LocalColor<unsigned char> ImageYuv::getLocalColor(const Color& color) const 
 // BGR image stuff
 //------------------------
 
+
+ImageBGR::ImageBGR(int h, int w, int stride, unsigned char* data) :
+	ImageBaseRgb(h, w, stride, 3, data, h * stride)
+{}
+
+ImageBGR::ImageBGR(int h, int w, int stride) :
+	ImageBaseRgb(h, w, stride, 3, h * stride)
+{}
+
 ImageBGR::ImageBGR(int h, int w) :
-	ImagePacked(h, w, 3 * w, 3, 3 * h * w) {}
+	ImageBGR(h, w, 3 * w) 
+{}
 
 ImageBGR::ImageBGR() :
-	ImageBGR(0, 0) {}
-
-bool ImageBGR::saveAsColorBMP(const std::string& filename) const {
-	std::ofstream os(filename, std::ios::binary);
-	im::BmpColorHeader(w, h).writeHeader(os);
-	std::vector<char> data(util::alignValue(w * 3, 4));
-
-	for (int r = h - 1; r >= 0; r--) {
-		const unsigned char* ptr = addr(0, r, 0);
-		std::copy(ptr, ptr + 3 * w, data.data());
-		os.write(data.data(), data.size());
-	}
-	return os.good();
-}
-
-static int readBytes(const char* ptr, int byteCount) {
-	int out = 0;
-	for (int i = 0; i < byteCount; i++, ptr++) {
-		out |= uint8_t(*ptr) << i * 8;
-	}
-	return out;
-}
+	ImageBGR(0, 0) 
+{}
 
 ImageBGR ImageBGR::readFromBMP(const std::string& filename) {
 	ImageBGR image;
+
+	auto readBytes = [] (const char* ptr, int byteCount) {
+		int out = 0;
+		for (int i = 0; i < byteCount; i++, ptr++) {
+			out |= uint8_t(*ptr) << i * 8;
+		}
+		return out;
+	};
+
 	try {
 		//read all bytes from file
 		std::ifstream is(filename, std::ios::binary);
@@ -328,13 +449,6 @@ ImageYuv ImageBGR::toYUV() const {
 	return out;
 }
 
-im::LocalColor<unsigned char> ImageBGR::getLocalColor(const Color& color) const {
-	unsigned char r = (unsigned char) color.getChannel(0);
-	unsigned char g = (unsigned char) color.getChannel(1);
-	unsigned char b = (unsigned char) color.getChannel(2);
-	return { { b, g, r }, color.getAlpha() };
-}
-
 
 //------------------------
 // RGBA image stuff
@@ -342,100 +456,47 @@ im::LocalColor<unsigned char> ImageBGR::getLocalColor(const Color& color) const 
 
 
 ImageRGBA::ImageRGBA(int h, int w, int stride, unsigned char* data) :
-	ImagePacked(h, w, stride, 4, data, h* stride) {}
+	ImageBaseRgb(h, w, stride, 4, data, h * stride) 
+{}
 
 ImageRGBA::ImageRGBA(int h, int w, int stride) :
-	ImagePacked(h, w, stride, 4, h* stride) {}
+	ImageBaseRgb(h, w, stride, 4, h * stride)
+{}
 
 ImageRGBA::ImageRGBA(int h, int w) :
-	ImageRGBA(h, w, 4 * w) {}
+	ImageRGBA(h, w, 4 * w) 
+{}
 
 ImageRGBA::ImageRGBA() :
-	ImageRGBA(0, 0) {}
+	ImageRGBA(0, 0) 
+{}
 
-void ImageRGBA::copyTo(ImageRGBA& dest, size_t r0, size_t c0, ThreadPoolBase& pool) const {
-	assert(c0 + w <= dest.w && r0 + h <= dest.h && "dimensions mismatch");
-	for (int c = 0; c < w; c++) {
-		for (int r = 0; r < h; r++) {
-			if (at(3, r, c) > 0) {
-				dest.at(0, r + r0, c + c0) = at(0, r, c);
-				dest.at(1, r + r0, c + c0) = at(1, r, c);
-				dest.at(2, r + r0, c + c0) = at(2, r, c);
-			}
-		}
-	}
-}
-
-bool ImageRGBA::saveAsColorBMP(const std::string& filename) const {
-	std::ofstream os(filename, std::ios::binary);
-	im::BmpColorHeader(w, h).writeHeader(os);
-	int stridedWidth = util::alignValue(w * 3, 4);
-	std::vector<char> imageRow(stridedWidth);
-
-	for (int r = h - 1; r >= 0; r--) {
-		unsigned char* ptr = (unsigned char*) imageRow.data();
-		for (int c = 0; c < w; c++) {
-			*ptr++ = at(2, r, c);
-			*ptr++ = at(1, r, c);
-			*ptr++ = at(0, r, c);
-		}
-		os.write(imageRow.data(), imageRow.size());
-	}
-	return os.good();
-}
-
-im::LocalColor<unsigned char> ImageRGBA::getLocalColor(const Color& color) const {
-	unsigned char r = (unsigned char) color.getChannel(0);
-	unsigned char g = (unsigned char) color.getChannel(1);
-	unsigned char b = (unsigned char) color.getChannel(2);
-	return { { r, g, b }, color.getAlpha() };
+ImageType ImageRGBA::type() const {
+	return ImageType::RGBA;
 }
 
 
 //------------------------
-// PPM image stuff
+// BGRA image stuff
 //------------------------
 
-ImagePPM::ImagePPM(int h, int w) :
-	ImagePacked(h, w, 3 * w, 3, 3 * h * w + headerSize) 
-{
-	//first 19 bytes are header for ppm format
-	std::string header = std::format("P6 {:5} {:5} 255 ", w, h);
-	std::copy_n(header.begin(), headerSize, arrays.at(0).get());
-	//std::format_to_n(arrays.at(0).get(), headerSize, "P6 {:5} {:5} 255 ", w, h);
-}
 
-ImagePPM::ImagePPM() :
-	ImagePPM(0, 0) {}
+ImageBGRA::ImageBGRA(int h, int w, int stride, unsigned char* data) :
+	ImageBaseRgb(h, w, stride, 4, data, h * stride) 
+{}
 
-const unsigned char* ImagePPM::data() const {
-	return arrays.at(0).get() + headerSize;
-}
+ImageBGRA::ImageBGRA(int h, int w, int stride) :
+	ImageBaseRgb(h, w, stride, 4, h * stride) 
+{}
 
-unsigned char* ImagePPM::data() {
-	return arrays.at(0).get() + headerSize;
-}
+ImageBGRA::ImageBGRA(int h, int w) :
+	ImageBGRA(h, w, 4 * w) 
+{}
 
-size_t ImagePPM::stridedSize() const {
-	return 3ull * h * w;
-}
+ImageBGRA::ImageBGRA() :
+	ImageBGRA(0, 0) 
+{}
 
-size_t ImagePPM::stridedByteSize() const {
-	return imageSize;
-}
-
-const unsigned char* ImagePPM::header() const {
-	return arrays.at(0).get();
-}
-
-bool ImagePPM::saveAsPPM(const std::string& filename) const {
-	std::ofstream os(filename, std::ios::binary);
-	os.write(reinterpret_cast<const char*>(arrays.at(0).get()), stridedSize());
-	return os.good();
-}
-
-bool ImagePPM::saveAsColorBMP(const std::string& filename) const {
-	ImageBGR bgr(h, w);
-	copyTo(bgr, { 0, 1, 2 }, { 2, 1, 0 });
-	return bgr.saveAsColorBMP(filename);
+ImageType ImageBGRA::type() const {
+	return ImageType::BGRA;
 }

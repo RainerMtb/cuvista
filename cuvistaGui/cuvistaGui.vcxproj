@@ -136,10 +136,9 @@ copy $(FFMPEG_PATH)\bin\*.dll $(SolutionDir)bin\$(Platform)\Deploy
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="ClickLabel.cpp" />
-    <ClCompile Include="DoubleClickSlider.cpp" />
     <ClCompile Include="Eula.cpp" />
-    <ClCompile Include="ImageLabel.cpp" />
-    <ClCompile Include="MessagePrinterGui.cpp" />
+    <ClCompile Include="CustomImageLabel.cpp" />
+    <ClCompile Include="CustomTextEdit.cpp" />
     <ClCompile Include="player.cpp" />
     <ClCompile Include="progress.cpp" />
     <ClCompile Include="UserInputGui.cpp" />
@@ -165,7 +164,7 @@ copy $(FFMPEG_PATH)\bin\*.dll $(SolutionDir)bin\$(Platform)\Deploy
     <ResourceCompile Include="cuvistaGui.rc" />
   </ItemGroup>
   <ItemGroup>
-    <QtMoc Include="ImageLabel.h" />
+    <QtMoc Include="CustomImageLabel.h" />
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="progress.h" />
@@ -177,13 +176,10 @@ copy $(FFMPEG_PATH)\bin\*.dll $(SolutionDir)bin\$(Platform)\Deploy
     <QtMoc Include="UserInputGui.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <QtMoc Include="MessagePrinterGui.h" />
+    <QtMoc Include="CustomTextEdit.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="CMakeLists.txt" />
-  </ItemGroup>
-  <ItemGroup>
-    <QtMoc Include="DoubleClickSlider.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Condition="Exists('$(QtMsBuild)\qt.targets')">

@@ -18,7 +18,8 @@
 
 
 #include "ImageYuvFFmpeg.hpp"
-#include "Mat.hpp"
+#include "Image2.hpp"
+#include <cassert>
 
 ImageYuvFFmpeg::ImageYuvFFmpeg(AVFrame* av_frame) :
     av_frame { av_frame } {}
@@ -29,14 +30,6 @@ uint8_t* ImageYuvFFmpeg::addr(size_t idx, size_t r, size_t c) {
 
 const uint8_t* ImageYuvFFmpeg::addr(size_t idx, size_t r, size_t c) const {
     return av_frame->data[idx] + r * av_frame->linesize[idx] + c;
-}
-
-uint8_t* ImageYuvFFmpeg::plane(size_t idx) {
-    return av_frame->data[idx];
-}
-
-const uint8_t* ImageYuvFFmpeg::plane(size_t idx) const {
-    return av_frame->data[idx];
 }
 
 int ImageYuvFFmpeg::strideInBytes() const {
@@ -63,10 +56,5 @@ void ImageYuvFFmpeg::setIndex(int64_t frameIndex) {
 bool ImageYuvFFmpeg::saveAsBMP(const std::string& filename, uint8_t scale) const {
     int h = height();
     int w = width();
-    Matc y = Matc::fromRowData(h, w, strideInBytes(), plane(0));
-    Matc u = Matc::fromRowData(h, w, strideInBytes(), plane(1));
-    Matc v = Matc::fromRowData(h, w, strideInBytes(), plane(2));
-    return ImageMatYuv8(h, w, w, y.data(), u.data(), v.data()).saveAsBMP(filename, scale);
+    return ImageMatYuv8(h, w, w, (uint8_t*) addr(0, 0, 0), (uint8_t*) addr(1, 0, 0), (uint8_t*) addr(2, 0, 0)).saveAsBMP(filename, scale);
 }
-
-

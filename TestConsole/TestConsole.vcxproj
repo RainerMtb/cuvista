@@ -186,7 +186,7 @@
       <AdditionalLibraryDirectories>$(SolutionDir)lib\$(Platform);$(SolutionDir)bin\$(Platform)\$(Configuration);$(SolutionDir)cpu_features\build\Release;$(CUDA_PATH)\lib\$(Platform);$(FFMPEG_PATH)\lib</AdditionalLibraryDirectories>
       <AdditionalDependencies>AvxStuff.lib;Common.lib;cpu_features.lib;OpenCl.lib;CudaStuff.lib;Matrix.lib;Deshaker.lib;cudart_static.lib;nvencodeapi.lib;cuda.lib;avcodec.lib;avformat.lib;avutil.lib;swscale.lib;swresample.lib;ws2_32.lib;Ole32.lib</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>libcmt.lib; msvcrt.lib; libcmtd.lib</IgnoreSpecificDefaultLibraries>
-      <DelayLoadDLLs>nvcuda.dll;OpenCL.dll;nvEncodeAPI64.dll</DelayLoadDLLs>
+      <DelayLoadDLLs>OpenCL.dll;nvEncodeAPI64.dll</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -208,7 +208,7 @@
       <AdditionalLibraryDirectories>$(SolutionDir)lib\$(Platform);$(SolutionDir)bin\$(Platform)\$(Configuration);$(SolutionDir)cpu_features\build\Release;$(CUDA_PATH)\lib\$(Platform);$(FFMPEG_PATH)\lib</AdditionalLibraryDirectories>
       <AdditionalDependencies>AvxStuff.lib;Common.lib;cpu_features.lib;OpenCl.lib;CudaStuff.lib;Matrix.lib;Deshaker.lib;cudart_static.lib;nvencodeapi.lib;cuda.lib;avcodec.lib;avformat.lib;avutil.lib;swscale.lib;swresample.lib;ws2_32.lib;Ole32.lib</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>libcmt.lib</IgnoreSpecificDefaultLibraries>
-      <DelayLoadDLLs>nvcuda.dll;OpenCL.dll;nvEncodeAPI64.dll</DelayLoadDLLs>
+      <DelayLoadDLLs>OpenCL.dll;nvEncodeAPI64.dll</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

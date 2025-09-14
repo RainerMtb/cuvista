@@ -42,26 +42,30 @@ void DummyFrame::outputData(int64_t frameIndex, const Affine2D& trf) {
 	size_t idx = frameIndex % mFrames.size();
 }
 
-void DummyFrame::getOutputYuv(int64_t frameIndex, ImageYuvData& image) {
+void DummyFrame::getOutputYuv(int64_t frameIndex, ImageYuv& image) {
 	size_t idx = frameIndex % mFrames.size();
 	mFrames[idx].copyTo(image, mPool);
 }
 
-void DummyFrame::getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) {
-	static std::vector<unsigned char> nv12(cudaPitch * mData.h * 3 / 2);
+void DummyFrame::getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) {
 	size_t idx = frameIndex % mFrames.size();
-	mFrames[idx].toNV12(nv12, cudaPitch, mPool);
-	encodeNvData(nv12, cudaNv12ptr);
+	mFrames[idx].toNV12(image, mPool);
+	encodeNvData(image, cudaNv12ptr);
 }
 
 void DummyFrame::getOutputRgba(int64_t frameIndex, ImageRGBA& image) {
 	size_t idx = frameIndex % mFrames.size();
-	mFrames[idx].toRGBA(image, mPool);
+	mFrames[idx].toBaseRgb(image, mPool);
+}
+
+void DummyFrame::getOutputBgra(int64_t frameIndex, ImageBGRA& image) {
+	size_t idx = frameIndex % mFrames.size();
+	mFrames[idx].toBaseRgb(image, mPool);
 }
 
 void DummyFrame::getWarped(int64_t frameIndex, ImageRGBA& image) {
 	size_t idx = frameIndex % mFrames.size();
-	mFrames[idx].toRGBA(image, mPool);
+	mFrames[idx].toBaseRgb(image, mPool);
 }
 
 void DummyFrame::getInput(int64_t frameIndex, ImageYuv& image) const {
@@ -71,5 +75,5 @@ void DummyFrame::getInput(int64_t frameIndex, ImageYuv& image) const {
 
 void DummyFrame::getInput(int64_t frameIndex, ImageRGBA& image) const {
 	size_t idx = frameIndex % mFrames.size();
-	mFrames[idx].toRGBA(image, mPool);
+	mFrames[idx].toBaseRgb(image, mPool);
 }

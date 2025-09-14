@@ -52,9 +52,10 @@ public:
 	void createPyramid(int64_t frameIndex, const Affine2D& trf, bool warp) override {};
 	void computeStart(int64_t frameIndex, std::vector<PointResult>& results) override {}
 	void computeTerminate(int64_t frameIndex, std::vector<PointResult>& results) override {}
-	void getOutputYuv(int64_t frameIndex, ImageYuvData& image) override {}
+	void getOutputYuv(int64_t frameIndex, ImageYuv& image) override {}
 	void getOutputRgba(int64_t frameIndex, ImageRGBA& image) override {}
-	void getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) override {}
+	void getOutputBgra(int64_t frameIndex, ImageBGRA& image) override {}
+	void getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) override {}
 	void getInput(int64_t frameIndex, ImageYuv& image) const override {}
 	void getInput(int64_t frameIndex, ImageRGBA& image) const override {}
 	void getWarped(int64_t frameIndex, ImageRGBA& image) override {}
@@ -70,7 +71,7 @@ public:
 };
 
 inline CudaProbeResult cudaProbeRuntime() { return { 0, 0 }; }
-inline void encodeNvData(const std::vector<unsigned char>& nv12, unsigned char* nvencPtr) {}
+inline void encodeNvData(const ImageNV12& image, unsigned char* nvencPtr) {}
 inline void getNvData(std::vector<unsigned char>& nv12, unsigned char* cudaNv12ptr) {}
 
 #else
@@ -203,9 +204,10 @@ public:
 	void computeStart(int64_t frameIndex, std::vector<PointResult>& results) override;
 	void computeTerminate(int64_t frameIndex, std::vector<PointResult>& results) override;
 	void cudaOutputData(int64_t frameIndex, const AffineCore& trf);
-	void getOutputYuv(int64_t frameIndex, ImageYuvData& image) override;
+	void getOutputYuv(int64_t frameIndex, ImageYuv& image) override;
 	void getOutputRgba(int64_t frameIndex, ImageRGBA& image) override;
-	void getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) override;
+	void getOutputBgra(int64_t frameIndex, ImageBGRA& image) override;
+	void getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) override;
 	void getInput(int64_t frameIndex, ImageYuv& image) const override;
 	void getInput(int64_t frameIndex, ImageRGBA& image) const override;
 	void getWarped(int64_t frameIndex, ImageRGBA& image) override;
@@ -222,7 +224,7 @@ void kernelComputeCall(ComputeKernelParam param, ComputeTextures& tex, CudaPoint
 CudaProbeResult cudaProbeRuntime();
 
 //only encode given nv12 data
-void encodeNvData(const std::vector<unsigned char>& nv12, unsigned char* nvencPtr);
+void encodeNvData(const ImageNV12& image, unsigned char* nvencPtr);
 
 //get NV12 data prepared for cuda encoding
 void getNvData(std::vector<unsigned char>& nv12, unsigned char* cudaNv12ptr);

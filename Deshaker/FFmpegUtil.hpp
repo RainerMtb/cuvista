@@ -62,6 +62,9 @@ struct StreamInfo {
 	std::string codec;
 	std::string durationString;
 	AVMediaType mediaType;
+	int index;
+
+	std::string inputStreamSummary() const;
 };
 
 class SidePacket {

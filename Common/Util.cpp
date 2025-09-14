@@ -186,11 +186,7 @@ namespace util {
 	}
 
 	CRC64& CRC64::addBytes(const unsigned char* data, size_t size) {
-		return addBytes(std::span(data, size));
-	}
-
-	CRC64& CRC64::addBytes(std::span<const unsigned char> data) {
-		for (size_t i = 0; i < data.size(); i++) {
+		for (size_t i = 0; i < size; i++) {
 			int idx = (crc ^ data[i]) & 0xFF;
 			crc = table[idx] ^ (crc >> 8);
 		}

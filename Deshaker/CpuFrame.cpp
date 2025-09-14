@@ -26,7 +26,7 @@
 CpuFrame::CpuFrame(MainData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool) :
 	FrameExecutor(data, deviceInfo, frame, pool) 
 {
-	assert(mDeviceInfo.type == DeviceType::CPU && "device type must be CPU here");
+	assert(mDeviceInfo.getType() == DeviceType::CPU && "device type must be CPU here");
 
 	//buffer to hold input frames in yuv format
 	for (int i = 0; i < data.bufferCount; i++) mYUV.emplace_back(mData.h, mData.w, mData.cpupitch);
@@ -44,7 +44,7 @@ CpuFrame::CpuFrame(MainData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame
 	mFilterBuffer = Matf::allocate(mData.h, mData.w);
 	mFilterResult = Matf::allocate(mData.h, mData.w);
 	mYuvPlane = Matf::allocate(mData.h, mData.w);
-	mOutput = ImageYuv(mData.h, mData.w, mData.cpupitch);
+	mOutput = ImageYuvFloat(mData.h, mData.w, mData.cpupitch);
 }
 
 //construct data for one pyramid
@@ -290,8 +290,7 @@ void CpuFrame::outputData(int64_t frameIndex, const Affine2D& trf) {
 		auto func2 = [&] (size_t r) {
 			for (size_t c = 0; c < mData.w; c++) {
 				float val = buf.at(r, c) + (buf.at(r, c) - mFilterResult.at(r, c)) * mData.unsharp[z];
-				val = std::clamp(val, 0.0f, 1.0f);
-				mOutput.at(z, r, c) = (unsigned char) std::rint(val * 255);
+				mOutput.at(z, r, c) = std::clamp(val, 0.0f, 1.0f);
 				//if (z==0 && r==1049 && c==842) std::printf("cpu %.14f %d\n", val * 255, mOutput.at(z, r, c));
 			}
 		};
@@ -301,25 +300,32 @@ void CpuFrame::outputData(int64_t frameIndex, const Affine2D& trf) {
 	mOutput.index = frameIndex;
 }
 
-void CpuFrame::getOutputYuv(int64_t frameIndex, ImageYuvData& image) {
+void CpuFrame::getOutputYuv(int64_t frameIndex, ImageYuv& image) {
 	assert(frameIndex == mOutput.index && "invalid frame index");
-	mOutput.copyTo(image, mPool);
+	mOutput.toYuv(image, mPool);
+	image.index = frameIndex;
 }
 
 void CpuFrame::getOutputRgba(int64_t frameIndex, ImageRGBA& image) {
 	assert(frameIndex == mOutput.index && "invalid frame index");
-	mOutput.toRGBA(image, mPool);
+	mOutput.toBaseRgb(image, mPool);
+	image.index = frameIndex;
 }
 
-void CpuFrame::getOutput(int64_t frameIndex, unsigned char* cudaNv12ptr, int cudaPitch) {
+void CpuFrame::getOutputBgra(int64_t frameIndex, ImageBGRA& image) {
 	assert(frameIndex == mOutput.index && "invalid frame index");
-	static std::vector<unsigned char> nv12(cudaPitch * mData.h * 3 / 2);
-	mOutput.toNV12(nv12, cudaPitch, mPool);
-	encodeNvData(nv12, cudaNv12ptr);
+	mOutput.toBaseRgb(image, mPool);
+	image.index = frameIndex;
+}
+
+void CpuFrame::getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) {
+	assert(frameIndex == mOutput.index && "invalid frame index");
+	mOutput.toNV12(image, mPool);
+	encodeNvData(image, cudaNv12ptr);
 }
 
 void CpuFrame::getWarped(int64_t frameIndex, ImageRGBA& image) {
-	ImageYuvMatFloat(mData.h, mData.w, mData.w, mBuffer[0].data(), mBuffer[1].data(), mBuffer[2].data()).toRGBA(image, mPool);
+	ImageYuvMatFloat(mData.h, mData.w, mData.w, mBuffer[0].data(), mBuffer[1].data(), mBuffer[2].data()).toBaseRgb(image, mPool);
 }
 
 Matf CpuFrame::getTransformedOutput() const {
@@ -338,7 +344,7 @@ Matf CpuFrame::getPyramid(int64_t index) const {
 
 void CpuFrame::getInput(int64_t frameIndex, ImageRGBA& image) const {
 	size_t idx = frameIndex % mYUV.size();
-	mYUV[idx].toRGBA(image, mPool);
+	mYUV[idx].toBaseRgb(image, mPool);
 }
 
 void CpuFrame::getInput(int64_t index, ImageYuv& image) const {

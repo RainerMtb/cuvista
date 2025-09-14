@@ -60,6 +60,7 @@ private:
     QSettings mSettings = QSettings("RainerMtb", "cuvista");
     QImage mErrorImage = QImage(":/cuvistaGui/res/signs-01.png");
     QImage mWorkingImage = QImage(":/cuvistaGui/res/signs-02.png");
+    QPixmap mInputImagePlaceholder = QPixmap(100, 100);
 
     Ui::cuvistaGuiClass ui;
     QString mMovieDir;
@@ -81,6 +82,8 @@ private:
 
     MainData mData;
     ImageYuv mInputYUV;
+    ImageBGR mInputBGR;
+    QImage mInputImage;
     FFmpegReader mReader;
 
     QColor mBackgroundColor;

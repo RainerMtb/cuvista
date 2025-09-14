@@ -34,6 +34,15 @@ static cpu_features::X86Info cpuInfo = cpu_features::GetX86Info();
 
 
  //CPU Device Info -----------------------------------
+
+DeviceInfoCpu::DeviceInfoCpu() :
+	DeviceInfoBase(16384) 
+{}
+
+DeviceType DeviceInfoCpu::getType() const {
+	return DeviceType::CPU;
+}
+
 std::string DeviceInfoCpu::getName() const {
 	return std::format("CPU, {}, {} threads", cpuInfo.brand_string, std::to_string(std::thread::hardware_concurrency()));
 }
@@ -52,6 +61,15 @@ cpu_features::X86Features DeviceInfoCpu::getCpuFeatures() const {
 
 
 //Avx Device Info -----------------------------------
+
+DeviceInfoAvx::DeviceInfoAvx() :
+	DeviceInfoBase(16384) 
+{}
+
+DeviceType DeviceInfoAvx::getType() const {
+	return DeviceType::AVX;
+}
+
 std::string DeviceInfoAvx::getName() const {
 	return std::format("AVX 512, {}", cpuInfo.brand_string);
 }
@@ -66,6 +84,15 @@ std::shared_ptr<FrameExecutor> DeviceInfoAvx::create(MainData& data, MovieFrame&
 
 
 //OPENCL Info -----------------------------------
+
+DeviceInfoOpenCl::DeviceInfoOpenCl(int64_t maxPixel) :
+	DeviceInfoBase(maxPixel) 
+{}
+
+DeviceType DeviceInfoOpenCl::getType() const {
+	return DeviceType::OPEN_CL;
+}
+
 std::string DeviceInfoOpenCl::getName() const {
 	std::string name = device->getInfo<CL_DEVICE_NAME>();
 	std::string vendor = device->getInfo<CL_DEVICE_VENDOR>();
@@ -114,6 +141,15 @@ std::ostream& operator << (std::ostream& os, const DeviceInfoCuda& info) {
 
 
 // Cuda Info -----------------------------------
+
+DeviceInfoCuda::DeviceInfoCuda(int64_t maxPixel) :
+	DeviceInfoBase(maxPixel) 
+{}
+
+DeviceType DeviceInfoCuda::getType() const {
+	return DeviceType::CUDA;
+}
+
 std::string DeviceInfoCuda::getName() const {
 	return std::format("Cuda, {}, Compute {}.{}", props->name, props->major, props->minor);
 }
@@ -137,7 +173,7 @@ std::vector<DeviceInfoCuda> CudaInfo::probeCuda() {
 		cudaDeviceProp& prop = res.props[i];
 
 		//create device info struct
-		DeviceInfoCuda cuda(DeviceType::CUDA, prop.sharedMemPerBlock / sizeof(float));
+		DeviceInfoCuda cuda(prop.sharedMemPerBlock / sizeof(float));
 		cuda.props = std::make_shared<cudaDeviceProp>(prop);
 		cuda.cudaIndex = i;
 
@@ -182,6 +218,15 @@ std::string CudaInfo::nvencDriverToString() const {
 
 
 //Null Device -----------------------------------
+
+DeviceInfoNull::DeviceInfoNull() :
+	DeviceInfoBase(0) 
+{}
+
+DeviceType DeviceInfoNull::getType() const {
+	return DeviceType::UNKNOWN;
+}
+
 std::string DeviceInfoNull::getName() const {
 	return "";
 }

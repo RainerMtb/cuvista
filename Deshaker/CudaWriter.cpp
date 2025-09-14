@@ -63,7 +63,7 @@ void CudaFFmpegWriter::open(EncodingOption videoCodec) {
     //select codec
     const DeviceInfoBase* dev = mData.deviceList[mData.deviceSelected];
     const DeviceInfoCuda* dic;
-    if (dev->type == DeviceType::CUDA) dic = static_cast<const DeviceInfoCuda*>(dev);
+    if (dev->getType() == DeviceType::CUDA) dic = static_cast<const DeviceInfoCuda*>(dev);
     else dic = &mData.cudaInfo.devices[0];
 
     if (videoCodec.codec == Codec::AUTO) videoCodec.codec = dic->encodingOptions[0].codec;
@@ -100,11 +100,13 @@ void CudaFFmpegWriter::open(EncodingOption videoCodec) {
     videoPacket = av_packet_alloc();
     if (!videoPacket)
         throw AVException("could not allocate encoder packet");
+
+    outputNV12 = ImageNV12(mReader.h, mReader.w, nvenc->cudaPitch);
 }
 
 
 void CudaFFmpegWriter::prepareOutput(FrameExecutor& executor) {
-    executor.getOutput(frameIndex, reinterpret_cast<unsigned char*>(nvenc->getNextInputFramePtr()), nvenc->cudaPitch);
+    executor.getOutputNvenc(frameIndex, outputNV12, reinterpret_cast<unsigned char*>(nvenc->getNextInputFramePtr()));
 }
 
 

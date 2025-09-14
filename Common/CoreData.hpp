@@ -34,24 +34,43 @@ enum class BackgroundMode {
 	COLOR
 };
 
-struct CoreData {
-	int MAX_POINTS_COUNT = 150;	//max number of points in x or y direction
-	int COMP_MAX_ITER = 20;		//max loop iterations
-	double COMP_MAX_TOL = 0.15;	//tolerance to stop window pattern matching
+inline constexpr struct {
+	double radsecMin = 0.1, radsecMax = 10.0;
+	double radsec = 0.5;
 
-	int w = 0;                  //frame width
-	int h = 0;					//frame height
-	int ir = 3;					//integration window, radius around point to integrate
-	int iw = 7;					//integration window, 2 * ir + 1
-	int ixCount = -1;
-	int iyCount = -1;
-	int zMin = -1;
-	int zMax = -1;				//pyramid steps used for actual computing
-	int zCount = 3;			    //number of pyramid levels to use for stabilization
-	int pyramidLevels = -1;     //number of pyramid levels to create
-	int pyramidRowCount = -1;	//number of rows for one pyramid, all the rows of Y data for all levels
-	int pyramidCount = 2;	    //number of pyramids to allocate in memory
-	int resultCount = 0;		//number of points to compute in a frame
+	double imZoomMin = 0.1, imZoomMax = 10.0;
+	double zoomMin = 1.05, zoomMax = 1.15;
+
+	int radiusMin = 1, radiusMax = 500;
+	int wMin = 100, hMin = 100;
+	int levelsMin = 1, levelsMax = 6;
+	int irMin = 0, irMax = 3;
+	int modeMax = 6;
+
+	uint8_t bgColorRed = 0;
+	uint8_t bgColorGreen = 150;
+	uint8_t bgColorBlue = 0;
+	int frameLimit = 500;
+} defaults;
+
+struct CoreData {
+	int MAX_POINTS_COUNT = 150;	   //max number of points in x or y direction
+	int COMP_MAX_ITER = 20;		   //max loop iterations
+	double COMP_MAX_TOL = 0.15;	   //tolerance to stop window pattern matching
+								   
+	int w = 0;                     //frame width
+	int h = 0;					   //frame height
+	int ir = 3;					   //integration window, radius around point to integrate
+	int iw = 7;					   //integration window, 2 * ir + 1
+	int ixCount = -1;			   
+	int iyCount = -1;			   
+	int zMin = -1;				   
+	int zMax = -1;				   //pyramid steps used for actual computing
+	int zCount = 3;			       //number of pyramid levels to use for stabilization
+	int pyramidLevels = -1;        //number of pyramid levels to create
+	int pyramidRowCount = -1;	   //number of rows for one pyramid, all the rows of Y data for all levels
+	int pyramidCount = 2;	       //number of pyramids to allocate in memory
+	int resultCount = 0;		   //number of points to compute in a frame
 
 	int cpupitch = 0;
 
@@ -62,15 +81,15 @@ struct CoreData {
 	double dnan = std::numeric_limits<double>::quiet_NaN();
 
 	Triplet unsharp = { 0.6f, 0.3f, 0.3f };          //ffmpeg unsharp=5:5:0.6:3:3:0.3
-	Triplet bgcolorYuv = {};                          //background fill colors in yuv
+	Triplet bgcolorYuv = {};                         //background fill colors in yuv
 	BackgroundMode bgmode = BackgroundMode::BLEND;   //fill gap with previous frames or not
 
-	int radius = -1;			//temporal radius, number of frames before and after used for smoothing
-	double radsec = 0.5;		//temporal radius in seconds
-	int bufferCount = -1;		//number of frames to buffer, set by MovieFrame
+	int radius = -1;                    //temporal radius, number of frames before and after used for smoothing
+	double radsec = defaults.radsec;    //temporal radius in seconds
+	int bufferCount = -1;               //number of frames to buffer, set by MovieFrame
 
-	double zoomMin = 1.05;		        //min additional zoom
-	double zoomMax = 1.15;              //max additioanl zoom
+	double zoomMin = defaults.zoomMin;  //min additional zoom
+	double zoomMax = defaults.zoomMax;  //max additioanl zoom
 	double zoomFallbackTotal = 0.025;   //fallback rate for dynamic zoom, to be divided by temporal radius
 	double zoomFallback = 0.0;          //fallback rate for dynamic zoom, to be applied per frame
 	

@@ -16,7 +16,7 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
-#include "ImageUtil.hpp"
+#include "ImageHeaders.hpp"
 #include <algorithm>
 #include <cassert>
 
@@ -78,4 +78,8 @@ void im::BmpGrayHeader::writeHeader(std::ofstream& os) const {
 
 void im::PgmHeader::writeHeader(std::ofstream& os) const {
 	os << "P5 " << w << " " << h * 3 << " 255 ";
+}
+
+void im::PpmHeader::writeHeader(std::ofstream& os) const {
+	os << "P6 " << w << " " << h << " 255 ";
 }

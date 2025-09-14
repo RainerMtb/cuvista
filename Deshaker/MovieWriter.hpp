@@ -118,10 +118,12 @@ protected:
 	bool doWriteOutput;
 
 public:
-	std::list<ImageYuv> outputFrames;
+	std::list<ImageYuv> outputFramesYuv;
+	std::list<ImageRGBA> outputFramesRgba;
+	std::list<ImageBGRA> outputFramesBgra;
 	std::list<ImageYuv> inputFrames;
 
-	RawMemoryStoreWriter(size_t maxFrameCount = 500, bool writeInput = true, bool writeOutput = true) :
+	RawMemoryStoreWriter(size_t maxFrameCount = 250, bool writeInput = true, bool writeOutput = true) :
 		maxFrameCount { maxFrameCount },
 		doWriteInput { writeInput },
 		doWriteOutput { writeOutput} {}
@@ -358,7 +360,7 @@ protected:
 	int legendSize = 0;
 	ImageRGBA legend;
 	ImageRGBA imageInterpolated;
-	ImageRGBplanar imageResults;
+	ImageRGBA imageResults;
 
 	void start(const std::string& sourceName, AVPixelFormat pixfmt);
 	void writeFlow(const MovieFrame& frame);
@@ -366,10 +368,7 @@ protected:
 	void vectorToColor(double dx, double dy, unsigned char* r, unsigned char* g, unsigned char* b);
 
 public:
-	OpticalFlowWriter(MainData& data, MovieReader& reader) :
-		FFmpegWriter(data, reader, 1),
-		imageInterpolated(data.h, data.w),
-		imageResults(data.iyCount, data.ixCount) {}
+	OpticalFlowWriter(MainData& data, MovieReader& reader);
 
 	void open(EncodingOption videoCodec) override {}
 	void start() override;

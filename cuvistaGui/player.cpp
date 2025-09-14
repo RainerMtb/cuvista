@@ -41,6 +41,7 @@ PlayerWindow::PlayerWindow(QWidget* parent) :
     connect(ui.btnPlay, &QPushButton::clicked, this, &PlayerWindow::play);
     connect(ui.btnStop, &QPushButton::clicked, this, &PlayerWindow::close);
     connect(this, &PlayerWindow::sigUpdate, ui.videoWidget->videoSink(), &QVideoSink::videoFrameChanged);
+    connect(this, &PlayerWindow::sigLate, ui.lblRealtime, &QLabel::setVisible);
     connect(ui.sliderVolume, &QSlider::valueChanged, this, &PlayerWindow::sigVolume);
 }
 
@@ -184,6 +185,7 @@ void PlayerWriter::writeOutput(const FrameExecutor& executor) {
 
     //check time to play video frame
     auto tnow = std::chrono::steady_clock::now();
+    mPlayer->sigLate(tnow > mNextPts);
     while (tnow < mNextPts || mPlayer->isPaused) {
         tnow = std::chrono::steady_clock::now();
     }

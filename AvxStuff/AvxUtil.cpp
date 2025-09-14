@@ -22,89 +22,24 @@
 #include "AvxMat.hpp"
 
 
- //transpose 4 vectors of 16 floats
-void avx::transpose16x4(std::span<V16f> data) {
-	V16f tmp[8];
-
-	tmp[0] = _mm512_unpacklo_ps(data[0], data[1]);
-	tmp[1] = _mm512_unpackhi_ps(data[0], data[1]);
-	tmp[2] = _mm512_unpacklo_ps(data[2], data[3]);
-	tmp[3] = _mm512_unpackhi_ps(data[2], data[3]);
-
-	data[0] = _mm512_shuffle_ps(tmp[0], tmp[2], 0b0100'0100);
-	data[1] = _mm512_shuffle_ps(tmp[0], tmp[2], 0b1110'1110);
-	data[2] = _mm512_shuffle_ps(tmp[1], tmp[3], 0b0100'0100);
-	data[3] = _mm512_shuffle_ps(tmp[1], tmp[3], 0b1110'1110);
-}
-
-
-//transpose 8 vectors of 16 floats
-//result is returned again in 8 vectors of 16 floats
-//each vector contains two 'blocks' of 8 floats representing data rows
-void avx::transpose16x8(std::span<V16f> data) {
-	V16f tmp[8];
-
-	tmp[0] = _mm512_unpacklo_ps(data[0], data[1]);
-	tmp[1] = _mm512_unpackhi_ps(data[0], data[1]);
-	tmp[2] = _mm512_unpacklo_ps(data[2], data[3]);
-	tmp[3] = _mm512_unpackhi_ps(data[2], data[3]);
-	tmp[4] = _mm512_unpacklo_ps(data[4], data[5]);
-	tmp[5] = _mm512_unpackhi_ps(data[4], data[5]);
-	tmp[6] = _mm512_unpacklo_ps(data[6], data[7]);
-	tmp[7] = _mm512_unpackhi_ps(data[6], data[7]);
-
-	data[0] = _mm512_shuffle_ps(tmp[0], tmp[2], 0b0100'0100);
-	data[1] = _mm512_shuffle_ps(tmp[0], tmp[2], 0b1110'1110);
-	data[2] = _mm512_shuffle_ps(tmp[1], tmp[3], 0b0100'0100);
-	data[3] = _mm512_shuffle_ps(tmp[1], tmp[3], 0b1110'1110);
-	data[4] = _mm512_shuffle_ps(tmp[4], tmp[6], 0b0100'0100);
-	data[5] = _mm512_shuffle_ps(tmp[4], tmp[6], 0b1110'1110);
-	data[6] = _mm512_shuffle_ps(tmp[5], tmp[7], 0b0100'0100);
-	data[7] = _mm512_shuffle_ps(tmp[5], tmp[7], 0b1110'1110);
-
-	tmp[0] = _mm512_shuffle_f32x4(data[0], data[4], 0b1000'1000);
-	tmp[1] = _mm512_shuffle_f32x4(data[1], data[5], 0b1000'1000);
-	tmp[2] = _mm512_shuffle_f32x4(data[2], data[6], 0b1000'1000);
-	tmp[3] = _mm512_shuffle_f32x4(data[3], data[7], 0b1000'1000);
-	tmp[4] = _mm512_shuffle_f32x4(data[0], data[4], 0b1101'1101);
-	tmp[5] = _mm512_shuffle_f32x4(data[1], data[5], 0b1101'1101);
-	tmp[6] = _mm512_shuffle_f32x4(data[2], data[6], 0b1101'1101);
-	tmp[7] = _mm512_shuffle_f32x4(data[3], data[7], 0b1101'1101);
-
-	data[0] = _mm512_shuffle_f32x4(tmp[0], tmp[1], 0b1000'1000);
-	data[1] = _mm512_shuffle_f32x4(tmp[2], tmp[3], 0b1000'1000);
-	data[2] = _mm512_shuffle_f32x4(tmp[4], tmp[5], 0b1000'1000);
-	data[3] = _mm512_shuffle_f32x4(tmp[6], tmp[7], 0b1000'1000);
-	data[4] = _mm512_shuffle_f32x4(tmp[0], tmp[1], 0b1101'1101);
-	data[5] = _mm512_shuffle_f32x4(tmp[2], tmp[3], 0b1101'1101);
-	data[6] = _mm512_shuffle_f32x4(tmp[4], tmp[5], 0b1101'1101);
-	data[7] = _mm512_shuffle_f32x4(tmp[6], tmp[7], 0b1101'1101);
-}
-
-
 //convert individual vectors in float for Y U V to one vector holding uchar packed RGB
-__m128i avx::yuvToRgbaPacked(V4f y, V4f u, V4f v) {
+void avx::yuvToRgbaPacked(V4f y, V4f u, V4f v, unsigned char* dest, V16f fu, V16f fv) {
 	//distribute y, u, v values to 16 places
 	__m512i index = _mm512_setr_epi32(0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3);
 	V16f yy = _mm512_permutexvar_ps(index, _mm512_castps128_ps512(y));
 	V16f uu = _mm512_permutexvar_ps(index, _mm512_castps128_ps512(u));
 	V16f vv = _mm512_permutexvar_ps(index, _mm512_castps128_ps512(v));
 	
-	//factors for conversion yuv to rgb
-	V16f fu = { 0.0f, -0.337633f, 1.732446f, 0.0f };
-	V16f fv = { 1.370705f, -0.698001f, 0.0f, 0.0f };
-
-	//convert
+	//convert color
 	V16f ps255 = 255.0f;
 	V16f ps128 = 128.0f;
+	V16f ps0 = 0.0f;
 	V16f rgba;
 	rgba = yy + (uu - ps128) * fu + (vv - ps128) * fv;
-	rgba = rgba.clamp(0.0f, 255.0f);
-	rgba = _mm512_mask_blend_ps(0b1000'1000'1000'1000, rgba, ps255);
+	rgba = _mm512_mask_max_ps(ps255, 0b0111'0111'0111'0111, rgba, ps0);
 
-	//convert floats to uint8
-	//default conversion in avx uses rint()
-	return _mm512_cvtepi32_epi8(_mm512_cvtps_epi32(rgba));
+	//convert floats to uint8, saturate and store
+	_mm512_mask_cvtusepi32_storeu_epi8(dest, 0xFFFF, _mm512_cvtps_epi32(rgba));
 }
 
 
