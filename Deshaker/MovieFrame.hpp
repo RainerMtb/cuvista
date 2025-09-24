@@ -32,6 +32,14 @@
  //---------------------------------------------------------------------
 
 
+enum class LoopResult {
+	LOOP_SUCCESS,
+	LOOP_CANCELLED,
+	LOOP_ERROR,
+	LOOP_NONE,
+};
+
+
 class MovieFrame {
 
 protected:
@@ -100,18 +108,23 @@ public:
 	std::string ptsForFrameAsString(int64_t frameIndex) const;
 
 	//run loop in subclass
-	virtual void runLoop(std::shared_ptr<ProgressBase> progress, UserInput& input, std::shared_ptr<FrameExecutor> executor) {}
+	virtual LoopResult runLoop(std::shared_ptr<ProgressBase> progress, UserInput& input, std::shared_ptr<FrameExecutor> executor);
 
 	//run loop with default progress and input, used for development
-	void runLoop(std::shared_ptr<FrameExecutor> executor);
+	LoopResult runLoop(std::shared_ptr<FrameExecutor> executor);
 };
+
+
+//---------------------------------------------------------------------
+//---------- MOVIE FRAME LOOP IMPLEMENTATIONS -------------------------
+//---------------------------------------------------------------------
 
 
 class MovieFrameCombined : public MovieFrame {
 public:
 	MovieFrameCombined(MainData& data, MovieReader& reader, MovieWriter& writer);
 
-	void runLoop(std::shared_ptr<ProgressBase> progress, UserInput& input, std::shared_ptr<FrameExecutor> executor) override;
+	LoopResult runLoop(std::shared_ptr<ProgressBase> progress, UserInput& input, std::shared_ptr<FrameExecutor> executor) override;
 };
 
 
@@ -119,5 +132,5 @@ class MovieFrameConsecutive : public MovieFrame {
 public:
 	MovieFrameConsecutive(MainData& data, MovieReader& reader, MovieWriter& writer);
 
-	void runLoop(std::shared_ptr<ProgressBase> progress, UserInput& input, std::shared_ptr<FrameExecutor> executor) override;
+	LoopResult runLoop(std::shared_ptr<ProgressBase> progress, UserInput& input, std::shared_ptr<FrameExecutor> executor) override;
 };

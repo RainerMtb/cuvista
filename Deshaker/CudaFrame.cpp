@@ -28,14 +28,6 @@ CudaFrame::CudaFrame(MainData& data, DeviceInfoBase& deviceInfo, MovieFrame& fra
 	cudaInit(mData, device->cudaIndex, *device->props, mFrame.mBufferFrame);
 }
 
-void CudaFrame::createPyramid(int64_t frameIndex, const Affine2D& trf, bool warp) {
-	cudaCreatePyramid(frameIndex, trf.toAffineCore(), warp);
-}
-
-void CudaFrame::outputData(int64_t frameIndex, const Affine2D& trf) {
-	cudaOutputData(frameIndex, trf.toAffineCore());
-}
-
 Matf CudaFrame::getPyramid(int64_t frameIndex) const {
 	Matf out = Matf::allocate(mData.pyramidRowCount, mData.w);
 	cudaGetPyramid(frameIndex, out.data());

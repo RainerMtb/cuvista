@@ -53,7 +53,7 @@ void cl::scale_8u32f_3(Image src, Image dest, Data& clData) {
 	runKernel(clData.kernels.scale_8u32f_3, src, dest, clData.queue);
 }
 
-void cl::scale_32f8u_3(Image src, Buffer dest, int pitch, Data& clData) {
+void cl::scale_32f8u_3(Image src, Buffer dest, int pitch, const Data& clData) {
 	Kernel kernel = clData.kernels.scale_32f8u_3;
 	kernel.setArg(0, src);
 	kernel.setArg(1, dest);
@@ -83,10 +83,9 @@ void cl::filter_32f_v3(Image src, Image dest, Data& clData) {
 	filter_32f_func(clData.kernels.filter_32f_3, src, dest, -1, 0, 1, clData);
 }
 
-void cl::warp_back(Image src, Image dest, Data& clData, std::array<double, 6> trf) {
-	cl_double8 cltrf = { trf[0], trf[1], trf[2], trf[3], trf[4], trf[5] };
+void cl::warp_back(Image src, Image dest, Data& clData, cl_float8 trf) {
 	Kernel& kernel = clData.kernels.warp_back;
-	kernel.setArg(2, cltrf);
+	kernel.setArg(2, trf);
 	runKernel(kernel, src, dest, clData.queue);
 }
 
@@ -97,9 +96,11 @@ void cl::unsharp(Image src, Image dest, Image gauss, Data& clData, cl_float4 fac
 	runKernel(kernel, src, dest, clData.queue);
 }
 
-void cl::yuv_to_rgba(Kernel& kernel, Image src, unsigned char* imageData, const Data& clData, int w, int h) {
+void cl::yuv_to_rgba(Kernel kernel, Image src, unsigned char* imageData, const Data& clData, int w, int h, const std::vector<int>& index) {
+	cl_int4 offset4 = { index[0], index[1], index[2], index[3] };
 	kernel.setArg(0, src);
 	kernel.setArg(1, clData.rgbaOut);
+	kernel.setArg(2, offset4);
 	clData.queue.enqueueNDRangeKernel(kernel, NullRange, NDRange(w, h));
 	clData.queue.enqueueReadBuffer(clData.rgbaOut, CL_TRUE, 0, 4ull * w * h, imageData);
 }

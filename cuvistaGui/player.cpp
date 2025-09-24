@@ -160,24 +160,21 @@ void PlayerWriter::start() {
 }
 
 //---- on frame executor thread
-void PlayerWriter::prepareOutput(FrameExecutor& executor) {
+void PlayerWriter::writeOutput(const FrameExecutor& executor) {
     // cannot reuse QVideoFrame, cannot be mapped more than once ???
     // have to create a new QVideoFrame
     // NOTE: MAN QT IS SUCH A CRAP
     mVideoFrame = QVideoFrame(QVideoFrameFormat(QSize(mData.w, mData.h), QVideoFrameFormat::Format_RGBX8888));
-    if (mVideoFrame.map(QVideoFrame::WriteOnly)) {
-        int64_t idx = frameIndex;
-        ImageRGBA image(mVideoFrame.height(), mVideoFrame.width(), mVideoFrame.bytesPerLine(0), mVideoFrame.bits(0));
-        executor.getOutputRgba(idx, image);
-        mVideoFrame.unmap();
+    if (mVideoFrame.map(QVideoFrame::WriteOnly) == false) {
+        errorLogger().logError("cannot map video frame");
 
     } else {
-        errorLogger().logError("cannot map video frame");
+        int64_t idx = frameIndex;
+        ImageRGBA image(mVideoFrame.height(), mVideoFrame.width(), mVideoFrame.bytesPerLine(0), mVideoFrame.bits(0));
+        executor.getOutputImage(idx, image);
+        mVideoFrame.unmap();
     }
-}
 
-//---- on frame executor thread
-void PlayerWriter::writeOutput(const FrameExecutor& executor) {
     //presentation time for next frame
     auto t1 = mReader.ptsForFrameAsMillis(frameIndex);
     auto t2 = mReader.ptsForFrameAsMillis(frameIndex + 1);

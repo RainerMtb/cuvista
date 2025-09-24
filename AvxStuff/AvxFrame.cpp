@@ -51,7 +51,7 @@ void AvxFrame::inputData(int64_t frameIdx, const ImageYuv& inputFrame) {
 	inputFrame.copyTo(mYUV[idx], mPool);
 }
 
-void AvxFrame::createPyramid(int64_t frameIndex, const Affine2D& trf, bool warp) {
+void AvxFrame::createPyramid(int64_t frameIndex, AffineDataFloat trf, bool warp) {
 	//util::ConsoleTimer ic("avx pyramid");
 	size_t pyrIdx = frameIndex % mPyr.size();
 	AvxMatf& Y = mPyr[pyrIdx];
@@ -92,7 +92,7 @@ void AvxFrame::createPyramid(int64_t frameIndex, const Affine2D& trf, bool warp)
 	}
 }
 
-void AvxFrame::outputData(int64_t frameIndex, const Affine2D& trf) {
+void AvxFrame::outputData(int64_t frameIndex, AffineDataFloat trf) {
 	//util::ConsoleTimer ic("avx output");
 	size_t yuvidx = frameIndex % mYUV.size();
 	const ImageYuv& input = mYUV[yuvidx];
@@ -108,23 +108,18 @@ void AvxFrame::outputData(int64_t frameIndex, const Affine2D& trf) {
 	}
 }
 
-void AvxFrame::getOutputYuv(int64_t frameIndex, ImageYuv& image) {
+void AvxFrame::getOutputYuv(int64_t frameIndex, ImageYuv& image) const {
 	write(image);
 	image.setIndex(frameIndex);
 }
 
-void AvxFrame::getOutputRgba(int64_t frameIndex, ImageRGBA& image) {
+void AvxFrame::getOutputImage(int64_t frameIndex, ImageBaseRgb& image) const {
 	//util::ConsoleTimer ic("avx output rgba");
 	yuvToRgb(mOutput[0].data(), mOutput[1].data(), mOutput[2].data(), mData.h, mData.w, pitch, image);
 	image.setIndex(frameIndex);
 }
 
-void AvxFrame::getOutputBgra(int64_t frameIndex, ImageBGRA& image) {
-	yuvToRgb(mOutput[0].data(), mOutput[1].data(), mOutput[2].data(), mData.h, mData.w, pitch, image);
-	image.setIndex(frameIndex);
-}
-
-void AvxFrame::getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) {
+void AvxFrame::getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) const {
 	write(image);
 	encodeNvData(image, cudaNv12ptr);
 }
@@ -468,49 +463,35 @@ V16f AvxFrame::interpolate(V16f f00, V16f f10, V16f f01, V16f f11, V16f dx, V16f
 	return dx1 * dy1 * f00 + dx1 * dy * f10 + dx * dy1 * f01 + dx * dy * f11;
 }
 
-std::pair<V8d, V8d> AvxFrame::transform(V8d x, V8d y, V8d m00, V8d m01, V8d m02, V8d m10, V8d m11, V8d m12) {
-	V8d xx = m02;
-	xx = _mm512_fmadd_pd(y, m01, xx);
-	xx = _mm512_fmadd_pd(x, m00, xx);
-	V8d yy = m12;
-	yy = _mm512_fmadd_pd(y, m11, yy);
-	yy = _mm512_fmadd_pd(x, m10, yy);
-	return { xx, yy };
-}
-
-void AvxFrame::warpBack(const Affine2D& trf, const AvxMatf& input, AvxMatf& dest) {
+void AvxFrame::warpBack(const AffineDataFloat& trf, const AvxMatf& input, AvxMatf& dest) {
 	//util::ConsoleTimer ic("avx warp");
 	//transform parameters
-	V8d m00 = trf.arrayValue(0);
-	V8d m01 = trf.arrayValue(1);
-	V8d m02 = trf.arrayValue(2);
-	V8d m10 = trf.arrayValue(3);
-	V8d m11 = trf.arrayValue(4);
-	V8d m12 = trf.arrayValue(5);
-	V8d offset = 8;
-	V8d iota = Iota::d;
+	V16f m00 = trf.m00;
+	V16f m01 = trf.m01;
+	V16f m02 = trf.m02;
+	V16f m10 = trf.m10;
+	V16f m11 = trf.m11;
+	V16f m12 = trf.m12;
+	V16f iota = Iota::f;
 
 	for (int threadIdx = 0; threadIdx < mData.cpuThreads; threadIdx++) mPool.add([&, threadIdx] {
 		for (int r = threadIdx; r < mData.h; r += mData.cpuThreads) {
-			V8d ix = iota;
-			V8d iy = r;
+			V16f ix = iota;
+			V16f iy = float(r);
 			V16f ps_zero = _mm512_set1_ps(0.0f);
 			__m512i epi_one = _mm512_set1_epi32(1);
 			__m512i epi_stride = _mm512_set1_epi32(input.w());
 			__m512i idx;
 			
 			for (int c = 0; c < pitch; c += 16) {
-				auto t1 = transform(ix, iy, m00, m01, m02, m10, m11, m12);
-				ix = _mm512_add_pd(ix, offset);
-				auto t2 = transform(ix, iy, m00, m01, m02, m10, m11, m12);
-				ix = _mm512_add_pd(ix, offset);
-				V16f xx1 = _mm512_castps256_ps512(_mm512_cvtpd_ps(t1.first)); //_mm512_cvtpd_pslo is missing in MSVC????
-				V16f xx2 = _mm512_castps256_ps512(_mm512_cvtpd_ps(t2.first));
-				V16f x = _mm512_shuffle_f32x4(xx1, xx2, 0b0100'0100);
-				
-				V16f yy1 = _mm512_castps256_ps512(_mm512_cvtpd_ps(t1.second));
-				V16f yy2 = _mm512_castps256_ps512(_mm512_cvtpd_ps(t2.second));
-				V16f y = _mm512_shuffle_f32x4(yy1, yy2, 0b0100'0100);
+				//transform
+				V16f x = m02;
+				x = _mm512_fmadd_ps(iy, m01, x);
+				x = _mm512_fmadd_ps(ix, m00, x);
+				V16f y = m12;
+				y = _mm512_fmadd_ps(iy, m11, y);
+				y = _mm512_fmadd_ps(ix, m10, y);
+				ix += 16;
 
 				//check within image bounds
 				__mmask16 mask = 0xFFFF;
@@ -575,7 +556,7 @@ void AvxFrame::unsharp(const AvxMatf& warped, AvxMatf& gauss, float unsharp, Avx
 	mPool.wait();
 }
 
-void AvxFrame::write(ImageYuv& dest) {
+void AvxFrame::write(ImageYuv& dest) const {
 	for (int z = 0; z < 3; z++) {
 		for (int r = 0; r < mData.h; r++) {
 			for (int c = 0; c < mData.w; c += 16) {
@@ -587,7 +568,7 @@ void AvxFrame::write(ImageYuv& dest) {
 	}
 }
 
-void AvxFrame::write(ImageNV12& image) {
+void AvxFrame::write(ImageNV12& image) const {
 	//util::ConsoleTimer ic("avx write nv12");
 	//Y-Plane
 	for (int r = 0; r < mData.h; r++) {

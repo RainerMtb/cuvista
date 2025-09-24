@@ -124,12 +124,6 @@ void FFmpegWriter::open(EncodingOption videoCodec) {
 }
 
 
-void FFmpegWriter::prepareOutput(FrameExecutor& executor) {
-    int64_t idx = frameIndex % imageBufferSize;
-    executor.getOutputYuv(frameIndex, imageBuffer[idx]);
-}
-
-
 int FFmpegWriter::sendFFmpegFrame(AVFrame* av_frame) {
     //util::ConsoleTimer timer("send ffmpeg");
     int result = avcodec_send_frame(codec_ctx, av_frame);
@@ -188,8 +182,8 @@ void FFmpegWriter::write(int bufferIndex) {
 
 
 void FFmpegWriter::writeOutput(const FrameExecutor& executor) {
-    assert(frameIndex == this->frameIndex && "invalid frame index");
-    int idx = frameIndex % imageBufferSize;
+    int64_t idx = frameIndex % imageBufferSize;
+    executor.getOutputYuv(frameIndex, imageBuffer[idx]);
     write(idx);
 }
 

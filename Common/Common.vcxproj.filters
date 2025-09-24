@@ -22,7 +22,7 @@
     <ClInclude Include="ImageHeaders.hpp" />
     <ClInclude Include="ThreadPoolBase.h" />
     <ClInclude Include="FrameExecutor.hpp" />
-    <ClInclude Include="AffineCore.hpp" />
+    <ClInclude Include="AffineData.hpp" />
     <ClInclude Include="ImageData.hpp" />
   </ItemGroup>
   <ItemGroup>

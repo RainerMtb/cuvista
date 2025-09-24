@@ -61,11 +61,6 @@ void MovieWriterCollection::writeInput(const FrameExecutor& executor) {
 	for (auto& writer : auxWriters) writer->writeInput(executor);
 }
 
-void MovieWriterCollection::prepareOutput(FrameExecutor& executor) {
-	mainWriter->prepareOutput(executor);
-	for (auto& writer : auxWriters) writer->prepareOutput(executor);
-}
-
 void MovieWriterCollection::updateStats() {
 	std::unique_lock<std::mutex> lock(mStatsMutex);
 	frameIndex = mainWriter->frameIndex;
@@ -82,6 +77,7 @@ void MovieWriterCollection::writeOutput(const FrameExecutor& executor) {
 
 bool MovieWriterCollection::startFlushing() {
 	bool retval = mainWriter->startFlushing();
+	for (auto& writer : auxWriters) writer->startFlushing();
 	updateStats();
 	return retval;
 }
@@ -92,36 +88,41 @@ bool MovieWriterCollection::flush() {
 	return retval;
 }
 
+void MovieWriterCollection::close() {
+	mainWriter->close();
+	for (auto& writer : auxWriters) writer->close();
+}
+
 
 //-----------------------------------------------------------------------------------
 // Raw Format Writers
 //-----------------------------------------------------------------------------------
 
-void OutputWriter::prepareOutput(FrameExecutor& executor) {
-	executor.getOutputYuv(frameIndex, outputFrame);
-}
-
 void OutputWriter::writeOutput(const FrameExecutor& executor) {
+	executor.getOutputYuv(frameIndex, outputFrame);
 	this->frameIndex++;
 }
 
-void RawMemoryStoreWriter::prepareOutput(FrameExecutor& executor) {
-	if (doWriteOutput) {
-		ImageYuv& frameYuv = outputFramesYuv.emplace_back(executor.mData.h, executor.mData.w);
-		executor.getOutputYuv(frameIndex, frameYuv);
-		while (outputFramesYuv.size() > maxFrameCount) outputFramesYuv.pop_front();
-
-		ImageRGBA& frameRgba = outputFramesRgba.emplace_back(executor.mData.h, executor.mData.w);
-		executor.getOutputRgba(frameIndex, frameRgba);
-		while (outputFramesRgba.size() > maxFrameCount) outputFramesRgba.pop_front();
-
-		ImageBGRA& frameBgra = outputFramesBgra.emplace_back(executor.mData.h, executor.mData.w);
-		executor.getOutputBgra(frameIndex, frameBgra);
-		while (outputFramesBgra.size() > maxFrameCount) outputFramesBgra.pop_front();
-	}
-}
-
 void RawMemoryStoreWriter::writeOutput(const FrameExecutor& executor) {
+	if (doWriteOutput) {
+		{
+			ImageYuv& frameYuv = outputFramesYuv.emplace_back(executor.mData.h, executor.mData.w);
+			executor.getOutputYuv(frameIndex, frameYuv);
+			while (outputFramesYuv.size() > maxFrameCount) outputFramesYuv.pop_front();
+		}
+
+		{
+			ImageRGBA& frameRgba = outputFramesRgba.emplace_back(executor.mData.h, executor.mData.w);
+			executor.getOutputImage(frameIndex, frameRgba);
+			while (outputFramesRgba.size() > maxFrameCount) outputFramesRgba.pop_front();
+		}
+
+		{
+			ImageBGRA& frameBgra = outputFramesBgra.emplace_back(executor.mData.h, executor.mData.w);
+			executor.getOutputImage(frameIndex, frameBgra);
+			while (outputFramesBgra.size() > maxFrameCount) outputFramesBgra.pop_front();
+		}
+	}
 	this->frameIndex++;
 }
 
@@ -201,12 +202,9 @@ std::string ImageWriter::makeFilename(const std::string& extension) const {
 // BMP Images
 //-----------------------------------------------------------------------------------
 
-void BmpImageWriter::prepareOutput(FrameExecutor& executor) {
-	worker.join();
-	executor.getOutputRgba(frameIndex, image);
-}
-
 void BmpImageWriter::writeOutput(const FrameExecutor& executor) {
+	worker.join();
+	executor.getOutputImage(frameIndex, image);
 	std::string fname = makeFilename("bmp");
 	worker = std::jthread([&, fname] { image.saveAsColorBMP(fname); });
 	outputBytesWritten += image.sizeInBytes();

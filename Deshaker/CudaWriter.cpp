@@ -105,11 +105,6 @@ void CudaFFmpegWriter::open(EncodingOption videoCodec) {
 }
 
 
-void CudaFFmpegWriter::prepareOutput(FrameExecutor& executor) {
-    executor.getOutputNvenc(frameIndex, outputNV12, reinterpret_cast<unsigned char*>(nvenc->getNextInputFramePtr()));
-}
-
-
 //write packets to ffmpeg stream
 void CudaFFmpegWriter::writePacketToFile(const NvPacket& nvpkt, bool terminate) {
     //put data from NvPacket into ffmpeg video packet
@@ -148,6 +143,7 @@ void CudaFFmpegWriter::encodePackets() {
 
 
 void CudaFFmpegWriter::writeOutput(const FrameExecutor& executor) {
+    executor.getOutputNvenc(frameIndex, outputNV12, reinterpret_cast<unsigned char*>(nvenc->getNextInputFramePtr()));
     encodePackets();
     encodingQueue.push_back(encoderPool.add([this, pkts = *nvPackets] { writePacketsToFile(pkts, false); }));
     encodingQueue.front().wait();
@@ -171,7 +167,6 @@ bool CudaFFmpegWriter::flush() {
 
 
 CudaFFmpegWriter::~CudaFFmpegWriter() {
-    nvenc->endEncode();
     nvenc->destroyEncoder();
 }
 

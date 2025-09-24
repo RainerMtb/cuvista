@@ -36,8 +36,10 @@ namespace util {
 
 	ConsoleTimer::~ConsoleTimer() {
 		auto stop = std::chrono::steady_clock::now();
-		auto delta = std::chrono::duration_cast<std::chrono::microseconds>(stop - mStart);
-		std::cout << mName << "=" << delta.count() / 1000.0 << " ms" << std::endl;
+		long long int delta = std::chrono::duration_cast<std::chrono::microseconds>(stop - mStart).count();
+		if (delta < 1000) std::cout << mName << "=" << delta << " us" << std::endl;
+		else if (delta < 1'000'000) std::cout << mName << "=" << delta / 1000.0 << " ms" << std::endl;
+		else std::cout << mName << "=" << delta / 1e6 << " s" << std::endl;
 	}
 
 	std::string concatStrings(std::span<std::string_view> strings) {

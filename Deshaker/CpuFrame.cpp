@@ -63,7 +63,7 @@ void CpuFrame::inputData(int64_t frameIndex, const ImageYuv& inputFrame) {
 	inputFrame.copyTo(mYUV[idx], mPool);
 }
 
-void CpuFrame::createPyramid(int64_t frameIndex, const Affine2D& trf, bool warp) {
+void CpuFrame::createPyramid(int64_t frameIndex, AffineDataFloat trf, bool warp) {
 	//util::ConsoleTimer ic("cpu pyramid");
 	size_t pyrIdx = frameIndex % mPyr.size();
 	CpuPyramid& frame = mPyr[pyrIdx];
@@ -81,8 +81,11 @@ void CpuFrame::createPyramid(int64_t frameIndex, const Affine2D& trf, bool warp)
 
 		//transform input
 		auto func1 = [&] (size_t r, size_t c) {
-			auto [x, y] = trf.transform(c, r); //pay attention to order of x and y
-			float result = mFilterBuffer.interp2(float(x), float(y)).value_or(0.0f);
+			float x0 = float(c);
+			float y0 = float(r);
+			float x = std::fma(x0, trf.m00, std::fma(y0, trf.m01, trf.m02));
+			float y = std::fma(x0, trf.m10, std::fma(y0, trf.m11, trf.m12));
+			float result = mFilterBuffer.interp2(x, y).value_or(0.0f);
 			return result;
 		};
 		y0.setValues(func1, mPool);
@@ -260,22 +263,27 @@ void CpuFrame::computeTerminate(int64_t frameIndex, std::vector<PointResult>& re
 	mPool.wait();
 }
 
-void CpuFrame::outputData(int64_t frameIndex, const Affine2D& trf) {
+void CpuFrame::outputData(int64_t frameIndex, AffineDataFloat trf) {
 	size_t yuvidx = frameIndex % mYUV.size();
 	const ImageYuv& input = mYUV[yuvidx];
 	for (size_t z = 0; z < 3; z++) {
 		constexpr float f = 1.0f / 255.0f;
 		mYuvPlane.setValues([&] (size_t r, size_t c) { return input.at(z, r, c) * f; }, mPool);
 		//transform and evaluate pixels, write to out buffer
-		auto func1 = [&] (size_t r, size_t c) {
-			float bg = (mData.bgmode == BackgroundMode::COLOR ? mData.bgcolorYuv[z] : mPrevOut[z].at(r, c));
-			auto [x, y] = trf.transform(c, r); //pay attention to order of x and y
-			float result = mYuvPlane.interp2(float(x), float(y)).value_or(bg);
-			return result;
-		};
 		Matf& buf = mBuffer[z];
-		buf.setValues(func1, mPool);
-		mPrevOut[z].setData(buf);
+		auto func1 = [&] (size_t r) {
+			for (size_t c = 0; c < mData.w; c++) {
+				float x0 = float(c);
+				float y0 = float(r);
+				float x = std::fma(x0, trf.m00, std::fma(y0, trf.m01, trf.m02));
+				float y = std::fma(x0, trf.m10, std::fma(y0, trf.m11, trf.m12));
+				float bg = (mData.bgmode == BackgroundMode::COLOR ? mData.bgcolorYuv[z] : mPrevOut[z].at(r, c));
+				float result = mYuvPlane.interp2(x, y).value_or(bg);
+				buf.at(r, c) = result;
+				mPrevOut[z].at(r, c) = result;
+			}
+		};
+		mPool.addAndWait(func1, 0, mData.h);
 		//if (z == 0) mYuvPlane.saveAsBinary("f:/cpu.dat");
 
 		//unsharp masking
@@ -300,25 +308,19 @@ void CpuFrame::outputData(int64_t frameIndex, const Affine2D& trf) {
 	mOutput.index = frameIndex;
 }
 
-void CpuFrame::getOutputYuv(int64_t frameIndex, ImageYuv& image) {
+void CpuFrame::getOutputYuv(int64_t frameIndex, ImageYuv& image) const {
 	assert(frameIndex == mOutput.index && "invalid frame index");
 	mOutput.toYuv(image, mPool);
 	image.index = frameIndex;
 }
 
-void CpuFrame::getOutputRgba(int64_t frameIndex, ImageRGBA& image) {
+void CpuFrame::getOutputImage(int64_t frameIndex, ImageBaseRgb& image) const {
 	assert(frameIndex == mOutput.index && "invalid frame index");
 	mOutput.toBaseRgb(image, mPool);
 	image.index = frameIndex;
 }
 
-void CpuFrame::getOutputBgra(int64_t frameIndex, ImageBGRA& image) {
-	assert(frameIndex == mOutput.index && "invalid frame index");
-	mOutput.toBaseRgb(image, mPool);
-	image.index = frameIndex;
-}
-
-void CpuFrame::getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) {
+void CpuFrame::getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) const {
 	assert(frameIndex == mOutput.index && "invalid frame index");
 	mOutput.toNV12(image, mPool);
 	encodeNvData(image, cudaNv12ptr);

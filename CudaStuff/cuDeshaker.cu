@@ -359,7 +359,7 @@ void CudaExecutor::inputData(int64_t frameIndex, const ImageYuv& inputFrame) {
 //----------------------------------
 
 //create image pyramid
-void CudaExecutor::cudaCreatePyramid(int64_t frameIndex, const AffineCore& trf, bool warp) {
+void CudaExecutor::createPyramid(int64_t frameIndex, AffineDataFloat trf, bool warp) {
 	int w = mData.w;
 	int h = mData.h;
 
@@ -473,7 +473,7 @@ void CudaExecutor::computeTerminate(int64_t frameIndex, std::vector<PointResult>
 //-------- OUTPUT
 //----------------------------------
 
-void CudaExecutor::cudaOutputData(int64_t frameIndex, const AffineCore& trf) {
+void CudaExecutor::outputData(int64_t frameIndex, AffineDataFloat trf) {
 	//ConsoleTimer timer;
 	//interrupt compute kernel
 	handleStatus(cudaMemsetAsync(d_interrupt, 1, sizeof(char), cs[1]), "error @output #10");
@@ -504,7 +504,7 @@ void CudaExecutor::cudaOutputData(int64_t frameIndex, const AffineCore& trf) {
 	cu::unsharp_32f_3(out.warped, out.filterV, out.final, cudaData.strideFloat4N, w, h, cs[1]);
 }
 
-void CudaExecutor::getOutputYuv(int64_t frameIndex, ImageYuv& image) {
+void CudaExecutor::getOutputYuv(int64_t frameIndex, ImageYuv& image) const {
 	cu::outputHost(out.final, cudaData.strideFloat4N, d_yuvOut, cudaData.strideChar, mData.w, mData.h, cs[1]);
 	for (int planeSize = cudaData.strideChar * mData.h, i = 0; i < 3; i++) {
 		cu::copy_32f_3(d_yuvOut + i * planeSize, cudaData.strideChar, image.addr(i, 0, 0), image.strideInBytes(), mData.w, mData.h, cs[1]);
@@ -514,23 +514,16 @@ void CudaExecutor::getOutputYuv(int64_t frameIndex, ImageYuv& image) {
 	handleStatus(cudaGetLastError(), "error @output #91");
 }
 
-void CudaExecutor::getOutputRgba(int64_t frameIndex, ImageRGBA& image) {
-	cu::yuv_to_rgba(out.final, cudaData.strideFloat4N, d_rgba, -1, mData.w, mData.h, cs[1]);
+void CudaExecutor::getOutputImage(int64_t frameIndex, ImageBaseRgb& image) const {
+	const std::vector<int>& idx = image.indexRgba();
+	cu::yuv_to_rgba(out.final, cudaData.strideFloat4N, d_rgba, -1, mData.w, mData.h, { idx[0], idx[1], idx[2], idx[3] }, cs[1]);
 	handleStatus(cudaMemcpyAsync(image.plane(0), d_rgba, 4ull * mData.w * mData.h, cudaMemcpyDefault, cs[1]), "error @output #94");
 	image.setIndex(frameIndex);
 	handleStatus(cudaStreamSynchronize(cs[1]), "error @output #92");
 	handleStatus(cudaGetLastError(), "error @output #93");
 }
 
-void CudaExecutor::getOutputBgra(int64_t frameIndex, ImageBGRA& image) {
-	cu::yuv_to_bgra(out.final, cudaData.strideFloat4N, d_rgba, -1, mData.w, mData.h, cs[1]);
-	handleStatus(cudaMemcpyAsync(image.plane(0), d_rgba, 4ull * mData.w * mData.h, cudaMemcpyDefault, cs[1]), "error @output #94");
-	image.setIndex(frameIndex);
-	handleStatus(cudaStreamSynchronize(cs[1]), "error @output #92");
-	handleStatus(cudaGetLastError(), "error @output #93");
-}
-
-void CudaExecutor::getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) {
+void CudaExecutor::getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) const {
 	cu::outputNvenc(out.final, cudaData.strideFloat4N, cudaNv12ptr, image.stride, mData.w, mData.h, cs[1]);
 	handleStatus(cudaStreamSynchronize(cs[1]), "error @output #95");
 	handleStatus(cudaGetLastError(), "error @output #96");
@@ -573,7 +566,8 @@ void CudaExecutor::getInput(int64_t frameIndex, ImageRGBA& image) const {
 }
 
 void CudaExecutor::getWarped(int64_t frameIndex, ImageRGBA& image) {
-	cu::yuv_to_rgba(out.warped, cudaData.strideFloat4N, d_rgba, -1, mData.w, mData.h);
+	int4 index = { 0, 1, 2, 3 };
+	cu::yuv_to_rgba(out.warped, cudaData.strideFloat4N, d_rgba, -1, mData.w, mData.h, index);
 	handleStatus(cudaMemcpy(image.plane(0), d_rgba, 4ull * mData.w * mData.h, cudaMemcpyDefault), "error @progress output");
 }
 

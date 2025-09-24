@@ -830,6 +830,9 @@
            <property name="toolTip">
             <string>Pixels to crop from left side of video</string>
            </property>
+           <property name="maximum">
+            <number>999</number>
+           </property>
           </widget>
          </item>
          <item>
@@ -1268,7 +1271,7 @@
  </resources>
  <connections/>
  <buttongroups>
-  <buttongroup name="buttonGroupBackground"/>
   <buttongroup name="buttonGroupOutput"/>
+  <buttongroup name="buttonGroupBackground"/>
  </buttongroups>
 </ui>

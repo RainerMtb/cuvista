@@ -21,7 +21,6 @@
 #include "clHeaders.hpp"
 #include "ErrorLogger.hpp"
 
-
 namespace cl {
 
 	class Size2 : public array<size_type, 2> {
@@ -95,7 +94,6 @@ namespace cl {
 			Kernel unsharp;
 			Kernel yuv8u_to_rgba;
 			Kernel yuv32f_to_rgba;
-			Kernel yuv32f_to_bgra;
 			Kernel scrap;
 			Kernel compute;
 		} kernels;
@@ -103,7 +101,7 @@ namespace cl {
 
 	void scale_8u32f_1(Image src, Image dest, Data& clData);
 	void scale_8u32f_3(Image src, Image dest, Data& clData);
-	void scale_32f8u_3(Image src, Buffer dest, int pitch, Data& clData);
+	void scale_32f8u_3(Image src, Buffer dest, int pitch, const Data& clData);
 
 	void filter_32f_h1(Image src, Image dest, int filterIndex, Data& clData);
 	void filter_32f_h3(Image src, Image dest, Data& clData);
@@ -111,8 +109,8 @@ namespace cl {
 	void filter_32f_v3(Image src, Image dest, Data& clData);
 
 	void remap_downsize_32f(Image src, Image dest, Data& clData);
-	void warp_back(Image src, Image dest, Data& clData, std::array<double, 6> trf);
+	void warp_back(Image src, Image dest, Data& clData, cl_float8 trf);
 	void unsharp(Image src, Image dest, Image gauss, Data& clData, cl_float4 factor);
 
-	void yuv_to_rgba(Kernel& kernel, Image src, unsigned char* imageData, const Data& clData, int w, int h);
+	void yuv_to_rgba(Kernel kernel, Image src, unsigned char* imageData, const Data& clData, int w, int h, const std::vector<int>& index);
 }

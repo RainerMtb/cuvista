@@ -19,6 +19,10 @@
 #pragma once
 
 //the six parameters for an affine transformation
-struct AffineCore {
+struct AffineDataFloat {
+	float m00, m01, m02, m10, m11, m12;
+};
+
+struct AffineDataDouble {
 	double m00, m01, m02, m10, m11, m12;
 };

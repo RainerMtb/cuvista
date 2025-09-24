@@ -23,6 +23,7 @@
 #include <fstream>
 #include <numeric>
 #include <regex>
+#include <iostream>
 
 
 //----------------------------------
@@ -398,6 +399,7 @@ bool FFmpegReader::read(ImageYuv& inputFrame) {
         inputFrame.index = frameIndex;
         int w = av_codec_ctx->width;
         int h = av_codec_ctx->height;
+        //std::cout << w << " " << h << std::endl;
 
         //set up sws scaler after first frame has been decoded
         if (!sws_scaler_ctx) {

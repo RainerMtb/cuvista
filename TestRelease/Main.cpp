@@ -22,48 +22,46 @@
 #include <filesystem>
 
 static void printArgs(std::span<std::string> s) {
-	std::cout << "ARGS: ";
+	std::cout << std::endl << "ARGS: ";
 	for (const std::string& str : s) std::cout << str << " ";
 	std::cout << std::endl;
 }
 
-static DeshakerResult run(std::vector<std::string> argsList, std::shared_ptr<MovieWriter> writer = {}) {
+static DeshakerResult run(std::vector<std::string> argsList, std::shared_ptr<MovieWriter> writer = {}, bool showOutput = true) {
 	std::ostringstream oss;
 
-	std::cout << std::endl;
-	printArgs(argsList);
-	DeshakerResult result = deshake(argsList, &oss, writer);
-	std::string str = oss.str();
-	if (str.empty()) {
-		std::cout << "no console output" << std::endl;
+	if (showOutput) {
+		printArgs(argsList);
+	}
 
-	} else {
-		std::cout << "console output: " << std::endl << str << std::endl;
+	DeshakerResult result = deshake(argsList, &oss, writer);
+
+	if (showOutput) {
+		std::string str = oss.str();
+		if (str.empty()) {
+			std::cout << "no console output" << std::endl;
+
+		} else {
+			std::cout << "console output: " << std::endl << str << std::endl;
+		}
 	}
 	return result;
 }
 
-static DeshakerResult run(const std::string& argsLine, std::shared_ptr<MovieWriter> writer = {}) {
-	return run(util::splitString(argsLine, " "), writer);
+static DeshakerResult run(const std::string& argsLine, std::shared_ptr<MovieWriter> writer = {}, bool showOutput = true) {
+	return run(util::splitString(argsLine, " "), writer, showOutput);
 }
 
-int main() {
-	std::string folder = "d:/videoTest/out";
-	std::cout << "--- Delete " << folder << " ---" << std::endl;
-	std::filesystem::path fp(folder);
-	for (const auto& entry : std::filesystem::directory_iterator(fp)) {
-		if (entry.is_regular_file()) std::filesystem::remove(entry);
-	}
-	
+static void testMain() {
 	std::cout << "--- Short Runs ---" << std::endl;
-	run("-frames 0 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/000.mp4 -noheader -progress 0 -y");
+	run("-frames 0 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/000null.mp4 -noheader -progress 0 -y");
 	run("-frames 1 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/001.mp4 -noheader -progress 0 -y");
 	run("-frames 2 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/002.mp4 -noheader -progress 0 -y");
 	run("-frames 3 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/003.mp4 -noheader -progress 0 -y");
 	run("-frames 40 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/004.mp4 -noheader -progress 0 -y");
 	run({ "-frames",  "40", "-i", "d:/VideoTest/example space.mp4", "-o", "d:/videoTest/out/000 space.mp4", "-noheader",  "-progress", "0", "-y" });
 
-	run("-mode 1 -frames 0 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/005.mp4 -noheader -progress 0 -y");
+	run("-mode 1 -frames 0 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/005null.mp4 -noheader -progress 0 -y");
 	run("-mode 1 -frames 1 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/006.mp4 -noheader -progress 0 -y");
 	run("-mode 1 -frames 2 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/007.mp4 -noheader -progress 0 -y");
 	run("-mode 1 -frames 3 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/008.mp4 -noheader -progress 0 -y");
@@ -110,11 +108,11 @@ int main() {
 	run("-device 2 -i d:/VideoTest/01.mp4 -o null -flow d:/videoTest/out/flow.mp4 -noheader -progress 0");
 
 	std::cout << "--- Encode Nvenc ---" << std::endl;
-	run("-i d:/VideoTest/example.mp4 -o d:/videoTest/out/nvenc00.mp4 -device 0 -encoder nvenc -quiet");
-	run("-i d:/VideoTest/example.mp4 -o d:/videoTest/out/nvenc01.mp4 -device 1 -encoder nvenc -quiet");
-	
-	//-------------------------------------------------------------------------------
+	run("-i d:/VideoTest/example.mp4 -o d:/videoTest/out/nvenc00.mp4 -device 0 -encoder nvenc -noheader -progress 0");
+	run("-i d:/VideoTest/example.mp4 -o d:/videoTest/out/nvenc01.mp4 -device 1 -encoder nvenc -noheader -progress 0");
+}
 
+static void testCrc() {
 	std::string ansiGreen = "\x1b[1;32m";
 	std::string ansiRed = "\x1b[1;31m";
 	std::string ansiClear = "\x1b[0m";
@@ -158,7 +156,7 @@ int main() {
 
 		{
 			//check yuv
-			uint64_t crcExpectedYuv = 0xa63021f0aec5d1f2;
+			uint64_t crcExpectedYuv = 0xa0899de9a81fe6ae;
 			util::CRC64 crcyuv;
 			for (const ImageYuv& image : externalWriter->outputFramesYuv) crcyuv.add(image);
 
@@ -169,7 +167,7 @@ int main() {
 
 		{
 			//check rgba
-			uint64_t crcExpectedRgba = 0xf3fadbd45fd0fa72;
+			uint64_t crcExpectedRgba = 0xf0cc957f24f5ae28;
 			util::CRC64 crcrgba;
 			for (const ImageRGBA& image : externalWriter->outputFramesRgba) crcrgba.add(image);
 
@@ -180,7 +178,7 @@ int main() {
 
 		{
 			//check bgra
-			uint64_t crcExpectedBgra = 0x27485038224bedab;
+			uint64_t crcExpectedBgra = 0xf1cfe7cbe874441a;
 			util::CRC64 crcbgra;
 			for (const ImageBGRA& image : externalWriter->outputFramesBgra) crcbgra.add(image);
 
@@ -203,7 +201,7 @@ int main() {
 		std::shared_ptr<RawMemoryStoreWriter> externalWriter = std::make_shared<RawMemoryStoreWriter>(250, false, true);
 		DeshakerResult result = run(commandsMode2[i], externalWriter);
 
-		uint64_t crcExpected = 0xfbbb91f16571d7e5;
+		uint64_t crcExpected = 0x62cc4863807117aa;
 		util::CRC64 crcOutput;
 		for (const ImageYuv& image : externalWriter->outputFramesYuv) crcOutput.add(image);
 
@@ -211,8 +209,34 @@ int main() {
 		std::cout << (match ? ansiGreen : ansiRed) << std::hex << "yuv file crc expected: " << crcExpected << ", actual crc: " << crcOutput
 			<< std::boolalpha << ", crc match: " << match << ansiClear << std::dec << std::endl;
 	}
+}
 
-	return 0;
+static void testSpeed() {
+	std::vector<std::string> commands = {
+		"-device 0 -i d:/VideoTest/02.mp4 -o f:/videoOut.mp4 -y -frames 200",
+		"-device 1 -i d:/VideoTest/02.mp4 -o f:/videoOut.mp4 -y -frames 200",
+		"-device 2 -i d:/VideoTest/02.mp4 -o f:/videoOut.mp4 -y -frames 200",
+		"-device 3 -i d:/VideoTest/02.mp4 -o f:/videoOut.mp4 -y -frames 200"
+	};
+
+	std::cout << std::endl << "SPEED TEST:" << std::endl;
+	for (const std::string& str : commands) {
+		DeshakerResult result = run(str, {}, false);
+		std::cout << result.executorNameShort << ": " << result.framesWritten << " frames, " << result.secs << " sec" << std::endl;
+	}
+}
+
+int main() {
+	std::string folder = "d:/videoTest/out";
+	std::cout << "--- Delete " << folder << " ---" << std::endl;
+	std::filesystem::path fp(folder);
+	for (const auto& entry : std::filesystem::directory_iterator(fp)) {
+		if (entry.is_regular_file()) std::filesystem::remove(entry);
+	}
+	
+	testSpeed();
+	testCrc();
+	testMain();
 }
 
 /*

@@ -100,7 +100,7 @@ void readAndWriteOneFrame() {
 		trf.addRotation(0.3).addTranslation(-200, 100);
 		trf.frameIndex = 0;
 		ex.outputData(0, trf);
-		writer.prepareOutput(ex);
+		writer.writeOutput(ex);
 		std::string fileOut = "f:/test.bmp";
 		std::cout << "writing file " << fileOut << std::endl;
 		writer.getOutputFrame().saveAsColorBMP(fileOut);

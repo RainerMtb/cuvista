@@ -36,6 +36,7 @@ struct DeshakerResult {
 
 	double secs;
 	std::string executorName;
+	std::string executorNameShort;
 	std::vector<TrajectoryItem> trajectory;
 };
 

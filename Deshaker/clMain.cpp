@@ -221,7 +221,6 @@ void OpenClExecutor::init() {
 		clData.kernels.unsharp = Kernel(program, "unsharp");
 		clData.kernels.yuv8u_to_rgba = Kernel(program, "yuv8u_to_rgba");
 		clData.kernels.yuv32f_to_rgba = Kernel(program, "yuv32f_to_rgba");
-		clData.kernels.yuv32f_to_bgra = Kernel(program, "yuv32f_to_bgra");
 		clData.kernels.scrap = Kernel(program, "scrap");
 		clData.kernels.compute = Kernel(program, "compute");
 
@@ -259,7 +258,7 @@ void OpenClExecutor::inputData(int64_t frameIndex, const ImageYuv& inputFrame) {
 //-------- CREATE PYRAMID ----------
 //----------------------------------
 
-void OpenClExecutor::createPyramid(int64_t frameIndex, const Affine2D& trf, bool warp) {
+void OpenClExecutor::createPyramid(int64_t frameIndex, AffineDataFloat trf, bool warp) {
 	//util::ConsoleTimer ic("ocl pyramid");
 	int w = mData.w;
 	int h = mData.h;
@@ -275,7 +274,8 @@ void OpenClExecutor::createPyramid(int64_t frameIndex, const Affine2D& trf, bool
 			cl_float4 bg = { 0.0f, 0.0f, 0.0f, 0.0f };
 			clData.queue.enqueueFillImage(im, bg, Size2(), Size2(mData.w, mData.h));
 			scale_8u32f_1(clData.yuv[frIdx], buf, clData);
-			warp_back(buf, im, clData, trf.toArray());
+			cl_float8 cltrf = { trf.m00, trf.m01, trf.m02, trf.m10, trf.m11, trf.m12 };
+			warp_back(buf, im, clData, cltrf);
 
 		} else {
 			//convert uint8_t to float
@@ -376,7 +376,7 @@ void OpenClExecutor::computeTerminate(int64_t frameIndex, std::vector<PointResul
 //-------- OUTPUT STABILIZED -------
 //----------------------------------
 
-void OpenClExecutor::outputData(int64_t frameIndex, const Affine2D& trf) {
+void OpenClExecutor::outputData(int64_t frameIndex, AffineDataFloat trf) {
 	//util::ConsoleTimer timer("ocl output");
 	int64_t frIdx = frameIndex % mData.bufferCount;
 	auto& [outStart, outWarped, outFilterH, outFilterV, outFinal] = clData.out;
@@ -390,7 +390,8 @@ void OpenClExecutor::outputData(int64_t frameIndex, const Affine2D& trf) {
 			clData.queue.enqueueFillImage(outWarped, bg, Size2(), Size2(mData.w, mData.h));
 		}
 		//warp input on top of background
-		warp_back(outStart, outWarped, clData, trf.toArray());
+		cl_float8 cltrf = { trf.m00, trf.m01, trf.m02, trf.m10, trf.m11, trf.m12 };
+		warp_back(outStart, outWarped, clData, cltrf);
 
 		//filtering
 		filter_32f_h3(outWarped, outFilterH, clData);
@@ -405,7 +406,7 @@ void OpenClExecutor::outputData(int64_t frameIndex, const Affine2D& trf) {
 	}
 }
 
-void OpenClExecutor::getOutputYuv(int64_t frameIndex, ImageYuv& image) {
+void OpenClExecutor::getOutputYuv(int64_t frameIndex, ImageYuv& image) const {
 	try {
 		//convert to YUV444 for output
 		scale_32f8u_3(clData.out[4], clData.yuvOut, mData.cpupitch, clData);
@@ -425,9 +426,9 @@ void OpenClExecutor::getOutputYuv(int64_t frameIndex, ImageYuv& image) {
 	}
 }
 
-void OpenClExecutor::getOutputRgba(int64_t frameIndex, ImageRGBA& image) {
+void OpenClExecutor::getOutputImage(int64_t frameIndex, ImageBaseRgb& image) const {
 	try {
-		yuv_to_rgba(clData.kernels.yuv32f_to_rgba, clData.out[4], image.plane(0), clData, image.width(), image.height());
+		yuv_to_rgba(clData.kernels.yuv32f_to_rgba, clData.out[4], image.plane(0), clData, image.width(), image.height(), image.indexRgba());
 		image.setIndex(frameIndex);
 
 	} catch (const Error& err) {
@@ -435,18 +436,8 @@ void OpenClExecutor::getOutputRgba(int64_t frameIndex, ImageRGBA& image) {
 	}
 }
 
-void OpenClExecutor::getOutputBgra(int64_t frameIndex, ImageBGRA& image) {
-	try {
-		yuv_to_rgba(clData.kernels.yuv32f_to_bgra, clData.out[4], image.plane(0), clData, image.width(), image.height());
-		image.setIndex(frameIndex);
-
-	} catch (const Error& err) {
-		errorLogger().logError("OpenCL output error: ", err.what());
-	}
-}
-
-void OpenClExecutor::getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) {
-	throw std::runtime_error("not supported");
+void OpenClExecutor::getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) const {
+	errorLogger().logError("nvenc not supported via OpenCl");
 }
 
 //utility function to read from image
@@ -499,12 +490,20 @@ void OpenClExecutor::getInput(int64_t frameIndex, ImageYuv& image) const {
 }
 
 void OpenClExecutor::getInput(int64_t frameIndex, ImageRGBA& image) const {
-	size_t fridx = frameIndex % clData.yuv.size();
-	Kernel k = clData.kernels.yuv8u_to_rgba;
-	yuv_to_rgba(k, clData.yuv[fridx], image.data(), clData, image.w, image.h);
+	try {
+		size_t fridx = frameIndex % clData.yuv.size();
+		yuv_to_rgba(clData.kernels.yuv8u_to_rgba, clData.yuv[fridx], image.data(), clData, image.w, image.h, { 0, 1, 2, 3 });
+
+	} catch (const Error& err) {
+		errorLogger().logError("OpenCL get input: ", err.what());
+	}
 }
 
 void OpenClExecutor::getWarped(int64_t frameIndex, ImageRGBA& image) {
-	Kernel k = clData.kernels.yuv32f_to_rgba;
-	yuv_to_rgba(k, clData.out[1], image.data(), clData, image.w, image.h);
+	try {
+		yuv_to_rgba(clData.kernels.yuv32f_to_rgba, clData.out[1], image.data(), clData, image.w, image.h, { 0, 1, 2, 3 });
+
+	} catch (const Error& err) {
+		errorLogger().logError("OpenCL get warped: ", err.what());
+	}
 }

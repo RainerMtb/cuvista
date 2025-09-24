@@ -47,7 +47,7 @@ static void runInit(MainData& data, std::unique_ptr<FrameExecutor>& ex, AffineTr
 	ex->computeStart(reader.frameIndex, ex->mFrame.mResultPoints);
 	ex->computeTerminate(reader.frameIndex, ex->mFrame.mResultPoints);
 	ex->outputData(0, trf);
-	ex->mFrame.mWriter.prepareOutput(*ex);
+	ex->mFrame.mWriter.writeOutput(*ex);
 }
 
 void filterCompare() {

@@ -35,14 +35,13 @@ public:
 	AvxFrame(CoreData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool);
 
 	void inputData(int64_t frameIndex, const ImageYuv& inputFrame) override;
-	void createPyramid(int64_t frameIndex, const Affine2D& trf, bool warp) override;
+	void createPyramid(int64_t frameIndex, AffineDataFloat trf, bool warp) override;
 	void computeStart(int64_t frameIndex, std::vector<PointResult>& results) override;
 	void computeTerminate(int64_t frameIndex, std::vector<PointResult>& results) override;
-	void outputData(int64_t frameIndex, const Affine2D& trf) override;
-	void getOutputYuv(int64_t frameIndex, ImageYuv& image) override;
-	void getOutputRgba(int64_t frameIndex, ImageRGBA& image) override;
-	void getOutputBgra(int64_t frameIndex, ImageBGRA& image) override;
-	void getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) override;
+	void outputData(int64_t frameIndex, AffineDataFloat trf) override;
+	void getOutputYuv(int64_t frameIndex, ImageYuv& image) const override;
+	void getOutputImage(int64_t frameIndex, ImageBaseRgb& image) const override;
+	void getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) const override;
 	Matf getTransformedOutput() const override;
 	Matf getPyramid(int64_t frameIndex) const override;
 	void getInput(int64_t frameIndex, ImageYuv& image) const override;
@@ -71,13 +70,12 @@ private:
 	std::vector<float> fv = { 1.370705f, -0.698001f, 0.0f, 0.0f };
 
 	void unsharp(const AvxMatf& warped, AvxMatf& gauss, float unsharp, AvxMatf& out);
-	void write(ImageYuv& dest);
-	void write(ImageNV12& image);
+	void write(ImageYuv& dest) const;
+	void write(ImageNV12& image) const;
 	void downsample(const float* srcptr, int h, int w, int stride, float* destptr, int destStride);
 	void filter(const AvxMatf& src, int r0, int h, int w, AvxMatf& dest, std::span<V16f> ks);
 
-	std::pair<V8d, V8d> transform(V8d x, V8d y, V8d m00, V8d m01, V8d m02, V8d m10, V8d m11, V8d m12);
-	void warpBack(const Affine2D& trf, const AvxMatf& input, AvxMatf& dest);
+	void warpBack(const AffineDataFloat& trf, const AvxMatf& input, AvxMatf& dest);
 
 	V16f interpolate(V16f f00, V16f f10, V16f f01, V16f f11, V16f dx, V16f dy);
 	V16f interpolate(V16f f00, V16f f10, V16f f01, V16f f11, V16f dx, V16f dy, V16f dx1, V16f dy1);

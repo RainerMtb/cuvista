@@ -38,27 +38,22 @@ void DummyFrame::inputData(int64_t frameIndex, const ImageYuv& inputFrame) {
 	inputFrame.copyTo(mFrames[idx], mPool);
 }
 
-void DummyFrame::outputData(int64_t frameIndex, const Affine2D& trf) {
+void DummyFrame::outputData(int64_t frameIndex, AffineDataFloat trf) {
 	size_t idx = frameIndex % mFrames.size();
 }
 
-void DummyFrame::getOutputYuv(int64_t frameIndex, ImageYuv& image) {
+void DummyFrame::getOutputYuv(int64_t frameIndex, ImageYuv& image) const {
 	size_t idx = frameIndex % mFrames.size();
 	mFrames[idx].copyTo(image, mPool);
 }
 
-void DummyFrame::getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) {
+void DummyFrame::getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) const {
 	size_t idx = frameIndex % mFrames.size();
 	mFrames[idx].toNV12(image, mPool);
 	encodeNvData(image, cudaNv12ptr);
 }
 
-void DummyFrame::getOutputRgba(int64_t frameIndex, ImageRGBA& image) {
-	size_t idx = frameIndex % mFrames.size();
-	mFrames[idx].toBaseRgb(image, mPool);
-}
-
-void DummyFrame::getOutputBgra(int64_t frameIndex, ImageBGRA& image) {
+void DummyFrame::getOutputImage(int64_t frameIndex, ImageBaseRgb& image) const {
 	size_t idx = frameIndex % mFrames.size();
 	mFrames[idx].toBaseRgb(image, mPool);
 }

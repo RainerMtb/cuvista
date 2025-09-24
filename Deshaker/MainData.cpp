@@ -80,7 +80,6 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 			fileIn = next;
 
 		} else if (args.nextArg("o", next)) {
-			console = &std::cout;
 			if (str_toupper(next) == "NULL") {
 				//do not do any output
 				videoOutputType = OutputType::NONE;
@@ -327,10 +326,13 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 	}
 
 	if (videoOutputType == OutputType::VIDEO_FILE || videoOutputType == OutputType::SEQUENCE_BMP || videoOutputType == OutputType::SEQUENCE_JPG) {
-		auto path1 = std::filesystem::path(fileIn);
-		auto path2 = std::filesystem::path(fileOutCheck);
+		std::filesystem::path path1 = fileIn;
+		std::filesystem::path path2 = fileOutCheck;
 		std::error_code ec;
-		if (std::filesystem::equivalent(path1, path2, ec)) {
+		//use check with error code parameter as non existing output file will throw an exception otherwise
+		bool filesEqual = std::filesystem::equivalent(path1, path2, ec);
+		std::string ecstr = ec.message();
+		if (filesEqual) {
 			throw AVException("cannot use the same file for input and output");
 		}
 		checkFileForWriting(fileOutCheck, overwriteOutput);

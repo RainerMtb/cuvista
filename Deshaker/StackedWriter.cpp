@@ -24,11 +24,8 @@ void StackedWriter::open(EncodingOption videoCodec) {
 	mInputFrameScaled.setColor(mData.backgroundColor);
 }
 
-void StackedWriter::prepareOutput(FrameExecutor& executor) {
-	executor.getOutputYuv(frameIndex, mOutputFrame);
-}
-
 void StackedWriter::writeOutput(const FrameExecutor& executor) {
+	executor.getOutputYuv(frameIndex, mOutputFrame);
 	executor.getInput(frameIndex, mInputFrame);
 
 	int bufferIndex = 0;

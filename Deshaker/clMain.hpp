@@ -38,14 +38,13 @@ public:
 
 	void init();
 	void inputData(int64_t frameIndex, const ImageYuv& inputFrame) override;
-	void createPyramid(int64_t frameIndex, const Affine2D& trf, bool warp) override;
+	void createPyramid(int64_t frameIndex, AffineDataFloat trf, bool warp) override;
 	void computeStart(int64_t frameIndex, std::vector<PointResult>& results) override;
 	void computeTerminate(int64_t frameIndex, std::vector<PointResult>& results) override;
-	void outputData(int64_t frameIndex, const Affine2D& trf) override;
-	void getOutputYuv(int64_t frameIndex, ImageYuv& image) override;
-	void getOutputRgba(int64_t frameIndex, ImageRGBA& image) override;
-	void getOutputBgra(int64_t frameIndex, ImageBGRA& image) override;
-	void getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) override;
+	void outputData(int64_t frameIndex, AffineDataFloat trf) override;
+	void getOutputYuv(int64_t frameIndex, ImageYuv& image) const override;
+	void getOutputImage(int64_t frameIndex, ImageBaseRgb& image) const override;
+	void getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) const override;
 	Matf getTransformedOutput() const override;
 	Matf getPyramid(int64_t frameIndex) const override;
 	void getInput(int64_t frameIndex, ImageYuv& image) const override;

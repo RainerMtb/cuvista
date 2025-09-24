@@ -431,7 +431,7 @@ void FFmpegFormatWriter::writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsI
 }
 
 //close ffmpeg format
-FFmpegFormatWriter::~FFmpegFormatWriter() {
+void FFmpegFormatWriter::close() {
     if (fmt_ctx && isHeaderWritten) {
         int result = av_write_trailer(fmt_ctx);
         if (result < 0) {
@@ -439,6 +439,12 @@ FFmpegFormatWriter::~FFmpegFormatWriter() {
         }
         outputBytesWritten = avio_tell(fmt_ctx->pb);
     }
+    if (fmt_ctx) {
+        avformat_close_input(&fmt_ctx); //free_context does not properly close the output file
+    }
+}
+
+FFmpegFormatWriter::~FFmpegFormatWriter() {
     if (av_avio) {
         avio_context_free(&av_avio);
     }
@@ -446,7 +452,6 @@ FFmpegFormatWriter::~FFmpegFormatWriter() {
         av_packet_free(&videoPacket);
     }
     if (fmt_ctx) {
-        avformat_close_input(&fmt_ctx); //free_context does not properly close the output file
         avformat_free_context(fmt_ctx); //release all resources of the output file
     }
 }

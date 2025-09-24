@@ -25,8 +25,6 @@
 
 #include "MovieFrame.hpp"
 #include "MovieReader.hpp"
-#include "FrameResult.hpp"
-#include "FrameExecutor.hpp"
 
 
 void debugPrint(winrt::hstring str);
@@ -61,14 +59,14 @@ namespace winrt::cuvistaWinui::implementation {
 
         MainWindow();
 
-        winrt::fire_and_forget btnOpenClick(const IInspectable& sender, const RoutedEventArgs& args);
+        void btnOpenClick(const IInspectable& sender, const RoutedEventArgs& args);
         void btnColorOk(const IInspectable& sender, const RoutedEventArgs& args);
         void btnColorCancel(const IInspectable& sender, const RoutedEventArgs& args);
 
         void lblColorClick(const IInspectable& sender, const Input::TappedRoutedEventArgs& args);
         void imageBackgroundClick(const IInspectable& sender, const Input::TappedRoutedEventArgs& args);
 
-        void btnStartClick(const IInspectable& sender, const RoutedEventArgs& args);
+        winrt::fire_and_forget btnStartClick(const IInspectable& sender, const RoutedEventArgs& args);
         winrt::fire_and_forget btnInfoClick(const IInspectable& sender, const RoutedEventArgs& args);
         void btnResetClick(const IInspectable& sender, const RoutedEventArgs& args);
 
@@ -92,8 +90,6 @@ namespace winrt::cuvistaWinui::implementation {
     private:
         Windows::UI::Color mBackgroundColor;
         Windows::Storage::ApplicationDataContainer mLocalSettings = Windows::Storage::ApplicationData::Current().LocalSettings();
-        Windows::Storage::Pickers::PickerLocationId mInputDir;
-        Windows::Storage::Pickers::PickerLocationId mOutputDir;
         Microsoft::UI::Dispatching::DispatcherQueue mDispatcher = Microsoft::UI::Dispatching::DispatcherQueue::GetForCurrentThread();
 
         MainData mData;
@@ -101,8 +97,13 @@ namespace winrt::cuvistaWinui::implementation {
         ImageBGRA mInputBGRA;
         FFmpegReader mReader;
 
+        std::shared_ptr<MovieWriter> mWriter;
+        std::shared_ptr<MovieFrame> mFrame;
+        std::shared_ptr<FrameExecutor> mExecutor;
+
         bool mInputReady = false;
         bool mOutputReady = false;
+		hstring mInputFile = L"";
 
         //SoftwareBitmap mInputImageBitmapPlaceholder = SoftwareBitmap(BitmapPixelFormat::Bgra8, 100, 100, BitmapAlphaMode::Premultiplied);
         //SoftwareBitmap mInputImageBitmap = mInputImageBitmapPlaceholder;

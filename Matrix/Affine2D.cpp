@@ -17,7 +17,6 @@
  */
 
 #include "Affine2D.hpp"
-#include "AffineCore.hpp"
 #include "CoreData.hpp"
 
 Affine2D::Affine2D(double m00, double m01, double m02, double m10, double m11, double m12) :
@@ -143,7 +142,11 @@ std::array<double, 6> Affine2D::toArray() const {
 	return { array[0], array[1], array[2], array[3], array[4], array[5] };
 }
 
-AffineCore Affine2D::toAffineCore() const {
+Affine2D::operator AffineDataFloat() const {
+	return { float(array[0]), float(array[1]), float(array[2]), float(array[3]), float(array[4]), float(array[5]) };
+}
+
+Affine2D::operator AffineDataDouble() const {
 	return { array[0], array[1], array[2], array[3], array[4], array[5] };
 }
 

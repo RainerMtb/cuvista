@@ -19,10 +19,9 @@
 #pragma once
 
 #include "Mat.hpp"
+#include "AffineData.hpp"
 #include <utility>
 #include <array>
-
-struct AffineCore;
 
 struct Point {
 	double x, y;
@@ -52,6 +51,10 @@ public:
 	Affine2D& reset();
 
 	bool operator == (const Affine2D& other) const;
+
+	operator AffineDataFloat() const;
+
+	operator AffineDataDouble() const;
 
 	bool equals(const Affine2D& other, double tolerance = 0.0) const;
 
@@ -90,8 +93,6 @@ public:
 	double arrayValue(int idx) const;
 
 	std::array<double, 6> toArray() const;
-
-	AffineCore toAffineCore() const;
 
 	std::string toString(const std::string& title = "", int digits = -1) const override;
 

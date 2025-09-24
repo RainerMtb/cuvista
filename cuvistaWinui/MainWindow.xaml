@@ -198,9 +198,9 @@
             <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Spacing="16">
                 <Image Width="24"  Stretch="Uniform" Source="/Assets/10_arrow.png"/>
                 <TextBlock Text="Pixel to Crop on Left" VerticalAlignment="Center"/>
-                <NumberBox Width="110" Value="0" SmallChange="1" LargeChange="5" SpinButtonPlacementMode="Compact"/>
+                <NumberBox x:Name="spinStackLeft" Width="110" Value="0" SmallChange="1" LargeChange="5" SpinButtonPlacementMode="Compact"/>
                 <TextBlock Text="on Right" VerticalAlignment="Center"/>
-                <NumberBox Width="110" Value="0" SmallChange="1" LargeChange="5" SpinButtonPlacementMode="Compact"/>
+                <NumberBox x:Name="spinStackRight" Width="110" Value="0" SmallChange="1" LargeChange="5" SpinButtonPlacementMode="Compact"/>
             </StackPanel>
 
             <CheckBox Grid.Row="4" x:Name="chkOverwrite" Content="Always Overwrite" VerticalAlignment="Center" FontWeight="SemiBold"/>

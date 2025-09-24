@@ -150,7 +150,7 @@ public:
 	//parameters for computation of trajectory, at least 0.33, greater -> more stable camera
 	double cSigmaParam = 1.25;
 
-	int64_t maxFrames = std::numeric_limits<int32_t>::max();
+	int64_t maxFrames = std::numeric_limits<int64_t>::max();
 	Color backgroundColor = Color::rgb(defaults.bgColorRed, defaults.bgColorGreen, defaults.bgColorBlue);
 
 	std::chrono::steady_clock::time_point timePoint;

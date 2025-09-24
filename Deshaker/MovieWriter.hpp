@@ -35,10 +35,10 @@ public:
 	virtual void open(EncodingOption videoCodec) {}
 	virtual void start() {}
 	virtual void writeInput(const FrameExecutor& executor) {}
-	virtual void prepareOutput(FrameExecutor& executor) {}
 	virtual void writeOutput(const FrameExecutor& executor) {}
 	virtual bool startFlushing() { return false; }
 	virtual bool flush() { return false; }
+	virtual void close() {}
 };
 
 
@@ -50,7 +50,8 @@ protected:
 
 public:
 	MovieWriterBase(MainData& data) :
-		mData(data) {}
+		mData(data) 
+	{}
 };
 
 
@@ -63,7 +64,8 @@ protected:
 public:
 	NullWriter(MainData& data, MovieReader& reader) :
 		MovieWriterBase(data),
-		mReader { reader } {}
+		mReader { reader } 
+	{}
 };
 
 
@@ -84,10 +86,10 @@ public:
 	void open(EncodingOption encodingOption) override;
 	void start() override;
 	void writeInput(const FrameExecutor& executor) override;
-	void prepareOutput(FrameExecutor& executor) override;
 	void writeOutput(const FrameExecutor& executor) override;
 	bool startFlushing() override;
 	bool flush() override;
+	void close() override;
 };
 
 
@@ -100,10 +102,10 @@ protected:
 public:
 	OutputWriter(MainData& data, MovieReader& reader) :
 		NullWriter(data, reader),
-		outputFrame(data.h, data.w, data.cpupitch) {}
+		outputFrame(data.h, data.w, data.cpupitch) 
+	{}
 
 	const ImageYuv& getOutputFrame() { return outputFrame; }
-	void prepareOutput(FrameExecutor& executor) override;
 	void writeOutput(const FrameExecutor& executor) override;
 };
 
@@ -126,9 +128,9 @@ public:
 	RawMemoryStoreWriter(size_t maxFrameCount = 250, bool writeInput = true, bool writeOutput = true) :
 		maxFrameCount { maxFrameCount },
 		doWriteInput { writeInput },
-		doWriteOutput { writeOutput} {}
+		doWriteOutput { writeOutput} 
+	{}
 
-	void prepareOutput(FrameExecutor& executor) override;
 	void writeOutput(const FrameExecutor& executor) override;
 	void writeInput(const FrameExecutor& executor) override;
 	
@@ -141,7 +143,8 @@ class ImageWriter : public OutputWriter {
 
 protected:
 	ImageWriter(MainData& data, MovieReader& reader) :
-		OutputWriter(data, reader) {}
+		OutputWriter(data, reader) 
+	{}
 
 	std::string makeFilename(const std::string& extension) const;
 
@@ -161,10 +164,10 @@ public:
 	BmpImageWriter(MainData& data, MovieReader& reader) :
 		ImageWriter(data, reader),
 		worker { [] {} },
-		image(data.h, data.w) {}
+		image(data.h, data.w) 
+	{}
 
 	~BmpImageWriter() override;
-	void prepareOutput(FrameExecutor& executor) override;
 	void writeOutput(const FrameExecutor& executor) override;
 };
 
@@ -179,7 +182,8 @@ private:
 
 public:
 	JpegImageWriter(MainData& data, MovieReader& reader) :
-		ImageWriter(data, reader) {}
+		ImageWriter(data, reader) 
+	{}
 
 	~JpegImageWriter() override;
 	void open(EncodingOption videoCodec) override;
@@ -195,7 +199,8 @@ private:
 
 public:
 	RawWriter(MainData& data, MovieReader& reader) :
-		OutputWriter(data, reader) {}
+		OutputWriter(data, reader) 
+	{}
 
 	void open(EncodingOption videoCodec) override;
 	void writeOutput(const FrameExecutor& executor) override;
@@ -207,7 +212,8 @@ class PipeWriter : public OutputWriter {
 
 public:
 	PipeWriter(MainData& data, MovieReader& reader) :
-		OutputWriter(data, reader) {}
+		OutputWriter(data, reader) 
+	{}
 
 	~PipeWriter() override;
 	void open(EncodingOption videoCodec) override;
@@ -239,11 +245,14 @@ protected:
 	bool isHeaderWritten = false;
 
 	FFmpegFormatWriter(MainData& data, MovieReader& reader) :
-		NullWriter(data, reader) {}
+		NullWriter(data, reader) 
+	{}
 
 	~FFmpegFormatWriter() override;
-	void open(AVCodecID codecId, const std::string& sourceName, int queueSize);
+	void close() override;
+
 	void open(AVCodecID codecId);
+	void open(AVCodecID codecId, const std::string& sourceName, int queueSize);
 	int writePacket(AVPacket* packet);
 	void writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsIdx, bool terminate);
 	void transcodeAudio(AVPacket* pkt, OutputStreamContext& osc, bool terminate);
@@ -281,11 +290,11 @@ protected:
 
 public:
 	FFmpegWriter(MainData& data, MovieReader& reader) :
-		FFmpegWriter(data, reader, 4) {}
+		FFmpegWriter(data, reader, 4) 
+	{}
 
 	~FFmpegWriter() override;
 	void open(EncodingOption videoCodec) override;
-	void prepareOutput(FrameExecutor& executor) override;
 	void writeOutput(const FrameExecutor& executor) override;
 	bool startFlushing() override;
 	bool flush() override;
@@ -307,10 +316,10 @@ public:
 		mWidthTotal { 2 * (data.w - data.stackCrop.left - data.stackCrop.right) },
 		mInputFrame(data.h, data.w, data.cpupitch),
 		mInputFrameScaled(data.h, data.w - data.stackCrop.left - data.stackCrop.right),
-		mOutputFrame(data.h, data.w, data.cpupitch) {}
+		mOutputFrame(data.h, data.w, data.cpupitch) 
+	{}
 
 	void open(EncodingOption videoCodec) override;
-	void prepareOutput(FrameExecutor& executor) override;
 	void writeOutput(const FrameExecutor& executor) override;
 };
 
@@ -342,7 +351,8 @@ class TransformsWriter : public MovieWriterBase, public TransformsFile {
 public:
 	TransformsWriter(MainData& data) :
 		MovieWriterBase(data),
-		TransformsFile() {}
+		TransformsFile() 
+	{}
 
 	void start() override;
 	void writeInput(const FrameExecutor& executor) override;
@@ -373,7 +383,6 @@ public:
 	void open(EncodingOption videoCodec) override {}
 	void start() override;
 	void writeInput(const FrameExecutor& executor) override;
-	void prepareOutput(FrameExecutor& executor) override {}
 	void writeOutput(const FrameExecutor& executor) override {}
 	~OpticalFlowWriter();
 };
@@ -410,7 +419,8 @@ public:
 	ResultImageWriter(MainData& data) :
 		MovieWriterBase(data),
 		yuv(data.h, data.w),
-		bgr(data.h, data.w) {}
+		bgr(data.h, data.w) 
+	{}
 
 	void start() override {}
 	void writeInput(const FrameExecutor& executor) override;

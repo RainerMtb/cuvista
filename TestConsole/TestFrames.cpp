@@ -67,7 +67,6 @@ template <class T> Result runPyramid(MainData& data, int deviceIndex) {
 		trf.addRotation(0.2).addTranslation(-40, 30);
 		trf.frameIndex = 0;
 		executor->outputData(0, trf);
-		writer.prepareOutput(*executor);
 		Result result = {
 			executor->getPyramid(0),
 			executor->getTransformedOutput(),
@@ -270,7 +269,6 @@ void createTransformImages() {
 		im1.writeText("input " + std::to_string(i), 0, 1080);
 		yuvFile.write(im1);
 		cpuframe.outputData(0, trf);
-		writer.prepareOutput(cpuframe);
 		ImageYuv imOut = writer.getOutputFrame();
 		imOut.writeText("output " + std::to_string(i + 1), 0, 1080);
 		yuvFile.write(imOut);

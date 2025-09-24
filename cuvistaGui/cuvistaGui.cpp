@@ -234,7 +234,9 @@ void cuvistaGui::setInputFile(const QString& inputPath) {
     ui.comboAudioTrack->clear();
     ui.comboAudioTrack->addItem("No Audio");
     mInputReady = false;
-    
+    mFileInput = QFileInfo(inputPath);
+    mInputDir = mFileInput.path();
+
     try {
         mReader.close();
         errorLogger().clearErrors();
@@ -285,9 +287,6 @@ void cuvistaGui::setInputFile(const QString& inputPath) {
         ui.labelStatus->setText(QString(ex.what()));
         ui.texInput->setPlainText("");
     }
-
-    mFileInput = QFileInfo(inputPath);
-    mInputDir = mFileInput.path();
 }
 
 void cuvistaGui::addInputFile(const QString& inputPath) {
@@ -380,7 +379,7 @@ void cuvistaGui::stabilize() {
     mData.zoomMin = 1.0 + ui.spinZoomMin->value() / 100.0;
     mData.zoomMax = ui.chkDynamicZoom->isChecked() ? 1.0 + ui.spinZoomMax->value() / 100.0 : mData.zoomMin;
     mData.bgmode = ui.radioBlend->isChecked() ? BackgroundMode::BLEND : BackgroundMode::COLOR;
-    if (ui.chkFrameLimit->isChecked()) mData.maxFrames = ui.spinFrameLimit->value();
+    mData.maxFrames = ui.chkFrameLimit->isChecked() ? ui.spinFrameLimit->value() : std::numeric_limits<int64_t>::max();
 
     using uchar = unsigned char;
     uchar rgb[] = { (uchar) mBackgroundColor.red(), (uchar) mBackgroundColor.green(), (uchar) mBackgroundColor.blue() };
@@ -446,9 +445,8 @@ void cuvistaGui::stabilize() {
 
     //set up worker thread
     auto fcn = [&] {
+        //send status message
         sigShowStatusMessage("stabilizing...");
-        //init writer on executor thread
-        mWriter->start();
         //run loop
         mFrame->runLoop(mProgress, mInputHandler, mExecutor);
     };

@@ -25,7 +25,7 @@ std::ostream& printError(std::ostream& os, const std::string& msg1) {
 
 DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console, std::shared_ptr<MovieWriter> externalWriter) {
 	std::set_terminate([] {
-		printError(std::cout, "error: std::terminate was called");
+		printError(std::cerr, "error: std::terminate was called");
 		std::exit(100);
 	});
 
@@ -88,7 +88,6 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 			writer->addWriter(externalWriter);
 		}
 		writer->open(data.requestedEncoding);
-		writer->start();
 
 		//----------- create Frame Handler for selected loop
 		if (data.mode == 0) {
@@ -180,6 +179,7 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 	result.bytesEncoded = writer->encodedBytesTotal;
 	result.trajectory = frame->mTrajectory.getTrajectory();
 	result.executorName = executor->mDeviceInfo.getName();
+	result.executorNameShort = executor->mDeviceInfo.getNameShort();
 
 	//destruct writer before frame
 	writer.reset();

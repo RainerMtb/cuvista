@@ -19,8 +19,8 @@
 #include "pch.h"
 #include "MainWindow.xaml.h"
 
-#include <microsoft.ui.xaml.window.h>
-#include <Shobjidl.h> //for IInitializeWithWindow for FilePicker
+#include <Shobjidl.h>
+#include <filesystem>
 
 #if __has_include("MainWindow.g.cpp")
 #include "MainWindow.g.cpp"
@@ -29,7 +29,10 @@
 #include "EncodingOptionXaml.g.cpp"
 #endif
 
-#include <filesystem>
+#include "FrameResult.hpp"
+#include "FrameExecutor.hpp"
+#include "CudaWriter.hpp"
+
 
 using namespace winrt;
 using namespace Windows::Graphics;
@@ -93,10 +96,6 @@ namespace winrt::cuvistaWinui::implementation {
 
     MainWindow::MainWindow() {
         InitializeComponent(); //should not be used??
-
-        mInputDir = Pickers::PickerLocationId::VideosLibrary;
-        mOutputDir = Pickers::PickerLocationId::VideosLibrary;
-
         lblStatus().Text(hformat("Version {}", CUVISTA_VERSION));
 
         mData.console = &mData.nullStream;
@@ -172,9 +171,9 @@ namespace winrt::cuvistaWinui::implementation {
         int numArgs;
         LPWSTR* cmdArgs = CommandLineToArgvW(cmd, &numArgs);
         if (numArgs > 1) {
-            std::filesystem::path fpath = cmdArgs[1];
-            if (std::filesystem::exists(fpath)) {
-                addInputFile(hstring(cmdArgs[1]));
+            std::filesystem::path p(cmdArgs[1]);
+            if (std::filesystem::exists(p)) {
+                addInputFile(cmdArgs[1]);
             }
         }
 
@@ -238,16 +237,24 @@ namespace winrt::cuvistaWinui::implementation {
         }
     }
 
-    winrt::fire_and_forget MainWindow::btnOpenClick(const IInspectable& sender, const RoutedEventArgs& args) {
+    void MainWindow::btnOpenClick(const IInspectable& sender, const RoutedEventArgs& args) {
         //debugPrint("open");
-        Pickers::FileOpenPicker openPicker;
-        HWND hwnd = GetActiveWindow();
-        openPicker.as<IInitializeWithWindow>()->Initialize(hwnd);
-        openPicker.SuggestedStartLocation(mInputDir);
-        openPicker.FileTypeFilter().ReplaceAll({ L"*", L".mp4", L".mkv" });
-        Windows::Storage::StorageFile file = co_await openPicker.PickSingleFileAsync();
-        if (file != nullptr) {
-            addInputFile(file.Path());
+        IFileDialog* ifd = nullptr;
+        HRESULT result = CoCreateInstance(CLSID_FileOpenDialog, NULL, CLSCTX_INPROC_SERVER, IID_IFileOpenDialog, (void**) (&ifd));
+        if (result == S_OK) {
+            ifd->SetOptions(FOS_PATHMUSTEXIST | FOS_FILEMUSTEXIST);
+            ifd->SetTitle(L"Select Video file to open");
+            COMDLG_FILTERSPEC filterSpec[] = { { L"All Files", L"*.*"} };
+            ifd->SetFileTypes(1, filterSpec);
+            if (ifd->Show(GetActiveWindow()) == S_OK) {
+                IShellItem* item = nullptr;
+                if (ifd->GetResult(&item) == S_OK) {
+                    PWSTR file = nullptr;
+                    if (item->GetDisplayName(SIGDN_FILESYSPATH, &file) == S_OK) {
+                        addInputFile(file);
+                    }
+                }
+            }
         }
     }
 
@@ -346,9 +353,10 @@ namespace winrt::cuvistaWinui::implementation {
         if (inputPath.empty()) {
             return;
         }
-        debugPrint(L"set input '" + inputPath + L"'");
+        //debugPrint(L"set input '" + inputPath + L"'");
 
         mInputReady = false;
+        mInputFile = inputPath;
 
         try {
             mReader.close();
@@ -382,6 +390,7 @@ namespace winrt::cuvistaWinui::implementation {
                     str += mReader.videoStreamSummary();
                 }
             }
+            //trim string
             size_t pos = str.size() - 1;
             while (pos > 0 && str[pos] == '\n') {
                 str[pos] = '\0';
@@ -408,13 +417,153 @@ namespace winrt::cuvistaWinui::implementation {
     //-------------------- Start Stabililzing ---------------------------------
     //-------------------------------------------------------------------------
 
-    void MainWindow::btnStartClick(const IInspectable& sender, const RoutedEventArgs& args) {
-        debugPrint("start");
+    winrt::fire_and_forget MainWindow::btnStartClick(const IInspectable& sender, const RoutedEventArgs& args) {
+        //debugPrint("start");
+        lblStatus().Text(L"");
+        if (mInputFile.empty() || mInputReady == false) {
+            co_return;
+        }
+
+        hstring outputFile;
+
+        //get output video file
+        //with radio buttons the IsChecked() method returns a IReference which ALWAYS will be true -> need to check the Value()
+        if (chkEncode().IsChecked().Value() || chkStack().IsChecked().Value()) {
+            IFileDialog* ifd = nullptr;
+            HRESULT result = CoCreateInstance(CLSID_FileSaveDialog, NULL, CLSCTX_INPROC_SERVER, IID_IFileSaveDialog, (void**) (&ifd));
+            if (result == S_OK) {
+                FILEOPENDIALOGOPTIONS op = chkOverwrite().IsChecked().Value() ? 0 : FOS_OVERWRITEPROMPT;
+                ifd->SetOptions(op);
+                ifd->SetTitle(L"Select Video file to save");
+                COMDLG_FILTERSPEC filterSpec[] = { { L"Video Files", L"*.mp4;*.mkv" }, { L"All Files", L"*.*" }};
+                ifd->SetFileTypes(2, filterSpec);
+                if (ifd->Show(GetActiveWindow()) == S_OK) {
+                    IShellItem* item = nullptr;
+                    if (ifd->GetResult(&item) == S_OK) {
+                        PWSTR file = nullptr;
+                        if (item->GetDisplayName(SIGDN_FILESYSPATH, &file) == S_OK) {
+                            outputFile = file;
+                        }
+                    }
+                }
+            }
+        }
+
+        //get output image sequence folder
+        if (chkSequence().IsChecked().Value()) {
+            IFileDialog* ifd = nullptr;
+            HRESULT result = CoCreateInstance(CLSID_FileOpenDialog, NULL, CLSCTX_INPROC_SERVER, IID_IFileOpenDialog, (void**) (&ifd));
+            if (result == S_OK) {
+                ifd->SetOptions(FOS_PICKFOLDERS);
+                if (ifd->Show(GetActiveWindow()) == S_OK) {
+                    IShellItem* item = nullptr;
+                    if (ifd->GetResult(&item) == S_OK) {
+                        PWSTR folder = nullptr;
+                        if (item->GetDisplayName(SIGDN_FILESYSPATH, &folder) == S_OK) {
+                            //check for overwrite
+                            std::string fileExt = to_string(comboImageType().SelectedValue().as<hstring>());
+                            std::transform(fileExt.begin(), fileExt.end(), fileExt.begin(), [] (char c) { return std::tolower(c); });
+                            std::string firstFile = ImageWriter::makeFilename(to_string(folder), 0, fileExt);
+
+                            std::filesystem::path p(firstFile);
+                            if (std::filesystem::exists(p) && chkOverwrite().IsChecked().Value() == false) {
+                                LPCWSTR msgTitle = L"Confirm File Overwrite";
+                                std::wstring firstFileW = std::wstring(firstFile.begin(), firstFile.end());
+                                std::wstring msgTextW = L"File " + firstFileW + L" exists,\noverwrite this and subsequent files?";
+                                int selection = MessageBoxW(NULL, msgTextW.c_str(), msgTitle, MB_ICONWARNING | MB_YESNO | MB_DEFBUTTON2);
+                                if (selection == IDYES) {
+                                    //overwrite images
+                                    outputFile = folder;
+                                }
+
+                            } else {
+                                //new images
+                                outputFile = folder;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (outputFile.empty()) {
+            co_return;
+        }
+
+        //debugPrint(outputFile);
+
+        //check if input and output point to same file
+        std::filesystem::path p1 = mInputFile.c_str();
+        std::filesystem::path p2 = outputFile.c_str();
+        std::error_code ec;
+        if (std::filesystem::equivalent(p1, p2, ec)) {
+            Controls::ContentDialog dialog;
+            dialog.Title(box_value(L"Invalid File Selection"));
+            dialog.Content(box_value(L"Please select different files\nfor input and output"));
+            dialog.CloseButtonText(L"OK");
+            dialog.XamlRoot(rootPanel().XamlRoot());
+            co_await dialog.ShowAsync();
+            co_return;
+        }
+
+        //set parameters
+        mData.fileOut = winrt::to_string(outputFile);
+        mData.deviceRequested = true;
+        mData.deviceSelected = comboDevice().SelectedIndex();
 
         IInspectable option = comboEncoding().SelectedValue();
-        EncodingOption eo = option.as<cuvistaWinui::implementation::EncodingOptionXaml>()->mOption;
-        //debugPrint(mapDeviceToString[eo.device]);
-        //debugPrint(mapCodecToString[eo.codec]);
+        mData.requestedEncoding = option.as<cuvistaWinui::implementation::EncodingOptionXaml>()->mOption;
+        mData.radsec = spinRadius().Value();
+        mData.zoomMin = 1.0 + spinZoomMin().Value();
+        mData.zoomMax = chkDynamicZoom().IsChecked().Value() ? 1.0 + spinZoomMax().Value() : mData.zoomMin;
+        mData.bgmode = radioBlend().IsChecked().Value() ? BackgroundMode::BLEND : BackgroundMode::COLOR;
+        mData.maxFrames = chkFrameLimit().IsChecked().Value() ? (int64_t) spinFrameLimit().Value() : std::numeric_limits<int64_t>::max();
+
+        mData.backgroundColor = Color::rgb(mBackgroundColor.R, mBackgroundColor.G, mBackgroundColor.B);
+        mData.backgroundColor.toYUVfloat(&mData.bgcolorYuv.y, &mData.bgcolorYuv.u, &mData.bgcolorYuv.v);
+
+        //rewind reader to beginning of input
+        mReader.rewind();
+        //check input parameters
+        mData.validate(mReader);
+        //crop setting for stack
+        mData.stackCrop = { (int) spinStackLeft().Value(), (int ) spinStackRight().Value() };
+
+        //select writer
+        if (chkStack().IsChecked().Value())
+            mWriter = std::make_shared<StackedWriter>(mData, mReader);
+        else if (chkSequence().IsChecked().Value() && comboImageType().SelectedValue().as<hstring>() == L"BMP")
+            mWriter = std::make_shared<BmpImageWriter>(mData, mReader);
+        else if (chkSequence().IsChecked().Value() && comboImageType().SelectedValue().as<hstring>() == L"JPG")
+            mWriter = std::make_shared<JpegImageWriter>(mData, mReader);
+        else if (chkEncode().IsChecked().Value() && mData.requestedEncoding.device == EncodingDevice::NVENC)
+            mWriter = std::make_shared<CudaFFmpegWriter>(mData, mReader);
+        else if (chkEncode().IsChecked().Value())
+            mWriter = std::make_shared<FFmpegWriter>(mData, mReader);
+        else
+            co_return;
+
+        //open writer
+        mWriter->open(mData.requestedEncoding);
+
+        //select frame handler
+        mData.mode = comboMode().SelectedIndex();
+        if (mData.mode == 0) {
+            mFrame = std::make_shared<MovieFrameCombined>(mData, mReader, *mWriter);
+        } else {
+            mFrame = std::make_shared<MovieFrameConsecutive>(mData, mReader, *mWriter);
+        }
+
+        //select frame executor class
+        mExecutor = mData.deviceList[mData.deviceSelected]->create(mData, *mFrame);
+
+        auto loop = [&] {
+            mFrame->runLoop(mExecutor);
+            mWriter.reset(); //---------------
+            mExecutor.reset(); //------------
+            mFrame.reset(); //-------------
+        };
+        mFuture = std::async(std::launch::async, loop);
 
         ITaskbarList3* taskbarPtr = nullptr;
         HRESULT hr = CoCreateInstance(CLSID_TaskbarList, NULL, CLSCTX_INPROC_SERVER, IID_ITaskbarList3, (void**) (&taskbarPtr));
@@ -523,3 +672,38 @@ namespace winrt::cuvistaWinui::implementation {
         }
     }
 }
+
+
+/*
+* COMMDLG Variant
+* 
+OPENFILENAME fileStruct = {};
+fileStruct.lStructSize = sizeof(fileStruct);
+fileStruct.hwndOwner = GetActiveWindow();
+wchar_t szFile[260] = {};
+fileStruct.lpstrFile = szFile;
+fileStruct.lpstrFile[0] = '\0';
+fileStruct.nMaxFile = sizeof(szFile);
+bool retval = GetSaveFileName(&fileStruct);
+if (retval) {
+    LPWSTR file = fileStruct.lpstrFile;
+    debugPrint(file);
+}
+*/
+
+/*
+* WinUi Picker Variant
+* 
+Pickers::FileSavePicker savePicker;
+savePicker.as<IInitializeWithWindow>()->Initialize(GetActiveWindow());
+savePicker.SuggestedStartLocation(Pickers::PickerLocationId::VideosLibrary);
+std::vector<hstring> videos = { L".mp4", L".mkv" };
+savePicker.FileTypeChoices().Insert(L"Video Files", winrt::single_threaded_vector<hstring>(std::move(videos)));
+
+Windows::Storage::StorageFile file = co_await savePicker.PickSaveFileAsync();
+if (file != nullptr) {
+    outFile = file.Path();
+} else {
+    co_return;
+}
+*/

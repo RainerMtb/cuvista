@@ -65,10 +65,10 @@ const AffineTransform& MovieFrame::getTransform() const {
 	return mFrameResult.getTransform();
 }
 
-void MovieFrame::runLoop(std::shared_ptr<FrameExecutor> executor) {
+LoopResult MovieFrame::runLoop(std::shared_ptr<FrameExecutor> executor) {
 	std::shared_ptr<ProgressBase> progress = std::make_shared<ProgressDefault>();
 	UserInputDefault input;
-	runLoop(progress, input, executor);
+	return runLoop(progress, input, executor);
 }
 
 void MovieFrame::progressUpdate(ProgressInfo& progressInfo, std::shared_ptr<ProgressBase> progress, double totalProgress, bool forceUpdate) {
@@ -81,6 +81,10 @@ void MovieFrame::progressUpdate(ProgressInfo& progressInfo, std::shared_ptr<Prog
 	progressInfo.outputBytesWritten = mWriter.outputBytesWritten;
 	lock.unlock();
 	progress->update(progressInfo, forceUpdate);
+}
+
+LoopResult MovieFrame::runLoop(std::shared_ptr<ProgressBase> progress, UserInput& input, std::shared_ptr<FrameExecutor> executor) {
+	return LoopResult::LOOP_NONE;
 }
 
 MovieFrameCombined::MovieFrameCombined(MainData& data, MovieReader& reader, MovieWriter& writer) :
@@ -100,16 +104,18 @@ MovieFrameConsecutive::MovieFrameConsecutive(MainData& data, MovieReader& reader
 //---------- DESHAKER LOOP COMBINED -----------------------------
 //---------------------------------------------------------------
 
-void MovieFrameCombined::runLoop(std::shared_ptr<ProgressBase> progress, UserInput& input, std::shared_ptr<FrameExecutor> executor) {
+LoopResult MovieFrameCombined::runLoop(std::shared_ptr<ProgressBase> progress, UserInput& input, std::shared_ptr<FrameExecutor> executor) {
 	assert(mData.mode == 0 && "mode must be == 0 here");
 	InputState inputState = InputState::NONE;
 	StateCombined state = StateCombined::READ_FIRST;
 	bool hasFramesToFlush = false;
 	ProgressInfo progressInfo = { mReader.frameCount };
+	LoopResult loopResult = LoopResult::LOOP_SUCCESS;
 
 	while (state != StateCombined::DONE) {
 		//handle current state
 		if (state == StateCombined::READ_FIRST) {
+			mWriter.start();
 			//show program header on console
 			if (mData.printHeader) mData.showIntro(executor->mDeviceInfo.getName(), mReader);
 			//init progress display
@@ -160,7 +166,6 @@ void MovieFrameCombined::runLoop(std::shared_ptr<ProgressBase> progress, UserInp
 			mTrajectory.computeSmoothZoom(mData, mWriter.frameIndex);
 			const AffineTransform& finalTransform = mTrajectory.getTransform(mData, mWriter.frameIndex);
 			executor->outputData(mWriter.frameIndex, finalTransform);
-			mWriter.prepareOutput(*executor);
 			mWriter.writeOutput(*executor);
 			mWriter.writeInput(*executor);
 			//get computed flow for current frame
@@ -180,7 +185,6 @@ void MovieFrameCombined::runLoop(std::shared_ptr<ProgressBase> progress, UserInp
 			mTrajectory.computeSmoothZoom(mData, mWriter.frameIndex);
 			const AffineTransform& finalTransform = mTrajectory.getTransform(mData, mWriter.frameIndex);
 			executor->outputData(mWriter.frameIndex, finalTransform);
-			mWriter.prepareOutput(*executor);
 			mWriter.writeOutput(*executor);
 			mWriter.writeInput(*executor);
 
@@ -188,7 +192,6 @@ void MovieFrameCombined::runLoop(std::shared_ptr<ProgressBase> progress, UserInp
 			mTrajectory.computeSmoothZoom(mData, mWriter.frameIndex);
 			const AffineTransform& tf = mTrajectory.getTransform(mData, mWriter.frameIndex);
 			executor->outputData(mWriter.frameIndex, tf);
-			mWriter.prepareOutput(*executor);
 			mWriter.writeOutput(*executor);
 
 		} else if (state == StateCombined::QUIT) {
@@ -198,6 +201,9 @@ void MovieFrameCombined::runLoop(std::shared_ptr<ProgressBase> progress, UserInp
 		} else if (state == StateCombined::FLUSH) {
 			//flush the writer as long as there are frames left
 			hasFramesToFlush = mWriter.flush();
+
+		} else if (state == StateCombined::CLOSE) {
+			mWriter.close();
 		}
 
 		//update progress
@@ -218,17 +224,21 @@ void MovieFrameCombined::runLoop(std::shared_ptr<ProgressBase> progress, UserInp
 		if (e == UserInputEnum::END) {
 			progress->writeMessage("[e] command received. Stop reading input.");
 			state = StateCombined::LAST_COMPUTE;
+			loopResult = LoopResult::LOOP_CANCELLED;
 
 		} else if (e == UserInputEnum::QUIT) {
 			progress->writeMessage("[q] command received. Stop writing output.");
 			state = StateCombined::QUIT;
+			loopResult = LoopResult::LOOP_CANCELLED;
 
 		} else if (e == UserInputEnum::HALT) {
 			progress->writeMessage("[x] command received. Terminating.");
 			state = StateCombined::DONE;
+			loopResult = LoopResult::LOOP_CANCELLED;
 
 		} else if (errorLogger().hasError()) {
 			state = StateCombined::DONE;
+			loopResult = LoopResult::LOOP_ERROR;
 
 		} else if (inputState == InputState::SIGNAL) {
 			inputState = InputState::HANDLED;
@@ -261,13 +271,14 @@ void MovieFrameCombined::runLoop(std::shared_ptr<ProgressBase> progress, UserInp
 	}
 	
 	//std::cout << mTrajectory << std::endl;
+	return loopResult;
 }
 
 // -----------------------------------------
 // -------- DESHAKER LOOP CONSECUTIVE-------
 // -----------------------------------------
 
-void MovieFrameConsecutive::runLoop(std::shared_ptr<ProgressBase> progress, UserInput& input, std::shared_ptr<FrameExecutor> executor) {
+LoopResult MovieFrameConsecutive::runLoop(std::shared_ptr<ProgressBase> progress, UserInput& input, std::shared_ptr<FrameExecutor> executor) {
 	assert(mData.mode > 0 && "mode must be > 0 here");
 	InputState inputState = InputState::NONE;
 	StateConsecutive state = StateConsecutive::READ_FIRST_FRAME;
@@ -276,6 +287,7 @@ void MovieFrameConsecutive::runLoop(std::shared_ptr<ProgressBase> progress, User
 	int64_t maxFrames = mData.maxFrames;
 	ProgressInfo progressInfo = { mReader.frameCount };
 	double progressPerReaderPass = 80.0 / (80.0 * mData.mode + 20.0);
+	LoopResult loopResult = LoopResult::LOOP_SUCCESS;
 
 	while (state != StateConsecutive::DONE) {
 		//handle current state
@@ -348,6 +360,7 @@ void MovieFrameConsecutive::runLoop(std::shared_ptr<ProgressBase> progress, User
 			f.wait();
 
 		} else if (state == StateConsecutive::WRITE_PREPARE) {
+			mWriter.start();
 			progressUpdate(progressInfo, progress, progressPerReaderPass * currentPass * 100.0, true);
 			//prepare for second pass, rewind reader and read first frame
 			mReader.rewind();
@@ -366,7 +379,6 @@ void MovieFrameConsecutive::runLoop(std::shared_ptr<ProgressBase> progress, User
 			executor->inputData(mReader.frameIndex, mBufferFrame);
 			const AffineTransform& tf = mTrajectory.getTransform(mData, mWriter.frameIndex);
 			executor->outputData(mWriter.frameIndex, tf);
-			mWriter.prepareOutput(*executor);
 			mWriter.writeOutput(*executor);
 			mReader.read(mBufferFrame);
 
@@ -377,6 +389,9 @@ void MovieFrameConsecutive::runLoop(std::shared_ptr<ProgressBase> progress, User
 		} else if (state == StateConsecutive::FLUSH) {
 			//flush the writer as long as there are frames left
 			hasFramesToFlush = mWriter.flush();
+
+		} else if (state == StateConsecutive::CLOSE) {
+			mWriter.close();
 		}
 
 		//update progress
@@ -400,22 +415,27 @@ void MovieFrameConsecutive::runLoop(std::shared_ptr<ProgressBase> progress, User
 			progress->writeMessage("[e] command received. Stop reading input.");
 			maxFrames = mReader.frameIndex;
 			state = StateConsecutive::WRITE_PREPARE;
+			loopResult = LoopResult::LOOP_CANCELLED;
 
 		} else if (e == UserInputEnum::END) {
 			progress->writeMessage("[e] command received. Stop reading more input.");
 			maxFrames = mReader.frameIndex;
 			state = StateConsecutive::ITERATION_PREPARE;
+			loopResult = LoopResult::LOOP_CANCELLED;
 
 		} else if (e == UserInputEnum::QUIT) {
 			progress->writeMessage("[q] command received. Stopping.");
 			state = StateConsecutive::QUIT;
+			loopResult = LoopResult::LOOP_CANCELLED;
 
 		} else if (e == UserInputEnum::HALT) {
 			progress->writeMessage("[x] command received. Terminating.");
 			state = StateConsecutive::DONE;
+			loopResult = LoopResult::LOOP_CANCELLED;
 
 		} else if (errorLogger().hasError()) {
 			state = StateConsecutive::DONE;
+			loopResult = LoopResult::LOOP_ERROR;
 
 		} else if (inputState == InputState::SIGNAL && currentPass > mData.mode) {
 			inputState = InputState::HANDLED;
@@ -456,4 +476,5 @@ void MovieFrameConsecutive::runLoop(std::shared_ptr<ProgressBase> progress, User
 	}
 
 	//std::cout << mTrajectory << std::endl;
+	return loopResult;
 }

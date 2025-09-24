@@ -123,7 +123,6 @@ float interpolate(__read_only image2d_t src, int c, int r, float dx, float dy) {
 	return (1.0f - dx) * (1.0f - dy) * f00 + (1.0f - dx) * dy * f10 + dx * (1.0f - dy) * f01 + dx * dy * f11;
 }
 
-
 __kernel void remap_downsize_32f(__read_only image2d_t src, __write_only image2d_t dest) {
 	int c = get_global_id(0);
 	int r = get_global_id(1);
@@ -136,14 +135,13 @@ __kernel void remap_downsize_32f(__read_only image2d_t src, __write_only image2d
 	write_imagef(dest, (int2)(c, r), val);
 }
 
-__kernel void warp_back(__read_only image2d_t src, __write_only image2d_t dest, double8 trf) {
+__kernel void warp_back(__read_only image2d_t src, __write_only image2d_t dest, float8 trf) {
 	int x = get_global_id(0);
 	int y = get_global_id(1);
 	int w = get_global_size(0);
 	int h = get_global_size(1);
-
-	float xx = (float) (fma(x, trf.s0, fma(y, trf.s1, trf.s2)));
-	float yy = (float) (fma(x, trf.s3, fma(y, trf.s4, trf.s5)));
+	float xx = fma(x, trf.s0, fma(y, trf.s1, trf.s2));
+	float yy = fma(x, trf.s3, fma(y, trf.s4, trf.s5));
 	if (xx >= 0.0f && xx <= w - 1 && yy >= 0.0f && yy <= h - 1) {
 		float flx = floor(xx);
 		float fly = floor(yy);
@@ -179,7 +177,7 @@ void yuv_to_rgba_func(float yf, float uf, float vf, uchar* r, uchar* g, uchar* b
 	*a = 0xFF;
 }
 
-__kernel void yuv8u_to_rgba(__read_only image2d_t src, __global uchar* dest) {
+__kernel void yuv8u_to_rgba(__read_only image2d_t src, __global uchar* dest, int4 offset) {
 	int c = get_global_id(0);
 	int r = get_global_id(1);
 	int w = get_global_size(0);
@@ -189,10 +187,10 @@ __kernel void yuv8u_to_rgba(__read_only image2d_t src, __global uchar* dest) {
 	uchar u = read_imageui(src, (int2)(c, r + h)).x;
 	uchar v = read_imageui(src, (int2)(c, r + h + h)).x;
 	uchar* ptr = dest + 4 * (r * w + c);
-	yuv_to_rgba_func(y, u, v, ptr, ptr + 1, ptr + 2, ptr + 3);
+	yuv_to_rgba_func(y, u, v, ptr + offset.s0, ptr + offset.s1, ptr + offset.s2, ptr + offset.s3);
 }
 
-void yuv32f_to_rgb_func(__read_only image2d_t src, __global uchar* dest, int offset0, int offset1, int offset2, int offset3) {
+__kernel void yuv32f_to_rgba(__read_only image2d_t src, __global uchar* dest, int4 offset) {
 	int c = get_global_id(0);
 	int r = get_global_id(1);
 	int w = get_global_size(0);
@@ -200,15 +198,7 @@ void yuv32f_to_rgb_func(__read_only image2d_t src, __global uchar* dest, int off
 
 	float4 yuv = read_imagef(src, (int2)(c, r)) * 255.0f;
 	uchar* ptr = dest + 4 * (r * w + c);
-	yuv_to_rgba_func(yuv.s0, yuv.s1, yuv.s2, ptr + offset0, ptr + offset1, ptr + offset2, ptr + offset3);
-}
-
-__kernel void yuv32f_to_bgra(__read_only image2d_t src, __global uchar* dest) {
-	yuv32f_to_rgb_func(src, dest, 2, 1, 0, 3);
-}
-
-__kernel void yuv32f_to_rgba(__read_only image2d_t src, __global uchar* dest) {
-	yuv32f_to_rgb_func(src, dest, 0, 1, 2, 3);
+	yuv_to_rgba_func(yuv.s0, yuv.s1, yuv.s2, ptr + offset.s0, ptr + offset.s1, ptr + offset.s2, ptr + offset.s3);
 }
 
 __kernel void scrap() {

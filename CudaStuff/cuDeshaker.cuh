@@ -20,7 +20,7 @@
 
 #include "CoreData.hpp"
 #include "FrameExecutor.hpp"
-#include "AffineCore.hpp"
+#include "AffineData.hpp"
 
 struct cudaDeviceProp;
 
@@ -49,23 +49,20 @@ public:
 		FrameExecutor(data, deviceInfo, frame, pool) {}
 
 	void inputData(int64_t frameIndex, const ImageYuv& inputFrame) override {}
-	void createPyramid(int64_t frameIndex, const Affine2D& trf, bool warp) override {};
+	void createPyramid(int64_t frameIndex, AffineDataFloat trf, bool warp) override {};
 	void computeStart(int64_t frameIndex, std::vector<PointResult>& results) override {}
 	void computeTerminate(int64_t frameIndex, std::vector<PointResult>& results) override {}
-	void getOutputYuv(int64_t frameIndex, ImageYuv& image) override {}
-	void getOutputRgba(int64_t frameIndex, ImageRGBA& image) override {}
-	void getOutputBgra(int64_t frameIndex, ImageBGRA& image) override {}
-	void getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) override {}
+	void getOutputYuv(int64_t frameIndex, ImageYuv& image) const override {}
+	void getOutputImage(int64_t frameIndex, ImageBaseRgb& image) const override {}
+	void getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) const override {}
 	void getInput(int64_t frameIndex, ImageYuv& image) const override {}
 	void getInput(int64_t frameIndex, ImageRGBA& image) const override {}
 	void getWarped(int64_t frameIndex, ImageRGBA& image) override {}
-	void outputData(int64_t frameIndex, const Affine2D& trf) override {}
+	void outputData(int64_t frameIndex, AffineDataFloat trf) override {}
 	Matf getPyramid(int64_t frameIndex) const override { return Matf(); }
 	Matf getTransformedOutput() const override { return Matf(); }
 
 	void cudaInit(CoreData& core, int devIdx, const cudaDeviceProp& prop, ImageYuv& yuvFrame) {}
-	void cudaCreatePyramid(int64_t frameIndex, const AffineCore& trf, bool warp) {}
-	void cudaOutputData(int64_t frameIndex, const AffineCore& trf) {}
 	void cudaGetTransformedOutput(float* data) const {}
 	void cudaGetPyramid(int64_t frameIndex, float* data) const {}
 };
@@ -201,18 +198,17 @@ public:
 
 	void cudaInit(CoreData& core, int devIdx, const cudaDeviceProp& prop, ImageYuv& yuvFrame);
 	void inputData(int64_t frameIndex, const ImageYuv& inputFrame) override;
+	void createPyramid(int64_t frameIndex, AffineDataFloat trf, bool warp) override;
 	void computeStart(int64_t frameIndex, std::vector<PointResult>& results) override;
 	void computeTerminate(int64_t frameIndex, std::vector<PointResult>& results) override;
-	void cudaOutputData(int64_t frameIndex, const AffineCore& trf);
-	void getOutputYuv(int64_t frameIndex, ImageYuv& image) override;
-	void getOutputRgba(int64_t frameIndex, ImageRGBA& image) override;
-	void getOutputBgra(int64_t frameIndex, ImageBGRA& image) override;
-	void getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) override;
+	void outputData(int64_t frameIndex, AffineDataFloat trf) override;
+	void getOutputYuv(int64_t frameIndex, ImageYuv& image) const override;
+	void getOutputImage(int64_t frameIndex, ImageBaseRgb& image) const override;
+	void getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) const override;
 	void getInput(int64_t frameIndex, ImageYuv& image) const override;
 	void getInput(int64_t frameIndex, ImageRGBA& image) const override;
 	void getWarped(int64_t frameIndex, ImageRGBA& image) override;
 
-	void cudaCreatePyramid(int64_t frameIndex, const AffineCore& trf, bool warp);
 	void cudaGetTransformedOutput(float* data) const;
 	void cudaGetPyramid(int64_t frameIndex, float* data) const;
 };

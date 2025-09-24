@@ -156,7 +156,6 @@ void cudaTextureRead() {
 		AffineTransform trf;
 		trf.setParam(0.952379970131, 0.001367827033, 33.316623121580, 26.105044749792);
 		frameExecutor.outputData(0, trf);
-		writer.prepareOutput(frameExecutor);
 		im1 = writer.getOutputFrame();
 	}
 
@@ -179,7 +178,6 @@ void cudaTextureRead() {
 		AffineTransform trf;
 		trf.setParam(0.952379970131, 0.001367827033, 33.316623121580, 26.105044749792);
 		frameExecutor.outputData(0, trf);
-		writer.prepareOutput(frameExecutor);
 		im2 = writer.getOutputFrame();
 	}
 

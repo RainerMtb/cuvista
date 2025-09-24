@@ -20,6 +20,7 @@
 
 #include "ErrorLogger.hpp"
 #include "Image.hpp"
+#include "AffineData.hpp"
 
 struct Triplet {
 	float y, u, v;
