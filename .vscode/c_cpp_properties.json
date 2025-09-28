@@ -37,11 +37,12 @@
                 "${workspaceFolder}/cpu_features/include",
                 "${FFMPEG_PATH}/include",
                 "${CUDA_PATH}/include",
-                "C:/Daten/Qt/6.9.2/msvc2022_64/include"
+                "C:/Daten/Qt/6.9.2/mingw_64/include"
             ],
             "defines": [],
             "cStandard": "c17",
-            "cppStandard": "c++20"
+            "cppStandard": "c++20",
+            "compilerPath": "C:/Daten/gcc-14.2.0-ucrt/mingw64/bin/g++"
         }
     ],
     "version": 4

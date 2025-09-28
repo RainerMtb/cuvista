@@ -83,7 +83,7 @@ void cl::filter_32f_v3(Image src, Image dest, Data& clData) {
 	filter_32f_func(clData.kernels.filter_32f_3, src, dest, -1, 0, 1, clData);
 }
 
-void cl::warp_back(Image src, Image dest, Data& clData, cl_float8 trf) {
+void cl::warp_back(Image src, Image dest, Data& clData, cl_float8& trf) {
 	Kernel& kernel = clData.kernels.warp_back;
 	kernel.setArg(2, trf);
 	runKernel(kernel, src, dest, clData.queue);
@@ -103,4 +103,13 @@ void cl::yuv_to_rgba(Kernel kernel, Image src, unsigned char* imageData, const D
 	kernel.setArg(2, offset4);
 	clData.queue.enqueueNDRangeKernel(kernel, NullRange, NDRange(w, h));
 	clData.queue.enqueueReadBuffer(clData.rgbaOut, CL_TRUE, 0, 4ull * w * h, imageData);
+}
+
+void cl::yuv_to_nv12(Kernel kernel, Image src, unsigned char* imageData, const Data& clData, int w, int h, int stride) {
+	kernel.setArg(0, src);
+	kernel.setArg(1, clData.yuvOut);
+	kernel.setArg(2, stride);
+	kernel.setArg(3, h);
+	clData.queue.enqueueNDRangeKernel(kernel, NullRange, NDRange(w / 2, h / 2));
+	clData.queue.enqueueReadBuffer(clData.yuvOut, CL_TRUE, 0, 3ull * stride * h / 2, imageData);
 }

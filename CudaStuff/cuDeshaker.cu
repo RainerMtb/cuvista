@@ -523,10 +523,11 @@ void CudaExecutor::getOutputImage(int64_t frameIndex, ImageBaseRgb& image) const
 	handleStatus(cudaGetLastError(), "error @output #93");
 }
 
-void CudaExecutor::getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) const {
+bool CudaExecutor::getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) const {
 	cu::outputNvenc(out.final, cudaData.strideFloat4N, cudaNv12ptr, image.stride, mData.w, mData.h, cs[1]);
 	handleStatus(cudaStreamSynchronize(cs[1]), "error @output #95");
-	handleStatus(cudaGetLastError(), "error @output #96");
+	handleStatus(cudaGetLastError(), "error @output #95");
+	return false;
 }
 
 void CudaExecutor::cudaGetTransformedOutput(float* warped) const {
@@ -571,14 +572,10 @@ void CudaExecutor::getWarped(int64_t frameIndex, ImageRGBA& image) {
 	handleStatus(cudaMemcpy(image.plane(0), d_rgba, 4ull * mData.w * mData.h, cudaMemcpyDefault), "error @progress output");
 }
 
-
 void encodeNvData(const ImageNV12& image, unsigned char* nvencPtr) {
 	handleStatus(cudaMemcpy(nvencPtr, image.addr(0, 0, 0), image.sizeInBytes(), cudaMemcpyHostToDevice), "error @simple encode #1 cannot copy to device");
 }
 
-void getNvData(std::vector<unsigned char>& nv12, unsigned char* cudaNv12ptr) {
-	handleStatus(cudaMemcpy(nv12.data(), cudaNv12ptr, nv12.size(), cudaMemcpyDeviceToHost), "error getting nv12 data");
-}
 
 /*
 void cudaSynchronize() {

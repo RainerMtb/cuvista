@@ -77,6 +77,7 @@ other output options:
                 default: all the frames there are
 -stack l:r      horizontally stack source and stabilized frames for comparison
                 parameter l:r defines pixels to crop from left and right
+                provide this option after setting the output file via -o xxx
 
 quality and performance settings:
 -radius sec     the temporal radius within which frames will be considered for 

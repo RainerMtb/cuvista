@@ -403,7 +403,7 @@ void OpticalFlowWriter::start(const std::string& sourceName, AVPixelFormat pixfm
 
 		if (sc.inputStream->index == mReader.videoStream->index) {
 			osc->handling = StreamHandling::STREAM_STABILIZE;
-			osc->outputStream = videoStream = newStream(fmt_ctx, sc.inputStream);
+			osc->outputStream = videoStream = createNewStream(fmt_ctx, sc.inputStream);
 
 		} else {
 			osc->handling = StreamHandling::STREAM_IGNORE;

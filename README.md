@@ -159,11 +159,11 @@ When done, run ```cuvista -info``` to see available devices and run a test
 
  
 ## Built and Tested on following Tools and versions
-- Windows 11 64bit
+- Windows 11
 - Ubuntu 25.04
 - Visual Studio 2022
-- Nvidia Cuda 13.0
+- Nvidia Cuda 13.0.1
 - Nvidia Video Codec SDK 13.0.19
-- FFmpeg 7.1
+- FFmpeg 8.0
 - Qt 6.9.2
 - Cmake later than 3.28

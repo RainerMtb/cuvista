@@ -18,7 +18,6 @@
 
 #include "AvxFrame.hpp"
 #include "AvxUtil.hpp"
-#include "cuDeshaker.cuh"
 
 AvxFrame::AvxFrame(CoreData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool) :
 	FrameExecutor(data, deviceInfo, frame, pool),
@@ -119,9 +118,9 @@ void AvxFrame::getOutputImage(int64_t frameIndex, ImageBaseRgb& image) const {
 	image.setIndex(frameIndex);
 }
 
-void AvxFrame::getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) const {
+bool AvxFrame::getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) const {
 	write(image);
-	encodeNvData(image, cudaNv12ptr);
+	return true;
 }
 
 Matf AvxFrame::getTransformedOutput() const {
@@ -581,7 +580,7 @@ void AvxFrame::write(ImageNV12& image) const {
 	}
 
 	//U-V-Planes
-	unsigned char* dest = image.addr(0, 0, 0) + image.h * image.stride;
+	unsigned char* dest = image.data() + image.h * image.stride;
 	for (int rr = 0; rr < mData.h / 2; rr++) {
 		int r = rr * 2;
 		__m512i a, b, x, sumU, sumV, sum;

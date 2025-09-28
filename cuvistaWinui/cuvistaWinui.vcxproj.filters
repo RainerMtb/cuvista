@@ -84,19 +84,19 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
-    <None Include="$(FFMPEG_PATH)\bin\avcodec-61.dll">
+    <None Include="$(FFMPEG_PATH)\bin\avcodec-62.dll">
       <Filter>externDLL</Filter>
     </None>
-    <None Include="$(FFMPEG_PATH)\bin\avformat-61.dll">
+    <None Include="$(FFMPEG_PATH)\bin\avformat-62.dll">
       <Filter>externDLL</Filter>
     </None>
-    <None Include="$(FFMPEG_PATH)\bin\avutil-59.dll">
+    <None Include="$(FFMPEG_PATH)\bin\avutil-60.dll">
       <Filter>externDLL</Filter>
     </None>
-    <None Include="$(FFMPEG_PATH)\bin\swresample-5.dll">
+    <None Include="$(FFMPEG_PATH)\bin\swresample-6.dll">
       <Filter>externDLL</Filter>
     </None>
-    <None Include="$(FFMPEG_PATH)\bin\swscale-8.dll">
+    <None Include="$(FFMPEG_PATH)\bin\swscale-9.dll">
       <Filter>externDLL</Filter>
     </None>
   </ItemGroup>

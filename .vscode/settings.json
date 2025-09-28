@@ -2,7 +2,7 @@
     "cmake.configureOnOpen": false,
     
     "cmake.configureSettings": {
-        "CMAKE_PREFIX_PATH": "c:/daten/qt/6.9.0/mingw_64",
+        "CMAKE_PREFIX_PATH": "C:/Daten/Qt/6.9.2/mingw_64",
         "FFMPEG_PATH": "d:/util/film/ffmpeg",
         "BUILD_GUI": "1",
     },
@@ -19,4 +19,5 @@
         "chrono": "cpp",
         "functional": "cpp"
     },
+    "C_Cpp.default.compilerPath": "/usr/bin/g++",
 }

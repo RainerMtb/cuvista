@@ -256,7 +256,7 @@ protected:
 	int writePacket(AVPacket* packet);
 	void writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsIdx, bool terminate);
 	void transcodeAudio(AVPacket* pkt, OutputStreamContext& osc, bool terminate);
-	AVStream* newStream(AVFormatContext* fmt_ctx, AVStream* inStream);
+	AVStream* createNewStream(AVFormatContext* fmt_ctx, AVStream* inStream);
 };
 
 

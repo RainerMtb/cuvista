@@ -35,19 +35,19 @@
 		<ComponentGroup Id="FilesToCopy" Directory="INSTALLFOLDER">
 			<!-- files ffmpeg -->
 			<Component>
-				<File Source="$(DeployDir)\avcodec-61.dll" />
+				<File Source="$(DeployDir)\avcodec-62.dll" />
 			</Component>
 			<Component>
-				<File Source="$(DeployDir)\avformat-61.dll" />
+				<File Source="$(DeployDir)\avformat-62.dll" />
 			</Component>
 			<Component>
-				<File Source="$(DeployDir)\avutil-59.dll" />
+				<File Source="$(DeployDir)\avutil-60.dll" />
 			</Component>
 			<Component>
-				<File Source="$(DeployDir)\swresample-5.dll" />
+				<File Source="$(DeployDir)\swresample-6.dll" />
 			</Component>
 			<Component>
-				<File Source="$(DeployDir)\swscale-8.dll" />
+				<File Source="$(DeployDir)\swscale-9.dll" />
 			</Component>
 			
 			<!-- files -->

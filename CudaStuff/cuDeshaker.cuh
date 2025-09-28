@@ -21,60 +21,15 @@
 #include "CoreData.hpp"
 #include "FrameExecutor.hpp"
 #include "AffineData.hpp"
+#include "cuUtil.cuh"
+#include "cuDecompose.cuh"
 
-struct cudaDeviceProp;
 
 struct CudaProbeResult {
 	int runtimeVersion;
 	int driverVersion;
 	std::vector<cudaDeviceProp> props;
 };
-
-#if defined(BUILD_CUDA) && BUILD_CUDA == 0
-
-struct cudaDeviceProp {
-	char name[256];
-	int major;
-	int minor;
-	int clockRate;
-	size_t totalGlobalMem;
-	int multiProcessorCount;
-	int maxTexture2D[2];
-	size_t sharedMemPerBlock;
-};
-
-class CudaExecutor : public FrameExecutor {
-public:
-	CudaExecutor(CoreData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool) :
-		FrameExecutor(data, deviceInfo, frame, pool) {}
-
-	void inputData(int64_t frameIndex, const ImageYuv& inputFrame) override {}
-	void createPyramid(int64_t frameIndex, AffineDataFloat trf, bool warp) override {};
-	void computeStart(int64_t frameIndex, std::vector<PointResult>& results) override {}
-	void computeTerminate(int64_t frameIndex, std::vector<PointResult>& results) override {}
-	void getOutputYuv(int64_t frameIndex, ImageYuv& image) const override {}
-	void getOutputImage(int64_t frameIndex, ImageBaseRgb& image) const override {}
-	void getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) const override {}
-	void getInput(int64_t frameIndex, ImageYuv& image) const override {}
-	void getInput(int64_t frameIndex, ImageRGBA& image) const override {}
-	void getWarped(int64_t frameIndex, ImageRGBA& image) override {}
-	void outputData(int64_t frameIndex, AffineDataFloat trf) override {}
-	Matf getPyramid(int64_t frameIndex) const override { return Matf(); }
-	Matf getTransformedOutput() const override { return Matf(); }
-
-	void cudaInit(CoreData& core, int devIdx, const cudaDeviceProp& prop, ImageYuv& yuvFrame) {}
-	void cudaGetTransformedOutput(float* data) const {}
-	void cudaGetPyramid(int64_t frameIndex, float* data) const {}
-};
-
-inline CudaProbeResult cudaProbeRuntime() { return { 0, 0 }; }
-inline void encodeNvData(const ImageNV12& image, unsigned char* nvencPtr) {}
-inline void getNvData(std::vector<unsigned char>& nv12, unsigned char* cudaNv12ptr) {}
-
-#else
-
-#include "cuUtil.cuh"
-#include "cuDecompose.cuh"
 
 struct DebugData {
 	std::vector<double> debugData;
@@ -204,7 +159,7 @@ public:
 	void outputData(int64_t frameIndex, AffineDataFloat trf) override;
 	void getOutputYuv(int64_t frameIndex, ImageYuv& image) const override;
 	void getOutputImage(int64_t frameIndex, ImageBaseRgb& image) const override;
-	void getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) const override;
+	bool getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) const override;
 	void getInput(int64_t frameIndex, ImageYuv& image) const override;
 	void getInput(int64_t frameIndex, ImageRGBA& image) const override;
 	void getWarped(int64_t frameIndex, ImageRGBA& image) override;
@@ -213,16 +168,12 @@ public:
 	void cudaGetPyramid(int64_t frameIndex, float* data) const;
 };
 
+//interface to call cuda kernels
 void kernelComputeCall(ComputeKernelParam param, ComputeTextures& tex, CudaPointResult* d_results);
-
 
 //see if cuda is available
 CudaProbeResult cudaProbeRuntime();
 
-//only encode given nv12 data
+//encode given nv12 data
 void encodeNvData(const ImageNV12& image, unsigned char* nvencPtr);
 
-//get NV12 data prepared for cuda encoding
-void getNvData(std::vector<unsigned char>& nv12, unsigned char* cudaNv12ptr);
-
-#endif

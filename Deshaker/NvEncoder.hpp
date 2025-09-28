@@ -22,10 +22,11 @@
 #include <list>
 #include <map>
 #include <optional>
-#include "AVException.hpp"
-
-#include "nvEncodeAPI.h"
 #include <cuda.h>
+
+#include "AVException.hpp"
+#include "nvEncodeAPI.h"
+
 #undef min
 #undef max
 

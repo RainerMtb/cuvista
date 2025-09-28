@@ -19,7 +19,6 @@
 #include "DummyFrame.hpp"
 #include "MainData.hpp"
 #include "MovieFrame.hpp"
-#include "cuDeshaker.cuh"
 
 DummyFrame::DummyFrame(MainData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool) :
 	FrameExecutor(data, deviceInfo, frame, pool),
@@ -47,10 +46,10 @@ void DummyFrame::getOutputYuv(int64_t frameIndex, ImageYuv& image) const {
 	mFrames[idx].copyTo(image, mPool);
 }
 
-void DummyFrame::getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) const {
+bool DummyFrame::getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) const {
 	size_t idx = frameIndex % mFrames.size();
 	mFrames[idx].toNV12(image, mPool);
-	encodeNvData(image, cudaNv12ptr);
+	return true;
 }
 
 void DummyFrame::getOutputImage(int64_t frameIndex, ImageBaseRgb& image) const {

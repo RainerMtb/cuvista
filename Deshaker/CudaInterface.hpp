@@ -24,9 +24,25 @@
 //dummy code to replace cuda stuff
 #include "MovieFrame.hpp"
 #include "Mat.hpp"
-#include "cuDeshaker.cuh"
 
 struct NvPacket {};
+
+struct CudaProbeResult {
+	int runtimeVersion;
+	int driverVersion;
+	std::vector<cudaDeviceProp> props;
+};
+
+struct cudaDeviceProp {
+	char name[256];
+	int major;
+	int minor;
+	int clockRate;
+	size_t totalGlobalMem;
+	int multiProcessorCount;
+	int maxTexture2D[2];
+	size_t sharedMemPerBlock;
+};
 
 class NvEncoder {
 public:
@@ -34,6 +50,31 @@ public:
 	void probeEncoding(uint32_t* nvencVersionApi, uint32_t* nvencVersionDriver) {}
 	void probeSupportedCodecs(DeviceInfoCuda& deviceInfoCuda) {}
 };
+
+class CudaExecutor : public FrameExecutor {
+public:
+	CudaExecutor(MainData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool) :
+		FrameExecutor(data, deviceInfo, frame, pool)
+	{}
+
+	void cudaInit(CoreData& core, int devIdx, const cudaDeviceProp& prop, ImageYuv& yuvFrame) {}
+	void inputData(int64_t frameIndex, const ImageYuv& inputFrame) override {}
+	void createPyramid(int64_t frameIndex, AffineDataFloat trf, bool warp) override {}
+	void computeStart(int64_t frameIndex, std::vector<PointResult>& results) override {}
+	void computeTerminate(int64_t frameIndex, std::vector<PointResult>& results) override {}
+	void outputData(int64_t frameIndex, AffineDataFloat trf) override {}
+	void getOutputYuv(int64_t frameIndex, ImageYuv& image) const override {}
+	void getOutputImage(int64_t frameIndex, ImageBaseRgb& image) const override {}
+	bool getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) const override { return true; }
+	void getInput(int64_t frameIndex, ImageYuv& image) const override {}
+	void getInput(int64_t frameIndex, ImageRGBA& image) const override {}
+	void getWarped(int64_t frameIndex, ImageRGBA& image) override {}
+
+	void cudaGetTransformedOutput(float* data) const {}
+	void cudaGetPyramid(int64_t frameIndex, float* data) const {}
+};
+
+inline CudaProbeResult cudaProbeRuntime() { return { 0, 0 }; }
 
 #else
 

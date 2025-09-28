@@ -221,6 +221,7 @@ void OpenClExecutor::init() {
 		clData.kernels.unsharp = Kernel(program, "unsharp");
 		clData.kernels.yuv8u_to_rgba = Kernel(program, "yuv8u_to_rgba");
 		clData.kernels.yuv32f_to_rgba = Kernel(program, "yuv32f_to_rgba");
+		clData.kernels.yuv32f_to_nv12 = Kernel(program, "yuv32f_to_nv12");
 		clData.kernels.scrap = Kernel(program, "scrap");
 		clData.kernels.compute = Kernel(program, "compute");
 
@@ -428,7 +429,7 @@ void OpenClExecutor::getOutputYuv(int64_t frameIndex, ImageYuv& image) const {
 
 void OpenClExecutor::getOutputImage(int64_t frameIndex, ImageBaseRgb& image) const {
 	try {
-		yuv_to_rgba(clData.kernels.yuv32f_to_rgba, clData.out[4], image.plane(0), clData, image.width(), image.height(), image.indexRgba());
+		yuv_to_rgba(clData.kernels.yuv32f_to_rgba, clData.out[4], image.data(), clData, image.width(), image.height(), image.indexRgba());
 		image.setIndex(frameIndex);
 
 	} catch (const Error& err) {
@@ -436,8 +437,15 @@ void OpenClExecutor::getOutputImage(int64_t frameIndex, ImageBaseRgb& image) con
 	}
 }
 
-void OpenClExecutor::getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) const {
-	errorLogger().logError("nvenc not supported via OpenCl");
+bool OpenClExecutor::getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) const {
+	try {
+		yuv_to_nv12(clData.kernels.yuv32f_to_nv12, clData.out[4], image.data(), clData, image.w, image.h, image.stride);
+		image.setIndex(frameIndex);
+
+	} catch (const Error& err) {
+		errorLogger().logError("OpenCL output error: ", err.what());
+	}
+	return true;
 }
 
 //utility function to read from image

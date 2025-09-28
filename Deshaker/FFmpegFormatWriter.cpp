@@ -20,7 +20,7 @@
 #include "MovieReader.hpp"
 #include <filesystem>
 
-AVStream* FFmpegFormatWriter::newStream(AVFormatContext* fmt_ctx, AVStream* inStream) {
+AVStream* FFmpegFormatWriter::createNewStream(AVFormatContext* fmt_ctx, AVStream* inStream) {
     AVStream* stream = avformat_new_stream(fmt_ctx, NULL); //docs say AVCodec parameter is not used
     if (!stream)
         throw AVException("could not create stream");
@@ -103,14 +103,14 @@ void FFmpegFormatWriter::open(AVCodecID codecId) {
         if (osc.handling == StreamHandling::STREAM_STABILIZE) {
             int codecSupported = avformat_query_codec(fmt_ctx->oformat, codecId, FF_COMPLIANCE_STRICT);
             if (codecSupported == 1) {
-                osc.outputStream = videoStream = newStream(fmt_ctx, inStream);
+                osc.outputStream = videoStream = createNewStream(fmt_ctx, inStream);
 
             } else {
                 throw AVException(std::format("cannot write codec '{}' to output", avcodec_get_name(inStream->codecpar->codec_id)));
             }
             
         } else if (osc.handling == StreamHandling::STREAM_COPY) {
-            osc.outputStream = newStream(fmt_ctx, inStream);
+            osc.outputStream = createNewStream(fmt_ctx, inStream);
 
             int retval = avcodec_parameters_copy(osc.outputStream->codecpar, inStream->codecpar);
             if (retval < 0)
@@ -121,7 +121,7 @@ void FFmpegFormatWriter::open(AVCodecID codecId) {
             osc.outputStream->codecpar->codec_tag = 0;
 
         } else if (osc.handling == StreamHandling::STREAM_TRANSCODE) {
-            osc.outputStream = newStream(fmt_ctx, inStream);
+            osc.outputStream = createNewStream(fmt_ctx, inStream);
 
             //set up audio transcoding
             //open reader
@@ -152,11 +152,12 @@ void FFmpegFormatWriter::open(AVCodecID codecId) {
             if (retval < 0)
                 throw AVException("cannot copy audio channel layout");
             osc.audioOutCtx->sample_rate = osc.audioInCtx->sample_rate;
+            
             osc.audioOutCtx->sample_fmt = osc.audioOutCodec->sample_fmts[0]; //deprecated
             //const AVSampleFormat* sampleFmts = nullptr;
             //int nFmts;
-            //avcodec_get_supported_config(sc.audioOutCtx, sc.audioOutCodec, AV_CODEC_CONFIG_SAMPLE_FORMAT, 0, (const void**) &sampleFmts, &nFmts);
-            //sc.audioOutCtx->sample_fmt = (sampleFmts)[0];
+            //avcodec_get_supported_config(osc.audioOutCtx, osc.audioOutCodec, AV_CODEC_CONFIG_SAMPLE_FORMAT, 0, (const void**) &sampleFmts, &nFmts);
+            //osc.audioOutCtx->sample_fmt = (sampleFmts)[0];
 
             if (fmt_ctx->oformat->flags & AVFMT_GLOBALHEADER)
                 osc.audioOutCtx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;

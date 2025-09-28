@@ -76,7 +76,13 @@
             </StackPanel>
         </ContentDialog>
 
-        <!-- Input -->
+        <ContentDialog x:Name="progressDialog">
+            <Grid>
+                
+            </Grid>
+        </ContentDialog>
+
+            <!-- Input -->
         <Grid RowDefinitions="auto, *"
               RowSpacing="8"
               Padding="4">

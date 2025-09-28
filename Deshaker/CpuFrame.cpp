@@ -20,7 +20,6 @@
 #include "MovieFrame.hpp"
 #include "SubMat.hpp"
 #include "MatrixInverter.hpp"
-#include "cuDeshaker.cuh"
 
 //constructor
 CpuFrame::CpuFrame(MainData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool) :
@@ -320,10 +319,10 @@ void CpuFrame::getOutputImage(int64_t frameIndex, ImageBaseRgb& image) const {
 	image.index = frameIndex;
 }
 
-void CpuFrame::getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) const {
+bool CpuFrame::getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) const {
 	assert(frameIndex == mOutput.index && "invalid frame index");
 	mOutput.toNV12(image, mPool);
-	encodeNvData(image, cudaNv12ptr);
+	return true;
 }
 
 void CpuFrame::getWarped(int64_t frameIndex, ImageRGBA& image) {

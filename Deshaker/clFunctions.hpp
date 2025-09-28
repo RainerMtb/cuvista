@@ -94,6 +94,7 @@ namespace cl {
 			Kernel unsharp;
 			Kernel yuv8u_to_rgba;
 			Kernel yuv32f_to_rgba;
+			Kernel yuv32f_to_nv12;
 			Kernel scrap;
 			Kernel compute;
 		} kernels;
@@ -109,8 +110,9 @@ namespace cl {
 	void filter_32f_v3(Image src, Image dest, Data& clData);
 
 	void remap_downsize_32f(Image src, Image dest, Data& clData);
-	void warp_back(Image src, Image dest, Data& clData, cl_float8 trf);
+	void warp_back(Image src, Image dest, Data& clData, cl_float8& trf);
 	void unsharp(Image src, Image dest, Image gauss, Data& clData, cl_float4 factor);
 
 	void yuv_to_rgba(Kernel kernel, Image src, unsigned char* imageData, const Data& clData, int w, int h, const std::vector<int>& index);
+	void yuv_to_nv12(Kernel kernel, Image src, unsigned char* imageData, const Data& clData, int w, int h, int stride);
 }

@@ -343,19 +343,22 @@ void MainData::collectDeviceInfo() {
 	//sort cuda devices by compute
 	std::sort(cudaInfo.devices.begin(), cudaInfo.devices.end());
 
-	//cpu encoders
+	//ffmpeg available encoders
 	std::vector<EncodingOption> cpuEncoders = {
 		{EncodingDevice::FFMPEG, Codec::H264},
 		{EncodingDevice::FFMPEG, Codec::H265},
 		{EncodingDevice::FFMPEG, Codec::AV1},
 	};
 
+	//nvenc available encoders
+	std::vector<EncodingOption> nvencEncoders = {};
+	if (cudaInfo.devices.size() > 0) {
+		nvencEncoders = cudaInfo.devices.front().encodingOptions;
+	}
+
 	//CPU device
 	deviceInfoCpu.encodingOptions = cpuEncoders;
-	if (cudaInfo.devices.size() > 0) {
-		DeviceInfoCuda& dic = cudaInfo.devices.front();
-		std::copy(dic.encodingOptions.begin(), dic.encodingOptions.end(), std::back_inserter(deviceInfoCpu.encodingOptions));
-	}
+	std::copy(nvencEncoders.begin(), nvencEncoders.end(), std::back_inserter(deviceInfoCpu.encodingOptions));
 	deviceList.push_back(&deviceInfoCpu);
 
 	//check for Avx512
@@ -366,7 +369,7 @@ void MainData::collectDeviceInfo() {
 	
 	///OpenCL devices
 	for (DeviceInfoOpenCl& dev : clinfo.devices) {
-		std::copy(cpuEncoders.begin(), cpuEncoders.end(), std::back_inserter(dev.encodingOptions));
+		dev.encodingOptions = deviceInfoCpu.encodingOptions;
 		deviceList.push_back(&dev);
 	}
 
@@ -532,10 +535,10 @@ std::ostream& MainData::showDeviceInfo(std::ostream& os) const {
 
 	//ffmpeg
 	os << std::endl << "FFMPEG:" << std::endl;
-	os << "libavutil identifier:  " << LIBAVUTIL_IDENT << std::endl;
-	os << "libavcodec identifier:  " << LIBAVCODEC_IDENT << std::endl;
-	os << "libavformat identifier: " << LIBAVFORMAT_IDENT << std::endl;
-	os << "libswscale identifier: " << LIBSWSCALE_IDENT << std::endl;
+	os << "libavutil identifier:     " << LIBAVUTIL_IDENT << std::endl;
+	os << "libavcodec identifier:    " << LIBAVCODEC_IDENT << std::endl;
+	os << "libavformat identifier:   " << LIBAVFORMAT_IDENT << std::endl;
+	os << "libswscale identifier:    " << LIBSWSCALE_IDENT << std::endl;
 	os << "libswresample identifier: " << LIBSWRESAMPLE_IDENT << std::endl;
 	if (ffmpeg_check_versions() == false) os << "warning: different version of ffmpeg was used at buildtime" << std::endl;
 

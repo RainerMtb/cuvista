@@ -113,6 +113,7 @@ namespace winrt::cuvistaWinui::implementation {
 
         hstring mInfoBoxString;
         std::future<void> mFuture = std::async([&] {});
+        std::future<LoopResult> mLoopFuture = std::async([&] { return LoopResult::LOOP_NONE; });
 
         std::vector<OutputTypeSelector> mOutputImageTypes = {
             { L"BMP", OutputType::SEQUENCE_BMP },
@@ -126,6 +127,9 @@ namespace winrt::cuvistaWinui::implementation {
         void updateInputImage();
 
         void infoBoxAppendText(std::string str);
+
+        LoopResult runLoop();
+
     public:
     };
 }

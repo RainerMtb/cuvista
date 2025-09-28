@@ -557,18 +557,28 @@ namespace winrt::cuvistaWinui::implementation {
         //select frame executor class
         mExecutor = mData.deviceList[mData.deviceSelected]->create(mData, *mFrame);
 
-        auto loop = [&] {
-            mFrame->runLoop(mExecutor);
-            mWriter.reset(); //---------------
-            mExecutor.reset(); //------------
-            mFrame.reset(); //-------------
-        };
-        mFuture = std::async(std::launch::async, loop);
+        //start frame loop async
+        mLoopFuture = std::async(std::launch::async, &MainWindow::runLoop, this);
 
         ITaskbarList3* taskbarPtr = nullptr;
         HRESULT hr = CoCreateInstance(CLSID_TaskbarList, NULL, CLSCTX_INPROC_SERVER, IID_ITaskbarList3, (void**) (&taskbarPtr));
         HWND hwnd = GetActiveWindow();
         taskbarPtr->SetProgressValue(hwnd, 50, 100);
+
+        //show progress dialog
+        co_await progressDialog().ShowAsync();
+
+        //after dialog is hidden again
+        LoopResult result = mLoopFuture.get();
+        mWriter.reset();
+        mExecutor.reset();
+        mFrame.reset();
+    }
+
+    LoopResult MainWindow::runLoop() {
+        LoopResult result = mFrame->runLoop(mExecutor);
+        mDispatcher.TryEnqueue([&] { progressDialog().Hide(); });
+        return result;
     }
 
     //-------------------------------------------------------------------------

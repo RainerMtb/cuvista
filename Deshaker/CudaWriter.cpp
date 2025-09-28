@@ -34,7 +34,6 @@ void CudaFFmpegWriter::writePacketsToFile(std::list<NvPacket> nvpkts, bool termi
 void CudaFFmpegWriter::encodePackets() {}
 
 void CudaFFmpegWriter::open(EncodingOption videoCodec) {}
-void CudaFFmpegWriter::prepareOutput(FrameExecutor& executor) {}
 void CudaFFmpegWriter::writeOutput(const FrameExecutor& executor) {}
 bool CudaFFmpegWriter::startFlushing() { return false; }
 bool CudaFFmpegWriter::flush() { return false; }
@@ -143,7 +142,11 @@ void CudaFFmpegWriter::encodePackets() {
 
 
 void CudaFFmpegWriter::writeOutput(const FrameExecutor& executor) {
-    executor.getOutputNvenc(frameIndex, outputNV12, reinterpret_cast<unsigned char*>(nvenc->getNextInputFramePtr()));
+    unsigned char* cudaPtr = reinterpret_cast<unsigned char*>(nvenc->getNextInputFramePtr());
+    bool needsCopy = executor.getOutputNvenc(frameIndex, outputNV12, cudaPtr);
+    if (needsCopy) {
+        encodeNvData(outputNV12, cudaPtr);
+    }
     encodePackets();
     encodingQueue.push_back(encoderPool.add([this, pkts = *nvPackets] { writePacketsToFile(pkts, false); }));
     encodingQueue.front().wait();

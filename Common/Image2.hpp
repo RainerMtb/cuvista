@@ -108,6 +108,10 @@ public:
 
 	const unsigned char* addr(size_t idx, size_t r, size_t c) const override;
 
+	unsigned char* data();
+
+	const unsigned char* data() const;
+
 	void toYuv(ImageYuv& dest, ThreadPoolBase& pool = defaultPool) const;
 
 	ImageYuv toYuv() const;

@@ -201,8 +201,33 @@ __kernel void yuv32f_to_rgba(__read_only image2d_t src, __global uchar* dest, in
 	yuv_to_rgba_func(yuv.s0, yuv.s1, yuv.s2, ptr + offset.s0, ptr + offset.s1, ptr + offset.s2, ptr + offset.s3);
 }
 
-__kernel void scrap() {
+__kernel void yuv32f_to_nv12(__read_only image2d_t src, __global uchar* dest, int stride, int h) {
+	int cc = get_global_id(0) * 2;
+	int r = get_global_id(1);
+	int rr = r * 2;
+	uchar* ptr;
+
+	float4 f00 = rint(read_imagef(src, (int2)(cc + 0, rr + 0)) * 255.0f);
+	float4 f01 = rint(read_imagef(src, (int2)(cc + 1, rr + 0)) * 255.0f);
+	float4 f10 = rint(read_imagef(src, (int2)(cc + 0, rr + 1)) * 255.0f);
+	float4 f11 = rint(read_imagef(src, (int2)(cc + 1, rr + 1)) * 255.0f);
+
+	// Y plane
+	ptr = dest + stride * rr + cc;
+	ptr[0] = (uchar) f00.x;
+	ptr[1] = (uchar) f01.x;
+	ptr[stride + 0] = (uchar) f10.x;
+	ptr[stride + 1] = (uchar) f11.x;
+
+	// UV planes
+	ptr = dest + stride * (h + r) + cc;
+	float u = (f00.y + f01.y + f10.y + f11.y) / 4.0f;
+	float v = (f00.z + f01.z + f10.z + f11.z) / 4.0f;
+	ptr[0] = (uchar) u;
+	ptr[1] = (uchar) v;
 }
+
+__kernel void scrap() {}
 
 )";
 

@@ -104,12 +104,13 @@ static void testMain() {
 	run("-device 2 -i d:/VideoTest/07.mp4 -o d:/videoTest/out/07.ocl.mkv -noheader -progress 0");
 
 	std::cout << "--- Misc ---" << std::endl;
-	run("-device 2 -stack 384:384 -i d:/VideoTest/06.mp4 -o d:/videoTest/out/06_stack.mp4 -noheader -progress 0");
+	run("-device 2 -i d:/VideoTest/06.mp4 -o d:/videoTest/out/06_stack.mp4 -stack 250:250 -noheader -progress 0");
 	run("-device 2 -i d:/VideoTest/01.mp4 -o null -flow d:/videoTest/out/flow.mp4 -noheader -progress 0");
 
 	std::cout << "--- Encode Nvenc ---" << std::endl;
-	run("-i d:/VideoTest/example.mp4 -o d:/videoTest/out/nvenc00.mp4 -device 0 -encoder nvenc -noheader -progress 0");
-	run("-i d:/VideoTest/example.mp4 -o d:/videoTest/out/nvenc01.mp4 -device 1 -encoder nvenc -noheader -progress 0");
+	run("-i d:/VideoTest/02short.mp4 -o d:/videoTest/out/nvenc00.mp4 -device 0 -encoder nvenc -noheader -progress 0");
+	run("-i d:/VideoTest/02short.mp4 -o d:/videoTest/out/nvenc01.mp4 -device 1 -encoder nvenc -noheader -progress 0");
+	run("-i d:/VideoTest/02short.mp4 -o d:/videoTest/out/nvenc02.mp4 -device 2 -encoder nvenc -noheader -progress 0");
 }
 
 static void testCrc() {

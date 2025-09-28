@@ -35,7 +35,7 @@ public:
 	void outputData(int64_t frameIndex, AffineDataFloat trf) override;
 	void getOutputYuv(int64_t frameIndex, ImageYuv& image) const override;
 	void getOutputImage(int64_t frameIndex, ImageBaseRgb& image) const override;
-	void getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) const override;
+	bool getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) const override;
 	Mat<float> getTransformedOutput() const override;
 	Mat<float> getPyramid(int64_t frameIndex) const override;
 	void getInput(int64_t frameIndex, ImageYuv& image) const override;

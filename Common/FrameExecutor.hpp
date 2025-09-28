@@ -38,7 +38,8 @@ public:
 		mData { data },
 		mDeviceInfo { deviceInfo },
 		mFrame { frame },
-		mPool { pool } {}
+		mPool { pool } 
+	{}
 	
 	//get frame data from reader into frame object
 	virtual void inputData(int64_t frameIndex, const ImageYuv& inputFrame) = 0;
@@ -55,7 +56,7 @@ public:
 	//prepare data for encoding on cpu
 	virtual void getOutputImage(int64_t frameIndex, ImageBaseRgb& image) const = 0;
 	//prepare data for encoding on cuda
-	virtual void getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) const = 0;
+	virtual bool getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) const = 0;
 	//get transformed image as Mat<float> where YUV color planes are stacked vertically
 	virtual Mat<float> getTransformedOutput() const = 0;
 	//get image pyramid as single Mat<float> where images are stacked vertically from large to small
@@ -68,4 +69,6 @@ public:
 	virtual void getWarped(int64_t frameIndex, ImageRGBA& image) = 0;
 	//destructor
 	virtual ~FrameExecutor() {}
+
+	DeviceType getType() const { return mDeviceInfo.getType(); }
 };

@@ -30,11 +30,14 @@ Cuda 11.8 is the highest version to support Compute 3.5
 Video Codec 11.0.10 is the highest encoder version to go along with it
 
 # Files To Deploy
-in program folder:
+in program folder for qt gui:
 ```
-   avcodec-61.dll
-   avformat-61.dll
-   avutil-59.dll
+   avcodec.dll
+   avformat.dll
+   avutil.dll
+   swresample.dll
+   swscale.dll
+
    D3Dcompiler_47.dll
    opengl32sw.dll
    Qt6Core.dll
@@ -43,8 +46,7 @@ in program folder:
    Qt6MultimediaWidgets.dll
    Qt6Network.dll
    Qt6Widgets.dll
-   swresample-5.dll
-   swscale-8.dll
+
    
 ---generic
        qtuiotouchplugin.dll

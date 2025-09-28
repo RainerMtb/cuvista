@@ -220,6 +220,14 @@ const unsigned char* ImageNV12::addr(size_t idx, size_t r, size_t c) const {
 	return arrays[0].get() + addrOffset(idx, r, c);
 }
 
+unsigned char* ImageNV12::data() {
+	return arrays[0].get();
+}
+
+const unsigned char* ImageNV12::data() const {
+	return arrays[0].get();
+}
+
 
 //------------------------
 // YUV float stuff
