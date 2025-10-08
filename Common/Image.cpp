@@ -524,6 +524,10 @@ template <class T> T ImageBase<T>::sample(size_t plane, double x, double y) cons
 	return sample(plane, x, y, 0.0, w - 1.0, 0.0, h - 1.0);
 }
 
+template <class T> T ImageBase<T>::sample(size_t plane, double x, double y, T defaultValue) const {
+	return (x < 0.0 || x > w - 1.0 || y < 0.0 || y > h - 1.0) ? defaultValue : sample(plane, x, y);
+}
+
 template <class T> std::vector<T> ImageBase<T>::rawBytes() const {
 	std::vector<T> data(sizeInBytes());
 	T* dest = data.data();

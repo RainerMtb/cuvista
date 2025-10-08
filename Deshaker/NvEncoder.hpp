@@ -43,8 +43,6 @@ struct NvPacket {
 class NvEncoder {
 
 private:
-	NV_ENC_BUFFER_FORMAT mBufferFormat = NV_ENC_BUFFER_FORMAT_NV12;
-
 	int mCudaIndex = -1;
 	CUcontext mCuContext = nullptr;
 	void* mEncoder = nullptr;

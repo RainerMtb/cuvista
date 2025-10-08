@@ -254,6 +254,8 @@ void JpegImageWriter::open(EncodingOption videoCodec) {
 }
 
 void JpegImageWriter::writeOutput(const FrameExecutor& executor) {
+	executor.getOutputYuv(frameIndex, outputFrame);
+
 	av_frame->pts = this->frameIndex;
 	int result = avcodec_send_frame(ctx, av_frame);
 	if (result < 0)

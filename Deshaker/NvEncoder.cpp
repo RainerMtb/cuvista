@@ -139,7 +139,7 @@ void NvEncoder::createEncoder(int w, int h, int fpsNum, int fpsDen, uint32_t gop
 	uint32_t fmtSupportedCount;
 	std::vector<NV_ENC_BUFFER_FORMAT> fmts(fmtCount);
 	handleResult(encFuncList.nvEncGetInputFormats(mEncoder, guid, fmts.data(), fmtCount, &fmtSupportedCount), "cannot get formats");
-	handleResult(std::find(fmts.cbegin(), fmts.cend(), mBufferFormat) == fmts.end(), "input format not supported");
+	handleResult(std::find(fmts.cbegin(), fmts.cend(), NV_ENC_BUFFER_FORMAT_NV12) == fmts.end(), "input format not supported");
 
 	NV_ENC_CAPS_PARAM capsParam = {};
 	capsParam.capsToQuery = NV_ENC_CAPS_SUPPORT_LOOKAHEAD;
@@ -219,8 +219,8 @@ void NvEncoder::createEncoder(int w, int h, int fpsNum, int fpsDen, uint32_t gop
 		registerResource.resourceToRegister = (void*) pDeviceFrame;
 		registerResource.width = w;
 		registerResource.height = h;
-		registerResource.pitch = (int) pitch;
-		registerResource.bufferFormat = mBufferFormat;
+		registerResource.pitch = pitch;
+		registerResource.bufferFormat = NV_ENC_BUFFER_FORMAT_NV12;
 		registerResource.bufferUsage = NV_ENC_INPUT_IMAGE;
 		handleResult(encFuncList.nvEncRegisterResource(mEncoder, &registerResource), "cannot register resource");
 		NV_ENC_REGISTERED_PTR registeredPtr = registerResource.registeredResource;
@@ -268,14 +268,14 @@ void NvEncoder::encodeFrame(std::list<NvPacket>& nvPackets) {
 	cuCtxPushCurrent(mCuContext);
 
 	//util::ConsoleTimer ct("encode");
-	NV_ENC_MAP_INPUT_RESOURCE mapInputResource = { NV_ENC_MAP_INPUT_RESOURCE_VER };
-	mapInputResource.registeredResource = registeredResources[i];
-	handleResult(encFuncList.nvEncMapInputResource(mEncoder, &mapInputResource), "cannot map input resource");
+	NV_ENC_MAP_INPUT_RESOURCE mappedInputResource = { NV_ENC_MAP_INPUT_RESOURCE_VER };
+	mappedInputResource.registeredResource = registeredResources[i];
+	handleResult(encFuncList.nvEncMapInputResource(mEncoder, &mappedInputResource), "cannot map input resource");
 
 	NV_ENC_PIC_PARAMS picParams = { NV_ENC_PIC_PARAMS_VER };
 	picParams.pictureStruct = NV_ENC_PIC_STRUCT_FRAME;
-	picParams.inputBuffer = mapInputResource.mappedResource;
-	picParams.bufferFmt = mBufferFormat;
+	picParams.inputBuffer = mappedInputResource.mappedResource;
+	picParams.bufferFmt = mappedInputResource.mappedBufferFmt;
 	picParams.inputWidth = w;
 	picParams.inputHeight = h;
 	picParams.outputBitstream = bitstreamOutputBuffer[i];
@@ -293,6 +293,7 @@ void NvEncoder::encodeFrame(std::list<NvPacket>& nvPackets) {
 	} else {
 		throw AVException("cannot encode frame, status=" + std::to_string(stat));
 	}
+	handleResult(encFuncList.nvEncUnmapInputResource(mEncoder, mappedInputResource.mappedResource), "cannot unmap input resource");
 	cuCtxPopCurrent(nullptr);
 }
 

@@ -93,12 +93,6 @@ template <class T> KernelContext prepareTexture(T* src, int srcStep, int texw, i
 
 //--------------- device functions
 
-__device__ void output(float4 val, uchar* nv12, int idx, float* u, float* v) {
-	nv12[idx] = (uchar) rintf(val.x * 255.0f);
-	*u += val.y;
-	*v += val.z;
-}
-
 __device__ void yuv_to_rgba_func(float yf, float uf, float vf, uchar* r, uchar* g, uchar* b, uchar* a) {
 	*r = (uchar) rint(cu::clamp(yf + (1.370705f * (vf - 128.0f)), 0.0f, 255.0f));
 	*g = (uchar) rint(cu::clamp(yf - (0.337633f * (uf - 128.0f)) - (0.698001f * (vf - 128.0f)), 0.0f, 255.0f));
@@ -164,6 +158,7 @@ __global__ void kernel_warp_back_3(cudaTextureObject_t texObj, cuMatf4 dest, Aff
 	if (x < dest.w && y < dest.h && xx >= 0.0f && xx <= dest.w - 1 && yy >= 0.0f && yy <= dest.h - 1) {
 		dest.at(y, x) = tex2Dinterp_3(texObj, xx, yy);
 	}
+	//if (y == 228 && x == 1082) printf("\ncpu %16.12f\n", yy);
 }
 
 __global__ void kernel_filter_3(cudaTextureObject_t texObj, cuMatf4 dest, int ks, int dx, int dy) {
@@ -217,23 +212,28 @@ __global__ void kernel_output_host(float4* src, int srcStep, uchar* dest, int de
 	}
 }
 
-__global__ void kernel_output_nvenc(float4* src, int srcStep, uchar* cudaNv12ptr, int cudaPitch, int w, int h) {
+__global__ void kernel_output_nvenc(float4* src, int srcStep, uchar* dest, int cudaPitch, int w, int h) {
 	uint x = blockIdx.x * blockDim.x + threadIdx.x;
 	uint y = blockIdx.y * blockDim.y + threadIdx.y;
+	int idx;
+	int outIdx;
 
 	if (x < w / 2 && y < h / 2) {
-		int idx = y * 2 * srcStep + x * 2;
-		int outIdx = y * 2 * cudaPitch + x * 2;
-		float u = 0.0f;
-		float v = 0.0f;
-		output(src[idx], cudaNv12ptr, outIdx, &u, &v);
-		output(src[idx + 1], cudaNv12ptr, outIdx + 1, &u, &v);
-		output(src[idx + w], cudaNv12ptr, outIdx + cudaPitch, &u, &v);
-		output(src[idx + w + 1], cudaNv12ptr, outIdx + cudaPitch + 1, &u, &v);
+		idx = y * 2 * srcStep + x * 2;
+		outIdx = y * 2 * cudaPitch + x * 2;
+		float4 f00 = src[idx + 0];
+		float4 f01 = src[idx + 1];
+		float4 f10 = src[idx + srcStep + 0];
+		float4 f11 = src[idx + srcStep + 1];
+
+		dest[outIdx + 0] = rintf(f00.x * 255.0f);
+		dest[outIdx + 1] = rintf(f01.x * 255.0f);
+		dest[outIdx + cudaPitch + 0] = rintf(f10.x * 255.0f);
+		dest[outIdx + cudaPitch + 1] = rintf(f11.x * 255.0f);
 
 		outIdx = (y + h) * cudaPitch + x * 2;
-		cudaNv12ptr[outIdx] = (uchar) rintf(u / 4 * 255);
-		cudaNv12ptr[outIdx + 1] = (uchar) rintf(v / 4 * 255);
+		dest[outIdx + 0] = rintf((f00.y + f01.y + f10.y + f11.y) * 255.0f / 4.0f);
+		dest[outIdx + 1] = rintf((f00.z + f01.z + f10.z + f11.z) * 255.0f / 4.0f);
 	}
 }
 
@@ -308,7 +308,7 @@ __global__ void kernel_filter(cudaTextureObject_t texObj, cuMatf dest, size_t ki
 	}
 }
 
-__global__ void kernel_yuv8_to_rgba8(cudaTextureObject_t texObj, uchar* rgba, int w, int h) {
+__global__ void kernel_yuv8_to_rgba8(cudaTextureObject_t texObj, uchar* rgba, int w, int h, int4 index) {
 	uint x = blockIdx.x * blockDim.x + threadIdx.x;
 	uint y = blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -316,8 +316,8 @@ __global__ void kernel_yuv8_to_rgba8(cudaTextureObject_t texObj, uchar* rgba, in
 		uchar colY = tex2D<uchar>(texObj, x, y);
 		uchar colU = tex2D<uchar>(texObj, x, y + h);
 		uchar colV = tex2D<uchar>(texObj, x, y + h + h);
-		uchar* dest = rgba + 4ull * (y * w + x);
-		yuv_to_rgba_func(colY, colU, colV, dest, dest + 1, dest + 2, dest + 3);
+		uchar* dest = rgba + 4 * (1ull * y * w + x);
+		yuv_to_rgba_func(colY, colU, colV, dest + index.x, dest + index.y, dest + index.z, dest + index.w);
 	}
 }
 
@@ -444,9 +444,9 @@ cudaError_t cu::remap_downsize_32f(float* src, int srcStep, float* dest, int des
 	return cudaGetLastError();
 }
 
-cudaError_t cu::yuv_to_rgba(uchar* src, int srcStep, uchar* dest, int destStep, int w, int h, cudaStream_t cs) {
+cudaError_t cu::yuv_to_rgba(uchar* src, int srcStep, uchar* dest, int destStep, int w, int h, int4 index, cudaStream_t cs) {
 	KernelContext ki = prepareTexture(src, srcStep, w, 3 * h, w, h);
-	kernel_yuv8_to_rgba8 <<<ki.blocks, ki.threads>>> (ki.texture, dest, w, h);
+	kernel_yuv8_to_rgba8 <<<ki.blocks, ki.threads>>> (ki.texture, dest, w, h, index);
 	cudaDestroyTextureObject(ki.texture);
 	return cudaGetLastError();
 }

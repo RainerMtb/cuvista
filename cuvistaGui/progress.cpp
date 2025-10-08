@@ -81,9 +81,7 @@ void ProgressWindow::setBackgroundColor(QString style) {
 //-----------------------------------------
 
 void ProgressGui::update(const ProgressInfo& progress, bool force) {
-	if (isDue(force)) {
-		mProgressWindow->sigProgress(progress.totalProgress);
-	}
+	mProgressWindow->sigProgress(progress.totalProgress);
 
 	auto timePointNow = std::chrono::steady_clock::now();
 	std::chrono::nanoseconds delta = timePointNow - mTimePoint;

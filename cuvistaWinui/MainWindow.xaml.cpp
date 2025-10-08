@@ -19,9 +19,6 @@
 #include "pch.h"
 #include "MainWindow.xaml.h"
 
-#include <Shobjidl.h>
-#include <filesystem>
-
 #if __has_include("MainWindow.g.cpp")
 #include "MainWindow.g.cpp"
 #endif
@@ -29,9 +26,11 @@
 #include "EncodingOptionXaml.g.cpp"
 #endif
 
+#include <filesystem>
 #include "FrameResult.hpp"
 #include "FrameExecutor.hpp"
 #include "CudaWriter.hpp"
+#include "AppUtil.hpp"
 
 
 using namespace winrt;
@@ -40,31 +39,11 @@ using namespace Windows::Storage;
 using namespace Windows::UI::Xaml;
 
 using namespace Microsoft::UI::Windowing;
-using namespace Microsoft::UI::Dispatching;
 //using namespace Windows::Foundation; --> error C2872: 'IUnknown': ambiguous symbol ???
-
-
-//-------------------------------------------------------------------------
-//-------------------- EncodingOptionXaml ---------------------------------
-//-------------------------------------------------------------------------
 
 
 template <class... Args> hstring hformat(std::format_string<Args...> fmt, Args&&... args) {
     return to_hstring(std::format(fmt, std::forward<Args>(args)...));
-}
-
-static Windows::Foundation::IInspectable box_string(const std::string& str) {
-    return winrt::box_value(to_hstring(str));
-}
-
-void debugPrint(hstring str) {
-    OutputDebugString(L"-------- ");
-    OutputDebugString(str.c_str());
-    OutputDebugString(L"\n");
-}
-
-void debugPrint(const std::string& str) {
-    debugPrint(to_hstring(str));
 }
 
 
@@ -89,6 +68,7 @@ namespace winrt::cuvistaWinui::implementation {
     hstring EncodingOptionXaml::Codec() const {
         return to_hstring(mapCodecToString[mOption.codec]);
     }
+
 
     //-------------------------------------------------------------------------
     //-------------------- MainWindow Constructor -----------------------------
@@ -131,8 +111,8 @@ namespace winrt::cuvistaWinui::implementation {
         setBackgroundColor(bg);
 
         //image sequence format
-        for (const OutputTypeSelector& ots : mOutputImageTypes) {
-            IInspectable iis = box_value(ots.name);
+        for (const auto& oit : mOutputImageTypes) {
+            IInspectable iis = box_value(oit.first);
             comboImageType().Items().Append(iis);
         }
         comboImageType().SelectedIndex(0);
@@ -166,6 +146,27 @@ namespace winrt::cuvistaWinui::implementation {
             if (recentFile.empty() == false) comboInputFile().Items().Append(box_value(recentFile));
         }
 
+        //stored settings
+        int windowX = localValues.Lookup(L"windowX").try_as<int>().value_or(50);
+        int windowY = localValues.Lookup(L"windowY").try_as<int>().value_or(50);
+        int windowWidth = localValues.Lookup(L"windowWidth").try_as<int>().value_or(700);
+        int windowHeight = localValues.Lookup(L"windowHeight").try_as<int>().value_or(800);
+        AppWindow().MoveAndResize({ windowX, windowY, windowWidth, windowHeight });
+
+        //min size
+        OverlappedPresenter op = AppWindow().Presenter().as<OverlappedPresenter>();
+        op.PreferredMinimumWidth(700);
+        op.PreferredMinimumHeight(800);
+
+        //more settings
+        chkOverwrite().IsChecked(localValues.Lookup(L"overwrite").try_as<bool>().value_or(false));
+        spinRadius().Value(localValues.Lookup(L"radius").try_as<double>().value_or(defaults.radsec));
+        spinZoomMin().Value(localValues.Lookup(L"zoomMin").try_as<double>().value_or(defaults.zoomMin - 1.0));
+        spinZoomMax().Value(localValues.Lookup(L"zoomMax").try_as<double>().value_or(defaults.zoomMax - 1.0));
+        chkDynamicZoom().IsChecked(localValues.Lookup(L"zoomDynamic").try_as<bool>().value_or(true));
+        chkFrameLimit().IsChecked(localValues.Lookup(L"limitEnabled").try_as<bool>().value_or(false));
+        spinFrameLimit().Value(localValues.Lookup(L"limitValue").try_as<double>().value_or(defaults.frameLimit));
+
         //load file when given as command line argument or when file was dropped on the app icon
         LPWSTR cmd = GetCommandLineW();
         int numArgs;
@@ -177,169 +178,11 @@ namespace winrt::cuvistaWinui::implementation {
             }
         }
 
-        //stored settings
-        int windowX = localValues.Lookup(L"windowX").try_as<int>().value_or(50);
-        int windowY = localValues.Lookup(L"windowY").try_as<int>().value_or(50);
-        int windowWidth = localValues.Lookup(L"windowWidth").try_as<int>().value_or(700);
-        int windowHeight = localValues.Lookup(L"windowHeight").try_as<int>().value_or(800);
-        AppWindow().MoveAndResize({ windowX, windowY, windowWidth, windowHeight });
-
-        //min size
-        OverlappedPresenter op = AppWindow().Presenter().as<OverlappedPresenter>();
-        op.PreferredMinimumWidth(700);
-        op.PreferredMinimumHeight(700);
-
-        //more settings
-        chkOverwrite().IsChecked(localValues.Lookup(L"overwrite").try_as<bool>().value_or(false));
-        spinRadius().Value(localValues.Lookup(L"radius").try_as<double>().value_or(defaults.radsec));
-        spinZoomMin().Value(localValues.Lookup(L"zoomMin").try_as<double>().value_or(defaults.zoomMin - 1.0));
-        spinZoomMax().Value(localValues.Lookup(L"zoomMax").try_as<double>().value_or(defaults.zoomMax - 1.0));
-        chkDynamicZoom().IsChecked(localValues.Lookup(L"zoomDynamic").try_as<bool>().value_or(true));
-        chkFrameLimit().IsChecked(localValues.Lookup(L"limitEnabled").try_as<bool>().value_or(false));
-        spinFrameLimit().Value(localValues.Lookup(L"limitValue").try_as<double>().value_or(defaults.frameLimit));
+        //load working bitmap
+        //auto loader = std::async(loadImage, L"ms-appx:///Assets/signs-02.png");
+        //mWorkingBitmap = loader.get();
     }
 
-    void MainWindow::imageInputLoaded(const IInspectable& sender, const RoutedEventArgs& args) {
-        //debugPrint("image loaded");
-        //mInputImageSource.SetBitmapAsync(mInputImageBitmapPlaceholder);
-        //imageInput().Source(mInputImageSource);
-        imageInput().Source(mInputImageBitmapPlaceholder);
-    }
-
-    void MainWindow::seek(double frac) {
-        //debugPrint("seek " + std::to_string(frac));
-        if (mInputReady && mReader.seek(frac) && mReader.read(mInputYUV)) {
-            updateInputImage();
-            inputPosition().Value(frac * 100.0);
-        }
-    }
-
-
-    //-------------------------------------------------------------------------
-    //-------------------- Event Handlers -------------------------------------
-    //-------------------------------------------------------------------------
-
-    void MainWindow::dragFile(const IInspectable& sender, const DragEventArgs& args) {
-        args.AcceptedOperation(winrt::Windows::ApplicationModel::DataTransfer::DataPackageOperation::Link);
-    }
-
-    winrt::fire_and_forget MainWindow::dropFile(const IInspectable& sender, const DragEventArgs& args) {
-        //debugPrint("drop");
-        hstring str = winrt::Windows::ApplicationModel::DataTransfer::StandardDataFormats::StorageItems();
-        if (args.DataView().Contains(str)) {
-            auto items = co_await args.DataView().GetStorageItemsAsync();
-            if (items.Size() > 0) {
-                Windows::Storage::StorageFile storageFile = items.First().Current().try_as<Windows::Storage::StorageFile>();
-                if (storageFile != nullptr) {
-                    addInputFile(storageFile.Path());
-                }
-            }
-        }
-    }
-
-    void MainWindow::btnOpenClick(const IInspectable& sender, const RoutedEventArgs& args) {
-        //debugPrint("open");
-        IFileDialog* ifd = nullptr;
-        HRESULT result = CoCreateInstance(CLSID_FileOpenDialog, NULL, CLSCTX_INPROC_SERVER, IID_IFileOpenDialog, (void**) (&ifd));
-        if (result == S_OK) {
-            ifd->SetOptions(FOS_PATHMUSTEXIST | FOS_FILEMUSTEXIST);
-            ifd->SetTitle(L"Select Video file to open");
-            COMDLG_FILTERSPEC filterSpec[] = { { L"All Files", L"*.*"} };
-            ifd->SetFileTypes(1, filterSpec);
-            if (ifd->Show(GetActiveWindow()) == S_OK) {
-                IShellItem* item = nullptr;
-                if (ifd->GetResult(&item) == S_OK) {
-                    PWSTR file = nullptr;
-                    if (item->GetDisplayName(SIGDN_FILESYSPATH, &file) == S_OK) {
-                        addInputFile(file);
-                    }
-                }
-            }
-        }
-    }
-
-    void MainWindow::btnColorOk(const IInspectable& sender, const RoutedEventArgs& args) {
-        //debugPrint("ok");
-        setBackgroundColor(colorPicker().Color());
-        colorFlyout().Hide();
-        radioColor().IsChecked(true);
-    }
-
-    void MainWindow::btnColorCancel(const IInspectable& sender, const RoutedEventArgs& args) {
-        //debugPrint("cancel");
-        colorFlyout().Hide();
-    }
-
-    void MainWindow::lblColorClick(const IInspectable& sender, const Input::TappedRoutedEventArgs& args) {
-        //debugPrint("color picker");
-        colorPicker().Color(mBackgroundColor);
-        Controls::Primitives::FlyoutBase::ShowAttachedFlyout(sender.as<FrameworkElement>());
-    }
-
-    void MainWindow::imageBackgroundClick(const IInspectable& sender, const Input::TappedRoutedEventArgs& args) {
-        winrt::Windows::Foundation::Point p = args.GetPosition(imageBackground());
-        double fraction = 1.0 * p.X / imageBackground().ActualWidth();
-        seek(fraction);
-    }
-
-    winrt::fire_and_forget MainWindow::btnInfoClick(const IInspectable& sender, const RoutedEventArgs& args) {
-        //devices info text
-        std::stringstream ss;
-        mData.showDeviceInfo(ss);
-        mInfoBoxString = to_hstring(ss.str());
-        infoBox().Text(mInfoBoxString);
-
-        //email link
-        hstring strEmail = L"cuvista@a1.net";
-        Windows::Foundation::Uri emailUri(L"mailto:" + strEmail);
-        infoLinkEmail().NavigateUri(emailUri);
-        Documents::Run emailRun;
-        emailRun.Text(strEmail);
-        infoLinkEmail().Inlines().Append(emailRun);
-
-        //github link
-        hstring strGit = L"https://github.com/RainerMtb/cuvista";
-        Windows::Foundation::Uri gitUri(strGit);
-        infoLinkGit().NavigateUri(gitUri);
-        Documents::Run gitRun;
-        gitRun.Text(strGit);
-        infoLinkGit().Inlines().Append(gitRun);
-
-        //header and footer
-        infoRunHeader().Text(std::format(L"CUVISTA - Cuda Video Stabilizer, Version {}\n\u00A9 2025 Rainer Bitschi ", to_hstring(CUVISTA_VERSION)));
-        infoRunFooter().Text(L"\nLicense GNU GPLv3+: GNU GPL version 3 or later");
-
-        //button will be disabled when starting tests
-        btnInfoTest().IsEnabled(true);
-        infoDialog().XamlRoot(rootPanel().XamlRoot());
-        Controls::ContentDialogResult result = co_await infoDialog().ShowAsync();
-        //debugPrint("done");
-    }
-
-    void MainWindow::btnInfoTestClick(const IInspectable& sender, const RoutedEventArgs& args) {
-        btnInfoTest().IsEnabled(false);
-        mFuture = std::async(std::launch::async, runSelfTest, std::ref(*this), mData.deviceList);
-    }
-
-    void MainWindow::btnInfoCloseClick(const IInspectable& sender, const RoutedEventArgs& args) {
-        infoDialog().Hide();
-    }
-
-    void MainWindow::infoDialogClosing(const Controls::ContentDialog& sender, const Controls::ContentDialogClosingEventArgs& args) {
-        //debugPrint("closing");
-        mFuture.wait();
-    }
-
-    void MainWindow::comboDeviceChanged(const IInspectable& sender, const Controls::SelectionChangedEventArgs& args) {
-        comboEncoding().Items().Clear();
-        int32_t index = comboDevice().SelectedIndex();
-        std::span<EncodingOption> s = mData.deviceList[index]->encodingOptions;
-        for (EncodingOption& e : s) {
-            auto eox = winrt::make_self<cuvistaWinui::implementation::EncodingOptionXaml>(e);
-            comboEncoding().Items().Append(eox.as<IInspectable>());
-        }
-        comboEncoding().SelectedIndex(0);
-    }
 
     //-------------------------------------------------------------------------
     //-------------------- Open Input File ------------------------------------
@@ -360,7 +203,7 @@ namespace winrt::cuvistaWinui::implementation {
 
         try {
             mReader.close();
-            errorLogger().clearErrors();
+            errorLogger().clear();
             mReader.open(to_string(inputPath));
             mInputYUV = ImageYuv(mReader.h, mReader.w);
 
@@ -369,10 +212,10 @@ namespace winrt::cuvistaWinui::implementation {
             if (errorLogger().hasNoError()) {
                 mReader.read(mInputYUV); //try to read again for second image
                 mInputImageBitmap = Media::Imaging::WriteableBitmap(mReader.w, mReader.h);
-                Windows::Storage::Streams::IBuffer pixelBuffer = mInputImageBitmap.PixelBuffer();
+                Streams::IBuffer pixelBuffer = mInputImageBitmap.PixelBuffer();
                 mInputBGRA = ImageBGRA(mReader.h, mReader.w, pixelBuffer.Length() / mReader.h, pixelBuffer.data());
+                mInputYUV.toBaseRgb(mInputBGRA);
                 imageInput().Source(mInputImageBitmap);
-                updateInputImage();
             }
 
             if (errorLogger().hasError()) {
@@ -397,104 +240,75 @@ namespace winrt::cuvistaWinui::implementation {
                 pos--;
             }
 
-            seek(0.1);
+            seekAsync(0.1);
             lblStatus().Text(hformat("Version {}", CUVISTA_VERSION));
             texInput().Text(to_hstring(str));
+            lblStatusLink().Inlines().Clear();
 
         } catch (const AVException& ex) {
-            imageInput().Source(imageError().Source());
+            imageInput().Source(xamlImageError().Source());
             lblStatus().Text(to_hstring(ex.what()));
             texInput().Text(L"");
+            lblStatusLink().Inlines().Clear();
         }
     }
 
-    void MainWindow::updateInputImage() {
-        mInputYUV.toBaseRgb(mInputBGRA);
-        mInputImageBitmap.Invalidate();
-    }
 
     //-------------------------------------------------------------------------
     //-------------------- Start Stabililzing ---------------------------------
     //-------------------------------------------------------------------------
 
-    winrt::fire_and_forget MainWindow::btnStartClick(const IInspectable& sender, const RoutedEventArgs& args) {
+    fire_and_forget MainWindow::btnStartClick(const IInspectable& sender, const RoutedEventArgs& args) {
         //debugPrint("start");
-        lblStatus().Text(L"");
         if (mInputFile.empty() || mInputReady == false) {
             co_return;
         }
 
-        hstring outputFile;
+        lblStatus().Text(L"");
+        lblStatusLink().Inlines().Clear();
 
         //get output video file
         //with radio buttons the IsChecked() method returns a IReference which ALWAYS will be true -> need to check the Value()
         if (chkEncode().IsChecked().Value() || chkStack().IsChecked().Value()) {
-            IFileDialog* ifd = nullptr;
-            HRESULT result = CoCreateInstance(CLSID_FileSaveDialog, NULL, CLSCTX_INPROC_SERVER, IID_IFileSaveDialog, (void**) (&ifd));
-            if (result == S_OK) {
-                FILEOPENDIALOGOPTIONS op = chkOverwrite().IsChecked().Value() ? 0 : FOS_OVERWRITEPROMPT;
-                ifd->SetOptions(op);
-                ifd->SetTitle(L"Select Video file to save");
-                COMDLG_FILTERSPEC filterSpec[] = { { L"Video Files", L"*.mp4;*.mkv" }, { L"All Files", L"*.*" }};
-                ifd->SetFileTypes(2, filterSpec);
-                if (ifd->Show(GetActiveWindow()) == S_OK) {
-                    IShellItem* item = nullptr;
-                    if (ifd->GetResult(&item) == S_OK) {
-                        PWSTR file = nullptr;
-                        if (item->GetDisplayName(SIGDN_FILESYSPATH, &file) == S_OK) {
-                            outputFile = file;
-                        }
-                    }
-                }
-            }
+            mOutputFile = selectFileSave(GetActiveWindow(), chkOverwrite().IsChecked().Value());
         }
 
         //get output image sequence folder
         if (chkSequence().IsChecked().Value()) {
-            IFileDialog* ifd = nullptr;
-            HRESULT result = CoCreateInstance(CLSID_FileOpenDialog, NULL, CLSCTX_INPROC_SERVER, IID_IFileOpenDialog, (void**) (&ifd));
-            if (result == S_OK) {
-                ifd->SetOptions(FOS_PICKFOLDERS);
-                if (ifd->Show(GetActiveWindow()) == S_OK) {
-                    IShellItem* item = nullptr;
-                    if (ifd->GetResult(&item) == S_OK) {
-                        PWSTR folder = nullptr;
-                        if (item->GetDisplayName(SIGDN_FILESYSPATH, &folder) == S_OK) {
-                            //check for overwrite
-                            std::string fileExt = to_string(comboImageType().SelectedValue().as<hstring>());
-                            std::transform(fileExt.begin(), fileExt.end(), fileExt.begin(), [] (char c) { return std::tolower(c); });
-                            std::string firstFile = ImageWriter::makeFilename(to_string(folder), 0, fileExt);
+            mOutputFile = L"";
+            hstring folder = selectFolder(GetActiveWindow());
+            if (folder.size() > 0) {
+                //check for overwrite
+                std::string fileExt = to_string(comboImageType().SelectedValue().as<hstring>());
+                std::transform(fileExt.begin(), fileExt.end(), fileExt.begin(), [] (char c) { return std::tolower(c); });
+                std::string firstFile = ImageWriter::makeFilename(to_string(folder), 0, fileExt);
 
-                            std::filesystem::path p(firstFile);
-                            if (std::filesystem::exists(p) && chkOverwrite().IsChecked().Value() == false) {
-                                LPCWSTR msgTitle = L"Confirm File Overwrite";
-                                std::wstring firstFileW = std::wstring(firstFile.begin(), firstFile.end());
-                                std::wstring msgTextW = L"File " + firstFileW + L" exists,\noverwrite this and subsequent files?";
-                                int selection = MessageBoxW(NULL, msgTextW.c_str(), msgTitle, MB_ICONWARNING | MB_YESNO | MB_DEFBUTTON2);
-                                if (selection == IDYES) {
-                                    //overwrite images
-                                    outputFile = folder;
-                                }
-
-                            } else {
-                                //new images
-                                outputFile = folder;
-                            }
-                        }
+                std::filesystem::path p(firstFile);
+                if (std::filesystem::exists(p) && chkOverwrite().IsChecked().Value() == false) {
+                    //ask for overwrite
+                    LPCWSTR msgTitle = L"Confirm File Overwrite";
+                    std::wstring firstFileW = std::wstring(firstFile.begin(), firstFile.end());
+                    std::wstring msgTextW = L"File " + firstFileW + L" exists,\noverwrite this and subsequent files?";
+                    int selection = MessageBoxW(NULL, msgTextW.c_str(), msgTitle, MB_ICONWARNING | MB_YESNO | MB_DEFBUTTON2);
+                    if (selection == IDYES) {
+                        mOutputFile = folder;
                     }
+
+                } else {
+                    //new images
+                    mOutputFile = folder;
                 }
             }
         }
 
-        if (outputFile.empty()) {
+        if (mOutputFile.empty()) {
             co_return;
         }
-
         //debugPrint(outputFile);
 
         //check if input and output point to same file
         std::filesystem::path p1 = mInputFile.c_str();
-        std::filesystem::path p2 = outputFile.c_str();
+        std::filesystem::path p2 = mOutputFile.c_str();
         std::error_code ec;
         if (std::filesystem::equivalent(p1, p2, ec)) {
             Controls::ContentDialog dialog;
@@ -507,7 +321,7 @@ namespace winrt::cuvistaWinui::implementation {
         }
 
         //set parameters
-        mData.fileOut = winrt::to_string(outputFile);
+        mData.fileOut = winrt::to_string(mOutputFile);
         mData.deviceRequested = true;
         mData.deviceSelected = comboDevice().SelectedIndex();
 
@@ -526,15 +340,18 @@ namespace winrt::cuvistaWinui::implementation {
         mReader.rewind();
         //check input parameters
         mData.validate(mReader);
+        //reset input handler
+        mBufferedInput = UserInputEnum::CONTINUE;
         //crop setting for stack
-        mData.stackCrop = { (int) spinStackLeft().Value(), (int ) spinStackRight().Value() };
+        mData.stackCrop = { (int) spinStackLeft().Value(), (int) spinStackRight().Value() };
 
         //select writer
+        OutputType imageType = mOutputImageTypes[comboImageType().SelectedValue().as<hstring>()];
         if (chkStack().IsChecked().Value())
             mWriter = std::make_shared<StackedWriter>(mData, mReader);
-        else if (chkSequence().IsChecked().Value() && comboImageType().SelectedValue().as<hstring>() == L"BMP")
+        else if (chkSequence().IsChecked().Value() && imageType == OutputType::SEQUENCE_BMP)
             mWriter = std::make_shared<BmpImageWriter>(mData, mReader);
-        else if (chkSequence().IsChecked().Value() && comboImageType().SelectedValue().as<hstring>() == L"JPG")
+        else if (chkSequence().IsChecked().Value() && imageType == OutputType::SEQUENCE_JPG)
             mWriter = std::make_shared<JpegImageWriter>(mData, mReader);
         else if (chkEncode().IsChecked().Value() && mData.requestedEncoding.device == EncodingDevice::NVENC)
             mWriter = std::make_shared<CudaFFmpegWriter>(mData, mReader);
@@ -557,29 +374,230 @@ namespace winrt::cuvistaWinui::implementation {
         //select frame executor class
         mExecutor = mData.deviceList[mData.deviceSelected]->create(mData, *mFrame);
 
-        //start frame loop async
-        mLoopFuture = std::async(std::launch::async, &MainWindow::runLoop, this);
+        //start progress class
+        mProgress = std::make_shared<ProgressGui>(*this, GetActiveWindow(), *mExecutor);
 
-        ITaskbarList3* taskbarPtr = nullptr;
-        HRESULT hr = CoCreateInstance(CLSID_TaskbarList, NULL, CLSCTX_INPROC_SERVER, IID_ITaskbarList3, (void**) (&taskbarPtr));
-        HWND hwnd = GetActiveWindow();
-        taskbarPtr->SetProgressValue(hwnd, 50, 100);
+        //start timing
+        mData.timeStart();
 
-        //show progress dialog
+        mFutureLoop = std::async(std::launch::async, &MainWindow::runLoop, this);
+        lblStatus().Text(L"stabilizing...");
+
+        //progrss dialog
+        progressBar().Value(0.0);
+
+        Media::SolidColorBrush brush(mBackgroundColor);
+        progressInputGrid().Background(brush);
+        progressOutputGrid().Background(brush);
+
+        //progress dialog images
+        mProgressInputBitmap = Media::Imaging::WriteableBitmap(mReader.w, mReader.h);
+        mProgressOutputBitmap = Media::Imaging::WriteableBitmap(mReader.w, mReader.h);
+        mProgressInputBgra = ImageBGRA(mReader.h, mReader.w, mReader.w * 4, mProgressInputBitmap.PixelBuffer().data());
+        mProgressOutputBgra = ImageBGRA(mReader.h, mReader.w, mReader.w * 4, mProgressOutputBitmap.PixelBuffer().data());
+
+        Imaging::SoftwareBitmap scaledImage = co_await loadScaledImage(L"ms-appx:///Assets/signs-02.png", mReader.w, mReader.h);
+        scaledImage.CopyToBuffer(mProgressInputBitmap.PixelBuffer());
+        scaledImage.CopyToBuffer(mProgressOutputBitmap.PixelBuffer());
+
+        progressInputImage().Source(mProgressInputBitmap);
+        progressOutputImage().Source(mProgressOutputBitmap);
+
+        //start frame loop async -----------------------------------------------------------
         co_await progressDialog().ShowAsync();
 
-        //after dialog is hidden again
-        LoopResult result = mLoopFuture.get();
+        //after dialog is hidden again -----------------------------------------------------
+        //debugPrint("loop done");
+        LoopResult result = mFutureLoop.get();
+        double secs = mData.timeElapsedSeconds();
+        double fps = mWriter->frameEncoded / secs;
         mWriter.reset();
         mExecutor.reset();
         mFrame.reset();
+        mProgress.reset();
+
+        if (result == LoopResult::LOOP_ERROR) {
+            hstring msg = to_hstring(errorLogger().getErrorMessage());
+            lblStatus().Text(msg);
+            Controls::ContentDialog dialog;
+            dialog.Title(box_value(L"Error"));
+            dialog.Content(box_value(msg));
+            dialog.CloseButtonText(L"OK");
+            dialog.XamlRoot(rootPanel().XamlRoot());
+            co_await dialog.ShowAsync();
+            errorLogger().clear();
+
+        } else if (result == LoopResult::LOOP_CANCELLED) {
+            lblStatus().Text(L"Operation was cancelled");
+
+        } else if (result == LoopResult::LOOP_SUCCESS) {
+            Documents::Run linkRun;
+            linkRun.Text(mOutputFile);
+            lblStatusLink().Inlines().ReplaceAll({ linkRun });
+            lblStatus().Text(hformat("written in {:.1f} min at {:.1f} fps", secs / 60.0, fps));
+        }
+        //debugPrint("done");
     }
 
+    //run frame loop on background thread
     LoopResult MainWindow::runLoop() {
-        LoopResult result = mFrame->runLoop(mExecutor);
-        mDispatcher.TryEnqueue([&] { progressDialog().Hide(); });
+        LoopResult result = mFrame->runLoop(*mProgress, *this, mExecutor);
+        DispatcherQueue().TryEnqueue([&] { progressDialog().Hide(); });
         return result;
     }
+
+
+    //-------------------------------------------------------------------------
+    //-------------------- Event Handlers -------------------------------------
+    //-------------------------------------------------------------------------
+
+    fire_and_forget MainWindow::seekAsync(double frac) {
+        //debugPrint("seek " + std::to_string(frac));
+        if (mInputReady && mReader.seek(frac) && mReader.read(mInputYUV)) {
+            mInputYUV.toBaseRgb(mInputBGRA);
+            DispatcherQueue().TryEnqueue([&, frac] {
+                mInputImageBitmap.Invalidate();
+                inputPosition().Value(frac * 100.0);
+            });
+        }
+        co_return;
+    }
+
+    void MainWindow::comboDeviceChanged(const IInspectable& sender, const Controls::SelectionChangedEventArgs& args) {
+        comboEncoding().Items().Clear();
+        int32_t index = comboDevice().SelectedIndex();
+        std::span<EncodingOption> s = mData.deviceList[index]->encodingOptions;
+        for (EncodingOption& e : s) {
+            auto eox = winrt::make_self<cuvistaWinui::implementation::EncodingOptionXaml>(e);
+            comboEncoding().Items().Append(eox.as<IInspectable>());
+        }
+        comboEncoding().SelectedIndex(0);
+    }
+
+    void MainWindow::dragFile(const IInspectable& sender, const DragEventArgs& args) {
+        args.AcceptedOperation(winrt::Windows::ApplicationModel::DataTransfer::DataPackageOperation::Link);
+    }
+
+    fire_and_forget MainWindow::dropFile(const IInspectable& sender, const DragEventArgs& args) {
+        //debugPrint("drop");
+        hstring str = winrt::Windows::ApplicationModel::DataTransfer::StandardDataFormats::StorageItems();
+        if (args.DataView().Contains(str)) {
+            Windows::Foundation::Collections::IVectorView items = co_await args.DataView().GetStorageItemsAsync();
+            if (items.Size() > 0) {
+                StorageFile storageFile = items.First().Current().try_as<StorageFile>();
+                if (storageFile != nullptr) {
+                    addInputFile(storageFile.Path());
+                }
+            }
+        }
+    }
+
+    void MainWindow::btnOpenClick(const IInspectable& sender, const RoutedEventArgs& args) {
+        //debugPrint("open");
+        hstring file = selectFileOpen(GetActiveWindow());
+        if (file.size() > 0) {
+            addInputFile(file);
+        }
+    }
+
+    void MainWindow::btnColorOk(const IInspectable& sender, const RoutedEventArgs& args) {
+        //debugPrint("ok");
+        setBackgroundColor(colorPicker().Color());
+        colorFlyout().Hide();
+        radioColor().IsChecked(true);
+    }
+
+    void MainWindow::btnColorCancel(const IInspectable& sender, const RoutedEventArgs& args) {
+        //debugPrint("cancel");
+        colorFlyout().Hide();
+    }
+
+    void MainWindow::lblColorClick(const IInspectable& sender, const Input::TappedRoutedEventArgs& args) {
+        //debugPrint("color picker");
+        colorPicker().Color(mBackgroundColor);
+        Controls::Primitives::FlyoutBase::ShowAttachedFlyout(sender.as<FrameworkElement>());
+    }
+
+    fire_and_forget MainWindow::imageInputClick(const IInspectable& sender, const Input::TappedRoutedEventArgs& args) {
+        winrt::Windows::Foundation::Point p = args.GetPosition(imageBackground());
+        double fraction = 1.0 * p.X / imageBackground().ActualWidth();
+        co_await winrt::resume_background();
+        seekAsync(fraction);
+    }
+
+    //cancel stabilization
+    void MainWindow::btnStopClick(const IInspectable& sender, const RoutedEventArgs& args) {
+        //set the cancel signal, send to frame loop via callback
+        mBufferedInput = UserInputEnum::QUIT;
+    }
+
+    //open video file in registered windows app
+    fire_and_forget MainWindow::statusLinkClick(const IInspectable& sender, const RoutedEventArgs& args) {
+        Windows::Storage::StorageFile file = co_await Windows::Storage::StorageFile::GetFileFromPathAsync(mOutputFile);
+        if (file) {
+            bool result = co_await Windows::System::Launcher::LaunchFileAsync(file);
+        }
+    }
+
+
+    //---------------------------------------------------------------
+    //-------------------- Info Box  --------------------------------
+    //---------------------------------------------------------------
+
+    fire_and_forget MainWindow::btnInfoClick(const IInspectable& sender, const RoutedEventArgs& args) {
+        //devices info text
+        std::stringstream ss;
+        mData.showDeviceInfo(ss);
+        mInfoBoxString = to_hstring(ss.str());
+        infoBox().Text(mInfoBoxString);
+
+        //email link
+        hstring strEmail = L"cuvista@a1.net";
+        Windows::Foundation::Uri emailUri(L"mailto:" + strEmail);
+        infoLinkEmail().NavigateUri(emailUri);
+        Documents::Run emailRun;
+        emailRun.Text(strEmail);
+        infoLinkEmail().Inlines().ReplaceAll({ emailRun });
+
+        //github link
+        hstring strGit = L"https://github.com/RainerMtb/cuvista";
+        Windows::Foundation::Uri gitUri(strGit);
+        infoLinkGit().NavigateUri(gitUri);
+        Documents::Run gitRun;
+        gitRun.Text(strGit);
+        infoLinkGit().Inlines().ReplaceAll({ gitRun });
+
+        //header and footer
+        infoRunHeader().Text(std::format(L"CUVISTA - Cuda Video Stabilizer, Version {}\n\u00A9 2025 Rainer Bitschi ",
+            to_hstring(CUVISTA_VERSION)
+        ));
+        using namespace Microsoft::Windows::ApplicationModel::WindowsAppRuntime;
+        infoRunFooter().Text(std::format(L"\nWindows App SDK {}, Windows App Runtime {}\nLicense GNU GPLv3+: GNU GPL version 3 or later",
+            ReleaseInfo::AsString(),
+            RuntimeInfo::AsString()
+        ));
+
+        //button will be disabled when starting tests
+        btnInfoTest().IsEnabled(true);
+        infoDialog().XamlRoot(rootPanel().XamlRoot());
+        Controls::ContentDialogResult result = co_await infoDialog().ShowAsync();
+        //debugPrint("done");
+    }
+
+    void MainWindow::btnInfoTestClick(const IInspectable& sender, const RoutedEventArgs& args) {
+        btnInfoTest().IsEnabled(false);
+        mFutureInfo = std::async(std::launch::async, runSelfTest, std::ref(*this), mData.deviceList);
+    }
+
+    void MainWindow::btnInfoCloseClick(const IInspectable& sender, const RoutedEventArgs& args) {
+        infoDialog().Hide();
+    }
+
+    void MainWindow::infoDialogClosing(const Controls::ContentDialog& sender, const Controls::ContentDialogClosingEventArgs& args) {
+        //debugPrint("closing");
+        mFutureInfo.wait();
+    }
+
 
     //-------------------------------------------------------------------------
     //-------------------- Private Methods ------------------------------------
@@ -609,17 +627,9 @@ namespace winrt::cuvistaWinui::implementation {
         lblColor().Background(brush);
     }
 
-    void MainWindow::print(const std::string& str) {
-        infoBoxAppendText(str);
-    }
-
-    void MainWindow::printNewLine() {
-        infoBoxAppendText("\n");
-    }
-
     void MainWindow::infoBoxAppendText(std::string str) {
         mInfoBoxString = mInfoBoxString + to_hstring(str);
-        mDispatcher.TryEnqueue([&, str = mInfoBoxString] {
+        DispatcherQueue().TryEnqueue([&, str = mInfoBoxString] {
             infoBox().Text(str);
             infoScroller().ScrollToVerticalOffset(infoScroller().ScrollableHeight());
         });
@@ -640,15 +650,45 @@ namespace winrt::cuvistaWinui::implementation {
         texInput().Text(L"");
         comboInputFile().Items().Clear();
         inputPosition().Value(0.0);
-        imageInput().Source(mInputImageBitmapPlaceholder);
+        mInputImageBitmap = Media::Imaging::WriteableBitmap(100, 100);
+        imageInput().Source(mInputImageBitmap);
     }
+
+
+    //-------------------------------------------------------------------------
+    //-------------------- subclass methods -----------------------------------
+    //-------------------------------------------------------------------------
+
+    //called on background thread
+    UserInputEnum MainWindow::checkState() {
+        UserInputEnum e = mBufferedInput;
+        mBufferedInput = UserInputEnum::NONE;
+        return e;
+    }
+
+    //called on background thread
+    void MainWindow::print(const std::string& str) {
+        infoBoxAppendText(str);
+    }
+
+    //called on background thread
+    void MainWindow::printNewLine() {
+        infoBoxAppendText("\n");
+    }
+
 
     //-------------------------------------------------------------------------
     //-------------------- Destructor -----------------------------------------
     //-------------------------------------------------------------------------
 
-    void MainWindow::windowClosedEvent(const IInspectable& sender, const WindowEventArgs& args) {
+   void MainWindow::windowClosedEvent(const IInspectable& sender, const WindowEventArgs& args) {
         //debugPrint("closed");
+        //args.Handled(true); //cancel the event
+       if (mFutureLoop.valid()) {
+           mBufferedInput = UserInputEnum::QUIT;
+           mFutureLoop.wait();
+       }
+
         auto localValues = mLocalSettings.Values();
         localValues.Insert(L"colorRed", box_value(mBackgroundColor.R));
         localValues.Insert(L"colorGreen", box_value(mBackgroundColor.G));
@@ -682,38 +722,3 @@ namespace winrt::cuvistaWinui::implementation {
         }
     }
 }
-
-
-/*
-* COMMDLG Variant
-* 
-OPENFILENAME fileStruct = {};
-fileStruct.lStructSize = sizeof(fileStruct);
-fileStruct.hwndOwner = GetActiveWindow();
-wchar_t szFile[260] = {};
-fileStruct.lpstrFile = szFile;
-fileStruct.lpstrFile[0] = '\0';
-fileStruct.nMaxFile = sizeof(szFile);
-bool retval = GetSaveFileName(&fileStruct);
-if (retval) {
-    LPWSTR file = fileStruct.lpstrFile;
-    debugPrint(file);
-}
-*/
-
-/*
-* WinUi Picker Variant
-* 
-Pickers::FileSavePicker savePicker;
-savePicker.as<IInitializeWithWindow>()->Initialize(GetActiveWindow());
-savePicker.SuggestedStartLocation(Pickers::PickerLocationId::VideosLibrary);
-std::vector<hstring> videos = { L".mp4", L".mkv" };
-savePicker.FileTypeChoices().Insert(L"Video Files", winrt::single_threaded_vector<hstring>(std::move(videos)));
-
-Windows::Storage::StorageFile file = co_await savePicker.PickSaveFileAsync();
-if (file != nullptr) {
-    outFile = file.Path();
-} else {
-    co_return;
-}
-*/

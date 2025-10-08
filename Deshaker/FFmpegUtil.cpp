@@ -55,7 +55,8 @@ bool ffmpeg_check_versions() {
 }
 
 void ffmpeg_log(void* avclass, int level, const char* fmt, va_list args) {
-    if (level <= AV_LOG_ERROR) {
+    if (level <= AV_LOG_INFO) {
+        //collect ffmpeg log
         const size_t ffmpeg_bufsiz = 256;
         char ffmpeg_logbuf[ffmpeg_bufsiz];
         std::vsnprintf(ffmpeg_logbuf, ffmpeg_bufsiz, fmt, args);
@@ -70,7 +71,12 @@ void ffmpeg_log(void* avclass, int level, const char* fmt, va_list args) {
             *ptr = '\0';
             ptr--;
         }
-        errorLogger().logError(ffmpeg_logbuf, ErrorSource::FFMPEG);
+        errorLogger().logFFmpeg(level, ffmpeg_logbuf);
+
+        //set error message for fatal log
+        if (level <= AV_LOG_FATAL) {
+            errorLogger().logError(ffmpeg_logbuf, ErrorSource::FFMPEG);
+        }
     }
 };
 

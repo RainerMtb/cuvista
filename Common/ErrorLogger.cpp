@@ -57,9 +57,15 @@ std::string ErrorLogger::getErrorMessage() {
 	return errorList.empty() ? "no error" : errorList[0].msg;
 }
 
-void ErrorLogger::clearErrors() {
+void ErrorLogger::logFFmpeg(int logLevel, std::string msg) {
+	ffmpegLog.emplace_back(std::chrono::system_clock::now(), logLevel, msg);
+	while (ffmpegLog.size() > 5000) ffmpegLog.pop_front();
+}
+
+void ErrorLogger::clear() {
 	std::lock_guard<std::mutex> lock(mMutex);
 	errorList.clear();
+	ffmpegLog.clear();
 }
 
 void ErrorLogger::clearErrors(ErrorSource source) {

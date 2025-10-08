@@ -214,10 +214,10 @@ static void testCrc() {
 
 static void testSpeed() {
 	std::vector<std::string> commands = {
-		"-device 0 -i d:/VideoTest/02.mp4 -o f:/videoOut.mp4 -y -frames 200",
+		"-device 0 -i d:/VideoTest/02.mp4 -o f:/videoOut.mp4 -y -frames 100",
 		"-device 1 -i d:/VideoTest/02.mp4 -o f:/videoOut.mp4 -y -frames 200",
-		"-device 2 -i d:/VideoTest/02.mp4 -o f:/videoOut.mp4 -y -frames 200",
-		"-device 3 -i d:/VideoTest/02.mp4 -o f:/videoOut.mp4 -y -frames 200"
+		"-device 2 -i d:/VideoTest/02.mp4 -o f:/videoOut.mp4 -y -frames 500",
+		"-device 3 -i d:/VideoTest/02.mp4 -o f:/videoOut.mp4 -y -frames 500"
 	};
 
 	std::cout << std::endl << "SPEED TEST:" << std::endl;
@@ -228,11 +228,13 @@ static void testSpeed() {
 }
 
 int main() {
-	std::string folder = "d:/videoTest/out";
-	std::cout << "--- Delete " << folder << " ---" << std::endl;
-	std::filesystem::path fp(folder);
-	for (const auto& entry : std::filesystem::directory_iterator(fp)) {
-		if (entry.is_regular_file()) std::filesystem::remove(entry);
+	std::vector<std::string> folders = { "d:/videoTest/out", "d:/videoTest/out/images" };
+	for (const std::string& folder : folders) {
+		std::cout << "--- Delete " << folder << " ---" << std::endl;
+		std::filesystem::path fp(folder);
+		for (const auto& entry : std::filesystem::directory_iterator(fp)) {
+			if (entry.is_regular_file()) std::filesystem::remove(entry);
+		}
 	}
 	
 	testSpeed();

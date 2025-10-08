@@ -162,6 +162,9 @@ namespace im {
 		//sample clamped to image bounds
 		T sample(size_t plane, double x, double y) const;
 
+		//sample from image, return defaultValue when outside
+		T sample(size_t plane, double x, double y, T defaultValue) const;
+
 		bool saveAsBMP(const std::string& filename, T scale = 1) const;
 
 		bool saveAsPGM(const std::string& filename, T scale = 1) const;

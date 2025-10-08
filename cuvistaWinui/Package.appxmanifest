@@ -5,18 +5,19 @@
   xmlns:mp="http://schemas.microsoft.com/appx/2014/phone/manifest"
   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
-  IgnorableNamespaces="uap rescap">
+  xmlns:uap18="http://schemas.microsoft.com/appx/manifest/uap/windows10/18"
+  IgnorableNamespaces="uap rescap uap18">
 
   <Identity
-    Name="8d19c836-4abe-48fd-9f88-2c4d82ef243b"
-    Publisher="CN=raine"
-    Version="1.0.0.0" />
+    Name="RainerMtb.cuvista"
+    Publisher="CN=24E5DFD5-C91A-4A90-A27E-EB39E6755150"
+    Version="1.7.1.0" />
 
-  <mp:PhoneIdentity PhoneProductId="8d19c836-4abe-48fd-9f88-2c4d82ef243b" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
+  <mp:PhoneIdentity PhoneProductId="2a02d5a1-ef69-4465-949d-d62d13b4c57e" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
   <Properties>
-    <DisplayName>cuvistaWinui</DisplayName>
-    <PublisherDisplayName>raine</PublisherDisplayName>
+    <DisplayName>cuvista</DisplayName>
+    <PublisherDisplayName>RainerMtb</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
 
@@ -32,14 +33,14 @@
   <Applications>
     <Application Id="App"
       Executable="$targetnametoken$.exe"
-      EntryPoint="$targetentrypoint$">
+      EntryPoint="$targetentrypoint$" uap18:RuntimeBehavior="windowsApp">
       <uap:VisualElements
-        DisplayName="cuvistaWinui"
-        Description="cuvistaWinui"
+        DisplayName="cuvista"
+        Description="Cuvista - Cuda Video Stabililzer, Microsoft Store Version"
         BackgroundColor="transparent"
         Square150x150Logo="Assets\Square150x150Logo.png"
         Square44x44Logo="Assets\Square44x44Logo.png">
-        <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png" />
+        <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png"  Square71x71Logo="Assets\SmallTile.png" Square310x310Logo="Assets\LargeTile.png"/>
         <uap:SplashScreen Image="Assets\SplashScreen.png" />
       </uap:VisualElements>
     </Application>

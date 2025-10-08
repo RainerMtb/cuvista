@@ -239,7 +239,7 @@ void cuvistaGui::setInputFile(const QString& inputPath) {
 
     try {
         mReader.close();
-        errorLogger().clearErrors();
+        errorLogger().clear();
         mReader.open(inputPath.toStdString());
         mInputYUV = ImageYuv(mReader.h, mReader.w);
 
@@ -392,6 +392,7 @@ void cuvistaGui::stabilize() {
     mData.validate(mReader);
     //reset input handler
     mInputHandler.mIsCancelled = false;
+    mInputHandler.mBufferedInput = UserInputEnum::CONTINUE;
     //audio track to play
     int audioStreamIndex = -1;
     if (ui.comboAudioTrack->currentIndex() > 0) {
@@ -436,8 +437,9 @@ void cuvistaGui::stabilize() {
 
     } else {
         mProgress = std::make_shared<ProgressGui>(mData, mProgressWindow, *mExecutor);
-        mProgressWindow->updateInput(mWorkingImage, "");
-        mProgressWindow->updateOutput(mWorkingImage, "");
+        QImage image = imageScaledToFit(mWorkingImage, mData.w, mData.h);
+        mProgressWindow->updateInput(image, "");
+        mProgressWindow->updateOutput(image, "");
         QPoint p = pos();
         mProgressWindow->move(p.x() + 40, p.y() + 40); //position relativ to parent window
         mProgressWindow->show();
@@ -448,7 +450,7 @@ void cuvistaGui::stabilize() {
         //send status message
         sigShowStatusMessage("stabilizing...");
         //run loop
-        mFrame->runLoop(mProgress, mInputHandler, mExecutor);
+        mFrame->runLoop(*mProgress, mInputHandler, mExecutor);
     };
     mThread = QThread::create(fcn);
     connect(mThread, &QThread::finished, this, &cuvistaGui::done);
@@ -458,6 +460,7 @@ void cuvistaGui::stabilize() {
     mThread->start();
 }
 
+//on main thread
 void cuvistaGui::done() {
     mProgressWindow->hide();
     mPlayerWindow->hide();
@@ -473,34 +476,25 @@ void cuvistaGui::done() {
     mProgress.reset();
     mThread->deleteLater();
 
-    //emit signals to report result back to main thread
-    if (errorLogger().hasError())
-        doneFail(errorLogger().getErrorMessage());
-    else if (mInputHandler.mIsCancelled)
-        doneCancel("Operation was cancelled");
-    else
-        doneSuccess(mData.fileOut, std::format(" written in {:.1f} min at {:.1f} fps", secs / 60.0, fps));
-}
+    if (errorLogger().hasError()) {
+        QString msg = QString::fromStdString(errorLogger().getErrorMessage());
+        QMessageBox::critical(this, QString("Error"), msg, QMessageBox::Ok);
+        ui.labelStatus->setText(QString("Error: %1").arg(msg));
+        errorLogger().clear();
 
-void cuvistaGui::doneSuccess(const std::string& fileString, const std::string& str) {
-    mProgressWindow->hide();
-    QString file = QString::fromStdString(fileString);
-    QUrl url = QUrl::fromLocalFile(file);
-    QFontMetrics metrics(ui.labelStatus->font());
-    QString fileElided = metrics.elidedText(file, Qt::ElideMiddle, 300);
-    QString labelText = QString("<a href='%1'>%2</a> %3").arg(file).arg(fileElided).arg(QString::fromStdString(str));
-    ui.labelStatus->setText(labelText);
-}
+    } else if (mInputHandler.mIsCancelled) {
+        ui.labelStatus->setText("Operation was cancelled");
 
-void cuvistaGui::doneFail(const std::string& str) {
-    QString msg = QString::fromStdString(str);
-    QMessageBox::critical(this, QString("Error"), msg, QMessageBox::Ok);
-    ui.labelStatus->setText(QString("Error: %1").arg(msg));
-    errorLogger().clearErrors();
-}
-
-void cuvistaGui::doneCancel(const std::string& str) {
-    ui.labelStatus->setText(QString::fromStdString(str));
+    } else {
+        mProgressWindow->hide();
+        QString file = QString::fromStdString(mData.fileOut);
+        QUrl url = QUrl::fromLocalFile(file);
+        QFontMetrics metrics(ui.labelStatus->font());
+        QString fileElided = metrics.elidedText(file, Qt::ElideMiddle, 300);
+        QString str = qformat(" written in {:.1f} min at {:.1f} fps", secs / 60.0, fps);
+        QString labelText = QString("<a href='%1'>%2</a> %3").arg(file).arg(fileElided).arg(str);
+        ui.labelStatus->setText(labelText);
+    }
 }
 
 void cuvistaGui::showStatusMessage(const std::string& msg) {

@@ -274,10 +274,11 @@ void CpuFrame::outputData(int64_t frameIndex, AffineDataFloat trf) {
 			for (size_t c = 0; c < mData.w; c++) {
 				float x0 = float(c);
 				float y0 = float(r);
-				float x = std::fma(x0, trf.m00, std::fma(y0, trf.m01, trf.m02));
-				float y = std::fma(x0, trf.m10, std::fma(y0, trf.m11, trf.m12));
+				float x = std::fmaf(x0, trf.m00, std::fmaf(y0, trf.m01, trf.m02));
+				float y = std::fmaf(x0, trf.m10, std::fmaf(y0, trf.m11, trf.m12));
 				float bg = (mData.bgmode == BackgroundMode::COLOR ? mData.bgcolorYuv[z] : mPrevOut[z].at(r, c));
 				float result = mYuvPlane.interp2(x, y).value_or(bg);
+				//if (z == 0 && r == 228 && c == 1082) std::printf("\ncpu %16.12f\n", y);
 				buf.at(r, c) = result;
 				mPrevOut[z].at(r, c) = result;
 			}
@@ -325,7 +326,7 @@ bool CpuFrame::getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned cha
 	return true;
 }
 
-void CpuFrame::getWarped(int64_t frameIndex, ImageRGBA& image) {
+void CpuFrame::getWarped(int64_t frameIndex, ImageBaseRgb& image) {
 	ImageYuvMatFloat(mData.h, mData.w, mData.w, mBuffer[0].data(), mBuffer[1].data(), mBuffer[2].data()).toBaseRgb(image, mPool);
 }
 
@@ -343,7 +344,7 @@ Matf CpuFrame::getPyramid(int64_t index) const {
 	return out;
 }
 
-void CpuFrame::getInput(int64_t frameIndex, ImageRGBA& image) const {
+void CpuFrame::getInput(int64_t frameIndex, ImageBaseRgb& image) const {
 	size_t idx = frameIndex % mYUV.size();
 	mYUV[idx].toBaseRgb(image, mPool);
 }

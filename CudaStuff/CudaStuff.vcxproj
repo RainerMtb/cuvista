@@ -89,6 +89,10 @@
       <Defines>BUILD_CUDA=1</Defines>
       <Include>$(SolutionDir)Common</Include>
     </CudaCompile>
+    <CudaLink>
+      <GPUDebugInfo>true</GPUDebugInfo>
+    </CudaLink>
+    <CudaLink />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -114,6 +118,15 @@
       <Defines>BUILD_CUDA=1</Defines>
       <Include>$(SolutionDir)Common</Include>
     </CudaCompile>
+    <CudaLink>
+      <GPUDebugInfo>InheritFromProject</GPUDebugInfo>
+    </CudaLink>
+    <CudaLink>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+    </CudaLink>
+    <CudaLink>
+      <Optimization>O2</Optimization>
+    </CudaLink>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

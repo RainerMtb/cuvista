@@ -161,8 +161,8 @@ public:
 	void getOutputImage(int64_t frameIndex, ImageBaseRgb& image) const override;
 	bool getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) const override;
 	void getInput(int64_t frameIndex, ImageYuv& image) const override;
-	void getInput(int64_t frameIndex, ImageRGBA& image) const override;
-	void getWarped(int64_t frameIndex, ImageRGBA& image) override;
+	void getInput(int64_t frameIndex, ImageBaseRgb& image) const override;
+	void getWarped(int64_t frameIndex, ImageBaseRgb& image) override;
 
 	void cudaGetTransformedOutput(float* data) const;
 	void cudaGetPyramid(int64_t frameIndex, float* data) const;

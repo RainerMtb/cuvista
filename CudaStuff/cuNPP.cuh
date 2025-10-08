@@ -52,6 +52,6 @@ namespace cu {
 	cudaError_t filter_32f_v(float* src, float* dest, int srcStep, int w, int h, size_t filterKernelIndex, cudaStream_t cs = 0);
 	cudaError_t filter_32f_v_3(float4* src, float4* dest, int step, int w, int h, cudaStream_t cs = 0);
 
-	cudaError_t yuv_to_rgba(uchar* src, int srcStep, uchar* dest, int destStep, int w, int h, cudaStream_t cs = 0);
+	cudaError_t yuv_to_rgba(uchar* src, int srcStep, uchar* dest, int destStep, int w, int h, int4 index, cudaStream_t cs = 0);
 	cudaError_t yuv_to_rgba(float4* src, int srcStep, uchar* dest, int destStep, int w, int h, int4 index, cudaStream_t cs = 0);
 }

@@ -64,9 +64,9 @@ public:
 	//get input image as stored in frame buffers
 	virtual void getInput(int64_t frameIndex, ImageYuv& image) const = 0;
 	//get input image as stored in frame buffers
-	virtual void getInput(int64_t frameIndex, ImageRGBA& image) const = 0;
+	virtual void getInput(int64_t frameIndex, ImageBaseRgb& image) const = 0;
 	//output rgb data warped but not unsharped
-	virtual void getWarped(int64_t frameIndex, ImageRGBA& image) = 0;
+	virtual void getWarped(int64_t frameIndex, ImageBaseRgb& image) = 0;
 	//destructor
 	virtual ~FrameExecutor() {}
 

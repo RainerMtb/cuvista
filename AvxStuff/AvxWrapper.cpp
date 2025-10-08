@@ -57,11 +57,12 @@ V16f V16f::broadcast(int i) const { return _mm512_permutexvar_ps(_mm512_set1_epi
 
 float V16f::operator [] (size_t i) const { return at(i); }
 
-#ifdef _MSC_VER
-float V16f::at(size_t i) const { return a.m512_f32[i]; }
-#else
-float V16f::at(size_t i) const { return a[i]; }
-#endif
+float V16f::at(size_t i) const { 
+	__mmask16 mask = 1 << i;
+	float f;
+	_mm512_mask_compressstoreu_ps(&f, mask, a);
+	return f;
+}
 
 std::ostream& operator << (std::ostream& os, const V16f& vec) {
 	for (int i = 0; i < 16; i++) os << vec[i] << " ";
@@ -75,7 +76,7 @@ float V16f::sum(int from, int to) const {
 }
 
 float V16f::sum() const {
-	return sum(0, 16);
+	return at(0) + at(1) + at(2) + at(3) + at(4) + at(5) + at(6) + at(7) + at(8) + at(9) + at(10) + at(11) + at(12) + at(13) + at(14) + at(15);
 }
 
 V16f V16f::clamp(V16f lo, V16f hi) const {
@@ -103,7 +104,7 @@ V16f V16f::rot(int i) const {
 	return _mm512_permutex2var_ps(a, idx, a);
 }
 
-V16f::operator __m512() { return a; }
+V16f::operator __m512() const { return a; }
 
 //--------------------------------------------------------
 
@@ -113,8 +114,7 @@ V8f::V8f(float a) : a { _mm256_set1_ps(a) } {}
 
 V8f::V8f(__m256 a) : a { a } {}
 
-V8f::V8f(float v0, float v1, float v2, float v3, float v4, float v5, float v6, float v7) :
-	a { _mm256_setr_ps(v0, v1, v2, v3, v4, v5, v6, v7) } {}
+V8f::V8f(float v0, float v1, float v2, float v3, float v4, float v5, float v6, float v7) : a { _mm256_setr_ps(v0, v1, v2, v3, v4, v5, v6, v7) } {}
 
 V8f::V8f(float a, float b) : V8f(a, b, a, b, a, b, a, b) {}
 
@@ -143,11 +143,12 @@ V8f V8f::broadcast(int i) const { return _mm256_permutexvar_ps(_mm256_set1_epi32
 
 float V8f::operator [] (size_t i) const { return at(i); }
 
-#ifdef _MSC_VER
-float V8f::at(size_t i) const { return a.m256_f32[i]; }
-#else
-float V8f::at(size_t i) const { return a[i]; }
-#endif
+float V8f::at(size_t i) const { 
+	__mmask8 mask = 1 << i;
+	float f;
+	_mm256_mask_compressstoreu_ps(&f, mask, a);
+	return f;
+}
 
 std::ostream& operator << (std::ostream& os, const V8f& vec) {
 	for (int i = 0; i < 8; i++) os << vec[i] << " ";
@@ -189,7 +190,7 @@ V8f V8f::rot(int i) const {
 	return _mm256_permutex2var_ps(a, idx, a);
 }
 
-V8f::operator __m256() { return a; }
+V8f::operator __m256() const { return a; }
 
 //---------------------------------------------------
 
@@ -199,8 +200,7 @@ V4f::V4f(float a) : a { _mm_set_ps1(a) } {}
 
 V4f::V4f(__m128 a) : a { a } {}
 
-V4f::V4f(float v0, float v1, float v2, float v3) :
-	a { _mm_setr_ps(v0, v1, v2, v3) } {}
+V4f::V4f(float v0, float v1, float v2, float v3) :	a { _mm_setr_ps(v0, v1, v2, v3) } {}
 
 V4f::V4f(float a, float b) : V4f(a, b, a, b) {}
 
@@ -229,11 +229,12 @@ V4f V4f::broadcast(int i) const { return _mm_permutevar_ps(a, _mm_set1_epi32(i))
 
 float V4f::operator [] (size_t i) const { return at(i); }
 
-#ifdef _MSC_VER
-float V4f::at(size_t i) const { return a.m128_f32[i]; }
-#else
-float V4f::at(size_t i) const { return a[i]; }
-#endif
+float V4f::at(size_t i) const { 
+	__mmask8 mask = 1 << i;
+	float f;
+	_mm_mask_compressstoreu_ps(&f, mask, a);
+	return f;
+}
 
 std::ostream& operator << (std::ostream& os, const V4f& vec) {
 	for (int i = 0; i < 4; i++) os << vec[i] << " ";
@@ -277,7 +278,7 @@ V4f V4f::rot(int i) const {
 	return a;
 }
 
-V4f::operator __m128() { return a; }
+V4f::operator __m128() const { return a; }
 
 //------------------------------------------------
 
@@ -291,10 +292,7 @@ V8d::V8d(__m512d a) : a { a } {}
 
 V8d::V8d(__m256 a) : a { _mm512_cvtps_pd(a) } {}
 
-V8d::V8d(V8f a) : a { _mm512_cvtps_pd(a) } {}
-
-V8d::V8d(double v0, double v1, double v2, double v3, double v4, double v5, double v6, double v7) :
-	a { _mm512_setr_pd(v0, v1, v2, v3, v4, v5, v6, v7) } {}
+V8d::V8d(double a, double b, double c, double d, double e, double f, double g, double h) : a { _mm512_setr_pd(a, b, c, d, e, f, g, h) } {}
 
 V8d::V8d(const double* data) : a { _mm512_loadu_pd(data) } {}
 
@@ -321,11 +319,12 @@ V8d V8d::broadcast(int i) const { return _mm512_permutexvar_pd(_mm512_set1_epi64
 
 double V8d::operator [] (size_t i) const { return at(i); }
 
-#ifdef _MSC_VER
-double V8d::at(size_t i) const { return a.m512d_f64[i]; }
-#else
-double V8d::at(size_t i) const { return a[i]; }
-#endif
+double V8d::at(size_t i) const { 
+	__mmask8 mask = 1 << i;
+	double d;
+	_mm512_mask_compressstoreu_pd(&d, mask, a);
+	return d;
+}
 
 std::ostream& operator << (std::ostream& os, const V8d& vec) {
 	for (int i = 0; i < 8; i++) os << vec[i] << " ";
@@ -367,4 +366,4 @@ V8d V8d::rot(int i) const {
 	return _mm512_permutex2var_pd(a, idx, a);
 }
 
-V8d::operator __m512d() { return a; }
+V8d::operator __m512d() const { return a; }

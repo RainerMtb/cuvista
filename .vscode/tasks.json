@@ -3,7 +3,7 @@
         {
             "type": "cppbuild",
             "label": "C/C++: g++.exe build active file",
-            "command": "C:/Daten/gcc-14.2.0-ucrt/bin/g++.exe",
+            "command": "C:/Daten/gcc-15.2.0-ucrt/bin/g++.exe",
             "args": [
                 "-fdiagnostics-color=always",
                 "-g",

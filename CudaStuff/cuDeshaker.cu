@@ -495,13 +495,13 @@ void CudaExecutor::outputData(int64_t frameIndex, AffineDataFloat trf) {
 	}
 	//warp input
 	cu::warp_back_32f_3(out.start, cudaData.strideFloat4N, out.warped, cudaData.strideFloat4N, w, h, trf, cs[1]);
-	//writeDeviceDataToFile(out.start, h, w, cudaData.strideFloat4N, "f:/cuda.dat");
 	//first filter pass
 	cu::filter_32f_h_3(out.warped, out.filterH, cudaData.strideFloat4N, w, h, cs[1]);
 	//second filter pass
 	cu::filter_32f_v_3(out.filterH, out.filterV, cudaData.strideFloat4N, w, h, cs[1]);
 	//combine unsharp mask
 	cu::unsharp_32f_3(out.warped, out.filterV, out.final, cudaData.strideFloat4N, w, h, cs[1]);
+	//writeDeviceDataToFile(out.final, h, w, cudaData.strideFloat4N, "f:/cuda.dat");
 }
 
 void CudaExecutor::getOutputYuv(int64_t frameIndex, ImageYuv& image) const {
@@ -526,7 +526,8 @@ void CudaExecutor::getOutputImage(int64_t frameIndex, ImageBaseRgb& image) const
 bool CudaExecutor::getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) const {
 	cu::outputNvenc(out.final, cudaData.strideFloat4N, cudaNv12ptr, image.stride, mData.w, mData.h, cs[1]);
 	handleStatus(cudaStreamSynchronize(cs[1]), "error @output #95");
-	handleStatus(cudaGetLastError(), "error @output #95");
+	handleStatus(cudaGetLastError(), "error @output #96");
+	//handleStatus(cudaMemcpy(image.data(), cudaNv12ptr, image.sizeInBytes(), cudaMemcpyDeviceToHost), "error");
 	return false;
 }
 
@@ -558,22 +559,24 @@ void CudaExecutor::getInput(int64_t frameIndex, ImageYuv& image) const {
 	handleStatus(cudaMemcpy2D(image.data(), image.stride, yuvSrc, cudaData.strideChar, image.w, 3ll * image.h, cudaMemcpyDefault), "error @getInput");
 }
 
-void CudaExecutor::getInput(int64_t frameIndex, ImageRGBA& image) const {
+void CudaExecutor::getInput(int64_t frameIndex, ImageBaseRgb& image) const {
 	int fridx = frameIndex % mData.bufferCount;
 	assert(frameIndizes[fridx] == frameIndex && "invalid frame in buffer");
+
+	const std::vector<int>& idx = image.indexRgba();
 	unsigned char* yuvSrc = d_yuvData + fridx * 3ull * mData.h * cudaData.strideChar;
-	cu::yuv_to_rgba(yuvSrc, cudaData.strideChar, d_rgba, -1, mData.w, mData.h);
+	cu::yuv_to_rgba(yuvSrc, cudaData.strideChar, d_rgba, -1, mData.w, mData.h, { idx[0], idx[1], idx[2], idx[3] });
 	handleStatus(cudaMemcpy(image.plane(0), d_rgba, 4ull * mData.w * mData.h, cudaMemcpyDefault), "error @progress input");
 }
 
-void CudaExecutor::getWarped(int64_t frameIndex, ImageRGBA& image) {
-	int4 index = { 0, 1, 2, 3 };
-	cu::yuv_to_rgba(out.warped, cudaData.strideFloat4N, d_rgba, -1, mData.w, mData.h, index);
+void CudaExecutor::getWarped(int64_t frameIndex, ImageBaseRgb& image) {
+	const std::vector<int>& idx = image.indexRgba();
+	cu::yuv_to_rgba(out.warped, cudaData.strideFloat4N, d_rgba, -1, mData.w, mData.h, { idx[0], idx[1], idx[2], idx[3] });
 	handleStatus(cudaMemcpy(image.plane(0), d_rgba, 4ull * mData.w * mData.h, cudaMemcpyDefault), "error @progress output");
 }
 
 void encodeNvData(const ImageNV12& image, unsigned char* nvencPtr) {
-	handleStatus(cudaMemcpy(nvencPtr, image.addr(0, 0, 0), image.sizeInBytes(), cudaMemcpyHostToDevice), "error @simple encode #1 cannot copy to device");
+	handleStatus(cudaMemcpy(nvencPtr, image.data(), image.sizeInBytes(), cudaMemcpyHostToDevice), "error @simple encode #1 cannot copy to device");
 }
 
 

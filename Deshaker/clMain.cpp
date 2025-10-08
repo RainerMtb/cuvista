@@ -497,19 +497,19 @@ void OpenClExecutor::getInput(int64_t frameIndex, ImageYuv& image) const {
 	clData.queue.enqueueReadImage(im, CL_TRUE, Size2(), Size2(image.w, image.h * 3), image.stride, 0, image.data());
 }
 
-void OpenClExecutor::getInput(int64_t frameIndex, ImageRGBA& image) const {
+void OpenClExecutor::getInput(int64_t frameIndex, ImageBaseRgb& image) const {
 	try {
 		size_t fridx = frameIndex % clData.yuv.size();
-		yuv_to_rgba(clData.kernels.yuv8u_to_rgba, clData.yuv[fridx], image.data(), clData, image.w, image.h, { 0, 1, 2, 3 });
+		yuv_to_rgba(clData.kernels.yuv8u_to_rgba, clData.yuv[fridx], image.data(), clData, image.w, image.h, image.indexRgba());
 
 	} catch (const Error& err) {
 		errorLogger().logError("OpenCL get input: ", err.what());
 	}
 }
 
-void OpenClExecutor::getWarped(int64_t frameIndex, ImageRGBA& image) {
+void OpenClExecutor::getWarped(int64_t frameIndex, ImageBaseRgb& image) {
 	try {
-		yuv_to_rgba(clData.kernels.yuv32f_to_rgba, clData.out[1], image.data(), clData, image.w, image.h, { 0, 1, 2, 3 });
+		yuv_to_rgba(clData.kernels.yuv32f_to_rgba, clData.out[1], image.data(), clData, image.w, image.h, image.indexRgba());
 
 	} catch (const Error& err) {
 		errorLogger().logError("OpenCL get warped: ", err.what());

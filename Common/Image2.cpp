@@ -228,6 +228,10 @@ const unsigned char* ImageNV12::data() const {
 	return arrays[0].get();
 }
 
+bool ImageNV12::saveAsBMP(const std::string& filename, unsigned char scale) const {
+	return toYuv().saveAsBMP(filename);
+}
+
 
 //------------------------
 // YUV float stuff
@@ -318,13 +322,31 @@ void ImageBaseRgb::copyTo(ImageBaseRgb& dest, size_t r0, size_t c0, ThreadPoolBa
 		for (int r = 0; r < h; r++) {
 			int srcAlpha = numPlanes < 4 ? 255 : at(indexRgba().at(3), r, c);
 			int destAlpha = 255 - srcAlpha;
-			for (int idx = 0; idx < 3; idx++) {
+			for (int idx = 0; idx < numPlanes && idx < dest.numPlanes; idx++) {
 				int srcidx = indexRgba().at(dest.indexRgba().at(idx));
 				uint8_t& ptr = dest.at(idx, r0 + r, c0 + c);
 				ptr = (at(srcidx, r, c) * srcAlpha + ptr * destAlpha) / 255;
 			}
 		}
 	}
+}
+
+void ImageBaseRgb::scaleToFit(ImageBaseRgb& dest, ThreadPoolBase& pool) const {
+	double scale = std::min(1.0 * dest.w / w, 1.0 * dest.h / h);
+	double dx = (dest.w - w * scale) / 2.0;
+	double dy = (dest.h - h * scale) / 2.0;
+	
+	auto fcn = [&] (size_t r) {
+		for (int c = 0; c < dest.w; c++) {
+			double x = (c - dx) / scale;
+			double y = (r - dy) / scale;
+			for (int idx = 0; idx < numPlanes && idx < dest.numPlanes; idx++) {
+				int srcidx = indexRgba().at(dest.indexRgba().at(idx));
+				dest.at(idx, r, c) = sample(srcidx, x, y, 0);
+			}
+		}
+	};
+	pool.addAndWait(fcn, 0, dest.h);
 }
 
 bool ImageBaseRgb::saveAsColorBMP(const std::string& filename) const {

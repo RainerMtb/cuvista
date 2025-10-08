@@ -45,9 +45,6 @@ public slots:
     void seek(double frac);
     void stabilize();
     void done();
-    void doneSuccess(const std::string& file, const std::string& str);
-    void doneFail(const std::string& str);
-    void doneCancel(const std::string& str);
     void showInfo();
     void resetGui();
     void showStatusMessage(const std::string& msg);

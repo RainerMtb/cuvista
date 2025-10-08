@@ -47,8 +47,8 @@ public:
 	Matf getTransformedOutput() const override;
 	Matf getPyramid(int64_t frameIndex) const override;
 	void getInput(int64_t frameIndex, ImageYuv& image) const override;
-	void getInput(int64_t frameIndex, ImageRGBA& image) const override;
-	void getWarped(int64_t frameIndex, ImageRGBA& image) override;
+	void getInput(int64_t frameIndex, ImageBaseRgb& image) const override;
+	void getWarped(int64_t frameIndex, ImageBaseRgb& image) override;
 
 private:
 	FilterKernel filterKernels[4] = {

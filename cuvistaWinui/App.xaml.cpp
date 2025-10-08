@@ -41,9 +41,12 @@ namespace winrt::cuvistaWinui::implementation
 #endif
     }
 
-    void App::OnLaunched(const LaunchActivatedEventArgs& args) {
+    fire_and_forget App::OnLaunched(const LaunchActivatedEventArgs& args) {
         //LaunchActivatedEventArgs does not hold runtime command arguments WTF????
         window = make<MainWindow>();
+        Windows::Foundation::Uri uri(L"ms-appx:///Assets/cuvista.ico");
+        Windows::Storage::StorageFile iconFile = co_await Windows::Storage::StorageFile::GetFileFromApplicationUriAsync(uri);
+        window.AppWindow().SetIcon(iconFile.Path());
         window.Activate();
     }
 }

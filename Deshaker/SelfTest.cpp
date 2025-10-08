@@ -39,7 +39,7 @@ void runSelfTest(util::MessagePrinter& out, std::vector<DeviceInfoBase*> deviceL
 	out.printNewLine();
 
 	for (size_t i = 0; i < deviceList.size(); i++) {
-		errorLogger().clearErrors();
+		errorLogger().clear();
 		out.print(" #");
 		out.print(std::to_string(i));
 		out.print(": ");

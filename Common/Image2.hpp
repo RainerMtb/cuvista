@@ -115,6 +115,8 @@ public:
 	void toYuv(ImageYuv& dest, ThreadPoolBase& pool = defaultPool) const;
 
 	ImageYuv toYuv() const;
+
+	bool saveAsBMP(const std::string& filename, unsigned char scale = 1) const override;
 };
 
 
@@ -150,6 +152,8 @@ public:
 	virtual std::vector<int> indexRgba() const = 0;
 
 	void copyTo(ImageBaseRgb& dest, size_t r0 = 0, size_t c0 = 0, ThreadPoolBase& pool = defaultPool) const;
+
+	void scaleToFit(ImageBaseRgb& dest, ThreadPoolBase& pool = defaultPool) const;
 
 	bool saveAsColorBMP(const std::string& filename) const;
 

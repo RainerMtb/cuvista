@@ -21,7 +21,7 @@
 int main() {
 	std::cout << "----------------------------" << std::endl << "TestMain:" << std::endl;
 	//qrdec();
-	draw("f:/drawing.bmp"); 
+	//draw("f:/drawing.bmp"); 
 	//filterCompare();
 	//matPerf();
 	//matTest();
@@ -30,7 +30,6 @@ int main() {
 	//cudaInvSimple();
 	//cudaInvPerformanceTest();
 	//cudaInvEqualityTest();
-	//cudaFMAD();
 	//cudaInvParallel();
 	//cudaInvTest(1, 32);
 	//cudaTextureRead();
@@ -47,7 +46,7 @@ int main() {
 	//similarTransform();
 
 	//testSampler();
-	//compareFramesPlatforms();
+	compareFramesPlatforms();
 	//avxCompute();
 	//avxTest();
 

@@ -20,7 +20,7 @@
 
 struct ProgressInfo {
 	int64_t frameCount, readIndex, writeIndex, encodeIndex, outputBytesWritten;
-	double totalProgress;
+	double totalProgress; //value between 0.0 and 100.0
 };
 
 class ProgressBase {

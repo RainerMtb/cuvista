@@ -147,17 +147,13 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 	UserInputConsole inputHandler(*data.console);
 
 	if (errorLogger().hasNoError()) {
-		frame->runLoop(progress, inputHandler, executor);
+		frame->runLoop(*progress, inputHandler, executor);
 	}
 
 	// --------------------------------------------------------------
 	// --------------- main loop end --------------------------------
 	// --------------------------------------------------------------
 
-	//close input and output, destruct frame object
-	//copy statistics before destructing
-	int64_t framesWritten = writer->frameIndex;
-	
 	//final console messages
 	if (errorLogger().hasError()) {
 		printError(std::cerr, "ERROR STACK:");
@@ -165,9 +161,6 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 		for (int i = 0; i < errorList.size(); i++) {
 			printError(std::cerr, std::format("[{}] {}", i, errorList[i].msg));
 		}
-
-	} else {
-		progress->terminate();
 	}
 
 	//collect state info
@@ -189,10 +182,10 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 
 	//show performance metrics
 	double secs = data.timeElapsedSeconds();
-	double fps = framesWritten / secs;
-	if (framesWritten > 0 && data.printSummary) {
+	double fps = result.framesWritten / secs;
+	if (result.framesWritten > 0 && data.printSummary) {
 		std::string time = secs < 60.0 ? std::format("{:.1f} sec", secs) : std::format("{:.1f} min", secs / 60.0);
-		std::string str = std::format("{} frames written in {} at {:.1f} fps", framesWritten, time, fps);
+		std::string str = std::format("{} frames written in {} at {:.1f} fps", result.framesWritten, time, fps);
 		*data.console << "\x1B[1;36m" << str << "\x1B[0m" << std::endl;
 	}
 

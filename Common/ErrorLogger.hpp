@@ -20,6 +20,7 @@
 
 #include <chrono>
 #include <vector>
+#include <list>
 #include <mutex>
 #include <string>
 
@@ -36,9 +37,16 @@ struct ErrorEntry {
 	ErrorSource source;
 };
 
+struct FFmpegLog {
+	std::chrono::time_point<std::chrono::system_clock> t;
+	int logLevel;
+	std::string msg;
+};
+
 class ErrorLogger {
 	std::mutex mMutex;
 	std::vector<ErrorEntry> errorList;
+	std::list<FFmpegLog> ffmpegLog;
 
 public:
 	bool hasNoError();
@@ -55,7 +63,9 @@ public:
 
 	std::string getErrorMessage();
 
-	void clearErrors();
+	void logFFmpeg(int logLevel, std::string msg);
+
+	void clear();
 
 	void clearErrors(ErrorSource source);
 };

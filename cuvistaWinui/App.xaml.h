@@ -26,7 +26,7 @@ namespace winrt::cuvistaWinui::implementation
     {
         App();
 
-        void OnLaunched(const Microsoft::UI::Xaml::LaunchActivatedEventArgs& args);
+        fire_and_forget OnLaunched(const Microsoft::UI::Xaml::LaunchActivatedEventArgs& args);
 
     private:
         winrt::Microsoft::UI::Xaml::Window window = nullptr;

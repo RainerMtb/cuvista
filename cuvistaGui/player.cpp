@@ -97,10 +97,7 @@ PlayerWriter::PlayerWriter(MainData& data, MovieReader& reader, PlayerWindow* pl
 //---- on gui thread
 void PlayerWriter::open(EncodingOption videoCodec) {
     //buffering frame
-    QImage scaledToFit = mImageWorking.scaled(mData.w, mData.h, Qt::KeepAspectRatio);
-    int x = (scaledToFit.width() - mData.w) / 2;
-    int y = (scaledToFit.height() - mData.h) / 2;
-    QImage image = scaledToFit.copy(x, y, mData.w, mData.h).convertToFormat(QImage::Format_RGBA8888);
+    QImage image = imageScaledToFit(mImageWorking, mData.w, mData.h).convertToFormat(QImage::Format_RGBA8888);
     mVideoFrame = QVideoFrame(image);
 
     //handling input streams
@@ -243,4 +240,11 @@ void PlayerProgress::update(const ProgressInfo& progress, bool force) {
 
     //send signal to player window
     mPlayer->sigProgress(str, status);
+}
+
+QImage imageScaledToFit(QImage source, int w, int h) {
+    QImage scaledToFit = source.scaled(w, h, Qt::KeepAspectRatio);
+    int x = (scaledToFit.width() - w) / 2;
+    int y = (scaledToFit.height() - h) / 2;
+    return scaledToFit.copy(x, y, w, h);
 }

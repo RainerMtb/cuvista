@@ -27,13 +27,9 @@
 #include "MovieReader.hpp"
 
 
-void debugPrint(winrt::hstring str);
-void debugPrint(const std::string& str);
-
 namespace winrt::cuvistaWinui::implementation {
     
     using namespace winrt::Microsoft::UI::Xaml;
-    using namespace Windows::Graphics::Imaging;
 
     struct EncodingOptionXaml : EncodingOptionXamlT<EncodingOptionXaml> {
 
@@ -55,82 +51,89 @@ namespace winrt::cuvistaWinui::implementation {
         OutputType outputType;
     };
 
-    struct MainWindow : MainWindowT<MainWindow>, util::MessagePrinter {
+    struct MainWindow : MainWindowT<MainWindow>, util::MessagePrinter, public UserInput {
+
+        Media::Imaging::WriteableBitmap mProgressInputBitmap = Media::Imaging::WriteableBitmap(1, 1);
+        Media::Imaging::WriteableBitmap mProgressOutputBitmap = Media::Imaging::WriteableBitmap(1, 1);
+        ImageBGRA mProgressInputBgra;
+        ImageBGRA mProgressOutputBgra;
 
         MainWindow();
 
-        void btnOpenClick(const IInspectable& sender, const RoutedEventArgs& args);
         void btnColorOk(const IInspectable& sender, const RoutedEventArgs& args);
         void btnColorCancel(const IInspectable& sender, const RoutedEventArgs& args);
-
         void lblColorClick(const IInspectable& sender, const Input::TappedRoutedEventArgs& args);
-        void imageBackgroundClick(const IInspectable& sender, const Input::TappedRoutedEventArgs& args);
+        fire_and_forget imageInputClick(const IInspectable& sender, const Input::TappedRoutedEventArgs& args);
 
-        winrt::fire_and_forget btnStartClick(const IInspectable& sender, const RoutedEventArgs& args);
-        winrt::fire_and_forget btnInfoClick(const IInspectable& sender, const RoutedEventArgs& args);
+        void btnOpenClick(const IInspectable& sender, const RoutedEventArgs& args);
+        fire_and_forget btnStartClick(const IInspectable& sender, const RoutedEventArgs& args);
+        fire_and_forget btnInfoClick(const IInspectable& sender, const RoutedEventArgs& args);
         void btnResetClick(const IInspectable& sender, const RoutedEventArgs& args);
+        void btnStopClick(const IInspectable& sender, const RoutedEventArgs& args);
+
+        fire_and_forget statusLinkClick(const IInspectable& sender, const RoutedEventArgs& args);
 
         void btnInfoCloseClick(const IInspectable& sender, const RoutedEventArgs& args);
         void btnInfoTestClick(const IInspectable& sender, const RoutedEventArgs& args);
         void infoDialogClosing(const Controls::ContentDialog& sender, const Controls::ContentDialogClosingEventArgs& args);
 
-        winrt::fire_and_forget dropFile(const IInspectable& sender, const DragEventArgs& args);
+        fire_and_forget dropFile(const IInspectable& sender, const DragEventArgs& args);
         void dragFile(const IInspectable& sender, const DragEventArgs& args);
         void setInputFile(const IInspectable& sender, const Controls::SelectionChangedEventArgs& args);
 
         void comboDeviceChanged(const IInspectable& sender, const Controls::SelectionChangedEventArgs& args);
-
-        void imageInputLoaded(const IInspectable& sender, const RoutedEventArgs& args);
-
-        void print(const std::string& str) override;
-        void printNewLine() override;
 
         void windowClosedEvent(const IInspectable& sender, const WindowEventArgs& args);
 
     private:
         Windows::UI::Color mBackgroundColor;
         Windows::Storage::ApplicationDataContainer mLocalSettings = Windows::Storage::ApplicationData::Current().LocalSettings();
-        Microsoft::UI::Dispatching::DispatcherQueue mDispatcher = Microsoft::UI::Dispatching::DispatcherQueue::GetForCurrentThread();
 
         MainData mData;
         ImageYuv mInputYUV;
         ImageBGRA mInputBGRA;
         FFmpegReader mReader;
+        Media::Imaging::WriteableBitmap mInputImageBitmap = Media::Imaging::WriteableBitmap(1, 1);
 
         std::shared_ptr<MovieWriter> mWriter;
         std::shared_ptr<MovieFrame> mFrame;
         std::shared_ptr<FrameExecutor> mExecutor;
+        std::shared_ptr<ProgressBase> mProgress;
 
         bool mInputReady = false;
-        bool mOutputReady = false;
 		hstring mInputFile = L"";
-
-        //SoftwareBitmap mInputImageBitmapPlaceholder = SoftwareBitmap(BitmapPixelFormat::Bgra8, 100, 100, BitmapAlphaMode::Premultiplied);
-        //SoftwareBitmap mInputImageBitmap = mInputImageBitmapPlaceholder;
-        //Media::Imaging::SoftwareBitmapSource mInputImageSource;
-        Media::Imaging::WriteableBitmap mInputImageBitmapPlaceholder = Media::Imaging::WriteableBitmap(100, 100);
-        Media::Imaging::WriteableBitmap mInputImageBitmap = mInputImageBitmapPlaceholder;
+        hstring mOutputFile = L"";
 
         hstring mInfoBoxString;
-        std::future<void> mFuture = std::async([&] {});
-        std::future<LoopResult> mLoopFuture = std::async([&] { return LoopResult::LOOP_NONE; });
+        std::future<void> mFutureInfo = std::async([&] {});
+        std::future<LoopResult> mFutureLoop = std::async([&] { return LoopResult::LOOP_NONE; });
 
-        std::vector<OutputTypeSelector> mOutputImageTypes = {
+        std::map<hstring, OutputType> mOutputImageTypes = {
             { L"BMP", OutputType::SEQUENCE_BMP },
             { L"JPG", OutputType::SEQUENCE_JPG }
         };
 
+        UserInputEnum mBufferedInput = UserInputEnum::CONTINUE;
+
         void setBackgroundColor(Windows::UI::Color color);
         void addInputFile(hstring file);
 
-        void seek(double frac);
-        void updateInputImage();
+        fire_and_forget seekAsync(double frac);
 
         void infoBoxAppendText(std::string str);
 
         LoopResult runLoop();
 
-    public:
+        //--------------------------------------
+        //-------- method overrides ------------
+        //--------------------------------------
+   
+        //print message for device info
+        void print(const std::string& str) override;
+        void printNewLine() override;
+
+        //user input to cancel loop
+        UserInputEnum checkState() override;
     };
 }
 

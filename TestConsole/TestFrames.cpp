@@ -35,7 +35,7 @@ struct Result {
 };
 
 template <class T> Result runPyramid(MainData& data, int deviceIndex) {
-	errorLogger().clearErrors();
+	errorLogger().clear();
 	try {
 		std::vector<unsigned char> bytes = util::base64_decode(movieTestData);
 		MemoryFFmpegReader reader(bytes);

@@ -127,7 +127,7 @@ Matf AvxFrame::getTransformedOutput() const {
 	return Matf::concatVert(mWarped[0].matShare(), mWarped[1].matShare(), mWarped[2].matShare());
 }
 
-void AvxFrame::getWarped(int64_t frameIndex, ImageRGBA& image) {
+void AvxFrame::getWarped(int64_t frameIndex, ImageBaseRgb& image) {
 	yuvToRgb(mWarped[0].data(), mWarped[1].data(), mWarped[2].data(), mData.h, mData.w, pitch, image);
 }
 
@@ -135,7 +135,7 @@ Matf AvxFrame::getPyramid(int64_t index) const {
 	return mPyr[index].matCopy();
 }
 
-void AvxFrame::getInput(int64_t frameIndex, ImageRGBA& image) const {
+void AvxFrame::getInput(int64_t frameIndex, ImageBaseRgb& image) const {
 	size_t idx = frameIndex % mYUV.size();
 	const ImageYuv& yuv = mYUV[idx];
 	yuvToRgb(yuv.plane(0), yuv.plane(1), yuv.plane(2), mData.h, mData.w, yuv.stride, image);

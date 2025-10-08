@@ -109,3 +109,5 @@ public:
 
     void update(const ProgressInfo& progress, bool force) override;
 };
+
+QImage imageScaledToFit(QImage source, int w, int h);

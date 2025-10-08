@@ -57,7 +57,7 @@ void DummyFrame::getOutputImage(int64_t frameIndex, ImageBaseRgb& image) const {
 	mFrames[idx].toBaseRgb(image, mPool);
 }
 
-void DummyFrame::getWarped(int64_t frameIndex, ImageRGBA& image) {
+void DummyFrame::getWarped(int64_t frameIndex, ImageBaseRgb& image) {
 	size_t idx = frameIndex % mFrames.size();
 	mFrames[idx].toBaseRgb(image, mPool);
 }
@@ -67,7 +67,7 @@ void DummyFrame::getInput(int64_t frameIndex, ImageYuv& image) const {
 	mFrames[idx].copyTo(image);
 }
 
-void DummyFrame::getInput(int64_t frameIndex, ImageRGBA& image) const {
+void DummyFrame::getInput(int64_t frameIndex, ImageBaseRgb& image) const {
 	size_t idx = frameIndex % mFrames.size();
 	mFrames[idx].toBaseRgb(image, mPool);
 }
