@@ -40,7 +40,12 @@ namespace util {
         ConsoleTimer(std::string&& name) : 
             mName { name }, 
             mStart { std::chrono::steady_clock::now() },
-            mInterval { mStart } {}
+            mInterval { mStart } 
+        {}
+
+        ConsoleTimer() :
+            ConsoleTimer("timer")
+        {}
 
         void interval(const std::string& name);
 

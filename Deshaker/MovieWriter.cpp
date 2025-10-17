@@ -270,7 +270,7 @@ void JpegImageWriter::writeOutput(const FrameExecutor& executor) {
 	if (file)
 		file.write(reinterpret_cast<char*>(packet->data), packet->size);
 	else
-		errorLogger().logError("error opening file '" + fname + "'", ErrorSource::WRITER);
+		errorLogger().logError("error opening output file '" + fname + "'", ErrorSource::WRITER);
 
 	outputBytesWritten += packet->size;
 	av_packet_unref(packet);
@@ -343,7 +343,7 @@ void TransformsFile::open(const std::string& trajectoryFile) {
 		file << id;
 
 	} else {
-		throw AVException("error opening file '" + trajectoryFile + "'");
+		throw AVException("error opening outout file '" + trajectoryFile + "'");
 	}
 }
 
@@ -397,7 +397,7 @@ void OpticalFlowWriter::start(const std::string& sourceName, AVPixelFormat pixfm
 
 	result = avio_open(&fmt_ctx->pb, fmt_ctx->url, AVIO_FLAG_WRITE);
 	if (result < 0)
-		throw AVException("error opening file '" + mData.fileOut + "'");
+		throw AVException("error opening output file '" + mData.fileOut + "'");
 
 	for (StreamContext& sc : mReader.mInputStreams) {
 		auto osc = std::make_shared<OutputStreamContext>();

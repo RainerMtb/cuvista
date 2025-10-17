@@ -16,10 +16,24 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
-#include "OpenClFrame.hpp"
+#pragma once
 
-OpenClFrame::OpenClFrame(CoreData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool) :
-	OpenClExecutor(data, deviceInfo, frame, pool) 
-{
-	init();
-}
+#include "Image2.hpp"
+#undef min
+#undef max
+
+class ImageXamlBGRA : public ImageBGRA {
+
+private:
+    winrt::Microsoft::UI::Xaml::Media::Imaging::WriteableBitmap bitmap;
+
+    ImageXamlBGRA(winrt::Microsoft::UI::Xaml::Media::Imaging::WriteableBitmap bitmap, int h, int w, unsigned char* data);
+
+public:
+    ImageXamlBGRA();
+
+    static ImageXamlBGRA create(winrt::Microsoft::UI::Xaml::Controls::IImage xamlImage, int h, int w);
+
+    winrt::fire_and_forget loadImageScaledToFit(winrt::hstring file);
+    void invalidate();
+};

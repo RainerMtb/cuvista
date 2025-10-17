@@ -68,7 +68,7 @@ const unsigned char* ImageYuv::data() const {
 
 ImageYuv ImageYuv::copy() const {
 	ImageYuv copyImage(h, w, stride);
-	std::copy(arrays[0].get(), arrays[0].get() + arraySizes[0], copyImage.arrays[0].get());
+	std::copy_n(arrays[0].get(), arraySizes[0], copyImage.arrays[0].get());
 	copyImage.index = index;
 	return copyImage;
 }
@@ -106,7 +106,7 @@ void ImageYuv::readFromPGM(const std::string& filename) {
 void ImageYuv::toNV12(ImageNV12& dest, ThreadPoolBase& pool) const {
 	//copy Y plane
 	for (int r = 0; r < h; r++) {
-		std::copy(addr(0, r, 0), addr(0, r, 0) + w, dest.addr(0, r, 0));
+		std::copy_n(addr(0, r, 0), w, dest.addr(0, r, 0));
 	}
 
 	//interleave U and V plane, simple bilinear downsampling
@@ -180,7 +180,7 @@ ImageNV12 ImageYuv::toNV12() const {
 void ImageNV12::toYuv(ImageYuv& dest, ThreadPoolBase& pool) const {
 	//copy Y plane over
 	for (int r = 0; r < h; r++) {
-		std::copy(addr(0, r, 0), addr(0, r, 0) + w, dest.addr(0, r, 0));
+		std::copy_n(addr(0, r, 0), w, dest.addr(0, r, 0));
 	}
 
 	//upscale temporary uv into U and V planes here

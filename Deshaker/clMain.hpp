@@ -28,15 +28,15 @@
 #include "FrameExecutor.hpp"
 
 
-class OpenClExecutor : public FrameExecutor {
+class OpenClFrame : public FrameExecutor {
 
 private:
 	cl::Data clData;
 
 public:
-	OpenClExecutor(CoreData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool);
+	OpenClFrame(CoreData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool);
 
-	void init();
+	void init() override;
 	void inputData(int64_t frameIndex, const ImageYuv& inputFrame) override;
 	void createPyramid(int64_t frameIndex, AffineDataFloat trf, bool warp) override;
 	void computeStart(int64_t frameIndex, std::vector<PointResult>& results) override;

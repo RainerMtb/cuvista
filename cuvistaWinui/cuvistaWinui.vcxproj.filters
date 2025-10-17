@@ -10,21 +10,32 @@
     <Midl Include="MainWindow.idl" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="pch.cpp" />
     <ClCompile Include="$(GeneratedFilesDir)module.g.cpp">
       <Filter>Generated</Filter>
     </ClCompile>
-    <ClCompile Include="AppUtil.cpp" />
+    <ClCompile Include="AppImage.cpp">
+      <Filter>Code</Filter>
+    </ClCompile>
+    <ClCompile Include="AppUtil.cpp">
+      <Filter>Code</Filter>
+    </ClCompile>
+    <ClCompile Include="pch.cpp">
+      <Filter>Code</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="pch.h" />
-    <ClInclude Include="AppUtil.hpp" />
+    <ClInclude Include="AppImage.hpp">
+      <Filter>Code</Filter>
+    </ClInclude>
+    <ClInclude Include="AppUtil.hpp">
+      <Filter>Code</Filter>
+    </ClInclude>
+    <ClInclude Include="pch.h">
+      <Filter>Code</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Image Include="Assets\Wide310x150Logo.scale-200.png">
-      <Filter>Assets</Filter>
-    </Image>
-    <Image Include="Assets\StoreLogo.png">
       <Filter>Assets</Filter>
     </Image>
     <Image Include="Assets\Square150x150Logo.scale-200.png">
@@ -37,9 +48,6 @@
       <Filter>Assets</Filter>
     </Image>
     <Image Include="Assets\SplashScreen.scale-200.png">
-      <Filter>Assets</Filter>
-    </Image>
-    <Image Include="Assets\LockScreenLogo.scale-200.png">
       <Filter>Assets</Filter>
     </Image>
     <Image Include="Assets\01_file-video-solid.png">
@@ -129,6 +137,18 @@
     <Image Include="Assets\Square44x44Logo.altform-lightunplated_targetsize-256.png">
       <Filter>Assets</Filter>
     </Image>
+    <Image Include="Assets\BadgeLogo.scale-100.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\BadgeLogo.scale-200.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\SplashScreen.scale-100.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\StoreLogo.png">
+      <Filter>Assets</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Assets">
@@ -139,6 +159,9 @@
     </Filter>
     <Filter Include="Generated">
       <UniqueIdentifier>{01be2107-37fc-45ee-9240-669d49038687}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Code">
+      <UniqueIdentifier>{551d0e62-e380-46c3-9ee9-1edbd0abac59}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

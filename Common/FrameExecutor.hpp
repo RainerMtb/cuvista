@@ -41,6 +41,8 @@ public:
 		mPool { pool } 
 	{}
 	
+	//initialize frame executor on its device
+	virtual void init() {}
 	//get frame data from reader into frame object
 	virtual void inputData(int64_t frameIndex, const ImageYuv& inputFrame) = 0;
 	//set up image pyramid

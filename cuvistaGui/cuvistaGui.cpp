@@ -201,8 +201,8 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     //window position and size
     int windowPosX = mSettings.value("qt/window/posx", 50).toInt();
     int windowPosY = mSettings.value("qt/window/posy", 50).toInt();
-    int windowWidth = mSettings.value("qt/window/width", 700).toInt();
-    int windowHeight = mSettings.value("qt/window/height", 700).toInt();
+    int windowWidth = std::max(700, mSettings.value("qt/window/width", 0).toInt());
+    int windowHeight = std::max(700, mSettings.value("qt/window/height", 0).toInt());
     move(windowPosX, windowPosY);
     resize(windowWidth, windowHeight);
 
@@ -281,6 +281,8 @@ void cuvistaGui::setInputFile(const QString& inputPath) {
         ui.comboAudioTrack->setCurrentIndex(ui.comboAudioTrack->count() > 1);
         ui.labelStatus->setText(qformat("Version {}", CUVISTA_VERSION));
         ui.texInput->setPlainText(QString::fromStdString(str).trimmed());
+        ui.spinStackLeft->setMaximum(mReader.w * 40 / 100);
+        ui.spinStackRight->setMaximum(mReader.w * 40 / 100);
 
     } catch (const AVException& ex) {
         ui.imageInput->setImage(mErrorImage);
@@ -386,52 +388,67 @@ void cuvistaGui::stabilize() {
     mData.backgroundColor = Color::rgb(rgb[0], rgb[1], rgb[2]);
     mData.backgroundColor.toYUVfloat(&mData.bgcolorYuv.y, &mData.bgcolorYuv.u, &mData.bgcolorYuv.v);
 
-    //rewind reader to beginning of input
-    mReader.rewind();
-    //check input parameters
-    mData.validate(mReader);
-    //reset input handler
-    mInputHandler.mIsCancelled = false;
-    mInputHandler.mBufferedInput = UserInputEnum::CONTINUE;
-    //audio track to play
-    int audioStreamIndex = -1;
-    if (ui.comboAudioTrack->currentIndex() > 0) {
-        audioStreamIndex = ui.comboAudioTrack->currentData().value<StreamContext*>()->inputStream->index;
-    }
-    //crop setting for stack
-    mData.stackCrop = { ui.spinStackLeft->value(), ui.spinStackRight->value() };
+    try {
+        //rewind reader to beginning of input
+        mReader.rewind();
+        //check input parameters
+        mData.validate(mReader);
+        //reset input handler
+        mInputHandler.mIsCancelled = false;
+        mInputHandler.mBufferedInput = UserInputEnum::CONTINUE;
+        //audio track to play
+        int audioStreamIndex = -1;
+        if (ui.comboAudioTrack->currentIndex() > 0) {
+            audioStreamIndex = ui.comboAudioTrack->currentData().value<StreamContext*>()->inputStream->index;
+        }
+        //crop setting for stack
+        mData.stackCrop = { ui.spinStackLeft->value(), ui.spinStackRight->value() };
 
-    //select writer
-    if (ui.chkStack->isChecked())
-        mWriter = std::make_shared<StackedWriter>(mData, mReader);
-    else if (ui.chkSequence->isChecked() && ui.comboImageType->currentData().value<OutputType>() == OutputType::SEQUENCE_BMP)
-        mWriter = std::make_shared<BmpImageWriter>(mData, mReader);
-    else if (ui.chkSequence->isChecked() && ui.comboImageType->currentData().value<OutputType>() == OutputType::SEQUENCE_JPG)
-        mWriter = std::make_shared<JpegImageWriter>(mData, mReader);
-    else if (ui.chkPlayer->isChecked())
-        mWriter = std::make_shared<PlayerWriter>(mData, mReader, mPlayerWindow, mWorkingImage, audioStreamIndex);
-    else if (ui.chkEncode->isChecked() && mData.requestedEncoding.device == EncodingDevice::NVENC)
-        mWriter = std::make_shared<CudaFFmpegWriter>(mData, mReader);
-    else if (ui.chkEncode->isChecked())
-        mWriter = std::make_shared<FFmpegWriter>(mData, mReader);
-    else
+        //select writer
+        if (ui.chkStack->isChecked())
+            mWriter = std::make_shared<StackedWriter>(mData, mReader);
+        else if (ui.chkSequence->isChecked() && ui.comboImageType->currentData().value<OutputType>() == OutputType::SEQUENCE_BMP)
+            mWriter = std::make_shared<BmpImageWriter>(mData, mReader);
+        else if (ui.chkSequence->isChecked() && ui.comboImageType->currentData().value<OutputType>() == OutputType::SEQUENCE_JPG)
+            mWriter = std::make_shared<JpegImageWriter>(mData, mReader);
+        else if (ui.chkPlayer->isChecked())
+            mWriter = std::make_shared<PlayerWriter>(mData, mReader, mPlayerWindow, mWorkingImage, audioStreamIndex);
+        else if (ui.chkEncode->isChecked() && mData.requestedEncoding.device == EncodingDevice::NVENC)
+            mWriter = std::make_shared<CudaFFmpegWriter>(mData, mReader);
+        else if (ui.chkEncode->isChecked())
+            mWriter = std::make_shared<FFmpegWriter>(mData, mReader);
+        else
+            return;
+
+        //open writer
+        mWriter->open(mData.requestedEncoding);
+
+        //select frame handler
+        mData.mode = ui.comboMode->currentIndex();
+        if (mData.mode == 0) {
+            mFrame = std::make_shared<MovieFrameCombined>(mData, mReader, *mWriter);
+        } else {
+            mFrame = std::make_shared<MovieFrameConsecutive>(mData, mReader, *mWriter);
+        }
+
+        //select frame executor class
+        mExecutor = mData.deviceList[mData.deviceSelected]->create(mData, *mFrame);
+        mExecutor->init();
+
+        //check error logger
+        if (errorLogger().hasError()) {
+            throw AVException(errorLogger().getErrorMessage());
+        }
+
+    } catch (AVException e) {
+        QString msg = QString::fromStdString(e.what());
+        QMessageBox::critical(this, QString("Error"), msg, QMessageBox::Ok);
+        ui.labelStatus->setText(QString("Error: %1").arg(msg));
+        errorLogger().clear();
         return;
-
-    //open writer
-    mWriter->open(mData.requestedEncoding);
-
-    //select frame handler
-    mData.mode = ui.comboMode->currentIndex();
-    if (mData.mode == 0) {
-        mFrame = std::make_shared<MovieFrameCombined>(mData, mReader, *mWriter);
-    } else {
-        mFrame = std::make_shared<MovieFrameConsecutive>(mData, mReader, *mWriter);
     }
 
-    //select frame executor class
-    mExecutor = mData.deviceList[mData.deviceSelected]->create(mData, *mFrame);
-
-    //set up output
+    //set up progress output
     if (ui.chkPlayer->isChecked()) {
         mProgress = std::make_shared<PlayerProgress>(mData, mPlayerWindow, *mExecutor);
 
@@ -597,8 +614,8 @@ void cuvistaGui::resetGui() {
 
     ui.chkOverwrite->setChecked(false);
     ui.spinRadius->setValue(defaults.radsec);
-    ui.spinZoomMin->setValue(defaults.zoomMin * 100.0 - 100.0);
-    ui.spinZoomMax->setValue(defaults.zoomMin * 100.0 - 100.0);
+    ui.spinZoomMin->setValue(std::round(defaults.zoomMin * 100.0 - 100.0));
+    ui.spinZoomMax->setValue(std::round(defaults.zoomMax * 100.0 - 100.0));
     ui.chkDynamicZoom->setChecked(true);
     ui.chkFrameLimit->setChecked(false);
     ui.spinFrameLimit->setValue(defaults.frameLimit);

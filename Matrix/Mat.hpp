@@ -120,7 +120,7 @@ protected:
 		return generate(rows(), cols(), op);
 	}
 
-	size_t clampUnsigned(size_t valuePositive, size_t valueNegative, size_t lo, size_t hi) {
+	size_t clampUnsigned(size_t valuePositive, size_t valueNegative, size_t lo, size_t hi) const {
 		size_t out = 0;
 		if (valuePositive < lo + valueNegative) out = lo;
 		else if (valuePositive > hi + valueNegative) out = hi;
@@ -154,7 +154,7 @@ protected:
 	}
 
 private:
-	inline static T EPS = std::numeric_limits<T>::epsilon() * 1000;
+	constexpr static T eps() { return 0; }
 
 	//compute array index from interator index
 	virtual std::function<size_t(size_t)> indexFunc(Direction dir) const {
@@ -294,6 +294,10 @@ public:
 	static Mat<T> fromRowData(size_t rows, size_t cols, size_t stride, const T* data) {
 		assert(stride >= cols && "invalid value for stride");
 		return generate(rows, cols, [&] (size_t r, size_t c) { return data[r * stride + c]; });
+	}
+
+	static Mat<T> fromRowData(size_t rows, size_t cols, const T* data) {
+		return fromRowData(rows, cols, cols, data);
 	}
 
 	static Mat<T> fromRowData(const std::vector<std::vector<T>>& data) {
@@ -461,7 +465,7 @@ public:
 
 	T min() const { return *std::min_element(cbegin(), cend()); }
 
-	template <class R> int compare(const Mat<R>& other, T tolerance = EPS) const {
+	template <class R> int compare(const Mat<R>& other, T tolerance = eps()) const {
 		if (rows() > other.rows()) return 1;
 		if (rows() < other.rows()) return -1;
 
@@ -481,7 +485,7 @@ public:
 		return 0;
 	}
 
-	template <class R> bool equals(const Mat<R>& other, T tolerance = EPS) const {
+	template <class R> bool equals(const Mat<R>& other, T tolerance = eps()) const {
 		return compare(other, tolerance) == 0;
 	}
 
@@ -489,11 +493,11 @@ public:
 		return compare(other, 0) == 0;
 	}
 
-	bool equalsIdentity(T tolerance = EPS) const {
+	bool equalsIdentity(T tolerance = eps()) const {
 		return rows() == cols() && compare(Mat<T>::eye(rows()), tolerance) == 0;
 	}
 
-	bool isSymmetric(T tolerance = EPS) const {
+	bool isSymmetric(T tolerance = eps()) const {
 		return compare(trans(), tolerance) == 0;
 	}
 
@@ -656,7 +660,7 @@ public:
 	//copy data directly from input array
 	Mat<T>& setData(const Mat<T>& input) {
 		assert(this->numel() == input.numel() && "data size mismatch");
-		std::copy(input.data(), input.data() + input.numel(), this->data());
+		std::copy_n(input.data(), input.numel(), this->data());
 		return *this;
 	}
 
@@ -951,10 +955,14 @@ public:
 
 
 template <class T> std::ostream& MatRow<T>::print(std::ostream& out) const {
-	Mat<T>(rowptr, 1, cols, false).print(out);
-	return out;
+	return Mat<T>::fromArray(1, cols, rowptr, false).print(out);
 }
+
 
 using Matd = Mat<double>;
 using Matf = Mat<float>;
 using Matc = Mat<unsigned char>;
+
+
+template<> constexpr double Matd::eps() { return 1e-12; }
+template<> constexpr float Matf::eps() { return 1e-5f; }

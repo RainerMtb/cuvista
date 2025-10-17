@@ -25,6 +25,7 @@
 
 #include "MovieFrame.hpp"
 #include "MovieReader.hpp"
+#include "AppImage.hpp"
 
 
 namespace winrt::cuvistaWinui::implementation {
@@ -53,10 +54,11 @@ namespace winrt::cuvistaWinui::implementation {
 
     struct MainWindow : MainWindowT<MainWindow>, util::MessagePrinter, public UserInput {
 
-        Media::Imaging::WriteableBitmap mProgressInputBitmap = Media::Imaging::WriteableBitmap(1, 1);
-        Media::Imaging::WriteableBitmap mProgressOutputBitmap = Media::Imaging::WriteableBitmap(1, 1);
-        ImageBGRA mProgressInputBgra;
-        ImageBGRA mProgressOutputBgra;
+        ImageXamlBGRA mProgressInput;
+        ImageXamlBGRA mProgressOutput;
+        bool mPlayerPaused;
+        int mAudioStreamIndex;
+        double mAudioGain = 1.0;
 
         MainWindow();
 
@@ -71,6 +73,9 @@ namespace winrt::cuvistaWinui::implementation {
         void btnResetClick(const IInspectable& sender, const RoutedEventArgs& args);
         void btnStopClick(const IInspectable& sender, const RoutedEventArgs& args);
 
+        void btnPlayerPauseClick(const IInspectable& sender, const RoutedEventArgs& args);
+        void btnPlayerStopClick(const IInspectable& sender, const RoutedEventArgs& args);
+
         fire_and_forget statusLinkClick(const IInspectable& sender, const RoutedEventArgs& args);
 
         void btnInfoCloseClick(const IInspectable& sender, const RoutedEventArgs& args);
@@ -82,8 +87,10 @@ namespace winrt::cuvistaWinui::implementation {
         void setInputFile(const IInspectable& sender, const Controls::SelectionChangedEventArgs& args);
 
         void comboDeviceChanged(const IInspectable& sender, const Controls::SelectionChangedEventArgs& args);
+        void modeSelectionChanged(const IInspectable& sender, const Controls::SelectionChangedEventArgs& args);
 
         void windowClosedEvent(const IInspectable& sender, const WindowEventArgs& args);
+        void sliderVolumeChanged(const IInspectable& sender, const Controls::Primitives::RangeBaseValueChangedEventArgs& args);
 
     private:
         Windows::UI::Color mBackgroundColor;
@@ -91,14 +98,8 @@ namespace winrt::cuvistaWinui::implementation {
 
         MainData mData;
         ImageYuv mInputYUV;
-        ImageBGRA mInputBGRA;
+        ImageXamlBGRA mInputBGRA;
         FFmpegReader mReader;
-        Media::Imaging::WriteableBitmap mInputImageBitmap = Media::Imaging::WriteableBitmap(1, 1);
-
-        std::shared_ptr<MovieWriter> mWriter;
-        std::shared_ptr<MovieFrame> mFrame;
-        std::shared_ptr<FrameExecutor> mExecutor;
-        std::shared_ptr<ProgressBase> mProgress;
 
         bool mInputReady = false;
 		hstring mInputFile = L"";
@@ -108,24 +109,26 @@ namespace winrt::cuvistaWinui::implementation {
         std::future<void> mFutureInfo = std::async([&] {});
         std::future<LoopResult> mFutureLoop = std::async([&] { return LoopResult::LOOP_NONE; });
 
-        std::map<hstring, OutputType> mOutputImageTypes = {
+        std::map<hstring, OutputType> mOutputImageTypeMap = {
             { L"BMP", OutputType::SEQUENCE_BMP },
             { L"JPG", OutputType::SEQUENCE_JPG }
         };
 
-        UserInputEnum mBufferedInput = UserInputEnum::CONTINUE;
+        std::map<int, int> mAudioTrackMap;
+
+        UserInputEnum mUserInput = UserInputEnum::CONTINUE;
 
         void setBackgroundColor(Windows::UI::Color color);
         void addInputFile(hstring file);
 
         fire_and_forget seekAsync(double frac);
 
+        fire_and_forget showErrorDialogAsync(hstring title, hstring content);
+
         void infoBoxAppendText(std::string str);
 
-        LoopResult runLoop();
-
         //--------------------------------------
-        //-------- method overrides ------------
+        //-------- class overrides -------------
         //--------------------------------------
    
         //print message for device info

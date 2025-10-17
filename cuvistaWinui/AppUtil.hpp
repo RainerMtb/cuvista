@@ -18,25 +18,43 @@
 
 #pragma once
 
-#include <hstring.h>
+#include <chrono>
+#include "ProgressDisplay.hpp"
+#include "FrameExecutor.hpp"
 
+
+//util functions
 void debugPrint(winrt::hstring str);
 void debugPrint(const std::string& str);
 
-winrt::Windows::Foundation::IInspectable box_string(const std::string& str);
+template <class... Args> winrt::hstring hformat(std::format_string<Args...> fmt, Args&&... args) {
+    return winrt::to_hstring(std::format(fmt, std::forward<Args>(args)...));
+}
 
 winrt::hstring selectFileOpen(HWND hwnd);
 winrt::hstring selectFileSave(HWND hwnd, bool alwaysOverwrite);
 winrt::hstring selectFolder(HWND hwnd);
 
+winrt::Windows::Foundation::IInspectable box_string(const std::string& str);
+void loadImageScaled(winrt::Microsoft::UI::Xaml::Controls::IImage image, winrt::hstring file);
 
-#include "ProgressDisplay.hpp"
-#include "FrameExecutor.hpp"
 
+//progress dialog window
 struct ITaskbarList3;
-struct winrt::cuvistaWinui::implementation::MainWindow;
+struct MainWindow;
 
-class ProgressGui : public ProgressDisplay {
+class ProgressDialog : public ProgressDisplay {
+
+public:
+    ProgressDialog(int interval) :
+        ProgressDisplay(interval)
+    {}
+
+    virtual winrt::Microsoft::UI::Xaml::Controls::IContentDialog dialog() = 0;
+};
+
+
+class ProgressGui : public ProgressDialog {
 
 private:
     winrt::cuvistaWinui::implementation::MainWindow& mainWindow;
@@ -47,7 +65,7 @@ private:
 
 public:
     ProgressGui(winrt::cuvistaWinui::implementation::MainWindow& mainWindow, HWND hwnd, FrameExecutor& executor) :
-        ProgressDisplay(50),
+        ProgressDialog(50),
         mainWindow { mainWindow },
         hwnd { hwnd },
         mExecutor { executor }
@@ -57,8 +75,56 @@ public:
     void update(const ProgressInfo& progress, bool force) override;
     void updateStatus(const std::string& msg) override;
     void terminate() override;
+
+    winrt::Microsoft::UI::Xaml::Controls::IContentDialog dialog() override;
 };
 
-winrt::Windows::Foundation::IAsyncOperation<winrt::Windows::Graphics::Imaging::SoftwareBitmap> loadScaledImage(winrt::hstring file, int w, int h);
 
-ImageBGRA loadImage(winrt::hstring file);
+//player dialog window
+class PlayerWriter : public NullWriter {
+
+private:
+    winrt::cuvistaWinui::implementation::MainWindow& mainWindow;
+    FrameExecutor& mExecutor;
+    std::chrono::time_point<std::chrono::steady_clock> mNextPts;
+    std::shared_ptr<OutputStreamContext> mAudioContext;
+    winrt::Windows::Media::Audio::IAudioGraph mAudioGraph;
+    winrt::Windows::Media::Audio::IAudioFrameInputNode mAudioInputNode;
+    bool mPlayAudio;
+
+public:
+    PlayerWriter(winrt::cuvistaWinui::implementation::MainWindow& mainWindow, FrameExecutor& executor, MainData& data, MovieReader& reader) :
+        NullWriter(data, reader),
+        mainWindow { mainWindow },
+        mExecutor { executor },
+        mPlayAudio { false }
+    {}
+
+    //writer
+    void open(EncodingOption videoCodec) override;
+    void start() override;
+    void writeOutput(const FrameExecutor& executor) override;
+    bool startFlushing() override;
+    void close() override;
+};
+
+
+class PlayerProgress : public ProgressDialog {
+
+private:
+    winrt::cuvistaWinui::implementation::MainWindow& mainWindow;
+    FrameExecutor& mExecutor;
+
+public:
+    PlayerProgress(winrt::cuvistaWinui::implementation::MainWindow& mainWindow, FrameExecutor& executor) :
+        ProgressDialog(0),
+        mainWindow { mainWindow },
+        mExecutor { executor }
+    {}
+
+    void update(const ProgressInfo& progress, bool force) override;
+    void terminate() override;
+
+    //dialog
+    winrt::Microsoft::UI::Xaml::Controls::IContentDialog dialog() override;
+};

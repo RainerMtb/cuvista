@@ -58,7 +58,6 @@ signals:
 public slots:
     void progress(QString str, QString status);
     void pause();
-    void play();
 };
 
 
@@ -81,7 +80,6 @@ private:
 
 public:
     PlayerWriter(MainData& data, MovieReader& reader, PlayerWindow* player, QImage imageWorking, int audioStreamCtx);
-    ~PlayerWriter();
 
     void open(EncodingOption videoCodec) override;
     void start() override;

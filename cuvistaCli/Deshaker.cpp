@@ -106,6 +106,7 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 			DeviceInfoBase* dib = data.deviceList[data.deviceSelected];
 			executor = dib->create(data, *frame);
 		}
+		executor->init();
 
 	} catch (const SilentQuitException&) {
 		return { 10 };

@@ -21,9 +21,11 @@
 #include "MovieFrame.hpp"
 
 CudaFrame::CudaFrame(MainData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool) :
-	CudaExecutor(data, deviceInfo, frame, pool) 
-{
-	assert(deviceInfo.getType() == DeviceType::CUDA && "device type must be CUDA here");
+	CudaExecutor(data, deviceInfo, frame, pool)
+{}
+
+void CudaFrame::init() {
+	assert(mDeviceInfo.getType() == DeviceType::CUDA && "device type must be CUDA here");
 	const DeviceInfoCuda* device = static_cast<const DeviceInfoCuda*>(&mDeviceInfo);
 	cudaInit(mData, device->cudaIndex, *device->props, mFrame.mBufferFrame);
 }

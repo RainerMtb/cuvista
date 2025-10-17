@@ -25,6 +25,7 @@ class CudaFrame : public CudaExecutor {
 public:
 	CudaFrame(MainData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool);
 
+	void init() override;
 	Mat<float> getPyramid(int64_t frameIndex) const override;
 	Mat<float> getTransformedOutput() const override;
 };

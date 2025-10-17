@@ -24,7 +24,7 @@
 #include "MovieWriter.hpp"
 #include "CudaFrame.hpp"
 #include "NvidiaDriver.hpp"
-#include "OpenClFrame.hpp"
+#include "clMain.hpp"
 #include "SelfTest.hpp"
 
 #include <algorithm>

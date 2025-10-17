@@ -85,17 +85,18 @@ std::ostream& operator << (std::ostream& ostream, const Timings& t) {
     return ostream;
 }
 
-SidePacket::SidePacket(int64_t frameIndex, double pts) {
-    this->frameIndex = frameIndex;
-    this->packet = nullptr;
-    this->pts = pts;
-}
+SidePacket::SidePacket(int64_t frameIndex, double pts, size_t audioDataSize) :
+    frameIndex { frameIndex },
+    packet { nullptr },
+    audioData(audioDataSize),
+    pts { pts }
+{}
 
-SidePacket::SidePacket(int64_t frameIndex, const AVPacket* packet) {
-    this->frameIndex = frameIndex;
-    this->packet = av_packet_clone(packet);
-    this->pts = std::numeric_limits<double>::quiet_NaN();
-}
+SidePacket::SidePacket(int64_t frameIndex, const AVPacket* packet) :
+    frameIndex { frameIndex },
+    packet { av_packet_clone(packet) },
+    pts { std::numeric_limits<double>::quiet_NaN() }
+{}
 
 SidePacket::~SidePacket() {
     if (packet) {

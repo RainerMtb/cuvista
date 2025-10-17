@@ -116,9 +116,6 @@
     <ClCompile Include="DummyFrame.cpp">
       <Filter>Frame</Filter>
     </ClCompile>
-    <ClCompile Include="OpenClFrame.cpp">
-      <Filter>Frame</Filter>
-    </ClCompile>
     <ClCompile Include="ImageYuvFFmpeg.cpp">
       <Filter>Util</Filter>
     </ClCompile>
@@ -230,9 +227,6 @@
       <Filter>Frame</Filter>
     </ClInclude>
     <ClInclude Include="DummyFrame.hpp">
-      <Filter>Frame</Filter>
-    </ClInclude>
-    <ClInclude Include="OpenClFrame.hpp">
       <Filter>Frame</Filter>
     </ClInclude>
     <ClInclude Include="ImageYuvFFmpeg.hpp">

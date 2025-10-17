@@ -209,7 +209,7 @@ template <class T> void ImageBase<T>::copyTo(ImageData<T>& dest, size_t r0, size
 	auto func = [&] (size_t i) {
 		for (size_t r = 0; r < h; r++) {
 			const T* ptr = addr(srcPlanes[i], r, 0);
-			std::copy(ptr, ptr + w, dest.addr(destPlanes[i], r + r0, c0));
+			std::copy_n(ptr, w, dest.addr(destPlanes[i], r + r0, c0));
 		}
 	};
 	pool.addAndWait(func, 0, srcPlanes.size());
@@ -532,7 +532,7 @@ template <class T> std::vector<T> ImageBase<T>::rawBytes() const {
 	std::vector<T> data(sizeInBytes());
 	T* dest = data.data();
 	for (int i : arraySizes) {
-		std::copy(arrays[i].get(), arrays[i].get() + arraySizes[i], dest);
+		std::copy_n(arrays[i].get(), arraySizes[i], dest);
 		dest += arraySizes[i];
 	}
 	return data;
@@ -615,7 +615,7 @@ template <class T> std::vector<T> ImagePacked<T>::rawBytes() const {
 	T* dest = data.data();
 	const T* src = this->arrays[0].get();
 	for (int r = 0; r < this->h; r++) {
-		std::copy(src, src + linesiz, dest);
+		std::copy_n(src, linesiz, dest);
 		src += linesiz;
 		dest += linesiz;
 	}

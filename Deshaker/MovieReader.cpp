@@ -357,7 +357,6 @@ bool FFmpegReader::read(ImageYuv& inputFrame) {
                         double timestamp = 1.0 * (av_packet->pts - sc.inputStream->start_time) *
                             sc.inputStream->time_base.num / sc.inputStream->time_base.den;
 
-                        SidePacket sidePacket(frameIndex, timestamp);
                         int bytesPerSample = av_get_bytes_per_sample(decodingSampleFormat);
                         while (response >= 0) {
                             response = avcodec_receive_frame(posc->audioInCtx, posc->frameIn);
@@ -372,7 +371,7 @@ bool FFmpegReader::read(ImageYuv& inputFrame) {
                             //no sample rate conversion makes conversion functions simpler
                             int sampleCount = swr_get_out_samples(posc->resampleCtx, posc->frameIn->nb_samples);
                             int byteCount = sampleCount * bytesPerSample * 2; //two output channels in packed format
-                            sidePacket.audioData.resize(byteCount);
+                            SidePacket sidePacket(frameIndex, timestamp, byteCount);
                             if (sampleCount > 0) {
                                 uint8_t* dest[AV_NUM_DATA_POINTERS] = { sidePacket.audioData.data() }; //must be an array of values
                                 const uint8_t** indata = (const uint8_t**) (posc->frameIn->data);
@@ -380,14 +379,14 @@ bool FFmpegReader::read(ImageYuv& inputFrame) {
                                 if (converted > 0) {
                                     byteCount = converted * bytesPerSample * 2;
                                     sidePacket.audioData.resize(byteCount);
+
+                                    //static std::ofstream file("f:/audio.raw", std::ios::binary);
+                                    //file.write(reinterpret_cast<char*>(sidePacket.audioData.data()), sidePacket.audioData.size());
+                                    std::unique_lock<std::mutex> lock(posc->mMutexSidePackets);
+                                    posc->sidePackets.push_back(std::move(sidePacket));
                                 }
                             }
                         }
-
-                        //static std::ofstream file("f:/audio.raw", std::ios::binary);
-                        //file.write(reinterpret_cast<char*>(sidePacket.audioData.data()), sidePacket.audioData.size());
-                        std::unique_lock<std::mutex> lock(posc->mMutexSidePackets);
-                        posc->sidePackets.push_back(std::move(sidePacket));
                     } //end audio decoding
                 } //end loop output streams
             }

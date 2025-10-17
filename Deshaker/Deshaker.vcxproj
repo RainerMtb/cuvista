@@ -99,7 +99,6 @@
     <ClCompile Include="ImageYuvFFmpeg.cpp" />
     <ClCompile Include="MainData.cpp" />
     <ClCompile Include="MatrixInverter.cpp" />
-    <ClCompile Include="OpenClFrame.cpp" />
     <ClCompile Include="SelfTest.cpp" />
     <ClCompile Include="StackedWriter.cpp" />
     <ClCompile Include="CpuFrame.cpp" />
@@ -148,7 +147,6 @@
     <ClInclude Include="MovieFrame.hpp" />
     <ClInclude Include="MovieWriter.hpp" />
     <ClInclude Include="NvidiaDriver.hpp" />
-    <ClInclude Include="OpenClFrame.hpp" />
     <ClInclude Include="ProgressBase.hpp" />
     <ClInclude Include="ProgressDisplay.hpp" />
     <ClInclude Include="ProgressDisplayConsole.hpp" />

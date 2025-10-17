@@ -18,8 +18,46 @@
 
 #include "TestMain.hpp"
 
+struct fp12 {
+	int32_t value;
+
+	fp12(int i) : value { i } {}
+
+	fp12() : fp12(0) {}
+
+	operator double() const { return 0.0; }
+
+	operator int() const { return 0; }
+};
+
+using Matfp = Mat<fp12>;
+
+
+void f() {
+	ImageBGR bgr = ImageBGR::readFromBMP("f:/x.bmp");
+	ImageYuv yuv = bgr.toYUV();
+	int h = yuv.h;
+	int w = yuv.w;
+	Matf matf;
+
+	{
+		Matf matf = Matc::fromArray(h, w, yuv.data(), false);
+		matf = matf.unaryOp([] (float f) { return f / 255.0f; });
+		Matf k = Matf::fromRow({ 0.0625f, 0.15f, 0.275f, 0.15f, 0.0625f });
+		util::ConsoleTimer ct("float");
+		matf = matf.filter(k);
+	}
+	matf.saveAsBinary("f:/x.dat");
+
+	{
+		Matc in = Matc::fromArray(h, w, yuv.data(), false);
+		Matfp mat = Matfp::generate(h, w, [&] (size_t r, size_t c) { return 0; });
+	}
+}
+
 int main() {
 	std::cout << "----------------------------" << std::endl << "TestMain:" << std::endl;
+	f();
 	//qrdec();
 	//draw("f:/drawing.bmp"); 
 	//filterCompare();
@@ -46,7 +84,7 @@ int main() {
 	//similarTransform();
 
 	//testSampler();
-	compareFramesPlatforms();
+	//compareFramesPlatforms();
 	//avxCompute();
 	//avxTest();
 

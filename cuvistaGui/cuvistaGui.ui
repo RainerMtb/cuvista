@@ -831,7 +831,7 @@
             <string>Pixels to crop from left side of video</string>
            </property>
            <property name="maximum">
-            <number>999</number>
+            <number>500</number>
            </property>
           </widget>
          </item>
@@ -889,7 +889,7 @@
        <item row="7" column="0">
         <widget class="QRadioButton" name="chkPlayer">
          <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;directly play stabilized video&lt;/p&gt;&lt;p&gt;requires Single Pass Mode&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;directly play stabilized video&lt;/p&gt;&lt;p&gt;requires Combined Stabilization Mode&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="text">
           <string>Live Playback</string>

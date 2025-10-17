@@ -74,7 +74,7 @@ public:
 	std::vector<uint8_t> audioData;
 	double pts;
 
-	SidePacket(int64_t frameIndex, double pts);
+	SidePacket(int64_t frameIndex, double pts, size_t audioDataSize);
 	SidePacket(int64_t frameIndex, const AVPacket* packet);
 	~SidePacket();
 };

@@ -38,7 +38,6 @@ PlayerWindow::PlayerWindow(QWidget* parent) :
     ui.setupUi(this);
     setWindowModality(Qt::ApplicationModal);
     connect(ui.btnPause, &QPushButton::clicked, this, &PlayerWindow::pause);
-    connect(ui.btnPlay, &QPushButton::clicked, this, &PlayerWindow::play);
     connect(ui.btnStop, &QPushButton::clicked, this, &PlayerWindow::close);
     connect(this, &PlayerWindow::sigUpdate, ui.videoWidget->videoSink(), &QVideoSink::videoFrameChanged);
     connect(this, &PlayerWindow::sigLate, ui.lblRealtime, &QLabel::setVisible);
@@ -46,11 +45,14 @@ PlayerWindow::PlayerWindow(QWidget* parent) :
 }
 
 void PlayerWindow::open(const QVideoFrame& videoFrame, bool hasAudio) {
-    ui.videoWidget->videoSink()->setVideoFrame(videoFrame);
+    ui.videoWidget->videoSink()->videoFrameChanged(videoFrame);
     ui.lblStatus->setText("Buffering...");
     ui.sliderVolume->setEnabled(hasAudio);
     QPixmap speaker = hasAudio ? mSpeakerOn : mSpeakerOff;
     ui.lblSpeaker->setPixmap(speaker.scaled(18, 18, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    ui.lblRealtime->setVisible(false);
+    ui.btnPause->setChecked(false);
+    isPaused = false;
 }
 
 void PlayerWindow::progress(QString str, QString status) {
@@ -59,13 +61,9 @@ void PlayerWindow::progress(QString str, QString status) {
 }
 
 void PlayerWindow::pause() {
-    isPaused = true;
-    ui.lblStatus->setText("Pausing...");
-}
-
-void PlayerWindow::play() {
-    isPaused = false;
-    ui.lblStatus->setText("Playing...");
+    bool p = ui.btnPause->isChecked();
+    ui.lblStatus->setText(p ? "Pausing..." : "Playing...");
+    isPaused = p;
 }
 
 void PlayerWindow::closeEvent(QCloseEvent* event) {
@@ -166,9 +164,8 @@ void PlayerWriter::writeOutput(const FrameExecutor& executor) {
         errorLogger().logError("cannot map video frame");
 
     } else {
-        int64_t idx = frameIndex;
         ImageRGBA image(mVideoFrame.height(), mVideoFrame.width(), mVideoFrame.bytesPerLine(0), mVideoFrame.bits(0));
-        executor.getOutputImage(idx, image);
+        executor.getOutputImage(frameIndex, image);
         mVideoFrame.unmap();
     }
 
@@ -217,8 +214,6 @@ bool PlayerWriter::flush() {
     return false;
 }
 
-PlayerWriter::~PlayerWriter() {}
-
 
 //-------------------------------------------------
 //------------- Progress Class --------------------
@@ -230,7 +225,7 @@ void PlayerProgress::update(const ProgressInfo& progress, bool force) {
 
     //frame stats
     QString str = "";
-    if (opstr.has_value()) str = QString("%1 (%2)").arg(idx).arg(QString::fromStdString(*opstr));
+    if (opstr.has_value()) str = QString("Frame: %1 (%2)").arg(idx).arg(QString::fromStdString(*opstr));
 
     //player state
     QString status = "Playing...";

@@ -33,7 +33,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="CoreMat.cpp" />
     <ClCompile Include="Affine2D.cpp" />
   </ItemGroup>
   <ItemGroup>

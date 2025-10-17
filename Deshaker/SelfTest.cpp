@@ -56,70 +56,80 @@ void runSelfTest(util::MessagePrinter& out, std::vector<DeviceInfoBase*> deviceL
 		data.validate(reader);
 		OutputWriter writer(data, reader);
 		
-		//executor and frame
-		MovieFrameCombined frame(data, reader, writer);
-		auto executor = deviceList[i]->create(data, frame);
-		
-		//first frame
-		//std::cout << "reading" << std::endl;
-		reader.read(frame.mBufferFrame);
-		executor->inputData(reader.frameIndex, frame.mBufferFrame);
-		executor->createPyramid(reader.frameIndex, {}, false);
-		//second frame
-		reader.read(frame.mBufferFrame);
-		executor->inputData(reader.frameIndex, frame.mBufferFrame);
-		executor->createPyramid(reader.frameIndex, {}, false);
-		//compute
-		//std::cout << "computing" << std::endl;
-		executor->computeStart(reader.frameIndex, frame.mResultPoints);
-		executor->computeTerminate(reader.frameIndex, frame.mResultPoints);
-		//input
-		ImageRGBA input(data.h, data.w);
-		executor->getInput(0, input);
-		//input.saveAsColorBMP(std::string("f:/input" + std::to_string(i) + ".bmp"));
-		//output
-		AffineTransform trf;
-		trf.addRotation(0.2).addTranslation(-40, 30);
-		executor->outputData(0, trf);
-		writer.writeOutput(*executor);
-
-		//checks
-		//std::cout << "running checks" << std::endl;
 		bool check = true;
-		if (uint64_t crc = input.crc(); crc != crcInput) {
-			out.print("FAIL input ");
+		try {
+			//frame executor
+			MovieFrameCombined frame(data, reader, writer);
+			std::shared_ptr<FrameExecutor> executor = deviceList[i]->create(data, frame);
+			executor->init();
+			if (errorLogger().hasError()) throw AVException(errorLogger().getErrorMessage());
+
+			//first frame
+			//std::cout << "reading" << std::endl;
+			reader.read(frame.mBufferFrame);
+			executor->inputData(reader.frameIndex, frame.mBufferFrame);
+			executor->createPyramid(reader.frameIndex, {}, false);
+			//second frame
+			reader.read(frame.mBufferFrame);
+			executor->inputData(reader.frameIndex, frame.mBufferFrame);
+			executor->createPyramid(reader.frameIndex, {}, false);
+			//compute
+			//std::cout << "computing" << std::endl;
+			executor->computeStart(reader.frameIndex, frame.mResultPoints);
+			executor->computeTerminate(reader.frameIndex, frame.mResultPoints);
+			//input
+			ImageRGBA input(data.h, data.w);
+			executor->getInput(0, input);
+			//input.saveAsColorBMP(std::string("f:/input" + std::to_string(i) + ".bmp"));
+			//output
+			AffineTransform trf;
+			trf.addRotation(0.2).addTranslation(-40, 30);
+			executor->outputData(0, trf);
+			writer.writeOutput(*executor);
+
+			//checks
+			//std::cout << "running checks" << std::endl;
+			if (uint64_t crc = input.crc(); crc != crcInput) {
+				out.print("FAIL input ");
+				check = false;
+			}
+			if (uint64_t crc = executor->getPyramid(0).crc(); crc != crcPyramid) {
+				out.print("FAIL pyramid ");
+				check = false;
+			}
+			if (uint64_t crc = executor->getTransformedOutput().crc(); crc != crcTransformed) {
+				//std::cout << std::hex << crc << " ";
+				out.print("FAIL transformed ");
+				check = false;
+			}
+			if (uint64_t crc = writer.getOutputFrame().crc(); crc != crcOutput) {
+				//std::cout << std::hex << crc << " ";
+				//writer.getOutputFrame().saveAsColorBMP("f:/test.bmp");
+				out.print("FAIL output ");
+				check = false;
+			}
+			util::CRC64 crc64;
+			for (const PointResult& pr : frame.mResultPoints) {
+				crc64.addDirect(pr.result);
+				crc64.addDirect(pr.idx);
+				crc64.addDirect(pr.ix0);
+				crc64.addDirect(pr.iy0);
+				crc64.addDirect(pr.x);
+				crc64.addDirect(pr.y);
+				crc64.addDirect(pr.u);
+				crc64.addDirect(pr.v);
+			}
+			if (uint64_t crc = crc64.result(); crc != crcResult) {
+				out.print("FAIL result ");
+				check = false;
+			}
+
+		} catch (AVException e) {
+			out.print("ERROR: ");
+			out.print(e.what());
 			check = false;
 		}
-		if (uint64_t crc = executor->getPyramid(0).crc(); crc != crcPyramid) {
-			out.print("FAIL pyramid ");
-			check = false;
-		}
-		if (uint64_t crc = executor->getTransformedOutput().crc(); crc != crcTransformed) {
-			//std::cout << std::hex << crc << " ";
-			out.print("FAIL transformed ");
-			check = false;
-		}
-		if (uint64_t crc = writer.getOutputFrame().crc(); crc != crcOutput) {
-			//std::cout << std::hex << crc << " ";
-			//writer.getOutputFrame().saveAsColorBMP("f:/test.bmp");
-			out.print("FAIL output ");
-			check = false;
-		}
-		util::CRC64 crc64;
-		for (const PointResult& pr : frame.mResultPoints) {
-			crc64.addDirect(pr.result); 
-			crc64.addDirect(pr.idx);
-			crc64.addDirect(pr.ix0);
-			crc64.addDirect(pr.iy0);
-			crc64.addDirect(pr.x);
-			crc64.addDirect(pr.y);
-			crc64.addDirect(pr.u);
-			crc64.addDirect(pr.v);
-		}
-		if (uint64_t crc = crc64.result(); crc != crcResult) {
-			out.print("FAIL result ");
-			check = false;
-		}
+
 		if (errorLogger().hasError()) {
 			out.print(errorLogger().getErrorMessage());
 			check = false;

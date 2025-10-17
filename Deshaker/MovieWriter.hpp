@@ -305,6 +305,7 @@ public:
 class StackedWriter : public FFmpegWriter {
 
 private:
+	int mWidth;
 	int mWidthTotal;
 	ImageYuv mInputFrame;
 	ImageYuv mInputFrameScaled;
@@ -313,9 +314,10 @@ private:
 public:
 	StackedWriter(MainData& data, MovieReader& reader) :
 		FFmpegWriter(data, reader, 1),
-		mWidthTotal { 2 * (data.w - data.stackCrop.left - data.stackCrop.right) },
+		mWidth { data.w - data.stackCrop.left - data.stackCrop.right },
+		mWidthTotal { 2 * mWidth },
 		mInputFrame(data.h, data.w, data.cpupitch),
-		mInputFrameScaled(data.h, data.w - data.stackCrop.left - data.stackCrop.right),
+		mInputFrameScaled(data.h, mWidth),
 		mOutputFrame(data.h, data.w, data.cpupitch) 
 	{}
 

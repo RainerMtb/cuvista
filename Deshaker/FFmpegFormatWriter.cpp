@@ -87,7 +87,7 @@ void FFmpegFormatWriter::open(AVCodecID codecId, const std::string& sourceName, 
     //open output for writing
     result = avio_open(&fmt_ctx->pb, fmt_ctx->url, AVIO_FLAG_WRITE);
     if (result < 0)
-        throw AVException("error opening file '" + mData.fileOut + "'");
+        throw AVException("error opening output file '" + mData.fileOut + "'");
 }
 
 void FFmpegFormatWriter::open(AVCodecID codecId) {

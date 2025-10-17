@@ -35,9 +35,10 @@
     
     <!-- there is no Window.Resources, must define in main grid, why the hell -->
     
-    <!-- Main -->
+    <!-- Main Grid -->
     <Grid x:Name="rootPanel" Margin="8" RowSpacing="8" RowDefinitions="*, auto, auto, auto">
 
+        <!-- Resources ######################################################## -->
         <Grid.Resources>
             <!-- define color picker flyout -->
             <Flyout x:Name="colorFlyout" x:Key="ColorFlyoutKey">
@@ -50,7 +51,9 @@
                 </StackPanel>
             </Flyout>
 
+            <!-- images -->
             <Image x:Name="xamlImageError" Source="/Assets/signs-01.png"/>
+            <Image x:Name="xamlImageWorking" Source="/Assets/signs-02.png"/>
 
         </Grid.Resources>
 
@@ -88,10 +91,10 @@
                     <TextBlock Grid.Column="0" Grid.Row="0" Text="Input" TextAlignment="Center"/>
                     <TextBlock Grid.Column="1" Grid.Row="0" Text="Output" TextAlignment="Center"/>
                     <Grid x:Name="progressInputGrid" Grid.Column="0" Grid.Row="1" Margin="0, 0, 4, 0" MaxHeight="400">
-                        <Image x:Name="progressInputImage" Stretch="Uniform"/>
+                        <Image x:Name="imageProgressInput" Stretch="Uniform"/>
                     </Grid>
                     <Grid x:Name="progressOutputGrid" Grid.Column="1" Grid.Row="1" Margin="4, 0, 0, 0" MaxHeight="400">
-                        <Image x:Name="progressOutputImage" Stretch="Uniform"/>
+                        <Image x:Name="imageProgressOutput" Stretch="Uniform"/>
                     </Grid>
                     <TextBlock x:Name="textTimeInput" Grid.Column="0" Grid.Row="2" TextAlignment="Center"/>
                     <TextBlock x:Name="textTimeOutput" Grid.Column="1" Grid.Row="2" TextAlignment="Center"/>
@@ -105,8 +108,41 @@
                 </Grid>
             </StackPanel>
         </ContentDialog>
+        
+        <!-- Player Dialog -->
+        <ContentDialog x:Name="playerDialog">
+            <ContentDialog.Resources>
+                <x:Double x:Key="ContentDialogMaxWidth">1400</x:Double>
+                <x:Double x:Key="ContentDialogMaxHeight">800</x:Double>
+            </ContentDialog.Resources>
+            <StackPanel Orientation="Vertical" Spacing="8">
+                <Grid Background="Black">
+                    <Image x:Name="imageVideoPlayer" Stretch="Uniform" MinWidth="480" MinHeight="480" MaxHeight="700"/>
+                </Grid>
+                <Grid ColumnDefinitions="auto, *, auto, auto, auto, auto, auto, auto" ColumnSpacing="8">
+                    <TextBlock x:Name="lblPlayerStatus" Text="Status" Grid.Column="0" VerticalAlignment="Center"/>
+                    <Image x:Name="imageRealtime" Grid.Column="2" Stretch="Uniform" Width="24" ToolTipService.ToolTip="Cannot Stabilize in Realtime"/>
+                    <TextBlock x:Name="lblPlayerFrame" Grid.Column="3" Width="140" VerticalAlignment="Center"/>
+                    <SymbolIcon x:Name="lblSpeaker" Grid.Column="4" Width="24"/>
+                    <Slider x:Name="sliderVolume" Grid.Column="5" Width="72" Value="75" ValueChanged="sliderVolumeChanged"/>
+                    <ToggleButton x:Name="btnPlayerPause" Grid.Column="6" Click="btnPlayerPauseClick">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xF8AE;"/>
+                            <TextBlock Text="Pause" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </ToggleButton>
+                    <Button x:Name="btnPlayerStop" Grid.Column="7" Click="btnPlayerStopClick">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xEE95;"/>
+                            <TextBlock Text="Stop" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </Grid>
+            </StackPanel>
+        </ContentDialog>
 
-            <!-- Input -->
+        <!-- Main Content ######################################################## -->
+        <!-- Input -->
         <Grid RowDefinitions="auto, *"
               RowSpacing="8"
               Padding="4">
@@ -114,7 +150,7 @@
             <!-- Input Button and recent files -->
             <Grid ColumnDefinitions="auto, *" Height="32" ColumnSpacing="16">
 
-                <Button x:Name="btnOpen" Click="btnOpenClick">
+                <Button Click="btnOpenClick">
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <Image Source="/Assets/01_file-video-solid.png" Stretch="Uniform"/>
                         <TextBlock Text="Input" VerticalAlignment="Center" FontWeight="SemiBold"/>
@@ -154,7 +190,7 @@
               Padding="8">
 
             <TextBlock Grid.Row="0" Text="Stabilization Mode:" VerticalAlignment="Center" FontWeight="SemiBold"/>
-            <ComboBox x:Name="comboMode" Grid.Row="0" Grid.Column="1" MinWidth="300"/>
+            <ComboBox x:Name="comboMode" Grid.Row="0" Grid.Column="1" MinWidth="300" SelectionChanged="modeSelectionChanged"/>
 
             <TextBlock Grid.Row="1" Text="Stabilization Device:" VerticalAlignment="Center" FontWeight="SemiBold"/>
             <ComboBox x:Name="comboDevice" Grid.Row="1" Grid.Column="1" MinWidth="300" HorizontalAlignment="Stretch" SelectionChanged="comboDeviceChanged"/>
@@ -188,7 +224,7 @@
 
         <!-- Output -->
         <Grid Grid.Row="2"
-              RowDefinitions="32, 32, 32, 2, 32, 32"
+              RowDefinitions="32, 32, 32, 32, 2, 32, 32"
               ColumnDefinitions="auto, *"
               RowSpacing="12"
               ColumnSpacing="16"
@@ -228,15 +264,29 @@
             <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Spacing="16">
                 <Image Width="24"  Stretch="Uniform" Source="/Assets/10_arrow.png"/>
                 <TextBlock Text="Pixel to Crop on Left" VerticalAlignment="Center"/>
-                <NumberBox x:Name="spinStackLeft" Width="110" Value="0" SmallChange="1" LargeChange="5" SpinButtonPlacementMode="Compact"/>
+                <NumberBox x:Name="spinStackLeft" Width="110" SmallChange="1" LargeChange="5" 
+                           SpinButtonPlacementMode="Compact" Minimum="0" Value="0">
+                </NumberBox>
                 <TextBlock Text="on Right" VerticalAlignment="Center"/>
-                <NumberBox x:Name="spinStackRight" Width="110" Value="0" SmallChange="1" LargeChange="5" SpinButtonPlacementMode="Compact"/>
+                <NumberBox x:Name="spinStackRight" Width="110" SmallChange="1" LargeChange="5" 
+                           SpinButtonPlacementMode="Compact" Minimum="0" Value="0">
+                </NumberBox>
+            </StackPanel>
+            
+            <!-- Output Live Player -->
+            <RadioButton Grid.Row="3" GroupName="grpOutput" x:Name="chkPlayer" Content="Live Playback" FontWeight="SemiBold"
+                         ToolTipService.ToolTip="Requires Combined Stabilization Mode"/>
+            <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Spacing="16">
+                <Image Width="24"  Stretch="Uniform" Source="/Assets/10_arrow.png"/>
+                <TextBlock Text="Play Audio" VerticalAlignment="Center"/>
+                <ComboBox x:Name="comboAudioTrack" MinWidth="200"/>
             </StackPanel>
 
-            <CheckBox Grid.Row="4" x:Name="chkOverwrite" Content="Always Overwrite" VerticalAlignment="Center" FontWeight="SemiBold"/>
+            <!-- Output Settings -->
+            <CheckBox Grid.Row="5" x:Name="chkOverwrite" Content="Always Overwrite" VerticalAlignment="Center" FontWeight="SemiBold"/>
 
-            <CheckBox Grid.Row="5" x:Name="chkFrameLimit" Content="Limit Output" VerticalAlignment="Center" FontWeight="SemiBold"/>
-            <StackPanel Grid.Row="5" Grid.Column="1" Orientation="Horizontal" Spacing="8">
+            <CheckBox Grid.Row="6" x:Name="chkFrameLimit" Content="Limit Output" VerticalAlignment="Center" FontWeight="SemiBold"/>
+            <StackPanel Grid.Row="6" Grid.Column="1" Orientation="Horizontal" Spacing="8">
                 <NumberBox x:Name="spinFrameLimit" Width="110"  Value="500" SmallChange="1" LargeChange="10" SpinButtonPlacementMode="Compact"/>
                 <TextBlock Text="Frames" VerticalAlignment="Center"/>
             </StackPanel>

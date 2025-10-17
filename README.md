@@ -29,13 +29,14 @@ On a RTX 3060 graphics card a typical video in FullHD resolution (1920 x 1080) s
 ## Limitations
 Stabilization works best with *natural video footage* like a camera mounted on a vehicle. It does not really work with sudden scene changes like a movie cut. Sudden changes in brightness can also throw off computations. In such cases even more shaking can be introduced.
 
-# Using CUVISTA
-For Windows you can get the latest version from the [Releases](https://github.com/RainerMtb/cuvista/releases) page. Just download either the msi file to install, or the zip file to unzip and run either ```cuvista.exe``` on the command line or ```cuvistaGui.exe``` for a graphical user interface. 
+# Using CUVISTA on Windows
+You can get the application ready to use in three ways
+
+- From the Microsoft App Store via [CUVISTA](https://apps.microsoft.com/detail/9njq1qxk96w7)
+- From GitHub on the [Releases](https://github.com/RainerMtb/cuvista/releases) page you can download an msi file to install the latest version
+- Also on the [Releases](https://github.com/RainerMtb/cuvista/releases) page you will find a zip file. This version does not need any installation. Download, unzip and run either ```cuvista.exe``` on the command line or ```cuvistaGui.exe``` for a graphical user interface. This version might require you to install additional components such as the Microsoft Visual C/C++ Runtime Libraries which you find at https://aka.ms/vs/17/release/vc_redist.x64.exe
 
 Have a look at available options on the command line via ```cuvista -h``` or ```cuvista -help```, in the GUI version a subset of most important options is available.
-
-In a fresh Windows environment the the Microsoft Visual C/C++ Runtime Libraries might be missing, so when using the zip archive you might be prompted with a message like ```MSVCP140.dll not found```, then download and install the latest redistributable https://aka.ms/vs/17/release/vc_redist.x64.exe. The MSI installer already comes with the necessary system files.
-
 
 
 # Building CUVISTA

@@ -115,6 +115,7 @@ void NvEncoder::probeSupportedCodecs(DeviceInfoCuda& deviceInfoCuda) {
 		deviceInfoCuda.encodingOptions.emplace_back(EncodingDevice::NVENC, Codec::H264);
 
 	encFuncList.nvEncDestroyEncoder(mEncoder);
+	mEncoder = nullptr;
 }
 
 
@@ -347,6 +348,7 @@ void NvEncoder::destroyEncoder() {
 	//destroy encoder
 	if (mEncoder != nullptr) {
 		encFuncList.nvEncDestroyEncoder(mEncoder);
+		mEncoder = nullptr;
 	}
 
 	cuCtxPopCurrent(nullptr);

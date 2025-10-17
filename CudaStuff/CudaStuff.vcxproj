@@ -88,6 +88,7 @@
       <CodeGeneration>compute_75,sm_75;compute_80,sm_80;compute_89,sm_89;compute_90,sm_90;compute_100,sm_100;compute_110,sm_110;compute_120,sm_120;compute_121,sm_121</CodeGeneration>
       <Defines>BUILD_CUDA=1</Defines>
       <Include>$(SolutionDir)Common</Include>
+      <CompileOut>$(SolutionDir)bin\$(Platform)\$(Configuration)\%(Filename)%(Extension).obj</CompileOut>
     </CudaCompile>
     <CudaLink>
       <GPUDebugInfo>true</GPUDebugInfo>
@@ -117,6 +118,7 @@
       <CodeGeneration>compute_75,sm_75;compute_80,sm_80;compute_89,sm_89;compute_90,sm_90;compute_100,sm_100;compute_110,sm_110;compute_120,sm_120;compute_121,sm_121</CodeGeneration>
       <Defines>BUILD_CUDA=1</Defines>
       <Include>$(SolutionDir)Common</Include>
+      <CompileOut>$(SolutionDir)bin\$(Platform)\$(Configuration)\%(Filename)%(Extension).obj</CompileOut>
     </CudaCompile>
     <CudaLink>
       <GPUDebugInfo>InheritFromProject</GPUDebugInfo>

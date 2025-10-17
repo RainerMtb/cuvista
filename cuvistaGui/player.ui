@@ -103,13 +103,6 @@
        </widget>
       </item>
       <item>
-       <widget class="QLabel" name="label_1">
-        <property name="text">
-         <string>Frame:</string>
-        </property>
-       </widget>
-      </item>
-      <item>
        <widget class="QLabel" name="lblFrame">
         <property name="minimumSize">
          <size>
@@ -121,7 +114,7 @@
          <enum>Qt::LayoutDirection::LeftToRight</enum>
         </property>
         <property name="text">
-         <string>X (00:00.000)</string>
+         <string>Frame: X (00:00.000)</string>
         </property>
         <property name="alignment">
          <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
@@ -187,22 +180,8 @@
          <iconset resource="cuvistaGui.qrc">
           <normaloff>:/cuvistaGui/res/06_pause-solid.png</normaloff>:/cuvistaGui/res/06_pause-solid.png</iconset>
         </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="btnPlay">
-        <property name="minimumSize">
-         <size>
-          <width>75</width>
-          <height>28</height>
-         </size>
-        </property>
-        <property name="text">
-         <string> Play</string>
-        </property>
-        <property name="icon">
-         <iconset resource="cuvistaGui.qrc">
-          <normaloff>:/cuvistaGui/res/04_play-solid.png</normaloff>:/cuvistaGui/res/04_play-solid.png</iconset>
+        <property name="checkable">
+         <bool>true</bool>
         </property>
        </widget>
       </item>

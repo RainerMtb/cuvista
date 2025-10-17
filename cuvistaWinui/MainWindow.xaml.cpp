@@ -42,11 +42,6 @@ using namespace Microsoft::UI::Windowing;
 //using namespace Windows::Foundation; --> error C2872: 'IUnknown': ambiguous symbol ???
 
 
-template <class... Args> hstring hformat(std::format_string<Args...> fmt, Args&&... args) {
-    return to_hstring(std::format(fmt, std::forward<Args>(args)...));
-}
-
-
 namespace winrt::cuvistaWinui::implementation {
 
     //-------------------------------------------------------------------------
@@ -111,7 +106,7 @@ namespace winrt::cuvistaWinui::implementation {
         setBackgroundColor(bg);
 
         //image sequence format
-        for (const auto& oit : mOutputImageTypes) {
+        for (const auto& oit : mOutputImageTypeMap) {
             IInspectable iis = box_value(oit.first);
             comboImageType().Items().Append(iis);
         }
@@ -147,16 +142,20 @@ namespace winrt::cuvistaWinui::implementation {
         }
 
         //stored settings
+        int minW = 700;
+        int minH = 850;
         int windowX = localValues.Lookup(L"windowX").try_as<int>().value_or(50);
         int windowY = localValues.Lookup(L"windowY").try_as<int>().value_or(50);
-        int windowWidth = localValues.Lookup(L"windowWidth").try_as<int>().value_or(700);
-        int windowHeight = localValues.Lookup(L"windowHeight").try_as<int>().value_or(800);
+        int windowWidth = localValues.Lookup(L"windowWidth").try_as<int>().value_or(0);
+        int windowHeight = localValues.Lookup(L"windowHeight").try_as<int>().value_or(0);
+        windowWidth = std::max(windowWidth, minW);
+        windowHeight = std::max(windowHeight, minH);
         AppWindow().MoveAndResize({ windowX, windowY, windowWidth, windowHeight });
 
         //min size
         OverlappedPresenter op = AppWindow().Presenter().as<OverlappedPresenter>();
-        op.PreferredMinimumWidth(700);
-        op.PreferredMinimumHeight(800);
+        op.PreferredMinimumWidth(minW);
+        op.PreferredMinimumHeight(minH);
 
         //more settings
         chkOverwrite().IsChecked(localValues.Lookup(L"overwrite").try_as<bool>().value_or(false));
@@ -200,6 +199,9 @@ namespace winrt::cuvistaWinui::implementation {
 
         mInputReady = false;
         mInputFile = inputPath;
+        comboAudioTrack().Items().Clear();
+        comboAudioTrack().Items().Append(box_string("No Audio"));
+        mAudioTrackMap.clear();
 
         try {
             mReader.close();
@@ -211,11 +213,8 @@ namespace winrt::cuvistaWinui::implementation {
 
             if (errorLogger().hasNoError()) {
                 mReader.read(mInputYUV); //try to read again for second image
-                mInputImageBitmap = Media::Imaging::WriteableBitmap(mReader.w, mReader.h);
-                Streams::IBuffer pixelBuffer = mInputImageBitmap.PixelBuffer();
-                mInputBGRA = ImageBGRA(mReader.h, mReader.w, pixelBuffer.Length() / mReader.h, pixelBuffer.data());
+                mInputBGRA = ImageXamlBGRA::create(imageInput(), mReader.h, mReader.w);
                 mInputYUV.toBaseRgb(mInputBGRA);
-                imageInput().Source(mInputImageBitmap);
             }
 
             if (errorLogger().hasError()) {
@@ -228,9 +227,15 @@ namespace winrt::cuvistaWinui::implementation {
             //info about streams
             std::string str;
             for (StreamContext& sc : mReader.mInputStreams) {
-                str += sc.inputStreamInfo().inputStreamSummary();
+                StreamInfo info = sc.inputStreamInfo();
+                str += info.inputStreamSummary();
                 if (sc.inputStream->index == mReader.videoStream->index) {
                     str += mReader.videoStreamSummary();
+                }
+                if (info.mediaType == AVMEDIA_TYPE_AUDIO) {
+                    hstring hstr = hformat("Track {}: {}", sc.inputStream->index, info.codec);
+                    mAudioTrackMap.insert({ comboAudioTrack().Items().Size(), sc.inputStream->index });
+                    comboAudioTrack().Items().Append(box_value(hstr));
                 }
             }
             //trim string
@@ -241,9 +246,13 @@ namespace winrt::cuvistaWinui::implementation {
             }
 
             seekAsync(0.1);
+            comboAudioTrack().SelectedIndex(comboAudioTrack().Items().Size() > 1);
             lblStatus().Text(hformat("Version {}", CUVISTA_VERSION));
             texInput().Text(to_hstring(str));
             lblStatusLink().Inlines().Clear();
+
+            spinStackLeft().Maximum(mReader.w * 40.0 / 100.0);
+            spinStackRight().Maximum(mReader.w * 40.0 / 100.0);
 
         } catch (const AVException& ex) {
             imageInput().Source(xamlImageError().Source());
@@ -267,10 +276,11 @@ namespace winrt::cuvistaWinui::implementation {
         lblStatus().Text(L"");
         lblStatusLink().Inlines().Clear();
 
-        //get output video file
         //with radio buttons the IsChecked() method returns a IReference which ALWAYS will be true -> need to check the Value()
         if (chkEncode().IsChecked().Value() || chkStack().IsChecked().Value()) {
+            //get output video file
             mOutputFile = selectFileSave(GetActiveWindow(), chkOverwrite().IsChecked().Value());
+            if (mOutputFile.empty()) co_return;
         }
 
         //get output image sequence folder
@@ -299,24 +309,17 @@ namespace winrt::cuvistaWinui::implementation {
                     mOutputFile = folder;
                 }
             }
-        }
-
-        if (mOutputFile.empty()) {
-            co_return;
+            if (mOutputFile.empty()) co_return;
         }
         //debugPrint(outputFile);
 
         //check if input and output point to same file
         std::filesystem::path p1 = mInputFile.c_str();
         std::filesystem::path p2 = mOutputFile.c_str();
+        //use error code, otherwise a non existent output file will throw an exception
         std::error_code ec;
         if (std::filesystem::equivalent(p1, p2, ec)) {
-            Controls::ContentDialog dialog;
-            dialog.Title(box_value(L"Invalid File Selection"));
-            dialog.Content(box_value(L"Please select different files\nfor input and output"));
-            dialog.CloseButtonText(L"OK");
-            dialog.XamlRoot(rootPanel().XamlRoot());
-            co_await dialog.ShowAsync();
+            showErrorDialogAsync(L"Invalid File Selection", L"Please select different files\nfor input and output");
             co_return;
         }
 
@@ -336,95 +339,126 @@ namespace winrt::cuvistaWinui::implementation {
         mData.backgroundColor = Color::rgb(mBackgroundColor.R, mBackgroundColor.G, mBackgroundColor.B);
         mData.backgroundColor.toYUVfloat(&mData.bgcolorYuv.y, &mData.bgcolorYuv.u, &mData.bgcolorYuv.v);
 
-        //rewind reader to beginning of input
-        mReader.rewind();
-        //check input parameters
-        mData.validate(mReader);
-        //reset input handler
-        mBufferedInput = UserInputEnum::CONTINUE;
-        //crop setting for stack
-        mData.stackCrop = { (int) spinStackLeft().Value(), (int) spinStackRight().Value() };
+        std::shared_ptr<ProgressDialog> progress;
+        std::shared_ptr<MovieFrame> frame;
+        std::shared_ptr<FrameExecutor> executor;
+        std::shared_ptr<MovieWriter> writer;
+        try {
+            //rewind reader to beginning of input
+            mReader.rewind();
+            //check input parameters
+            mData.validate(mReader);
+            //reset input handler
+            mUserInput = UserInputEnum::CONTINUE;
+            //crop setting for stack
+            mData.stackCrop = { (int) spinStackLeft().Value(), (int) spinStackRight().Value() };
+            //audio track to play
+            mAudioStreamIndex = -1;
+            if (comboAudioTrack().SelectedIndex() > 0) {
+                mAudioStreamIndex = mAudioTrackMap.at(comboAudioTrack().SelectedIndex());
+            }
 
-        //select writer
-        OutputType imageType = mOutputImageTypes[comboImageType().SelectedValue().as<hstring>()];
-        if (chkStack().IsChecked().Value())
-            mWriter = std::make_shared<StackedWriter>(mData, mReader);
-        else if (chkSequence().IsChecked().Value() && imageType == OutputType::SEQUENCE_BMP)
-            mWriter = std::make_shared<BmpImageWriter>(mData, mReader);
-        else if (chkSequence().IsChecked().Value() && imageType == OutputType::SEQUENCE_JPG)
-            mWriter = std::make_shared<JpegImageWriter>(mData, mReader);
-        else if (chkEncode().IsChecked().Value() && mData.requestedEncoding.device == EncodingDevice::NVENC)
-            mWriter = std::make_shared<CudaFFmpegWriter>(mData, mReader);
-        else if (chkEncode().IsChecked().Value())
-            mWriter = std::make_shared<FFmpegWriter>(mData, mReader);
-        else
+            //select writer
+            OutputType imageType = mOutputImageTypeMap.at(comboImageType().SelectedValue().as<hstring>());
+            if (chkStack().IsChecked().Value())
+                writer = std::make_shared<StackedWriter>(mData, mReader);
+            else if (chkSequence().IsChecked().Value() && imageType == OutputType::SEQUENCE_BMP)
+                writer = std::make_shared<BmpImageWriter>(mData, mReader);
+            else if (chkSequence().IsChecked().Value() && imageType == OutputType::SEQUENCE_JPG)
+                writer = std::make_shared<JpegImageWriter>(mData, mReader);
+            else if (chkEncode().IsChecked().Value() && mData.requestedEncoding.device == EncodingDevice::NVENC)
+                writer = std::make_shared<CudaFFmpegWriter>(mData, mReader);
+            else if (chkPlayer().IsChecked().Value())
+                writer = std::make_shared<PlayerWriter>(*this, *executor, mData, mReader);
+            else if (chkEncode().IsChecked().Value())
+                writer = std::make_shared<FFmpegWriter>(mData, mReader);
+            else
+                co_return;
+
+            //open writer
+            writer->open(mData.requestedEncoding);
+
+            //select frame handler
+            mData.mode = comboMode().SelectedIndex();
+            if (mData.mode == 0) {
+                frame = std::make_shared<MovieFrameCombined>(mData, mReader, *writer);
+            } else {
+                frame = std::make_shared<MovieFrameConsecutive>(mData, mReader, *writer);
+            }
+
+            //select frame executor class
+            executor = mData.deviceList[mData.deviceSelected]->create(mData, *frame);
+            executor->init();
+
+            //check error logger
+            if (errorLogger().hasError()) {
+                throw AVException(errorLogger().getErrorMessage());
+            }
+
+        } catch (AVException e) {
+            hstring msg = to_hstring(e.what());
+            showErrorDialogAsync(L"Error", msg);
+            lblStatus().Text(msg);
+            errorLogger().clear();
             co_return;
-
-        //open writer
-        mWriter->open(mData.requestedEncoding);
-
-        //select frame handler
-        mData.mode = comboMode().SelectedIndex();
-        if (mData.mode == 0) {
-            mFrame = std::make_shared<MovieFrameCombined>(mData, mReader, *mWriter);
-        } else {
-            mFrame = std::make_shared<MovieFrameConsecutive>(mData, mReader, *mWriter);
         }
 
-        //select frame executor class
-        mExecutor = mData.deviceList[mData.deviceSelected]->create(mData, *mFrame);
+        //setup dialog
+        if (chkPlayer().IsChecked().Value()) {
+            //start gui progress class
+            progress = std::make_shared<PlayerProgress>(*this, *executor);
 
-        //start progress class
-        mProgress = std::make_shared<ProgressGui>(*this, GetActiveWindow(), *mExecutor);
+            //player output video image
+            mProgressOutput = ImageXamlBGRA::create(imageVideoPlayer(), mReader.h, mReader.w);
+            mProgressOutput.loadImageScaledToFit(L"ms-appx:///Assets/signs-02.png");
+
+        } else {
+            //start gui progress class
+            progress = std::make_shared<ProgressGui>(*this, GetActiveWindow(), *executor);
+
+            //progress dialog
+            progressBar().Value(0.0);
+
+            Media::SolidColorBrush brush(mBackgroundColor);
+            progressInputGrid().Background(brush);
+            progressOutputGrid().Background(brush);
+
+            //progress dialog images
+            mProgressInput = ImageXamlBGRA::create(imageProgressInput(), mReader.h, mReader.w);
+            mProgressInput.loadImageScaledToFit(L"ms-appx:///Assets/signs-02.png");
+            mProgressOutput = ImageXamlBGRA::create(imageProgressOutput(), mReader.h, mReader.w);
+            mProgressOutput.loadImageScaledToFit(L"ms-appx:///Assets/signs-02.png");
+        }
+        lblStatus().Text(L"stabilizing...");
 
         //start timing
         mData.timeStart();
 
-        mFutureLoop = std::async(std::launch::async, &MainWindow::runLoop, this);
-        lblStatus().Text(L"stabilizing...");
+        //start process loop ----------------------------------------------------
+        auto loopFunction = [&] {
+            LoopResult result = frame->runLoop(*progress, *this, executor);
+            DispatcherQueue().TryEnqueue([&] { progress->dialog().Hide(); });
+            return result;
+        };
+        mFutureLoop = std::async(std::launch::async, loopFunction);
 
-        //progrss dialog
-        progressBar().Value(0.0);
+        //show dialog -----------------------------------------------------------
+        co_await progress->dialog().ShowAsync();
 
-        Media::SolidColorBrush brush(mBackgroundColor);
-        progressInputGrid().Background(brush);
-        progressOutputGrid().Background(brush);
-
-        //progress dialog images
-        mProgressInputBitmap = Media::Imaging::WriteableBitmap(mReader.w, mReader.h);
-        mProgressOutputBitmap = Media::Imaging::WriteableBitmap(mReader.w, mReader.h);
-        mProgressInputBgra = ImageBGRA(mReader.h, mReader.w, mReader.w * 4, mProgressInputBitmap.PixelBuffer().data());
-        mProgressOutputBgra = ImageBGRA(mReader.h, mReader.w, mReader.w * 4, mProgressOutputBitmap.PixelBuffer().data());
-
-        Imaging::SoftwareBitmap scaledImage = co_await loadScaledImage(L"ms-appx:///Assets/signs-02.png", mReader.w, mReader.h);
-        scaledImage.CopyToBuffer(mProgressInputBitmap.PixelBuffer());
-        scaledImage.CopyToBuffer(mProgressOutputBitmap.PixelBuffer());
-
-        progressInputImage().Source(mProgressInputBitmap);
-        progressOutputImage().Source(mProgressOutputBitmap);
-
-        //start frame loop async -----------------------------------------------------------
-        co_await progressDialog().ShowAsync();
-
-        //after dialog is hidden again -----------------------------------------------------
+        //dialog hidden again ----------------------------------------------------
         //debugPrint("loop done");
         LoopResult result = mFutureLoop.get();
         double secs = mData.timeElapsedSeconds();
-        double fps = mWriter->frameEncoded / secs;
-        mWriter.reset();
-        mExecutor.reset();
-        mFrame.reset();
-        mProgress.reset();
+        double fps = writer->frameEncoded / secs;
+        writer.reset();
+        executor.reset();
+        frame.reset();
+        progress.reset();
 
         if (result == LoopResult::LOOP_ERROR) {
             hstring msg = to_hstring(errorLogger().getErrorMessage());
+            showErrorDialogAsync(L"Error", msg);
             lblStatus().Text(msg);
-            Controls::ContentDialog dialog;
-            dialog.Title(box_value(L"Error"));
-            dialog.Content(box_value(msg));
-            dialog.CloseButtonText(L"OK");
-            dialog.XamlRoot(rootPanel().XamlRoot());
-            co_await dialog.ShowAsync();
             errorLogger().clear();
 
         } else if (result == LoopResult::LOOP_CANCELLED) {
@@ -439,13 +473,6 @@ namespace winrt::cuvistaWinui::implementation {
         //debugPrint("done");
     }
 
-    //run frame loop on background thread
-    LoopResult MainWindow::runLoop() {
-        LoopResult result = mFrame->runLoop(*mProgress, *this, mExecutor);
-        DispatcherQueue().TryEnqueue([&] { progressDialog().Hide(); });
-        return result;
-    }
-
 
     //-------------------------------------------------------------------------
     //-------------------- Event Handlers -------------------------------------
@@ -456,7 +483,7 @@ namespace winrt::cuvistaWinui::implementation {
         if (mInputReady && mReader.seek(frac) && mReader.read(mInputYUV)) {
             mInputYUV.toBaseRgb(mInputBGRA);
             DispatcherQueue().TryEnqueue([&, frac] {
-                mInputImageBitmap.Invalidate();
+                mInputBGRA.invalidate();
                 inputPosition().Value(frac * 100.0);
             });
         }
@@ -492,6 +519,7 @@ namespace winrt::cuvistaWinui::implementation {
         }
     }
 
+    //select file
     void MainWindow::btnOpenClick(const IInspectable& sender, const RoutedEventArgs& args) {
         //debugPrint("open");
         hstring file = selectFileOpen(GetActiveWindow());
@@ -500,6 +528,7 @@ namespace winrt::cuvistaWinui::implementation {
         }
     }
 
+    //commit color selection
     void MainWindow::btnColorOk(const IInspectable& sender, const RoutedEventArgs& args) {
         //debugPrint("ok");
         setBackgroundColor(colorPicker().Color());
@@ -507,17 +536,20 @@ namespace winrt::cuvistaWinui::implementation {
         radioColor().IsChecked(true);
     }
 
+    //cancel color selection
     void MainWindow::btnColorCancel(const IInspectable& sender, const RoutedEventArgs& args) {
         //debugPrint("cancel");
         colorFlyout().Hide();
     }
 
+    //select color
     void MainWindow::lblColorClick(const IInspectable& sender, const Input::TappedRoutedEventArgs& args) {
         //debugPrint("color picker");
         colorPicker().Color(mBackgroundColor);
         Controls::Primitives::FlyoutBase::ShowAttachedFlyout(sender.as<FrameworkElement>());
     }
 
+    //seek to file position
     fire_and_forget MainWindow::imageInputClick(const IInspectable& sender, const Input::TappedRoutedEventArgs& args) {
         winrt::Windows::Foundation::Point p = args.GetPosition(imageBackground());
         double fraction = 1.0 * p.X / imageBackground().ActualWidth();
@@ -528,7 +560,7 @@ namespace winrt::cuvistaWinui::implementation {
     //cancel stabilization
     void MainWindow::btnStopClick(const IInspectable& sender, const RoutedEventArgs& args) {
         //set the cancel signal, send to frame loop via callback
-        mBufferedInput = UserInputEnum::QUIT;
+        mUserInput = UserInputEnum::QUIT;
     }
 
     //open video file in registered windows app
@@ -539,6 +571,27 @@ namespace winrt::cuvistaWinui::implementation {
         }
     }
 
+
+    //---------------------------------------------------------------
+    //-------------------- Player Events ----------------------------
+    //---------------------------------------------------------------
+
+    void MainWindow::btnPlayerPauseClick(const IInspectable& sender, const RoutedEventArgs& args) {
+        bool p = btnPlayerPause().IsChecked().Value();
+        lblPlayerStatus().Text(p ? L"Pausing..." : L"Playing...");
+        mPlayerPaused = p;
+    }
+
+    void MainWindow::btnPlayerStopClick(const IInspectable& sender, const RoutedEventArgs& args) {
+        mUserInput = UserInputEnum::QUIT;
+        mPlayerPaused = false;
+        btnPlayerPause().IsChecked(false);
+    }
+
+    void MainWindow::sliderVolumeChanged(const IInspectable& sender, const Controls::Primitives::RangeBaseValueChangedEventArgs& args) {
+        double volume = args.NewValue();
+        mAudioGain = volume / 100.0;
+    }
 
     //---------------------------------------------------------------
     //-------------------- Info Box  --------------------------------
@@ -603,6 +656,16 @@ namespace winrt::cuvistaWinui::implementation {
     //-------------------- Private Methods ------------------------------------
     //-------------------------------------------------------------------------
 
+    fire_and_forget MainWindow::showErrorDialogAsync(hstring title, hstring content) {
+        Controls::ContentDialog dialog;
+        dialog.Title(box_value(title));
+        dialog.Content(box_value(content));
+        dialog.CloseButtonText(L"OK");
+        dialog.XamlRoot(rootPanel().XamlRoot());
+        co_await dialog.ShowAsync();
+        co_return;
+    }
+
     void MainWindow::addInputFile(hstring file) {
         if (file.size() > 0) {
             //debugPrint(L"add file '" + file + L"'");
@@ -650,8 +713,17 @@ namespace winrt::cuvistaWinui::implementation {
         texInput().Text(L"");
         comboInputFile().Items().Clear();
         inputPosition().Value(0.0);
-        mInputImageBitmap = Media::Imaging::WriteableBitmap(100, 100);
-        imageInput().Source(mInputImageBitmap);
+        mInputBGRA = ImageXamlBGRA::create(imageInput(), 100, 100);
+    }
+
+    void MainWindow::modeSelectionChanged(const IInspectable& sender, const Controls::SelectionChangedEventArgs& args) {
+        if (comboMode().SelectedIndex() == 0) {
+            chkPlayer().IsEnabled(true);
+
+        } else {
+            chkPlayer().IsEnabled(false);
+            chkPlayer().IsChecked(false);
+        }
     }
 
 
@@ -661,8 +733,8 @@ namespace winrt::cuvistaWinui::implementation {
 
     //called on background thread
     UserInputEnum MainWindow::checkState() {
-        UserInputEnum e = mBufferedInput;
-        mBufferedInput = UserInputEnum::NONE;
+        UserInputEnum e = mUserInput;
+        mUserInput = UserInputEnum::NONE;
         return e;
     }
 
@@ -685,7 +757,7 @@ namespace winrt::cuvistaWinui::implementation {
         //debugPrint("closed");
         //args.Handled(true); //cancel the event
        if (mFutureLoop.valid()) {
-           mBufferedInput = UserInputEnum::QUIT;
+           mUserInput = UserInputEnum::QUIT;
            mFutureLoop.wait();
        }
 
@@ -722,3 +794,4 @@ namespace winrt::cuvistaWinui::implementation {
         }
     }
 }
+

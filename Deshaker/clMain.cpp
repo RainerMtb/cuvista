@@ -36,7 +36,7 @@ static bool operator == (const ImageFormat& a, const ImageFormat& b) {
 	return a.image_channel_data_type == b.image_channel_data_type && a.image_channel_order == b.image_channel_order;
 }
 
-OpenClExecutor::OpenClExecutor(CoreData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool) :
+OpenClFrame::OpenClFrame(CoreData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool) :
 	FrameExecutor(data, deviceInfo, frame, pool) {}
 
 //check available devices
@@ -137,7 +137,7 @@ void cl::probeRuntime(OpenClInfo& info) {
 }
 
 //set up device to use
-void OpenClExecutor::init() {
+void OpenClFrame::init() {
 	assert(mDeviceInfo.getType() == DeviceType::OPEN_CL && "device type must be OpenCL here");
 	const DeviceInfoOpenCl* devInfo = static_cast<const DeviceInfoOpenCl*>(&mDeviceInfo);
 
@@ -245,7 +245,7 @@ void OpenClExecutor::init() {
 //-------- INPUT YUV DATA ----------
 //----------------------------------
 
-void OpenClExecutor::inputData(int64_t frameIndex, const ImageYuv& inputFrame) {
+void OpenClFrame::inputData(int64_t frameIndex, const ImageYuv& inputFrame) {
 	int64_t fr = frameIndex % mData.bufferCount;
 	try {
 		clData.queue.enqueueWriteImage(clData.yuv[fr], CL_TRUE, Size2(), Size2(mData.w, mData.h * 3), mData.cpupitch, 0, inputFrame.data());
@@ -259,7 +259,7 @@ void OpenClExecutor::inputData(int64_t frameIndex, const ImageYuv& inputFrame) {
 //-------- CREATE PYRAMID ----------
 //----------------------------------
 
-void OpenClExecutor::createPyramid(int64_t frameIndex, AffineDataFloat trf, bool warp) {
+void OpenClFrame::createPyramid(int64_t frameIndex, AffineDataFloat trf, bool warp) {
 	//util::ConsoleTimer ic("ocl pyramid");
 	int w = mData.w;
 	int h = mData.h;
@@ -311,7 +311,7 @@ void OpenClExecutor::createPyramid(int64_t frameIndex, AffineDataFloat trf, bool
 //----------------------------------
 
 //internal function to start compute kernel
-void OpenClExecutor::compute(int64_t frameIndex, const CoreData& core, int rowStart, int rowEnd) {
+void OpenClFrame::compute(int64_t frameIndex, const CoreData& core, int rowStart, int rowEnd) {
 	//util::ConsoleTimer timer("ocl compute start");
 	assert(frameIndex > 0 && "invalid pyramid index");
 
@@ -337,7 +337,7 @@ void OpenClExecutor::compute(int64_t frameIndex, const CoreData& core, int rowSt
 	}
 }
 
-void OpenClExecutor::computeStart(int64_t frameIndex, std::vector<PointResult>& results) {
+void OpenClFrame::computeStart(int64_t frameIndex, std::vector<PointResult>& results) {
 	try {
 		//reset computed flag
 		clData.queue.enqueueFillBuffer<cl_char>(clData.results, 0, 0, sizeof(cl_PointResult) * mData.resultCount);
@@ -349,7 +349,7 @@ void OpenClExecutor::computeStart(int64_t frameIndex, std::vector<PointResult>& 
 	compute(frameIndex, mData, 0, mData.iyCount / 4);
 }
 
-void OpenClExecutor::computeTerminate(int64_t frameIndex, std::vector<PointResult>& results) {
+void OpenClFrame::computeTerminate(int64_t frameIndex, std::vector<PointResult>& results) {
 	//util::ConsoleTimer timer("ocl compute end");
 
 	//compute rest of points
@@ -377,7 +377,7 @@ void OpenClExecutor::computeTerminate(int64_t frameIndex, std::vector<PointResul
 //-------- OUTPUT STABILIZED -------
 //----------------------------------
 
-void OpenClExecutor::outputData(int64_t frameIndex, AffineDataFloat trf) {
+void OpenClFrame::outputData(int64_t frameIndex, AffineDataFloat trf) {
 	//util::ConsoleTimer timer("ocl output");
 	int64_t frIdx = frameIndex % mData.bufferCount;
 	auto& [outStart, outWarped, outFilterH, outFilterV, outFinal] = clData.out;
@@ -407,7 +407,7 @@ void OpenClExecutor::outputData(int64_t frameIndex, AffineDataFloat trf) {
 	}
 }
 
-void OpenClExecutor::getOutputYuv(int64_t frameIndex, ImageYuv& image) const {
+void OpenClFrame::getOutputYuv(int64_t frameIndex, ImageYuv& image) const {
 	try {
 		//convert to YUV444 for output
 		scale_32f8u_3(clData.out[4], clData.yuvOut, mData.cpupitch, clData);
@@ -427,7 +427,7 @@ void OpenClExecutor::getOutputYuv(int64_t frameIndex, ImageYuv& image) const {
 	}
 }
 
-void OpenClExecutor::getOutputImage(int64_t frameIndex, ImageBaseRgb& image) const {
+void OpenClFrame::getOutputImage(int64_t frameIndex, ImageBaseRgb& image) const {
 	try {
 		yuv_to_rgba(clData.kernels.yuv32f_to_rgba, clData.out[4], image.data(), clData, image.width(), image.height(), image.indexRgba());
 		image.setIndex(frameIndex);
@@ -437,7 +437,7 @@ void OpenClExecutor::getOutputImage(int64_t frameIndex, ImageBaseRgb& image) con
 	}
 }
 
-bool OpenClExecutor::getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) const {
+bool OpenClFrame::getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) const {
 	try {
 		yuv_to_nv12(clData.kernels.yuv32f_to_nv12, clData.out[4], image.data(), clData, image.w, image.h, image.stride);
 		image.setIndex(frameIndex);
@@ -449,20 +449,20 @@ bool OpenClExecutor::getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsign
 }
 
 //utility function to read from image
-void OpenClExecutor::readImage(Image src, size_t destPitch, void* dest, CommandQueue queue) const {
+void OpenClFrame::readImage(Image src, size_t destPitch, void* dest, CommandQueue queue) const {
 	size_t w = src.getImageInfo<CL_IMAGE_WIDTH>();
 	size_t h = src.getImageInfo<CL_IMAGE_HEIGHT>();
 	queue.enqueueReadImage(src, CL_TRUE, Size2(), Size2(w, h), destPitch, 0, dest);
 }
 
 //utility function to read from image array
-void OpenClExecutor::readImage(Image2DArray src, int idx, size_t destPitch, void* dest, cl::CommandQueue queue) const {
+void OpenClFrame::readImage(Image2DArray src, int idx, size_t destPitch, void* dest, cl::CommandQueue queue) const {
 	size_t w = src.getImageInfo<CL_IMAGE_WIDTH>();
 	size_t h = src.getImageInfo<CL_IMAGE_HEIGHT>();
 	queue.enqueueReadImage(src, CL_TRUE, Size3(0, 0, idx), Size3(w, h, 1ull), destPitch, 0, dest);
 }
 
-Matf OpenClExecutor::getPyramid(int64_t frameIndex) const {
+Matf OpenClFrame::getPyramid(int64_t frameIndex) const {
 	size_t pyrIdx = frameIndex % mData.pyramidCount;
 	size_t wbytes = mData.w * sizeof(float);
 	Matf out = Mat<float>::zeros(mData.pyramidRowCount, mData.w);
@@ -476,7 +476,7 @@ Matf OpenClExecutor::getPyramid(int64_t frameIndex) const {
 	return out;
 }
 
-Matf OpenClExecutor::getTransformedOutput() const {
+Matf OpenClFrame::getTransformedOutput() const {
 	std::vector<cl_float4> imageData(1ull * mData.w * mData.h);
 	readImage(clData.out[1], mData.w * sizeof(cl_float4), imageData.data(), clData.queue);
 	
@@ -491,13 +491,13 @@ Matf OpenClExecutor::getTransformedOutput() const {
 	return warped;
 }
 
-void OpenClExecutor::getInput(int64_t frameIndex, ImageYuv& image) const {
+void OpenClFrame::getInput(int64_t frameIndex, ImageYuv& image) const {
 	int64_t fr = frameIndex % mData.bufferCount;
 	Image im = clData.yuv[fr];
 	clData.queue.enqueueReadImage(im, CL_TRUE, Size2(), Size2(image.w, image.h * 3), image.stride, 0, image.data());
 }
 
-void OpenClExecutor::getInput(int64_t frameIndex, ImageBaseRgb& image) const {
+void OpenClFrame::getInput(int64_t frameIndex, ImageBaseRgb& image) const {
 	try {
 		size_t fridx = frameIndex % clData.yuv.size();
 		yuv_to_rgba(clData.kernels.yuv8u_to_rgba, clData.yuv[fridx], image.data(), clData, image.w, image.h, image.indexRgba());
@@ -507,7 +507,7 @@ void OpenClExecutor::getInput(int64_t frameIndex, ImageBaseRgb& image) const {
 	}
 }
 
-void OpenClExecutor::getWarped(int64_t frameIndex, ImageBaseRgb& image) {
+void OpenClFrame::getWarped(int64_t frameIndex, ImageBaseRgb& image) {
 	try {
 		yuv_to_rgba(clData.kernels.yuv32f_to_rgba, clData.out[1], image.data(), clData, image.w, image.h, image.indexRgba());
 
