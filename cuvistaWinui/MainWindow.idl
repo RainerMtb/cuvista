@@ -6,10 +6,9 @@ namespace cuvistaWinui
         MainWindow();
     }
 
-    runtimeclass EncodingOptionXaml
+    runtimeclass CustomRuntimeXaml
     {
-        EncodingOptionXaml();
-        String Device { get; };
-        String Codec { get; };
+        CustomRuntimeXaml();
+        String displayName { get; };
     }
 }

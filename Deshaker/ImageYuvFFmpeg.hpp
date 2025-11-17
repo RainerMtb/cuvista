@@ -38,6 +38,10 @@ public:
     int height() const override;
     int width() const override;
     int strideInBytes() const override;
+    int sizeInBytes() const override;
+
     void setIndex(int64_t frameIndex) override;
     bool saveAsBMP(const std::string& filename, uint8_t scale = 1) const override;
+    std::vector<uint8_t> rawBytes() const override;
+    ImageType type() const override;
 };

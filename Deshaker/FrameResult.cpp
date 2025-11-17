@@ -46,10 +46,6 @@ FrameResult::FrameResult(MainData& data, ThreadPoolBase& threadPool) :
 	mConsList.reserve(data.resultCount);
 	mList1.resize(data.resultCount);
 	mList2.resize(data.resultCount);
-
-	//init debug storage and put in first item
-	resultStore.clear();
-	resultStore.emplace_back(0);
 }
 
 const AffineTransform& FrameResult::getTransform() const {
@@ -300,7 +296,6 @@ const AffineTransform& FrameResult::computeTransform(std::span<PointResult> resu
 		for (PointContext& pc : mConsList) pc.ptr->isConsens = true;
 	}
 
-	//resultStore.emplace_back(frameIndex, std::vector<PointResult>(results.begin(), results.end())); //-----------
 	//std::cout << "frame " << frameIndex << ", " << mBestTransform << std::endl;
 	return mBestTransform;
 }

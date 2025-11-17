@@ -9,4 +9,5 @@ add_library(Common STATIC
     ImageHeaders.cpp
     ThreadPoolBase.cpp
     Util.cpp
+    OutputOption.cpp
 )

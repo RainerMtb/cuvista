@@ -82,33 +82,39 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 		} else if (args.nextArg("o", next)) {
 			if (str_toupper(next) == "NULL") {
 				//do not do any output
-				videoOutputType = OutputType::NONE;
-
-			} else if (str_toupper(next) == "PIPE:") {
-				//activate pipe output
-				console = &nullStream;
-				printHeader = false;
-				printSummary = false;
-				videoOutputType = OutputType::PIPE;
-				progressType = ProgressType::NONE;
+				outputOption = OutputOption::OPTION_NONE;
 
 			} else if (str_toupper(next).ends_with(".BMP")) {
-				videoOutputType = OutputType::SEQUENCE_BMP;
+				outputOption = OutputOption::IMAGE_BMP;
 				fileOut = next;
 
 			} else if (str_toupper(next).ends_with(".JPG")) {
-				videoOutputType = OutputType::SEQUENCE_JPG;
+				outputOption = OutputOption::IMAGE_JPG;
 				fileOut = next;
 
 			} else if (str_toupper(next).ends_with(".YUV")) {
-				videoOutputType = OutputType::RAW_YUV_FILE;
+				outputOption = OutputOption::RAW_YUV444;
+				fileOut = next;
+
+			} else if (str_toupper(next).ends_with(".NV12")) {
+				outputOption = OutputOption::RAW_NV12;
 				fileOut = next;
 
 			} else {
-				//default file output
-				videoOutputType = OutputType::VIDEO_FILE;
+				//default video file output
+				outputOption = OutputOption::OPTION_AUTO;
 				fileOut = next;
 			}
+
+		} else if (args.nextArg("enc", next)) {
+			outputOption = OutputOption::find(str_toupper(next));
+			if (outputOption == OutputOption::PIPE_RAW || outputOption == OutputOption::PIPE_ASF) {
+				console = &nullStream;
+				printHeader = false;
+				progressType = ProgressType::NONE;
+
+			} else if (outputOption.device == OutputGroup::INVALID)
+				throw AVException("invalid encoding option: " + next);
 
 		} else if (args.nextArg("trf", next)) {
 			//trajectory file
@@ -118,13 +124,13 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 			//file to store detailed results
 			resultsFile = next;
 
-		} else if (args.nextArg("resim", next)) {
+		} else if (args.nextArg("resim")) {
 			//produce and write transformation images
-			resultImageFile = next;
+			outputOption = OutputOption::IMAGE_RESULTS;
 
-		} else if (args.nextArg("flow", next)) {
+		} else if (args.nextArg("flow")) {
 			//optical flow video
-			flowFile = next;
+			outputOption = OutputOption::VIDEO_FLOW;
 
 		} else if (args.nextArg("mode", next)) {
 			int i = std::stoi(next);
@@ -201,7 +207,7 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 			cpuThreadsRequired = { std::stoul(next) };
 
 		} else if (args.nextArg("crf", next)) {
-			*crf = std::stoi(next); //output encoder crf value
+			requestedCrf = std::stoi(next); //output encoder crf value
 
 		} else if (args.nextArg("y")) {
 			overwriteOutput = DecideYNA::YES; //always overwrite
@@ -213,6 +219,7 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 			showHeader();
 			*console << std::endl;
 			showDeviceInfo(*console);
+			showEncodingInfo(*console);
 			MessagePrinterConsole mpc(console);
 			runSelfTest(mpc, deviceList);
 			throw SilentQuitException();
@@ -251,7 +258,7 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 			progressType = ProgressType::NONE;
 
 		} else if (args.nextArg("levels", next)) {
-			zCount = std::stoi(next);
+			pyramidLevelsRequested = std::stoi(next);
 
 		} else if (args.nextArg("ir", next)) {
 			//integration radius
@@ -266,18 +273,10 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 				throw AVException("invalid roicrop definition: " + next);
 
 		} else if (args.nextArg("codec", next)) {
-			auto item = mapStringToCodec.find(str_toupper(next));
-			if (item == mapStringToCodec.end())
-				throw AVException("invalid codec: " + next);
-			else
-				requestedEncoding.codec = item->second;
+			throw AVException("invalid option, use -enc instead");
 
 		} else if (args.nextArg("encoder", next)) {
-			auto item = mapStringToDevice.find(str_toupper(next));
-			if (item == mapStringToDevice.end())
-				throw AVException("invalid encoding device: " + next);
-			else
-				requestedEncoding.device = item->second;
+			throw AVException("invalid option, use -enc instead");
 
 		} else if (args.nextArg("frames", next)) {
 			maxFrames = std::stoll(next);
@@ -295,7 +294,7 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 			std::smatch matcher;
 			if (std::regex_match(next, matcher, std::regex("(\\d+):(\\d+)$"))) {
 				stackCrop = { std::stoi(matcher[1].str()), std::stoi(matcher[2].str()) };
-				videoOutputType = OutputType::STACKING;
+				outputOption = OutputOption::VIDEO_STACK;
 
 			} else {
 				throw AVException("invalid parameter for stacking: " + next);
@@ -318,14 +317,14 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 
 	//check output file presence and permissions
 	std::string fileOutCheck = fileOut;
-	if (videoOutputType == OutputType::SEQUENCE_BMP) {
+	if (outputOption == OutputOption::IMAGE_BMP) {
 		fileOutCheck = ImageWriter::makeFilename(fileOut, 0, "bmp");
 	}
-	if (videoOutputType == OutputType::SEQUENCE_JPG) {
+	if (outputOption == OutputOption::IMAGE_JPG) {
 		fileOutCheck = ImageWriter::makeFilename(fileOut, 0, "jpg");
 	}
 
-	if (videoOutputType == OutputType::VIDEO_FILE || videoOutputType == OutputType::SEQUENCE_BMP || videoOutputType == OutputType::SEQUENCE_JPG) {
+	if (outputOption == OutputOption::OPTION_AUTO || outputOption == OutputOption::IMAGE_BMP || outputOption == OutputOption::IMAGE_JPG) {
 		std::filesystem::path path1 = fileIn;
 		std::filesystem::path path2 = fileOutCheck;
 		std::error_code ec;
@@ -344,62 +343,60 @@ void MainData::collectDeviceInfo() {
 	std::sort(cudaInfo.devices.begin(), cudaInfo.devices.end());
 
 	//ffmpeg available encoders
-	std::vector<EncodingOption> cpuEncoders = {
-		{EncodingDevice::FFMPEG, Codec::H264},
-		{EncodingDevice::FFMPEG, Codec::H265},
-		{EncodingDevice::FFMPEG, Codec::AV1},
+	std::vector<OutputOption> cpuEncoders = {
+		OutputOption::FFMPEG_H264,
+		OutputOption::FFMPEG_HEVC,
+		OutputOption::FFMPEG_AV1,
+		OutputOption::FFMPEG_FFV1
 	};
 
-	//nvenc available encoders
-	std::vector<EncodingOption> nvencEncoders = {};
+	//nvenc available encoders taken from first cuda device
+	std::vector<OutputOption> nvencEncoders = {};
 	if (cudaInfo.devices.size() > 0) {
-		nvencEncoders = cudaInfo.devices.front().encodingOptions;
+		nvencEncoders = cudaInfo.devices.front().videoEncodingOptions;
 	}
 
 	//CPU device
-	deviceInfoCpu.encodingOptions = cpuEncoders;
-	std::copy(nvencEncoders.begin(), nvencEncoders.end(), std::back_inserter(deviceInfoCpu.encodingOptions));
+	deviceInfoCpu.videoEncodingOptions = cpuEncoders;
+	std::copy(nvencEncoders.begin(), nvencEncoders.end(), std::back_inserter(deviceInfoCpu.videoEncodingOptions));
 	deviceList.push_back(&deviceInfoCpu);
 
 	//check for Avx512
 	if (hasAvx512()) {
-		deviceInfoAvx.encodingOptions = deviceInfoCpu.encodingOptions;
+		deviceInfoAvx.videoEncodingOptions = deviceInfoCpu.videoEncodingOptions;
 		deviceList.push_back(&deviceInfoAvx);
 	}
 	
 	///OpenCL devices
 	for (DeviceInfoOpenCl& dev : clinfo.devices) {
-		dev.encodingOptions = deviceInfoCpu.encodingOptions;
+		dev.videoEncodingOptions = deviceInfoCpu.videoEncodingOptions;
 		deviceList.push_back(&dev);
 	}
 
 	//Cuda devices
 	for (DeviceInfoCuda& dev : cudaInfo.devices) {
-		std::copy(cpuEncoders.begin(), cpuEncoders.end(), std::back_inserter(dev.encodingOptions));
+		std::copy(cpuEncoders.begin(), cpuEncoders.end(), std::back_inserter(dev.videoEncodingOptions));
 		deviceList.push_back(&dev);
 	}
 }
 
 void MainData::validate(const MovieReader& reader) {
 	if (this->cpuThreadsRequired.has_value()) this->cpuThreads = this->cpuThreadsRequired.value();
-	else this->cpuThreads = std::max(1u, std::thread::hardware_concurrency() * 3 / 4);
+	else this->cpuThreads = std::max(2u, std::thread::hardware_concurrency() * 3 / 4);
 
 	//main metrics
 	this->w = reader.w;
 	this->h = reader.h;
 
-	//no output to console if frame output through pipe
-	if (videoOutputType == OutputType::PIPE) progressType = ProgressType::NONE;
-
 	//pyramid levels to compute
-	this->zMax = this->zCount - 1;
+	this->zMax = pyramidLevelsRequested - 1;
 	int div0 = 1 << zMax;
 	int points = std::max(w / div0, h / div0);
 	while (points > MAX_POINTS_COUNT) {
 		points /= 2;
 		zMax++;
 	}
-	this->zMin = zMax - zCount + 1;
+	this->zMin = zMax - pyramidLevelsRequested + 1;
 	this->pyramidLevels = zMax + 1;
 
 	//number of rows for one complete pyramid
@@ -441,11 +438,16 @@ void MainData::validate(const MovieReader& reader) {
 	if (deviceRequested == false) {
 		deviceSelected = deviceList.size() - 1;
 	}
-	if (requestedEncoding.device == EncodingDevice::AUTO) {
-		if (deviceList[deviceSelected]->getType() == DeviceType::CUDA) selectedEncoding.device = EncodingDevice::NVENC;
-		else selectedEncoding.device = EncodingDevice::FFMPEG;
+	if (outputOption.device == OutputGroup::AUTO) {
+		DeviceInfoBase* dev = deviceList[deviceSelected];
+		outputOption = dev->videoEncodingOptions.front();
+	}
+	if (requestedCrf == -1) {
+		//set default crf from option list
+		selectedCrf = outputOption.defaultCrf();
+
 	} else {
-		selectedEncoding.device = requestedEncoding.device;
+		selectedCrf = (uint8_t) requestedCrf;
 	}
 
 	//check certain values ranges for sanity
@@ -460,8 +462,9 @@ void MainData::validate(const MovieReader& reader) {
 	if (zoomMin > zoomMax) throw AVException("invalid zoom values, max zoom must be greater min zoom");
 	if (zoomMin < defaults.imZoomMin || zoomMin > defaults.imZoomMax) throw AVException("invalid zoom value");
 	if (zoomMax < defaults.imZoomMin || zoomMax > defaults.imZoomMax) throw AVException("invalid zoom value");
+	if (ixCount < 8 || iyCount < 8) throw AVException("invalid settings");
 
-	if (zCount < defaults.levelsMin || zCount > defaults.levelsMax) throw AVException("invalid pyramid levels: " + std::to_string(pyramidLevels));
+	if (pyramidLevelsRequested < defaults.levelsMin || pyramidLevelsRequested > defaults.levelsMax) throw AVException("invalid pyramid levels: " + std::to_string(pyramidLevels));
 	if (ir < defaults.irMin || ir > defaults.irMax) throw AVException("invalid integration radius: " + std::to_string(ir));
 
 	//check ffmpeg versions
@@ -500,17 +503,16 @@ void MainData::showIntro(const std::string& deviceName, const MovieReader& reade
 		<< ", radius=" << radius
 		<< std::endl;
 
-	//device info
-	*console << "\x1B[1;36m" << "USING: " << deviceName << "\x1B[0m" << std::endl;
-
 	//output to be written
-	if (videoOutputType == OutputType::VIDEO_FILE) *console << "FILE OUT: " << fileOut << std::endl;
+	if (outputOption.isVideoFile()) *console << "FILE OUT: " << outputOption.fullName() << ", " << fileOut << std::endl;
 	if (trajectoryFile.empty() == false) *console << "TRAJECTORY FILE: " << trajectoryFile << std::endl;
 	if (resultsFile.empty() == false) *console << "CALCULATION DETAIL OUTPUT: " << resultsFile << std::endl;
-	if (videoOutputType == OutputType::SEQUENCE_BMP) *console << "IMAGE SEQUENCE: " << ImageWriter::makeFilenameSamples(fileOut, "bmp") << std::endl;
-	if (videoOutputType == OutputType::SEQUENCE_JPG) *console << "IMAGE SEQUENCE: " << ImageWriter::makeFilenameSamples(fileOut, "jpg") << std::endl;
-	if (resultImageFile.empty() == false) *console << "CALCULATION DETAIL IMAGES: " << ImageWriter::makeFilenameSamples(resultImageFile, "bmp") << std::endl;
-	if (flowFile.empty() == false) *console << "OPTICAL FLOW VIDEO: " << flowFile << std::endl;
+	if (outputOption == OutputOption::IMAGE_BMP) *console << "IMAGE SEQUENCE: " << ImageWriter::makeFilenameSamples(fileOut, "bmp") << std::endl;
+	if (outputOption == OutputOption::IMAGE_JPG) *console << "IMAGE SEQUENCE: " << ImageWriter::makeFilenameSamples(fileOut, "jpg") << std::endl;
+	if (outputOption == OutputOption::IMAGE_RESULTS) *console << "RESULTS IMAGES: " << ImageWriter::makeFilenameSamples(fileOut, "bmp") << std::endl;
+
+	//device info
+	*console << "\x1B[1;36m" << "  USING: " << deviceName << "\x1B[0m" << std::endl;
 }
 
 //default output when no arguments are given
@@ -522,6 +524,7 @@ void MainData::showBasicInfo() const {
 //show info about system
 void MainData::showDeviceInfo() const {
 	showDeviceInfo(*console);
+	showEncodingInfo(*console);
 	throw SilentQuitException();
 }
 
@@ -534,7 +537,7 @@ std::ostream& MainData::showDeviceInfo(std::ostream& os) const {
 	}
 
 	//ffmpeg
-	os << std::endl << "FFMPEG:" << std::endl;
+	os << std::endl << "FFMPEG Versions:" << std::endl;
 	os << "libavutil identifier:     " << LIBAVUTIL_IDENT << std::endl;
 	os << "libavcodec identifier:    " << LIBAVCODEC_IDENT << std::endl;
 	os << "libavformat identifier:   " << LIBAVFORMAT_IDENT << std::endl;
@@ -580,6 +583,20 @@ std::ostream& MainData::showDeviceInfo(std::ostream& os) const {
 		os << "OpenCL Device:" << std::endl;
 		os << info << std::endl;
 	}
+
+	return os;
+}
+
+//show video encoding options
+std::ostream& MainData::showEncodingInfo(std::ostream& os) const {
+	//available encoding options
+	os << "Available Video Encoding Options:" << std::endl;
+	std::vector<OutputOption> videoOptions = deviceInfoCpu.videoEncodingOptions;
+	std::sort(videoOptions.begin(), videoOptions.end(), [] (const OutputOption& o1, const OutputOption o2) { return o1.fullName() < o2.fullName(); });
+	for (const OutputOption& o : videoOptions) {
+		os << o.fullName() << std::endl;
+	}
+
 	return os;
 }
 

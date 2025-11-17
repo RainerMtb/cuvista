@@ -19,7 +19,7 @@
 #pragma once
 
 #include "MainWindow.g.h"
-#include "EncodingOptionXaml.g.h"
+#include "CustomRuntimeXaml.g.h"
 #undef min
 #undef max
 
@@ -32,24 +32,18 @@ namespace winrt::cuvistaWinui::implementation {
     
     using namespace winrt::Microsoft::UI::Xaml;
 
-    struct EncodingOptionXaml : EncodingOptionXamlT<EncodingOptionXaml> {
+    struct CustomRuntimeXaml : CustomRuntimeXamlT<CustomRuntimeXaml> {
 
         //constructor defined in IDL
-        EncodingOptionXaml();
+        CustomRuntimeXaml();
         //constructor used in code
-        EncodingOptionXaml(EncodingOption option);
+        CustomRuntimeXaml(RuntimeBase* object);
 
         //property getters called from XAML
-        hstring Device() const;
-        hstring Codec() const;
+        hstring displayName() const;
 
         //original property
-        EncodingOption mOption;
-    };
-
-    struct OutputTypeSelector {
-        hstring name;
-        OutputType outputType;
+        RuntimeBase* object;
     };
 
     struct MainWindow : MainWindowT<MainWindow>, util::MessagePrinter, public UserInput {
@@ -109,9 +103,9 @@ namespace winrt::cuvistaWinui::implementation {
         std::future<void> mFutureInfo = std::async([&] {});
         std::future<LoopResult> mFutureLoop = std::async([&] { return LoopResult::LOOP_NONE; });
 
-        std::map<hstring, OutputType> mOutputImageTypeMap = {
-            { L"BMP", OutputType::SEQUENCE_BMP },
-            { L"JPG", OutputType::SEQUENCE_JPG }
+        std::map<hstring, OutputOption> mOutputImageTypeMap = {
+            { L"BMP", OutputOption::IMAGE_BMP },
+            { L"JPG", OutputOption::IMAGE_JPG }
         };
 
         std::map<int, int> mAudioTrackMap;
@@ -144,5 +138,5 @@ namespace winrt::cuvistaWinui::factory_implementation
 {
     struct MainWindow : MainWindowT<MainWindow, implementation::MainWindow> {};
 
-    struct EncodingOptionXaml : EncodingOptionXamlT<EncodingOptionXaml, implementation::EncodingOptionXaml> {};
+    struct CustomRuntimeXaml : CustomRuntimeXamlT<CustomRuntimeXaml, implementation::CustomRuntimeXaml> {};
 }

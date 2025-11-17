@@ -30,6 +30,7 @@
 
 class MovieReader;
 
+/*
 enum class OutputType {
 	NONE,
 	PIPE,
@@ -39,6 +40,7 @@ enum class OutputType {
 	SEQUENCE_JPG,
 	STACKING,
 };
+*/
 
 enum class ProgressType {
 	NONE,
@@ -127,12 +129,11 @@ public:
 
 	//output related
 	util::NullOutstream nullStream;
-	EncodingOption requestedEncoding = { EncodingDevice::AUTO, Codec::AUTO };
-	EncodingOption selectedEncoding = { EncodingDevice::AUTO, Codec::AUTO };
+	OutputOption outputOption = OutputOption::OPTION_NONE;
 	std::ostream* console = &std::cout;
-	OutputType videoOutputType = OutputType::NONE;
 	DecideYNA overwriteOutput = DecideYNA::ASK;
-	std::optional<uint8_t> crf = std::nullopt;
+	int requestedCrf = -1;
+	uint8_t selectedCrf = 0;
 
 	bool printHeader = true;
 	bool printSummary = true;
@@ -141,8 +142,6 @@ public:
 	std::string fileOut;				//output file path
 	std::string trajectoryFile;			//file to read or write trajectory data
 	std::string resultsFile;			//output file path
-	std::string resultImageFile;        //file to write result images, grayscale background and transform vectors
-	std::string flowFile;               //file to write video showing optical flow
 
 	bool dummyFrame = false;
 	ProgressType progressType = ProgressType::MULTILINE;
@@ -173,6 +172,8 @@ public:
 	void showDeviceInfo() const;
 
 	std::ostream& showDeviceInfo(std::ostream& os) const;
+
+	std::ostream& showEncodingInfo(std::ostream& os) const;
 
 	void showBasicInfo() const;
 

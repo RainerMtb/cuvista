@@ -22,6 +22,10 @@
 #include "ImageData.hpp"
 #include "Color.hpp"
 
+struct Size {
+	int h, w;
+};
+
 namespace im {
 
 	template <class T> struct LocalColor {
@@ -128,13 +132,13 @@ namespace im {
 		double compareTo(const ImageBase& other) const;
 
 		//write text into image
-		void writeText(std::string_view text, int x, int y);
+		Size writeText(std::string_view text, int x, int y);
 
 		//write text into image
-		void writeText(std::string_view text, int x, int y, int sx, int sy, TextAlign alignment);
+		Size writeText(std::string_view text, int x, int y, int sx, int sy, TextAlign alignment);
 
 		//write text into image
-		void writeText(std::string_view text, int x, int y, int sx, int sy, TextAlign alignment, const Color& fg, const Color& bg);
+		Size writeText(std::string_view text, int x, int y, int sx, int sy, TextAlign alignment, const Color& fg, const Color& bg);
 
 		void drawLine(double x0, double y0, double x1, double y1, const Color& color, double alpha = 1.0);
 

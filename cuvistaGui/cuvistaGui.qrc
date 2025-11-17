@@ -15,5 +15,6 @@
     <file>res/License.md</file>
     <file>res/09_speaker_off.png</file>
     <file>res/09_speaker_on.png</file>
+    <file>res/11_bars-solid-full.png</file>
   </qresource>
 </RCC>

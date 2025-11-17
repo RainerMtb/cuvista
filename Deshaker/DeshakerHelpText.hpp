@@ -25,15 +25,14 @@ input/output options:
 -o file.mkv     output file in .MKV format
 -o file.yuv     output file, write uncompressed YUV444P video data
                 this will produce a huge file, you have been warned
+-o file.nv12    output file, write raw video data in NV12 format
+                half the size of YUV444P, still be warned
 
--o pipe:        output raw YUV444P data to pipe
-                use for example to connect to ffmpeg encoder
-                for further processing, input must then be specified as
-                -f rawvideo -video_size w:h -framerate n -pix_fmt yuv444p 
-                refer to pipe mechanism of your OS for further information
 -o fmt.jpg      output a sequence of images in jpeg format
-                format see below for bmp images
+                format see below
 -o fmt.bmp      output a sequence of images in 8bit color bmp format
+                format see below
+-o null         do not write any output file
 
 fmt specifier   fmt must specify the output file and should contain a number
                 formatting sequence, otherwise the same file will just
@@ -41,43 +40,43 @@ fmt specifier   fmt must specify the output file and should contain a number
                 example: -o im%03d.bmp will produce 3 digits with leading 0
                 im000.bmp, im001.bmp, im002.bmp, ...
 
--o null         do not write any output, for whatever reason this may be
+following options may be provided after -o parameter
+-enc xx:yy      specify output encoding options
+                get a list of available video encoding options via -info
+                default: auto:auto, based on -o parameter
+-enc pipe:asf   write to pipe in asf container format
+                video data arrives in YUV444P format, other streams are copied
+                example: cuvista [...] -enc pipe:asf | ffmpeg -i pipe:0 [...]
+                refer to pipe mechanism of your OS for further information
+-enc pipe:raw   output raw YUV444P data to pipe
+                use for example to connect to ffmpeg encoder
+                for further processing, input must then be specified as
+                -f rawvideo -video_size w:h -framerate n -pix_fmt yuv444p 
+                refer to pipe mechanism of your OS for further information
+-resim          write bmp images showing transform vectors
+                green: point is consens / red: point is not consens
+                blue: calculated transform
+-flow           produce video of calculated optical flow
+-stack l:r      horizontally stack source and stabilized frames for comparison
+                parameter l:r number of pixels to crop from left and right
 
 computing options:
 -device n       device to use for stabilization computations
                 use -info to list available devices and run a small test
-                default: highest index available
+                default: max index value
 -device cpu     same as -device 0
--encoder xxx    device to use for video encoding
-                options: auto, nvenc, ffmpeg
-                default: auto; prefer nvenc when available
--codec xxx      video codec to use for encoding
-                options: auto, h264, h265
-                default: auto; which is h265 on gpu / h264 on cpu
 
 mode of operation:
--mode 0         read and write in one single pass, fast, requires large buffer
--mode 1         consecutively run read and write pass, requires less memory
+-mode 0         read and write in one single pass, fastest, needs larger buffer
+-mode 1         consecutively run read and write pass, needs smaller buffer
 -mode n         multiple analysis passes, potentially improving stabilization
-                default: 0
-                maximum: 6
+                default: 0, min: 0, max: 6
 
 other output options:
--trf file       text file containing transformation data per frame
+-trf file       write file containing transformation data per frame
 -res file       write detailed results of the compute step to text file
--resim fmt.bmp  write images containing transform vectors in bmp file format 
-                images are grayscaled, lines are colored
-                green: point is consens / red: point is not consens
-                blue: calculated transform
-                see above for filename pattern
--resim folder   write images to specified folder using default filename pattern
--flow file      produce video of calculated optical flow
-
--frames n       maximum number of frames to encode
+-frames n       maximum number of frames to encode, useful for a test sample
                 default: all the frames there are
--stack l:r      horizontally stack source and stabilized frames for comparison
-                parameter l:r defines pixels to crop from left and right
-                provide this option after setting the output file via -o xxx
 
 quality and performance settings:
 -radius sec     the temporal radius within which frames will be considered for 
@@ -98,7 +97,7 @@ quality and performance settings:
 -bgcolor rgb    background colors separated by colons in format RRR:GGG:BBB
                 color values must be between 0 and 255
 -bgcolor web    background color given as a web color string in format #RRGGBB
--cputhreads n   number of threads on the cpu to use for computations
+-cputhreads n   number of threads on the cpu to use for various tasks
                 default: 3/4 of hardware threads
 -crf n          constant rate factor used for encoding
                 lower value represents higher quality and bigger file size
@@ -120,7 +119,7 @@ misc options:
 -progress 4     simple graph indicator
 -noheader       do not display program info at start
 -showheader     display program info at start
--nosummary      do not display summary satistics at end of program
+-nosummary      do not display summary satistics at end of program run
 -showsummary    display summary statistics 
 -quiet          same as '-progress 0 -noheader -nosummary'
                 do not produce any output except error messages
@@ -131,9 +130,9 @@ advanced computation parameters:
                 default: 3
 -ir             integration radius, between 1 and 3
                 default: 3
--roicrop h:v    specify region of interest for analyzation
-                number of pixels to crop separated by colon
-                representing cropHorizontal:cropVertical
+-roicrop h:v    specify region of interest for stabilization computations
+                number of pixels to crop away horizontally and vertically
+                may be used to ignore text along the edge of input
                 default 0:0
                 
 keyboard input options at runtime:

@@ -20,25 +20,29 @@
 #include "MovieReader.hpp"
 #include <filesystem>
 
-AVStream* FFmpegFormatWriter::createNewStream(AVFormatContext* fmt_ctx, AVStream* inStream) {
-    AVStream* stream = avformat_new_stream(fmt_ctx, NULL); //docs say AVCodec parameter is not used
-    if (!stream)
-        throw AVException("could not create stream");
-
-    stream->time_base = inStream->time_base;
-    stream->start_time = 0;
-    stream->duration = inStream->duration;
-    return stream;
-}
-
-//setup output format
-void FFmpegFormatWriter::open(AVCodecID codecId, const std::string& sourceName, int queueSize) {
+//setup output format from codec
+void FFmpegFormatWriter::openFormat(AVCodecID codecId, const std::string& sourceName, int queueSize) {
     av_log_set_callback(ffmpeg_log);
 
     //setup output context
-    int result = avformat_alloc_output_context2(&fmt_ctx, NULL, NULL, sourceName.c_str());
+    AVFormatContext* ctx = nullptr;
+    int result = avformat_alloc_output_context2(&ctx, NULL, NULL, sourceName.c_str());
     if (result < 0)
         throw AVException(av_make_error(result, "cannot allocate output format"));
+
+    //continue open format
+    openFormat(codecId, ctx, queueSize);
+
+    //open output for writing
+    result = avio_open(&fmt_ctx->pb, fmt_ctx->url, AVIO_FLAG_WRITE);
+    if (result < 0)
+        throw AVException("error opening output file '" + mData.fileOut + "'");
+}
+
+//setup output format from format context
+void FFmpegFormatWriter::openFormat(AVCodecID codecId, AVFormatContext* ctx, int queueSize) {
+    //set format context into class
+    fmt_ctx = ctx;
 
     //set default stream handling
     for (StreamContext& sc : mReader.mInputStreams) {
@@ -49,7 +53,7 @@ void FFmpegFormatWriter::open(AVCodecID codecId, const std::string& sourceName, 
             osc->handling = StreamHandling::STREAM_STABILIZE;
 
         } else {
-            int codecSupported = avformat_query_codec(fmt_ctx->oformat, sc.inputStream->codecpar->codec_id, FF_COMPLIANCE_STRICT);
+            int codecSupported = avformat_query_codec(fmt_ctx->oformat, sc.inputStream->codecpar->codec_id, FF_COMPLIANCE_NORMAL);
             //codecSupported = false; //force transcode for debugging <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
             if (codecSupported == 1) {
                 osc->handling = StreamHandling::STREAM_COPY;
@@ -72,7 +76,7 @@ void FFmpegFormatWriter::open(AVCodecID codecId, const std::string& sourceName, 
     }
 
     //allocate ffmpeg stuff
-    open(codecId);
+    openFormat(codecId);
 
     //sort by output stream index
     auto partFcn = [&] (std::shared_ptr<OutputStreamContext> ptr) {
@@ -83,14 +87,9 @@ void FFmpegFormatWriter::open(AVCodecID codecId, const std::string& sourceName, 
         return ptr1->outputStream->index < ptr2->outputStream->index;
     };
     std::sort(outputStreams.begin(), iter, sortFcn);
-
-    //open output for writing
-    result = avio_open(&fmt_ctx->pb, fmt_ctx->url, AVIO_FLAG_WRITE);
-    if (result < 0)
-        throw AVException("error opening output file '" + mData.fileOut + "'");
 }
 
-void FFmpegFormatWriter::open(AVCodecID codecId) {
+void FFmpegFormatWriter::openFormat(AVCodecID codecId) {
     //av_log_set_level(AV_LOG_ERROR);
     //custom callback to log ffmpeg errors
     av_log_set_callback(ffmpeg_log);
@@ -106,7 +105,7 @@ void FFmpegFormatWriter::open(AVCodecID codecId) {
                 osc.outputStream = videoStream = createNewStream(fmt_ctx, inStream);
 
             } else {
-                throw AVException(std::format("cannot write codec '{}' to output", avcodec_get_name(inStream->codecpar->codec_id)));
+                throw AVException(std::format("cannot write codec '{}' to output", avcodec_get_name(codecId)));
             }
             
         } else if (osc.handling == StreamHandling::STREAM_COPY) {
@@ -215,6 +214,17 @@ void FFmpegFormatWriter::open(AVCodecID codecId) {
                 throw AVException("cannot allocate fifo");
         }
     }
+}
+
+AVStream* FFmpegFormatWriter::createNewStream(AVFormatContext* fmt_ctx, AVStream* inStream) {
+    AVStream* stream = avformat_new_stream(fmt_ctx, NULL); //docs say AVCodec parameter is not used
+    if (!stream)
+        throw AVException("could not create stream");
+
+    stream->time_base = inStream->time_base;
+    stream->start_time = 0;
+    stream->duration = inStream->duration;
+    return stream;
 }
 
 //----------------------------------

@@ -33,7 +33,7 @@
 //in windows we need to set pipe mode
 #include <io.h>
 
-void PipeWriter::open(EncodingOption videoCodec) {
+void PipeWriter::openPipe() {
 	//set stdout to binary mode
 	int result = _setmode(_fileno(stdout), _O_BINARY);
 	if (result < 0) {
@@ -41,7 +41,7 @@ void PipeWriter::open(EncodingOption videoCodec) {
 	}
 }
 
-PipeWriter::~PipeWriter() {
+void PipeWriter::closePipe() {
 	int result = _setmode(_fileno(stdout), _O_TEXT);
 	if (result < 0) {
 		errorLogger().logError("Pipe: error setting stdout to text mode", ErrorSource::WRITER);
@@ -50,26 +50,9 @@ PipeWriter::~PipeWriter() {
 
 #else
 
-void PipeWriter::open(EncodingOption videoCodec) {}
+void PipeWriter::openPipe() {}
 
-PipeWriter::~PipeWriter() {}
+void PipeWriter::closePipe() {}
 
 #endif
 
-void PipeWriter::writeOutput(const FrameExecutor& executor) {
-	const unsigned char* src = outputFrame.data();
-	size_t bytes = 0;
-	
-	for (int i = 0; i < 3ull * outputFrame.h; i++) {
-		bytes += fwrite(src, 1, outputFrame.w, stdout);
-		src += outputFrame.stride;
-	}
-	
-	if (bytes != 3ull * outputFrame.w * outputFrame.h) {
-		errorLogger().logError("Pipe: error writing data", ErrorSource::WRITER);
-	}
-
-	std::unique_lock<std::mutex> lock(mStatsMutex);
-	outputBytesWritten += bytes;
-	this->frameIndex++;
-}

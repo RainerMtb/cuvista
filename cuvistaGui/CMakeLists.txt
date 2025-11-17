@@ -20,6 +20,7 @@ qt_add_executable(cuvistaGui
     ClickLabel.cpp
     CustomImageLabel.cpp
     CustomTextEdit.cpp
+    cuvistaGui.rc
 )
 
 target_include_directories(cuvistaGui PRIVATE "${PROJECT_SOURCE_DIR}/Deshaker")
@@ -46,6 +47,7 @@ qt_generate_deploy_app_script(
     OUTPUT_SCRIPT deploy_script
     NO_COMPILER_RUNTIME
     NO_TRANSLATIONS
+    DEPLOY_TOOL_OPTIONS --no-ffmpeg
 )
 
 install(SCRIPT "${deploy_script}")

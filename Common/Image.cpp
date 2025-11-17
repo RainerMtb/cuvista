@@ -235,16 +235,16 @@ template <class T> void ImageBase<T>::copyTo(ImageData<T>& dest, ThreadPoolBase&
 // write text
 //------------------------
 
-template <class T> void ImageBase<T>::writeText(std::string_view text, int x, int y) {
+template <class T> Size ImageBase<T>::writeText(std::string_view text, int x, int y) {
 	int scale = std::min(w, h) / 600 + 1;
-	writeText(text, x, y, scale, scale, TextAlign::BOTTOM_LEFT);
+	return writeText(text, x, y, scale, scale, TextAlign::BOTTOM_LEFT);
 }
 
-template <class T> void ImageBase<T>::writeText(std::string_view text, int x, int y, int sx, int sy, TextAlign alignment) {
-	writeText(text, x, y, sx, sy, alignment, Color::WHITE, Color::BLACK_SEMI);
+template <class T> Size ImageBase<T>::writeText(std::string_view text, int x, int y, int sx, int sy, TextAlign alignment) {
+	return writeText(text, x, y, sx, sy, alignment, Color::WHITE, Color::BLACK_SEMI);
 }
 
-template <class T> void ImageBase<T>::writeText(std::string_view text, int x, int y, int sx, int sy,
+template <class T> Size ImageBase<T>::writeText(std::string_view text, int x, int y, int sx, int sy,
 	TextAlign alignment, const Color& fg, const Color& bg) {
 
 	//compute alignment
@@ -288,6 +288,8 @@ template <class T> void ImageBase<T>::writeText(std::string_view text, int x, in
 			}
 		}
 	}
+
+	return { ht, wt };
 }
 
 

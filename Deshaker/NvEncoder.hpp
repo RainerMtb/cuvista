@@ -72,7 +72,7 @@ public:
 	void init();
 	void probeEncoding(uint32_t* nvencVersionApi, uint32_t* nvencVersionDriver);
 	void probeSupportedCodecs(DeviceInfoCuda& deviceInfoCuda);
-	void createEncoder(int w, int h, int fpsNum, int fpsDen, uint32_t gopLen, std::optional<uint8_t> crf, GUID guid);
+	void createEncoder(int w, int h, int fpsNum, int fpsDen, uint32_t gopLen, uint8_t crf, GUID guid);
 	void destroyEncoder();
 
 	CUdeviceptr getNextInputFramePtr();

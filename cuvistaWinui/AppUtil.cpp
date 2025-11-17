@@ -207,7 +207,7 @@ using namespace winrt::Windows::Media::Audio;
 
 
 //on ui thread
-void PlayerWriter::open(EncodingOption videoCodec) {
+void PlayerWriter::open(OutputOption outputOption) {
     //handling input streams
     for (StreamContext& sc : mReader.mInputStreams) {
         auto posc = std::make_shared<OutputStreamContext>();
@@ -315,7 +315,7 @@ void PlayerWriter::writeOutput(const FrameExecutor& executor) {
 
 
 //on background thread
-bool PlayerWriter::startFlushing() {
+bool PlayerWriter::flush() {
     //wait some time after the last frame is displayed before closing the player
     std::this_thread::sleep_for(std::chrono::milliseconds(750));
     return false;

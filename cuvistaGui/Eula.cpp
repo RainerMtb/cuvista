@@ -47,7 +47,7 @@ Eula::Eula() :
 
     //load markdown text data
     QFile file(":cuvistaGui/res/License.md");
-    file.open(QIODeviceBase::ReadOnly);
+    bool retval = file.open(QIODeviceBase::ReadOnly);
     QString md = QString::fromLocal8Bit(file.readAll());
     ui.textEdit->setMarkdown(md);
     file.close();

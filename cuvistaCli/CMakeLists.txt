@@ -3,6 +3,7 @@
 add_executable(cuvista 
     Main.cpp
     Deshaker.cpp
+    CMakeIcon.rc
 )
 
 target_include_directories(cuvista PRIVATE "${PROJECT_SOURCE_DIR}/Deshaker")

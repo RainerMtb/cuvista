@@ -9,7 +9,7 @@
     <OutputPath>$(SolutionDir)bin\$(Platform)\Installer\</OutputPath>
 	  <Platforms>x64</Platforms>
 	  <SuppressValidation>false</SuppressValidation>
-	  <SuppressIces>ICE03;ICE30</SuppressIces>
+	  <SuppressIces>ICE03;ICE30;ICE61</SuppressIces>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\cuvistaCli\cuvista.vcxproj" />

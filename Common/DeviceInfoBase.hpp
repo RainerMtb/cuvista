@@ -18,51 +18,10 @@
 
 #pragma once
 
-#include <vector>
-#include <string>
 #include <map>
 #include <memory>
 
-enum class Codec {
-	AUTO,
-	H264,
-	H265,
-	AV1,
-};
-
-enum class EncodingDevice {
-	AUTO,
-	NVENC,
-	FFMPEG,
-};
-
-inline std::map<std::string, Codec> mapStringToCodec = {
-	{"AUTO", Codec::AUTO},
-	{"H264", Codec::H264},
-	{"H265", Codec::H265},
-	{"AV1", Codec::AV1},
-};
-inline std::map<Codec, std::string> mapCodecToString = {
-	{Codec::AUTO, "AUTO"},
-	{Codec::H264, "H264"},
-	{Codec::H265, "H265"},
-	{Codec::AV1, "AV1"},
-};
-inline std::map<std::string, EncodingDevice> mapStringToDevice = {
-	{"AUTO", EncodingDevice::AUTO},
-	{"NVENC", EncodingDevice::NVENC},
-	{"FFMPEG", EncodingDevice::FFMPEG},
-};
-inline std::map<EncodingDevice, std::string> mapDeviceToString = {
-	{EncodingDevice::AUTO, "AUTO"},
-	{EncodingDevice::NVENC, "NVENC"},
-	{EncodingDevice::FFMPEG, "FFMPEG"},
-};
-
-struct EncodingOption {
-	EncodingDevice device;
-	Codec codec;
-};
+#include "OutputOption.hpp"
 
 enum class DeviceType {
 	CPU,
@@ -78,7 +37,7 @@ class MovieFrame;
 
 class DeviceInfoBase {
 public:
-	std::vector<EncodingOption> encodingOptions;
+	std::vector<OutputOption> videoEncodingOptions;
 	int64_t maxPixel;
 
 	DeviceInfoBase(int64_t maxPixel)

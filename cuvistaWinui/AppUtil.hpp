@@ -101,10 +101,10 @@ public:
     {}
 
     //writer
-    void open(EncodingOption videoCodec) override;
+    void open(OutputOption outputOption) override;
     void start() override;
     void writeOutput(const FrameExecutor& executor) override;
-    bool startFlushing() override;
+    bool flush() override;
     void close() override;
 };
 

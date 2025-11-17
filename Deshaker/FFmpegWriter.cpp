@@ -23,16 +23,28 @@
 #include "Util.hpp"
 
 
-void FFmpegWriter::open(AVCodecID codecId, AVPixelFormat pixfmt, int h, int w, int stride) {
-    int result = 0;
-
-    //find and open codec
+void FFmpegWriter::open(std::span<std::string> codecNames, AVCodecID codecId, AVPixelFormat pixfmt, int h, int w, int stride) {
+    //first try to find codec by name
     const AVCodec* codec = nullptr;
-    for (const std::string& codecName : codecToNamesMap[codecId]) {
-        if (codec = avcodec_find_encoder_by_name(codecName.c_str())) break;
+    for (const std::string& codecName : codecNames) {
+        codec = avcodec_find_encoder_by_name(codecName.c_str());
+        if (codec) break;
     }
-    if (!codec)
+    //finding by name does not work in thge gui on linux, try by id ???
+    if (!codec) {
+        codec = avcodec_find_encoder(codecId);
+    }
+    if (!codec) {
         throw AVException("Could not find encoder");
+    }
+    //std::cout << "Using encoder: " << codec->name << " - " << codec->long_name << std::endl;
+
+    //open codec
+    open(codec, pixfmt, h, w, stride);
+}
+
+void FFmpegWriter::open(const AVCodec* codec, AVPixelFormat pixfmt, int h, int w, int stride) {
+    int result = 0;
 
     codec_ctx = avcodec_alloc_context3(codec);
     if (!codec_ctx)
@@ -46,11 +58,12 @@ void FFmpegWriter::open(AVCodecID codecId, AVPixelFormat pixfmt, int h, int w, i
     codec_ctx->time_base = { mReader.fpsDen, mReader.fpsNum };
     codec_ctx->gop_size = gopSize;
     codec_ctx->max_b_frames = 4;
+    codec_ctx->thread_count = mData.cpuThreads;
     //av_opt_set(codec_ctx->priv_data, "preset", "slow", 0);
     av_opt_set(codec_ctx->priv_data, "profile", "main", 0);
     av_opt_set(codec_ctx->priv_data, "x265-params", "log-level=error", 0);
     av_opt_set(codec_ctx->priv_data, "svtav1-params", "svt-log-level=1", 0);
-    if (mData.crf) av_opt_set(codec_ctx->priv_data, "crf", std::to_string(mData.crf.value()).c_str(), 0);
+    av_opt_set(codec_ctx->priv_data, "crf", std::to_string(mData.selectedCrf).c_str(), 0);
 
     if (fmt_ctx->oformat->flags & AVFMT_GLOBALHEADER)
         codec_ctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
@@ -100,12 +113,13 @@ void FFmpegWriter::open(AVCodecID codecId, AVPixelFormat pixfmt, int h, int w, i
 
 
 //set up ffmpeg encoder
-void FFmpegWriter::open(EncodingOption videoCodec, AVPixelFormat pixfmt, int h, int w, int stride, const std::string& sourceName) {
+void FFmpegWriter::open(OutputOption outputOption, AVPixelFormat pixfmt, int h, int w, int stride, const std::string& sourceName) {
     //open container format
-    AVCodecID codecID = codecToCodecIdMap[videoCodec.codec];
-    FFmpegFormatWriter::open(codecID, sourceName, imageBufferSize);
+    AVCodecID codecID = optionToCodecIdMap[outputOption];
+    FFmpegFormatWriter::openFormat(codecID, sourceName, imageBufferSize);
 
-    open(codecID, pixfmt, h, w, stride);
+    std::span<std::string> codecNames = codecToNamesMap[codecID];
+    open(codecNames, codecID, pixfmt, h, w, stride);
 
     sws_scaler_ctx = sws_getContext(w, h, AV_PIX_FMT_YUV444P, w, h, pixfmt, SWS_BILINEAR, NULL, NULL, NULL);
     if (!sws_scaler_ctx) 
@@ -119,8 +133,8 @@ void FFmpegWriter::open(EncodingOption videoCodec, AVPixelFormat pixfmt, int h, 
 
 
 //normal entry point for opening Writer
-void FFmpegWriter::open(EncodingOption videoCodec) {
-    open(videoCodec, AV_PIX_FMT_YUV420P, mData.h, mData.w, mData.cpupitch, mData.fileOut);
+void FFmpegWriter::open(OutputOption outputOption) {
+    open(outputOption, AV_PIX_FMT_YUV420P, mData.h, mData.w, mData.cpupitch, mData.fileOut);
 }
 
 
@@ -189,15 +203,19 @@ void FFmpegWriter::writeOutput(const FrameExecutor& executor) {
 
 
 //flush encoder buffer
-bool FFmpegWriter::startFlushing() {
-    for (auto& f : encodingQueue) f.wait();
-    int result = sendFFmpegFrame(nullptr);
-    return result >= 0;
-}
-
-
 bool FFmpegWriter::flush() {
-    return writeFFmpegPacket(nullptr) >= 0;
+    int result = 0;
+
+    if (isFlushing) {
+        result = writeFFmpegPacket(nullptr);
+
+    } else {
+        isFlushing = true;
+        for (auto& f : encodingQueue) f.wait();
+        result = sendFFmpegFrame(nullptr);
+    }
+
+    return result >= 0;
 }
 
 

@@ -23,11 +23,6 @@
 #include "MainData.hpp"
 #include "ThreadPoolBase.h"
 
-//hold data for debugging
-struct FrameResultStore {
-	int64_t frameIndex = -1;
-	std::vector<PointResult> results;
-};
 
 //compute and hold transform for one video frame
 class FrameResult {
@@ -35,9 +30,6 @@ class FrameResult {
 	using SamplerPtr = std::shared_ptr<SamplerBase<PointContext>>;
 
 public:
-	//store results for analyzing and debugging
-	inline static std::list<FrameResultStore> resultStore;
-
 	//construct lists and solver class
 	FrameResult(MainData& data, ThreadPoolBase& threadPool);
 

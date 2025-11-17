@@ -52,23 +52,32 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 
 		//----------- create appropriate MovieWriter
 		std::shared_ptr<MovieWriter> mainWriter;
-		if (data.videoOutputType == OutputType::STACKING)
+		if (data.outputOption == OutputOption::VIDEO_STACK)
 			mainWriter = std::make_shared<StackedWriter>(data, *reader);
-		else if (data.videoOutputType == OutputType::PIPE)
-			mainWriter = std::make_shared<PipeWriter>(data, *reader);
-		else if (data.videoOutputType == OutputType::SEQUENCE_BMP)
+		else if (data.outputOption == OutputOption::VIDEO_FLOW)
+			mainWriter = std::make_shared<OpticalFlowWriter>(data, *reader);
+		else if (data.outputOption == OutputOption::PIPE_RAW)
+			mainWriter = std::make_shared<RawPipeWriter>(data, *reader);
+		else if (data.outputOption == OutputOption::PIPE_ASF)
+			mainWriter = std::make_shared<AsfPipeWriter>(data, *reader);
+		else if (data.outputOption == OutputOption::IMAGE_BMP)
 			mainWriter = std::make_shared<BmpImageWriter>(data, *reader);
-		else if (data.videoOutputType == OutputType::SEQUENCE_JPG)
+		else if (data.outputOption == OutputOption::IMAGE_JPG)
 			mainWriter = std::make_shared<JpegImageWriter>(data, *reader);
-		else if (data.videoOutputType == OutputType::RAW_YUV_FILE)
-			mainWriter = std::make_shared<RawWriter>(data, *reader);
-		else if (data.videoOutputType == OutputType::VIDEO_FILE && data.selectedEncoding.device == EncodingDevice::FFMPEG)
+		else if (data.outputOption == OutputOption::RAW_YUV444)
+			mainWriter = std::make_shared<RawYuvWriter>(data, *reader);
+		else if (data.outputOption == OutputOption::RAW_NV12)
+			mainWriter = std::make_shared<RawNv12Writer>(data, *reader);
+		else if (data.outputOption == OutputOption::IMAGE_RESULTS)
+			mainWriter = std::make_shared<ResultImageWriter>(data, *reader);
+		else if (data.outputOption.device == OutputGroup::VIDEO_FFMPEG)
 			mainWriter = std::make_shared<FFmpegWriter>(data, *reader);
-		else if (data.videoOutputType == OutputType::VIDEO_FILE && data.selectedEncoding.device == EncodingDevice::NVENC)
+		else if (data.outputOption.device == OutputGroup::VIDEO_NVENC)
 			mainWriter = std::make_shared<CudaFFmpegWriter>(data, *reader);
 		else
 			mainWriter = std::make_shared<OutputWriter>(data, *reader);
 
+		//create new collection of writers
 		writer = std::make_unique<MovieWriterCollection>(data, *reader, mainWriter);
 
 		//----------- create secondary Writers
@@ -78,16 +87,10 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 		if (!data.resultsFile.empty()) {
 			writer->addWriter(std::make_unique<ResultDetailsWriter>(data));
 		}
-		if (!data.resultImageFile.empty()) {
-			writer->addWriter(std::make_unique<ResultImageWriter>(data));
-		}
-		if (!data.flowFile.empty()) {
-			writer->addWriter(std::make_unique<OpticalFlowWriter>(data, *reader));
-		}
 		if (externalWriter) {
 			writer->addWriter(externalWriter);
 		}
-		writer->open(data.requestedEncoding);
+		writer->open(data.outputOption);
 
 		//----------- create Frame Handler for selected loop
 		if (data.mode == 0) {
@@ -112,25 +115,25 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 		return { 10 };
 
 	} catch (const CancelException& e) {
-		printError(*data.console, e.what());
+		printError(std::cerr, e.what());
 		return { 1 };
 
 	} catch (const AVException& e) {
-		printError(*data.console, std::string("error: ") + e.what());
+		printError(std::cerr, std::string("error: ") + e.what());
 		if (errorLogger().hasError()) {
-			printError(*data.console, std::string("error: ") + errorLogger().getErrorMessage());
+			printError(std::cerr, std::string("error: ") + errorLogger().getErrorMessage());
 		}
 		return { 2 };
 
 	} catch (const std::invalid_argument& e) {
-		printError(*data.console, std::string("invalid value: ") + e.what());
+		printError(std::cerr, std::string("invalid value: ") + e.what());
 		if (errorLogger().hasError()) {
-			printError(*data.console, std::string("error: ") + errorLogger().getErrorMessage());
+			printError(std::cerr, std::string("error: ") + errorLogger().getErrorMessage());
 		}
 		return { 3 };
 
 	} catch (...) {
-		printError(*data.console, "unknown error in cuvista");
+		printError(std::cerr, "unknown error in cuvista");
 		return { 4 };
 	}
 
@@ -170,6 +173,7 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 	result.framesRead = reader->frameIndex;
 	result.framesWritten = writer->frameIndex;
 	result.framesEncoded = writer->frameEncoded;
+	result.bytesWritten = writer->outputBytesWritten;
 	result.bytesEncoded = writer->encodedBytesTotal;
 	result.trajectory = frame->mTrajectory.getTrajectory();
 	result.executorName = executor->mDeviceInfo.getName();

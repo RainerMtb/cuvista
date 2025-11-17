@@ -38,8 +38,7 @@ public:
 	CudaFFmpegWriter(MainData& data, MovieReader& reader);
 	~CudaFFmpegWriter() override;
 
-	void open(EncodingOption videoCodec) override;
+	void open(OutputOption outputOption) override;
 	void writeOutput(const FrameExecutor& executor) override;
-	bool startFlushing() override;
 	bool flush() override;
 };

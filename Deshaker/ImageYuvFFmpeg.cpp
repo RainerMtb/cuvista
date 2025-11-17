@@ -37,6 +37,10 @@ int ImageYuvFFmpeg::strideInBytes() const {
     return av_frame->linesize[0];
 }
 
+int ImageYuvFFmpeg::sizeInBytes() const {
+    return height() * strideInBytes() * planes();
+}
+
 int ImageYuvFFmpeg::height() const {
     return av_frame->height;
 }
@@ -56,5 +60,19 @@ void ImageYuvFFmpeg::setIndex(int64_t frameIndex) {
 bool ImageYuvFFmpeg::saveAsBMP(const std::string& filename, uint8_t scale) const {
     int h = height();
     int w = width();
-    return ImageMatYuv8(h, w, w, (uint8_t*) addr(0, 0, 0), (uint8_t*) addr(1, 0, 0), (uint8_t*) addr(2, 0, 0)).saveAsBMP(filename, scale);
+    ImageMatYuv8 mat(h, w, w, (uint8_t*) addr(0, 0, 0), (uint8_t*) addr(1, 0, 0), (uint8_t*) addr(2, 0, 0));
+    return mat.saveAsBMP(filename, scale);
+}
+
+std::vector<uint8_t> ImageYuvFFmpeg::rawBytes() const {
+    int planeSize = strideInBytes() * height();
+    std::vector<uint8_t> data(3ll * planeSize);
+    std::copy_n(addr(0, 0, 0), planeSize, data.data());
+    std::copy_n(addr(1, 0, 0), planeSize, data.data() + planeSize);
+    std::copy_n(addr(2, 0, 0), planeSize, data.data() + planeSize * 2);
+    return data;
+}
+
+ImageType ImageYuvFFmpeg::type() const {
+    return ImageType::SHARED;
 }

@@ -22,8 +22,8 @@
 #if __has_include("MainWindow.g.cpp")
 #include "MainWindow.g.cpp"
 #endif
-#if __has_include("EncodingOptionXaml.g.cpp")
-#include "EncodingOptionXaml.g.cpp"
+#if __has_include("CustomRuntimeXaml.g.cpp")
+#include "CustomRuntimeXaml.g.cpp"
 #endif
 
 #include <filesystem>
@@ -48,20 +48,16 @@ namespace winrt::cuvistaWinui::implementation {
     //-------------------- EncodingOptionXaml ---------------------------------
     //-------------------------------------------------------------------------
 
-    EncodingOptionXaml::EncodingOptionXaml() :
-        EncodingOptionXaml({ EncodingDevice::AUTO, Codec::AUTO })
+    CustomRuntimeXaml::CustomRuntimeXaml() :
+        object { &RuntimeBase::EMPTY }
     {}
 
-    EncodingOptionXaml::EncodingOptionXaml(EncodingOption option) {
-        mOption = option;
-    }
+    CustomRuntimeXaml::CustomRuntimeXaml(RuntimeBase* object) :
+        object { object }
+    {}
 
-    hstring EncodingOptionXaml::Device() const {
-        return to_hstring(mapDeviceToString[mOption.device]);
-    }
-
-    hstring EncodingOptionXaml::Codec() const {
-        return to_hstring(mapCodecToString[mOption.codec]);
+    hstring CustomRuntimeXaml::displayName() const {
+        return to_hstring(object->displayName());
     }
 
 
@@ -143,7 +139,7 @@ namespace winrt::cuvistaWinui::implementation {
 
         //stored settings
         int minW = 700;
-        int minH = 850;
+        int minH = 750;
         int windowX = localValues.Lookup(L"windowX").try_as<int>().value_or(50);
         int windowY = localValues.Lookup(L"windowY").try_as<int>().value_or(50);
         int windowWidth = localValues.Lookup(L"windowWidth").try_as<int>().value_or(0);
@@ -163,8 +159,11 @@ namespace winrt::cuvistaWinui::implementation {
         spinZoomMin().Value(localValues.Lookup(L"zoomMin").try_as<double>().value_or(defaults.zoomMin - 1.0));
         spinZoomMax().Value(localValues.Lookup(L"zoomMax").try_as<double>().value_or(defaults.zoomMax - 1.0));
         chkDynamicZoom().IsChecked(localValues.Lookup(L"zoomDynamic").try_as<bool>().value_or(true));
-        chkFrameLimit().IsChecked(localValues.Lookup(L"limitEnabled").try_as<bool>().value_or(false));
         spinFrameLimit().Value(localValues.Lookup(L"limitValue").try_as<double>().value_or(defaults.frameLimit));
+        //chkFrameLimit().IsChecked(localValues.Lookup(L"limitEnabled").try_as<bool>().value_or(false));
+
+        sliderQuality().Value(localValues.Lookup(L"encodingQuality").try_as<double>().value_or(defaults.encodingQuality));
+        sliderLevels().Value(3.0);
 
         //load file when given as command line argument or when file was dropped on the app icon
         LPWSTR cmd = GetCommandLineW();
@@ -176,10 +175,6 @@ namespace winrt::cuvistaWinui::implementation {
                 addInputFile(cmdArgs[1]);
             }
         }
-
-        //load working bitmap
-        //auto loader = std::async(loadImage, L"ms-appx:///Assets/signs-02.png");
-        //mWorkingBitmap = loader.get();
     }
 
 
@@ -329,12 +324,15 @@ namespace winrt::cuvistaWinui::implementation {
         mData.deviceSelected = comboDevice().SelectedIndex();
 
         IInspectable option = comboEncoding().SelectedValue();
-        mData.requestedEncoding = option.as<cuvistaWinui::implementation::EncodingOptionXaml>()->mOption;
+        RuntimeBase* ptr = option.as<cuvistaWinui::implementation::CustomRuntimeXaml>()->object;
+        mData.outputOption = *static_cast<OutputOption*>(ptr);
+        mData.requestedCrf = mData.outputOption.percentToCrf(sliderQuality().Value());
         mData.radsec = spinRadius().Value();
         mData.zoomMin = 1.0 + spinZoomMin().Value();
         mData.zoomMax = chkDynamicZoom().IsChecked().Value() ? 1.0 + spinZoomMax().Value() : mData.zoomMin;
         mData.bgmode = radioBlend().IsChecked().Value() ? BackgroundMode::BLEND : BackgroundMode::COLOR;
         mData.maxFrames = chkFrameLimit().IsChecked().Value() ? (int64_t) spinFrameLimit().Value() : std::numeric_limits<int64_t>::max();
+        mData.pyramidLevelsRequested = (int) sliderLevels().Value();
 
         mData.backgroundColor = Color::rgb(mBackgroundColor.R, mBackgroundColor.G, mBackgroundColor.B);
         mData.backgroundColor.toYUVfloat(&mData.bgcolorYuv.y, &mData.bgcolorYuv.u, &mData.bgcolorYuv.v);
@@ -359,24 +357,24 @@ namespace winrt::cuvistaWinui::implementation {
             }
 
             //select writer
-            OutputType imageType = mOutputImageTypeMap.at(comboImageType().SelectedValue().as<hstring>());
+            OutputOption imageType = mOutputImageTypeMap.at(comboImageType().SelectedValue().as<hstring>());
             if (chkStack().IsChecked().Value())
                 writer = std::make_shared<StackedWriter>(mData, mReader);
-            else if (chkSequence().IsChecked().Value() && imageType == OutputType::SEQUENCE_BMP)
+            else if (chkSequence().IsChecked().Value() && imageType == OutputOption::IMAGE_BMP)
                 writer = std::make_shared<BmpImageWriter>(mData, mReader);
-            else if (chkSequence().IsChecked().Value() && imageType == OutputType::SEQUENCE_JPG)
+            else if (chkSequence().IsChecked().Value() && imageType == OutputOption::IMAGE_BMP)
                 writer = std::make_shared<JpegImageWriter>(mData, mReader);
-            else if (chkEncode().IsChecked().Value() && mData.requestedEncoding.device == EncodingDevice::NVENC)
+            else if (chkEncode().IsChecked().Value() && mData.outputOption.device == OutputGroup::VIDEO_NVENC)
                 writer = std::make_shared<CudaFFmpegWriter>(mData, mReader);
+            else if (chkEncode().IsChecked().Value() && mData.outputOption.device == OutputGroup::VIDEO_FFMPEG)
+                writer = std::make_shared<FFmpegWriter>(mData, mReader);
             else if (chkPlayer().IsChecked().Value())
                 writer = std::make_shared<PlayerWriter>(*this, *executor, mData, mReader);
-            else if (chkEncode().IsChecked().Value())
-                writer = std::make_shared<FFmpegWriter>(mData, mReader);
             else
                 co_return;
 
             //open writer
-            writer->open(mData.requestedEncoding);
+            writer->open(mData.outputOption);
 
             //select frame handler
             mData.mode = comboMode().SelectedIndex();
@@ -449,7 +447,8 @@ namespace winrt::cuvistaWinui::implementation {
         //debugPrint("loop done");
         LoopResult result = mFutureLoop.get();
         double secs = mData.timeElapsedSeconds();
-        double fps = writer->frameEncoded / secs;
+        double fps = writer->frameIndex / secs;
+        std::string fileSize = util::byteSizeToString(writer->encodedBytesTotal);
         writer.reset();
         executor.reset();
         frame.reset();
@@ -468,7 +467,7 @@ namespace winrt::cuvistaWinui::implementation {
             Documents::Run linkRun;
             linkRun.Text(mOutputFile);
             lblStatusLink().Inlines().ReplaceAll({ linkRun });
-            lblStatus().Text(hformat("written in {:.1f} min at {:.1f} fps", secs / 60.0, fps));
+            lblStatus().Text(hformat("({}) written in {:.1f} min at {:.1f} fps", fileSize, secs / 60.0, fps));
         }
         //debugPrint("done");
     }
@@ -493,10 +492,9 @@ namespace winrt::cuvistaWinui::implementation {
     void MainWindow::comboDeviceChanged(const IInspectable& sender, const Controls::SelectionChangedEventArgs& args) {
         comboEncoding().Items().Clear();
         int32_t index = comboDevice().SelectedIndex();
-        std::span<EncodingOption> s = mData.deviceList[index]->encodingOptions;
-        for (EncodingOption& e : s) {
-            auto eox = winrt::make_self<cuvistaWinui::implementation::EncodingOptionXaml>(e);
-            comboEncoding().Items().Append(eox.as<IInspectable>());
+        for (OutputOption& o : mData.deviceList[index]->videoEncodingOptions) {
+            auto comPtr = winrt::make_self<cuvistaWinui::implementation::CustomRuntimeXaml>(&o);
+            comboEncoding().Items().Append(comPtr.as<IInspectable>());
         }
         comboEncoding().SelectedIndex(0);
     }
@@ -709,7 +707,12 @@ namespace winrt::cuvistaWinui::implementation {
         chkFrameLimit().IsChecked(false);
         spinFrameLimit().Value(defaults.frameLimit);
 
+        sliderLevels().Value(defaults.levels);
+        sliderQuality().Value(defaults.encodingQuality);
+
         mReader.close();
+        mInputFile = {};
+
         texInput().Text(L"");
         comboInputFile().Items().Clear();
         inputPosition().Value(0.0);
@@ -780,6 +783,7 @@ namespace winrt::cuvistaWinui::implementation {
         localValues.Insert(L"zoomDynamic", box_value(chkDynamicZoom().IsChecked()));
         localValues.Insert(L"limitEnabled", box_value(chkFrameLimit().IsChecked()));
         localValues.Insert(L"limitValue", box_value(spinFrameLimit().Value()));
+        localValues.Insert(L"encodingQuality", box_value(sliderQuality().Value()));
 
         Controls::ItemCollection recentFiles = comboInputFile().Items();
         uint32_t idx = 0;
@@ -794,4 +798,3 @@ namespace winrt::cuvistaWinui::implementation {
         }
     }
 }
-

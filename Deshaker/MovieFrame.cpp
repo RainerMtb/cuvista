@@ -196,7 +196,7 @@ LoopResult MovieFrameCombined::runLoop(ProgressBase& progress, UserInput& input,
 
 		} else if (state == StateCombined::QUIT) {
 			//start to flush the writer
-			hasFramesToFlush = mWriter.startFlushing();
+			hasFramesToFlush = mWriter.flush();
 
 		} else if (state == StateCombined::FLUSH) {
 			//flush the writer as long as there are frames left
@@ -385,7 +385,7 @@ LoopResult MovieFrameConsecutive::runLoop(ProgressBase& progress, UserInput& inp
 
 		} else if (state == StateConsecutive::QUIT) {
 			//start to flush the writer
-			hasFramesToFlush = mWriter.startFlushing();
+			hasFramesToFlush = mWriter.flush();
 
 		} else if (state == StateConsecutive::FLUSH) {
 			//flush the writer as long as there are frames left

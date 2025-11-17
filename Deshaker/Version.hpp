@@ -20,4 +20,4 @@
 
 #include <string>
 
-inline std::string CUVISTA_VERSION = "1.7.2";
+inline std::string CUVISTA_VERSION = "1.8.0";

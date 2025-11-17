@@ -1,16 +1,19 @@
-﻿<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+﻿<?define cuvistaVersion="1.8.0.0"?>
+
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
 	<Package
 		Name="Cuvista"
 		Manufacturer="Rainer Bitschi"
-		Version="1.7.2.0"
+		Version="$(var.cuvistaVersion)"
 		Id="Rainer Bitschi - Cuvista"
 		UpgradeCode="1446b707-932a-49b4-a152-e2e0528cf201"
+		ProductCode="*"
 		>
 
 		<MajorUpgrade
 			Schedule="afterInstallExecute"
 			AllowDowngrades="no"
-            AllowSameVersionUpgrades="no"
+            AllowSameVersionUpgrades="yes"
             Disallow="no"
             IgnoreRemoveFailure="no"
             MigrateFeatures="yes"

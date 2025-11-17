@@ -46,8 +46,10 @@ std::stringstream& ProgressDisplayConsole::buildMessageLine(const ProgressInfo& 
 	if (progress.writeIndex > 0)
 		buffer << ", frames out " << progress.writeIndex;
 
-	if (progress.outputBytesWritten > 0)
-		buffer << ", output written " << util::byteSizeToString(progress.outputBytesWritten);
+	if (progress.outputBytesWritten > 0) {
+		int64_t byteCount = progress.outputBytesWritten;
+		buffer << ", output written " << util::byteSizeToString(byteCount) << " (" << byteCount << " bytes)";
+	}
 	return buffer;
 }
 
@@ -160,11 +162,12 @@ std::string ProgressDisplayMultiLine::buildLine(int64_t frameIndex, int64_t fram
 
 std::string ProgressDisplayMultiLine::buildMessage(const ProgressInfo& progress) {
 	int64_t graphLength = getConsoleWidth() - 25LL;
-	return std::format("\x0D\x1B[2K{}\n\x0D\x1B[2KInput   {}\n\x0D\x1B[2KOutput  {}\n\x0D\x1B[2KTotal   {}\n\x0D\x1B[2Koutput written {}\n",
+	return std::format("\x0D\x1B[2K{}\n\x0D\x1B[2KInput   {}\n\x0D\x1B[2KOutput  {}\n\x0D\x1B[2KTotal   {}\n\x0D\x1B[2Koutput written {} ({} bytes)\n",
 		mStatusMessage,
 		buildLine(progress.readIndex, progress.frameCount, graphLength, -1.0),
 		buildLine(progress.writeIndex, progress.frameCount, graphLength, -1.0),
 		buildLine(0, 0, graphLength, progress.totalProgress),
-		util::byteSizeToString(progress.outputBytesWritten))
-		;
+		util::byteSizeToString(progress.outputBytesWritten),
+		progress.outputBytesWritten
+		);
 }

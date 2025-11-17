@@ -55,6 +55,7 @@ static DeshakerResult run(const std::string& argsLine, std::shared_ptr<MovieWrit
 static void testMain() {
 	std::cout << "--- Short Runs ---" << std::endl;
 	run("-frames 0 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/000null.mp4 -noheader -progress 0 -y");
+	run("-frames 0 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/001null.mp4 -enc ffmpeg:hevc -noheader -progress 0 -y");
 	run("-frames 1 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/001.mp4 -noheader -progress 0 -y");
 	run("-frames 2 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/002.mp4 -noheader -progress 0 -y");
 	run("-frames 3 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/003.mp4 -noheader -progress 0 -y");
@@ -68,8 +69,8 @@ static void testMain() {
 	run("-mode 1 -frames 40 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/009.mp4 -noheader -progress 0 -y");
 
 	std::cout << "--- Images ---" << std::endl;
-	run("-frames 10 -i d:/VideoTest/04.ts -resim d:/VideoTest/out/images/test%02d.jpg -progress 0 -y");
-	run("-frames 5 -i d:/VideoTest/01.mp4 -o d:/VideoTest/out/images/im%03d.bmp -progress 0 -y");
+	run("-frames 10 -i d:/VideoTest/04.ts -o d:/VideoTest/out/images/test%02d.jpg -resim -progress 0 -y");
+	run("-device 3 -frames 5 -i d:/VideoTest/01.mp4 -o d:/VideoTest/out/images/im%03d.bmp -progress 0 -y");
 	run("-device 2 -frames 5 -i d:/VideoTest/01.mp4 -o d:/VideoTest/out/images/im%03d.jpg -progress 0 -y");
 
 	std::cout << "--- Videos ---" << std::endl;
@@ -105,12 +106,20 @@ static void testMain() {
 
 	std::cout << "--- Misc ---" << std::endl;
 	run("-device 2 -i d:/VideoTest/06.mp4 -o d:/videoTest/out/06_stack.mp4 -stack 250:250 -noheader -progress 0");
-	run("-device 2 -i d:/VideoTest/01.mp4 -o null -flow d:/videoTest/out/flow.mp4 -noheader -progress 0");
+	run("-device 2 -i d:/VideoTest/01.mp4 -o d:/videoTest/out/flow.mp4 -flow -noheader -progress 0");
+	run("-device 1 -i d:/VideoTest/02short.mp4 -o d:/videoTest/out/raw02.yuv -noheader -progress 0");
+	run("-device 1 -i d:/VideoTest/02short.mp4 -o d:/videoTest/out/raw02.nv12 -noheader -progress 0");
 
 	std::cout << "--- Encode Nvenc ---" << std::endl;
-	run("-i d:/VideoTest/02short.mp4 -o d:/videoTest/out/nvenc00.mp4 -device 0 -encoder nvenc -noheader -progress 0");
-	run("-i d:/VideoTest/02short.mp4 -o d:/videoTest/out/nvenc01.mp4 -device 1 -encoder nvenc -noheader -progress 0");
-	run("-i d:/VideoTest/02short.mp4 -o d:/videoTest/out/nvenc02.mp4 -device 2 -encoder nvenc -noheader -progress 0");
+	run("-i d:/VideoTest/02short.mp4 -o d:/videoTest/out/nvenc00.mp4 -device 0 -enc nvenc:hevc -noheader -progress 0");
+	run("-i d:/VideoTest/02short.mp4 -o d:/videoTest/out/nvenc01.mp4 -device 1 -enc nvenc:h264 -noheader -progress 0");
+	run("-i d:/VideoTest/02short.mp4 -o d:/videoTest/out/nvenc02.mp4 -device 2 -enc nvenc:hevc -noheader -progress 0");
+
+	std::cout << "--- Encoding to Cpu ---" << std::endl;
+	run("-i d:/VideoTest/02short.mp4 -o d:/videoTest/out/enc_av1.mp4 -enc ffmpeg:av1 -progress 0");
+	run("-i d:/VideoTest/02short.mp4 -o d:/videoTest/out/enc_hevc.mp4 -enc ffmpeg:hevc -progress 0");
+	run("-i d:/VideoTest/02short.mp4 -o d:/videoTest/out/enc_h264.mp4 -enc ffmpeg:h264 -progress 0");
+	run("-i d:/VideoTest/02short.mp4 -o d:/videoTest/out/enc_ffv1.mp4 -enc ffmpeg:ffv1 -progress 0");
 }
 
 static void testCrc() {
@@ -118,7 +127,7 @@ static void testCrc() {
 	std::string ansiRed = "\x1b[1;31m";
 	std::string ansiClear = "\x1b[0m";
 
-	std::cout << "--- Check Equal Files ---" << std::endl;
+	std::cout << std::endl << "--- Check Equal Files ---" << std::endl;
 	std::vector<std::string> commands = {
 		"-device 0 -i d:/VideoTest/02short.mp4 -o null -quiet",
 		"-device 1 -i d:/VideoTest/02short.mp4 -o null -quiet",
@@ -190,7 +199,7 @@ static void testCrc() {
 	}
 
 	//------------------------------------------------------------------------------------
-	std::cout << "--- Check Mode 2 ---" << std::endl;
+	std::cout << std::endl << "--- Check Mode 2 ---" << std::endl;
 	std::vector<std::string> commandsMode2 = {
 		"-device 0 -i d:/VideoTest/02short.mp4 -o null -quiet -mode 2",
 		"-device 1 -i d:/VideoTest/02short.mp4 -o null -quiet -mode 2",

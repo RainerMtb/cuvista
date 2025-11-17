@@ -254,6 +254,7 @@ void FFmpegFormatReader::close() {
     if (isFormatOpen) {
         avformat_close_input(&av_format_ctx);
         avformat_free_context(av_format_ctx);
+        isFormatOpen = false;
     }
 }
 
@@ -490,13 +491,17 @@ MemoryFFmpegReader::MemoryFFmpegReader(std::span<unsigned char> movieData) :
     mData { movieData } {}
 
 void MemoryFFmpegReader::open(const std::string& source) {
+    //custom avio
     int bufsiz = 4 * 1024;
     mBuffer = (unsigned char*) av_malloc(bufsiz);
     av_avio = avio_alloc_context(mBuffer, bufsiz, 0, this, &MemoryFFmpegReader::readBuffer, nullptr, &MemoryFFmpegReader::seekBuffer);
+    
+    //custom format context
     AVFormatContext* av_fmt = avformat_alloc_context();
     av_fmt->pb = av_avio;
     av_fmt->flags |= AVFMT_FLAG_CUSTOM_IO;
 
+    //open input using format and io context
     openInput(av_fmt, "");
 }
 

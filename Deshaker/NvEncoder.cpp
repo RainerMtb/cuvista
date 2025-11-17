@@ -108,18 +108,18 @@ void NvEncoder::probeSupportedCodecs(DeviceInfoCuda& deviceInfoCuda) {
 
 	//order best codec first
 	if (std::find(guids.cbegin(), guids.cend(), NV_ENC_CODEC_AV1_GUID) != guids.cend())
-		deviceInfoCuda.encodingOptions.emplace_back(EncodingDevice::NVENC, Codec::AV1);
+		deviceInfoCuda.videoEncodingOptions.push_back(OutputOption::NVENC_AV1);
 	if (std::find(guids.cbegin(), guids.cend(), NV_ENC_CODEC_HEVC_GUID) != guids.cend())
-		deviceInfoCuda.encodingOptions.emplace_back(EncodingDevice::NVENC, Codec::H265);
+		deviceInfoCuda.videoEncodingOptions.push_back(OutputOption::NVENC_HEVC);
 	if (std::find(guids.cbegin(), guids.cend(), NV_ENC_CODEC_H264_GUID) != guids.cend())
-		deviceInfoCuda.encodingOptions.emplace_back(EncodingDevice::NVENC, Codec::H264);
+		deviceInfoCuda.videoEncodingOptions.push_back(OutputOption::NVENC_H264);
 
 	encFuncList.nvEncDestroyEncoder(mEncoder);
 	mEncoder = nullptr;
 }
 
 
-void NvEncoder::createEncoder(int w, int h, int fpsNum, int fpsDen, uint32_t gopLen, std::optional<uint8_t> crf, GUID guid) {
+void NvEncoder::createEncoder(int w, int h, int fpsNum, int fpsDen, uint32_t gopLen, uint8_t crf, GUID guid) {
 	this->h = h;
 	this->w = w;
 	init();
@@ -157,10 +157,11 @@ void NvEncoder::createEncoder(int w, int h, int fpsNum, int fpsDen, uint32_t gop
 	encFuncList.nvEncGetEncodePresetConfigEx(mEncoder, guid, presetGuid, tuning, &presetConfig);
 
 	NV_ENC_CONFIG encoderConfig = presetConfig.presetCfg;
-	encoderConfig.rcParams.rateControlMode = NV_ENC_PARAMS_RC_VBR;
-	encoderConfig.gopLength = gopLen;
-	if (crf) encoderConfig.rcParams.targetQuality = *crf;
 	encoderConfig.frameIntervalP = 1; //picture pattern
+	encoderConfig.gopLength = gopLen;
+	encoderConfig.rcParams.rateControlMode = NV_ENC_PARAMS_RC_VBR;
+	encoderConfig.rcParams.targetQuality = crf;
+	encoderConfig.rcParams.maxBitRate = 85'000'000; //bits per second
 	encoderConfig.rcParams.enableLookahead = hasEnableLookahead;
 	encoderConfig.rcParams.lookaheadDepth = 8;
 

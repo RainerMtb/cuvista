@@ -46,6 +46,7 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     mInputDir = mMovieDir;
     mOutputDir = mMovieDir;
     ui.labelStatus->setText(qformat("Version {}", CUVISTA_VERSION));
+    ui.tabSettings->setCurrentIndex(0);
 
     mData.console = &mData.nullStream;
     mData.printHeader = false;
@@ -57,6 +58,18 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     mInputImagePlaceholder.fill(Qt::transparent);
     ui.imageInput->setImage(mInputImagePlaceholder);
 
+    //slider changes
+    auto fcnSliderQuality = [&] (int value) {
+        ui.lblQuality->setText(QString::number(value) + "%");
+    };
+    connect(ui.sliderQuality, &QSlider::valueChanged, this, fcnSliderQuality);
+
+    auto fcnSliderLevels = [&] (int value) {
+        ui.lblLevels->setText(QString::number(value));
+    };
+    connect(ui.sliderLevels, &QSlider::valueChanged, this, fcnSliderLevels);
+    ui.sliderLevels->setValue(defaults.levels);
+
     //modes list
     ui.comboMode->addItem(QString("Combined - Single Pass"));
     ui.comboMode->addItem(QString("Two Pass - Analyze then Write"));
@@ -64,9 +77,9 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
         ui.comboMode->addItem(QString("Multi Pass - Analyze %1x").arg(i));
     }
     auto fcnModeCheck = [&] (int index) {
-        //if (index > 0 && ui.chkPlayer->isChecked()) ui.chkPlayer->setChecked(false);
-        ui.chkPlayer->setEnabled(index == 0);
-        ui.chkPlayer->setCheckable(index == 0);
+        bool playerEnabled = index == 0;
+        ui.chkPlayer->setEnabled(playerEnabled);
+        ui.chkPlayer->setCheckable(playerEnabled);
     };
     connect(ui.comboMode, &QComboBox::currentIndexChanged, this, fcnModeCheck);
 
@@ -75,15 +88,12 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
         ui.comboDevice->addItem(QString::fromStdString(mData.deviceList[i]->getName()));
     }
 
-    //combo box for encoding options for selected device
     auto fcnEncoding = [&] (int index) {
         ui.comboEncoding->clear();
-
-        std::span<EncodingOption> options = mData.deviceList[index]->encodingOptions;
-        for (EncodingOption e : options) {
+        std::span<OutputOption> options = mData.deviceList[index]->videoEncodingOptions;
+        for (OutputOption e : options) {
             QVariant qv = QVariant::fromValue(e);
-            QString qs = qformat("{} - {}", mapDeviceToString[e.device], mapCodecToString[e.codec]);
-
+            QString qs = QString::fromStdString(e.displayName());
             ui.comboEncoding->addItem(qs, qv);
         }
     };
@@ -93,6 +103,23 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     connect(ui.comboDevice, &QComboBox::currentIndexChanged, this, fcnEncoding);
     //trigger setting encoding options
     ui.comboDevice->setCurrentIndex(ui.comboDevice->count() - 1);
+    //encoding quality
+    int encodingQuality = mSettings.value("qt/encoding/quality", defaults.encodingQuality).toInt();
+    ui.sliderQuality->setValue(encodingQuality);
+    //enable quality slider for appropriate settings
+    auto fcnQualityEnable = [&] (int _) {
+        bool qualityEnabled = false;
+        if (ui.chkEncode->isChecked() && ui.comboEncoding->currentData().value<OutputOption>().hasQuality()) {
+            qualityEnabled = true;
+        }
+        if (ui.chkSequence->isChecked() && ui.comboImageType->currentData().value<OutputOption>().hasQuality()) {
+            qualityEnabled = true;
+        }
+        ui.sliderQuality->setEnabled(qualityEnabled);
+    };
+    connect(ui.comboEncoding, &QComboBox::currentIndexChanged, this, fcnQualityEnable);
+    connect(ui.comboImageType, &QComboBox::currentIndexChanged, this, fcnQualityEnable);
+    connect(ui.buttonGroupOutput, &QButtonGroup::idClicked, this, fcnQualityEnable);
 
     //background color selection
     int colorRed = mSettings.value("qt/color/red", mData.backgroundColor.getChannel(0)).toInt();
@@ -112,8 +139,8 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     connect(ui.lblColor, &ClickLabel::clicked, this, fcnColorSelection);
 
     //image sequences
-    ui.comboImageType->addItem("BMP", QVariant::fromValue(OutputType::SEQUENCE_BMP));
-    ui.comboImageType->addItem("JPG", QVariant::fromValue(OutputType::SEQUENCE_JPG));
+    ui.comboImageType->addItem("BMP", QVariant::fromValue(OutputOption::IMAGE_BMP));
+    ui.comboImageType->addItem("JPG", QVariant::fromValue(OutputOption::IMAGE_JPG));
 
     //limits
     ui.spinRadius->setMinimum(defaults.radsecMin);
@@ -201,8 +228,8 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     //window position and size
     int windowPosX = mSettings.value("qt/window/posx", 50).toInt();
     int windowPosY = mSettings.value("qt/window/posy", 50).toInt();
-    int windowWidth = std::max(700, mSettings.value("qt/window/width", 0).toInt());
-    int windowHeight = std::max(700, mSettings.value("qt/window/height", 0).toInt());
+    int windowWidth = std::max(600, mSettings.value("qt/window/width", 0).toInt());
+    int windowHeight = std::max(600, mSettings.value("qt/window/height", 0).toInt());
     move(windowPosX, windowPosY);
     resize(windowWidth, windowHeight);
 
@@ -213,6 +240,8 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     int playerHeight = mSettings.value("qt/player/height", 480).toInt();
     mPlayerWindow->move(playerPosX, playerPosY);
     mPlayerWindow->resize(playerWidth, playerHeight);
+    
+    mProgressWindow->resize(500, 300);
 
     //other settings
     ui.chkOverwrite->setChecked(mSettings.value("qt/overwrite", false).toBool());
@@ -220,8 +249,8 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     ui.spinZoomMin->setValue(mSettings.value("qt/zoom/min", std::round(defaults.zoomMin * 100 - 100)).toInt());
     ui.spinZoomMax->setValue(mSettings.value("qt/zoom/max", std::round(defaults.zoomMax * 100 - 100)).toInt());
     ui.chkDynamicZoom->setChecked(mSettings.value("qt/zoom/dynamic", true).toBool());
-    ui.chkFrameLimit->setChecked(mSettings.value("qt/limit/enable", false).toBool());
     ui.spinFrameLimit->setValue(mSettings.value("qt/limit/value", defaults.frameLimit).toInt());
+    //ui.chkFrameLimit->setChecked(mSettings.value("qt/limit/enable", false).toBool());
 }
 
 //-------------------------
@@ -376,12 +405,14 @@ void cuvistaGui::stabilize() {
     mData.fileOut = outFile.toStdString();
     mData.deviceRequested = true;
     mData.deviceSelected = ui.comboDevice->currentIndex();
-    mData.requestedEncoding = ui.comboEncoding->currentData().value<EncodingOption>();
+    mData.outputOption = ui.comboEncoding->currentData().value<OutputOption>();
+    mData.requestedCrf = mData.outputOption.percentToCrf(ui.sliderQuality->value());
     mData.radsec = ui.spinRadius->value();
     mData.zoomMin = 1.0 + ui.spinZoomMin->value() / 100.0;
     mData.zoomMax = ui.chkDynamicZoom->isChecked() ? 1.0 + ui.spinZoomMax->value() / 100.0 : mData.zoomMin;
     mData.bgmode = ui.radioBlend->isChecked() ? BackgroundMode::BLEND : BackgroundMode::COLOR;
     mData.maxFrames = ui.chkFrameLimit->isChecked() ? ui.spinFrameLimit->value() : std::numeric_limits<int64_t>::max();
+    mData.pyramidLevelsRequested = ui.sliderLevels->value();
 
     using uchar = unsigned char;
     uchar rgb[] = { (uchar) mBackgroundColor.red(), (uchar) mBackgroundColor.green(), (uchar) mBackgroundColor.blue() };
@@ -407,21 +438,21 @@ void cuvistaGui::stabilize() {
         //select writer
         if (ui.chkStack->isChecked())
             mWriter = std::make_shared<StackedWriter>(mData, mReader);
-        else if (ui.chkSequence->isChecked() && ui.comboImageType->currentData().value<OutputType>() == OutputType::SEQUENCE_BMP)
+        else if (ui.chkSequence->isChecked() && ui.comboImageType->currentData().value<OutputOption>() == OutputOption::IMAGE_BMP)
             mWriter = std::make_shared<BmpImageWriter>(mData, mReader);
-        else if (ui.chkSequence->isChecked() && ui.comboImageType->currentData().value<OutputType>() == OutputType::SEQUENCE_JPG)
+        else if (ui.chkSequence->isChecked() && ui.comboImageType->currentData().value<OutputOption>() == OutputOption::IMAGE_JPG)
             mWriter = std::make_shared<JpegImageWriter>(mData, mReader);
         else if (ui.chkPlayer->isChecked())
             mWriter = std::make_shared<PlayerWriter>(mData, mReader, mPlayerWindow, mWorkingImage, audioStreamIndex);
-        else if (ui.chkEncode->isChecked() && mData.requestedEncoding.device == EncodingDevice::NVENC)
+        else if (ui.chkEncode->isChecked() && mData.outputOption.device == OutputGroup::VIDEO_NVENC)
             mWriter = std::make_shared<CudaFFmpegWriter>(mData, mReader);
-        else if (ui.chkEncode->isChecked())
+        else if (ui.chkEncode->isChecked() && mData.outputOption.device == OutputGroup::VIDEO_FFMPEG)
             mWriter = std::make_shared<FFmpegWriter>(mData, mReader);
         else
             return;
 
         //open writer
-        mWriter->open(mData.requestedEncoding);
+        mWriter->open(mData.outputOption);
 
         //select frame handler
         mData.mode = ui.comboMode->currentIndex();
@@ -484,7 +515,8 @@ void cuvistaGui::done() {
 
     //stopwatch
     double secs = mData.timeElapsedSeconds();
-    double fps = mWriter->frameEncoded / secs;
+    double fps = mWriter->frameIndex / secs;
+    std::string fileSize = util::byteSizeToString(mWriter->encodedBytesTotal);
 
     //always destruct writer before frame
     mWriter.reset();
@@ -508,7 +540,7 @@ void cuvistaGui::done() {
         QUrl url = QUrl::fromLocalFile(file);
         QFontMetrics metrics(ui.labelStatus->font());
         QString fileElided = metrics.elidedText(file, Qt::ElideMiddle, 300);
-        QString str = qformat(" written in {:.1f} min at {:.1f} fps", secs / 60.0, fps);
+        QString str = qformat(" ({}) written in {:.1f} min at {:.1f} fps", fileSize, secs / 60.0, fps);
         QString labelText = QString("<a href='%1'>%2</a> %3").arg(file).arg(fileElided).arg(str);
         ui.labelStatus->setText(labelText);
     }
@@ -610,7 +642,8 @@ void cuvistaGui::resetGui() {
     setBackgroundColor(QColor::fromRgb(defaults.bgColorRed, defaults.bgColorGreen, defaults.bgColorBlue));
 
     mPlayerWindow->move(50, 50);
-    mProgressWindow->resize(640, 480);
+    mPlayerWindow->resize(640, 480);
+    mFileInput = {};
 
     ui.chkOverwrite->setChecked(false);
     ui.spinRadius->setValue(defaults.radsec);
@@ -619,6 +652,8 @@ void cuvistaGui::resetGui() {
     ui.chkDynamicZoom->setChecked(true);
     ui.chkFrameLimit->setChecked(false);
     ui.spinFrameLimit->setValue(defaults.frameLimit);
+    ui.sliderQuality->setValue(defaults.encodingQuality);
+    ui.sliderLevels->setValue(defaults.levels);
 
     mReader.close();
     ui.texInput->clear();
@@ -652,6 +687,8 @@ cuvistaGui::~cuvistaGui() {
     mSettings.setValue("qt/zoom/dynamic", ui.chkDynamicZoom->isChecked());
     mSettings.setValue("qt/limit/enable", ui.chkFrameLimit->isChecked());
     mSettings.setValue("qt/limit/value", ui.spinFrameLimit->value());
+
+    mSettings.setValue("qt/encoding/quality", ui.sliderQuality->value());
 
     //recent files
     int idx = 0;

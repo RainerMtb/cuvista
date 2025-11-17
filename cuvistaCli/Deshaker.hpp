@@ -32,6 +32,7 @@ struct DeshakerResult {
 	int64_t framesRead;
 	int64_t framesWritten;
 	int64_t framesEncoded;
+	int64_t bytesWritten;
 	int64_t bytesEncoded;
 
 	double secs;

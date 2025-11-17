@@ -44,9 +44,11 @@ inline constexpr struct {
 
 	int radiusMin = 1, radiusMax = 500;
 	int wMin = 100, hMin = 100;
-	int levelsMin = 1, levelsMax = 6;
+	int levelsMin = 1, levelsMax = 6, levels = 3;
 	int irMin = 0, irMax = 3;
 	int modeMax = 6;
+	
+	int encodingQuality = 70;
 
 	uint8_t bgColorRed = 0;
 	uint8_t bgColorGreen = 150;
@@ -67,7 +69,7 @@ struct CoreData {
 	int iyCount = -1;			   
 	int zMin = -1;				   
 	int zMax = -1;				   //pyramid steps used for actual computing
-	int zCount = 3;			       //number of pyramid levels to use for stabilization
+	int pyramidLevelsRequested = defaults.levels;  //number of pyramid levels wanted for stabilization
 	int pyramidLevels = -1;        //number of pyramid levels to create
 	int pyramidRowCount = -1;	   //number of rows for one pyramid, all the rows of Y data for all levels
 	int pyramidCount = 2;	       //number of pyramids to allocate in memory

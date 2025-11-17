@@ -81,10 +81,9 @@ private:
 public:
     PlayerWriter(MainData& data, MovieReader& reader, PlayerWindow* player, QImage imageWorking, int audioStreamCtx);
 
-    void open(EncodingOption videoCodec) override;
+    void open(OutputOption outputOption) override;
     void start() override;
     void writeOutput(const FrameExecutor& executor) override;
-    bool startFlushing() override;
     bool flush() override;
 
 public slots:

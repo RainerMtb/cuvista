@@ -57,7 +57,7 @@ void openClInvGroupTest(int w1, int w2);
 void openClnorm1Test();
 
 void compareFramesPlatforms();
-void analyzeFrames();
+void testVideo1();
 
 void flow();
 void pinvTest();

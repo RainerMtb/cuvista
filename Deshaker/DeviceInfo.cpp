@@ -129,12 +129,6 @@ std::ostream& operator << (std::ostream& os, const DeviceInfoCuda& info) {
 	os << "Multiprocessor count: " << info.props->multiProcessorCount << std::endl;
 	os << "Max Texture Size:     " << info.props->maxTexture2D[0] << " x " << info.props->maxTexture2D[1] << std::endl;
 	os << "Shared Mem per Block: " << info.props->sharedMemPerBlock / 1024 << " kb" << std::endl;
-	
-	os << "Nvenc Encoders:       ";
-	for (const EncodingOption& eo : info.encodingOptions) {
-		if (eo.device == EncodingDevice::NVENC) os << mapCodecToString[eo.codec] << " ";
-	}
-	os << std::endl;
 
 	return os;
 }

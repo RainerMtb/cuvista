@@ -162,10 +162,11 @@ void compareFramesPlatforms() {
 	std::cout << errorLogger().getErrorMessage() << std::endl;
 }
 
-void analyzeFrames() {
+void testVideo1() {
 	std::string inFile = "f:/pic/input.mp4";
 	std::string outputFile = "f:/pic/videoOut.yuv";
 	std::string inputFile = "f:/pic/videoInput.yuv";
+	std::string resultsFile = "f:/pic/results.dat";
 
 	MainData data;
 	data.fileIn = inFile;
@@ -181,50 +182,37 @@ void analyzeFrames() {
 	RawMemoryStoreWriter writer(maxFrames);
 	std::shared_ptr<MovieFrame> frame = std::make_shared<MovieFrameConsecutive>(data, reader, writer);
 	std::shared_ptr<FrameExecutor> executor = std::make_shared<CudaFrame>(data, cudaDevices[0], *frame, frame->mPool);
+	executor->init();
 	frame->runLoop(executor);
-
-	//paint vectors of displacements into gray input image
-	std::vector<ImageYuv> inputFrames(writer.inputFrames.begin(), writer.inputFrames.end());
-	auto& lst = FrameResult::resultStore;
-	std::vector<FrameResultStore> resultStoreData(std::move_iterator(std::begin(lst)), std::move_iterator(std::end(lst)));
-
-	auto func = [&] (size_t idx) {
-		assert(inputFrames.size() > idx && "input frame not found");
-		ImageYuv& image = inputFrames[idx];
-		assert(resultStoreData.size() > size_t(image.index) && "resultStore not found");
-		const FrameResultStore& resultStore = resultStoreData[image.index];
-		assert(image.index == resultStore.frameIndex && "index mismatch");
-		image.setColorPlane(1, 128);
-		image.setColorPlane(2, 128);
-
-		Color col;
-		for (const PointResult& pr : resultStore.results) {
-			if (pr.isConsidered) {
-				double px = pr.x + data.w / 2.0;
-				double py = pr.y + data.h / 2.0;
-				double x2 = px + pr.u;
-				double y2 = py + pr.v;
-
-				if (pr.isConsens) {
-					col = Color::GREEN;
-
-				} else {
-					col = Color::RED;
-				}
-				image.drawLine(px, py, x2, y2, col);
-				image.drawMarker(x2, y2, col, 1.4);
-			}
-		}
-	};
-	frame->mPool.addAndWait(func, 0, inputFrames.size());
 
 	//output raw yuv files
 	writer.writeYuvFiles(outputFile, inputFile);
 
-	std::cout << std::endl << "input frames " << writer.inputFrames.size() << " " << inputFile << std::endl;
+	//write results binary
+	std::ofstream resfile(resultsFile, std::ios::binary);
+	auto writefcn = [&] (auto value) { resfile.write(reinterpret_cast<const char*>(&value), sizeof(value)); };
+	writefcn(data.w);
+	writefcn(data.h);
+
+	int idx = 0;
+	for (std::span<PointResult> spr : writer.results) {
+		for (const PointResult& pr : spr) {
+			writefcn(idx);
+			writefcn(pr.idx);
+			writefcn(pr.x);
+			writefcn(pr.y);
+			writefcn(pr.u);
+			writefcn(pr.v);
+			writefcn((char) pr.isValid());
+			writefcn((char) pr.isConsens);
+		}
+		idx++;
+	}
+
+	std::cout << std::endl << "results " << resultsFile << std::endl;
+	std::cout << "input frames " << writer.inputFrames.size() << " " << inputFile << std::endl;
 	std::cout << "output frames " << writer.outputFramesYuv.size() << " " << outputFile << std::endl;
 }
-
 
 // read and transform distinct images
 void createTransformImages() {

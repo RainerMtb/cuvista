@@ -33,58 +33,50 @@ void CudaFFmpegWriter::writePacketToFile(const NvPacket& nvpkt, bool terminate) 
 void CudaFFmpegWriter::writePacketsToFile(std::list<NvPacket> nvpkts, bool terminate) {}
 void CudaFFmpegWriter::encodePackets() {}
 
-void CudaFFmpegWriter::open(EncodingOption videoCodec) {}
+void CudaFFmpegWriter::open(OutputOption outputOption) {}
 void CudaFFmpegWriter::writeOutput(const FrameExecutor& executor) {}
-bool CudaFFmpegWriter::startFlushing() { return false; }
 bool CudaFFmpegWriter::flush() { return false; }
 
 #else
-
-std::map<GUID, AVCodecID> guidToCodecMap = {
-    { NV_ENC_CODEC_H264_GUID, AV_CODEC_ID_H264 },
-    { NV_ENC_CODEC_HEVC_GUID, AV_CODEC_ID_HEVC },
-};
-
-std::map<Codec, GUID> codecToGuidMap = {
-    { Codec::H264, NV_ENC_CODEC_H264_GUID },
-    { Codec::H265, NV_ENC_CODEC_HEVC_GUID },
-};
-
 
 CudaFFmpegWriter::CudaFFmpegWriter(MainData& data, MovieReader& reader) :
     FFmpegFormatWriter(data, reader),
     nvPackets { std::make_unique<std::list<NvPacket>>() } {}
 
 //cuda encoding contructor
-void CudaFFmpegWriter::open(EncodingOption videoCodec) {
-    int result;
-
+void CudaFFmpegWriter::open(OutputOption outputOption) {
     //select codec
     const DeviceInfoBase* dev = mData.deviceList[mData.deviceSelected];
     const DeviceInfoCuda* dic;
     if (dev->getType() == DeviceType::CUDA) dic = static_cast<const DeviceInfoCuda*>(dev);
     else dic = &mData.cudaInfo.devices[0];
 
-    if (videoCodec.codec == Codec::AUTO) videoCodec.codec = dic->encodingOptions[0].codec;
-    GUID guid = codecToGuidMap[videoCodec.codec];
+    std::map<OutputOption, GUID> optionToGuidMap = {
+        { OutputOption::NVENC_H264, NV_ENC_CODEC_H264_GUID },
+        { OutputOption::NVENC_HEVC, NV_ENC_CODEC_HEVC_GUID },
+        { OutputOption::NVENC_AV1, NV_ENC_CODEC_AV1_GUID },
+    };
+    GUID guid = optionToGuidMap[outputOption];
     nvenc = dic->nvenc;
 
     //open ffmpeg output format
-    AVCodecID id = codecToCodecIdMap[videoCodec.codec];
-    FFmpegFormatWriter::open(id, mData.fileOut, 4);
+    AVCodecID codecId = optionToCodecIdMap[outputOption];
+    FFmpegFormatWriter::openFormat(codecId, mData.fileOut, 4);
 
     //setup nvenc class
-    nvenc->createEncoder(mReader.w, mReader.h, mReader.fpsNum, mReader.fpsDen, gopSize, mData.crf, guid);
+    nvenc->createEncoder(mReader.w, mReader.h, mReader.fpsNum, mReader.fpsDen, gopSize, mData.selectedCrf, guid);
 
     //setup codec parameters for ffmpeg format output
     AVCodecParameters* params = videoStream->codecpar;
     params->codec_type = AVMEDIA_TYPE_VIDEO;
-    params->codec_id = guidToCodecMap[guid];
+    params->codec_id = codecId;
     params->width = mData.w;
     params->height = mData.h;
     params->extradata_size = nvenc->mExtradataSize;
     params->extradata = (uint8_t*) av_mallocz(0ull + nvenc->mExtradataSize + AV_INPUT_BUFFER_PADDING_SIZE);
     std::memcpy(params->extradata, nvenc->mExtradata.data(), nvenc->mExtradataSize);
+
+    int result;
 
     result = avformat_init_output(fmt_ctx, NULL);
     if (result < 0)
@@ -155,16 +147,16 @@ void CudaFFmpegWriter::writeOutput(const FrameExecutor& executor) {
 }
 
 
-//flush encoder buffer
-bool CudaFFmpegWriter::startFlushing() {
-    for (auto& futs : encodingQueue) futs.wait();
-    nvenc->endEncode();
-    return nvenc->hasBufferedFrame();
-}
-
-
 bool CudaFFmpegWriter::flush() {
-    writePacketToFile(nvenc->getBufferedFrame(), true);
+    if (isFlushing) {
+        writePacketToFile(nvenc->getBufferedFrame(), true);
+
+    } else {
+        isFlushing = true;
+        for (auto& futs : encodingQueue) futs.wait();
+        nvenc->endEncode();
+    }
+
     return nvenc->hasBufferedFrame();
 }
 

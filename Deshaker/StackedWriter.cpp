@@ -19,8 +19,8 @@
 #include "MovieWriter.hpp"
 #include "MovieFrame.hpp"
 
-void StackedWriter::open(EncodingOption videoCodec) {
-	FFmpegWriter::open(videoCodec, AV_PIX_FMT_YUV420P, mData.h, mWidthTotal, mWidthTotal, mData.fileOut);
+void StackedWriter::open(OutputOption outputOption) {
+	FFmpegWriter::open(outputOption, AV_PIX_FMT_YUV420P, mData.h, mWidthTotal, mWidthTotal, mData.fileOut);
 	mInputFrameScaled.setColor(mData.backgroundColor);
 }
 

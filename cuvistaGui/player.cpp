@@ -93,7 +93,7 @@ PlayerWriter::PlayerWriter(MainData& data, MovieReader& reader, PlayerWindow* pl
     mAudioIODevice { nullptr } {}
 
 //---- on gui thread
-void PlayerWriter::open(EncodingOption videoCodec) {
+void PlayerWriter::open(OutputOption outputOption) {
     //buffering frame
     QImage image = imageScaledToFit(mImageWorking, mData.w, mData.h).convertToFormat(QImage::Format_RGBA8888);
     mVideoFrame = QVideoFrame(image);
@@ -199,18 +199,14 @@ void PlayerWriter::writeOutput(const FrameExecutor& executor) {
 }
 
 //---- on frame executor thread
-bool PlayerWriter::startFlushing() {
+bool PlayerWriter::flush() {
+    //wait some time after the last frame is displayed before closing the player
+    QThread::msleep(750);
+
     if (mAudioSink != nullptr) {
         mAudioSink->stop();
         mAudioSink->deleteLater();
     }
-    return true;
-}
-
-//---- on frame executor thread
-bool PlayerWriter::flush() {
-    //wait some time after the last frame is displayed before closing the player
-    QThread::msleep(750);
     return false;
 }
 
