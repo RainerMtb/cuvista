@@ -30,18 +30,6 @@
 
 class MovieReader;
 
-/*
-enum class OutputType {
-	NONE,
-	PIPE,
-	VIDEO_FILE,
-	RAW_YUV_FILE,
-	SEQUENCE_BMP,
-	SEQUENCE_JPG,
-	STACKING,
-};
-*/
-
 enum class ProgressType {
 	NONE,
 	MULTILINE,
@@ -116,10 +104,10 @@ public:
 	
 	int mode = 0;
 	std::vector<DeviceInfoBase*> deviceList;
+	std::vector<DeviceInfoOpenCl> deviceInfoOpenCl;
+	std::vector<DeviceInfoCuda> deviceInfoCuda;
 	DeviceInfoCpu deviceInfoCpu;
 	DeviceInfoAvx deviceInfoAvx;
-	OpenClInfo clinfo;
-	CudaInfo cudaInfo;
 	bool deviceRequested = false;
 	size_t deviceSelected = 0;
 	DeviceInfoNull deviceInfoNull;
@@ -182,10 +170,6 @@ public:
 	void showHeader() const;
 
 	void showIntro(const std::string& deviceName, const MovieReader& reader) const;
-
-	size_t deviceCountCuda() const;
-
-	size_t deviceCountOpenCl() const;
 
 	void timeStart();
 

@@ -23,6 +23,7 @@
 #undef min
 #undef max
 
+#include <any>
 #include "MovieFrame.hpp"
 #include "MovieReader.hpp"
 #include "AppImage.hpp"
@@ -34,16 +35,25 @@ namespace winrt::cuvistaWinui::implementation {
 
     struct CustomRuntimeXaml : CustomRuntimeXamlT<CustomRuntimeXaml> {
 
+    private:
+        //original property
+        std::any object;
+
+        //name to display
+        hstring name;
+
+    public:
         //constructor defined in IDL
         CustomRuntimeXaml();
+
         //constructor used in code
-        CustomRuntimeXaml(RuntimeBase* object);
+        CustomRuntimeXaml(std::string name, std::any object);
 
         //property getters called from XAML
         hstring displayName() const;
 
-        //original property
-        RuntimeBase* object;
+        //get user property
+        template <class T> T get();
     };
 
     struct MainWindow : MainWindowT<MainWindow>, util::MessagePrinter, public UserInput {
@@ -86,6 +96,8 @@ namespace winrt::cuvistaWinui::implementation {
         void windowClosedEvent(const IInspectable& sender, const WindowEventArgs& args);
         void sliderVolumeChanged(const IInspectable& sender, const Controls::Primitives::RangeBaseValueChangedEventArgs& args);
 
+        void imageGridResize(const IInspectable& sender, const SizeChangedEventArgs& args);
+
     private:
         Windows::UI::Color mBackgroundColor;
         Windows::Storage::ApplicationDataContainer mLocalSettings = Windows::Storage::ApplicationData::Current().LocalSettings();
@@ -96,6 +108,7 @@ namespace winrt::cuvistaWinui::implementation {
         FFmpegReader mReader;
 
         bool mInputReady = false;
+        double inputVideoFraction = 0.0;
 		hstring mInputFile = L"";
         hstring mOutputFile = L"";
 
@@ -120,6 +133,7 @@ namespace winrt::cuvistaWinui::implementation {
         fire_and_forget showErrorDialogAsync(hstring title, hstring content);
 
         void infoBoxAppendText(std::string str);
+
 
         //--------------------------------------
         //-------- class overrides -------------

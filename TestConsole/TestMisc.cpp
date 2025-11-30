@@ -71,7 +71,7 @@ void similarTransform() {
 
 void readAndWriteOneFrame() {
 	MainData data;
-	data.probeCuda();
+	data.deviceInfoCuda = data.probeCuda();
 	data.collectDeviceInfo();
 	{
 		NullReader reader;
@@ -112,8 +112,8 @@ void checkVersions() {
 	std::cout << "check cuda devices" << std::endl;
 	try {
 		MainData data;
-		data.probeCuda();
-		data.probeOpenCl();
+		data.deviceInfoCuda = data.probeCuda();
+		data.deviceInfoOpenCl = data.probeOpenCl();
 		data.showDeviceInfo();
 	} catch (CancelException ignore) {}
 }

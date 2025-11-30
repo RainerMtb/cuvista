@@ -17,14 +17,7 @@
  */
 
 #include "OutputOption.hpp"
-
 #include <cmath>
-
-RuntimeBase RuntimeBase::EMPTY = {};
-
-std::string RuntimeBase::displayName() const {
-	return "";
-}
 
 OutputOption OutputOption::FFMPEG_AV1 =  { 0, "FFMPEG",  "AV1", 63, 1, 55, OutputGroup::VIDEO_FFMPEG };
 OutputOption OutputOption::FFMPEG_HEVC = { 1, "FFMPEG", "HEVC", 51, 1, 45, OutputGroup::VIDEO_FFMPEG };
@@ -52,11 +45,11 @@ OutputOption OutputOption::OPTION_INVALID = { 92,     "",     "", 0, 0, 0, Outpu
 
 
 std::string OutputOption::displayName() const {
-	return group + " - " + name;
+	return nameGroup + " - " + nameDetail;
 }
 
 std::string OutputOption::fullName() const {
-	return group + ":" + name;
+	return nameGroup + ":" + nameDetail;
 }
 
 int OutputOption::defaultCrf() const {
@@ -80,11 +73,11 @@ OutputOption OutputOption::find(std::string optionName) {
 }
 
 bool OutputOption::isVideoFile() const {
-	return device == OutputGroup::VIDEO_FFMPEG || device == OutputGroup::VIDEO_NVENC || device == OutputGroup::VIDEO_OTHER;
+	return group == OutputGroup::VIDEO_FFMPEG || group == OutputGroup::VIDEO_NVENC || group == OutputGroup::VIDEO_OTHER;
 }
 
 bool OutputOption::isImageSequence() const {
-	return device == OutputGroup::IMAGE_SEQUENCE;
+	return group == OutputGroup::IMAGE_SEQUENCE;
 }
 
 bool OutputOption::hasQuality() const {

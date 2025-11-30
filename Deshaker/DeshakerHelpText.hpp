@@ -53,9 +53,9 @@ following options may be provided after -o parameter
                 for further processing, input must then be specified as
                 -f rawvideo -video_size w:h -framerate n -pix_fmt yuv444p 
                 refer to pipe mechanism of your OS for further information
+                piping does not work in Windows PowerShell, use Command Line
 -resim          write bmp images showing transform vectors
                 green: point is consens / red: point is not consens
-                blue: calculated transform
 -flow           produce video of calculated optical flow
 -stack l:r      horizontally stack source and stabilized frames for comparison
                 parameter l:r number of pixels to crop from left and right

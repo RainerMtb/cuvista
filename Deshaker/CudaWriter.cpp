@@ -49,7 +49,7 @@ void CudaFFmpegWriter::open(OutputOption outputOption) {
     const DeviceInfoBase* dev = mData.deviceList[mData.deviceSelected];
     const DeviceInfoCuda* dic;
     if (dev->getType() == DeviceType::CUDA) dic = static_cast<const DeviceInfoCuda*>(dev);
-    else dic = &mData.cudaInfo.devices[0];
+    else dic = &mData.deviceInfoCuda[0];
 
     std::map<OutputOption, GUID> optionToGuidMap = {
         { OutputOption::NVENC_H264, NV_ENC_CODEC_H264_GUID },

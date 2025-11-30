@@ -40,8 +40,8 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 	std::shared_ptr<MovieFrame> frame;
 
 	try {
-		data.probeOpenCl();
-		data.probeCuda();
+		data.deviceInfoOpenCl = data.probeOpenCl();
+		data.deviceInfoCuda = data.probeCuda();
 		data.collectDeviceInfo();
 		data.probeInput(argsInput);
 
@@ -70,9 +70,9 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 			mainWriter = std::make_shared<RawNv12Writer>(data, *reader);
 		else if (data.outputOption == OutputOption::IMAGE_RESULTS)
 			mainWriter = std::make_shared<ResultImageWriter>(data, *reader);
-		else if (data.outputOption.device == OutputGroup::VIDEO_FFMPEG)
+		else if (data.outputOption.group == OutputGroup::VIDEO_FFMPEG)
 			mainWriter = std::make_shared<FFmpegWriter>(data, *reader);
-		else if (data.outputOption.device == OutputGroup::VIDEO_NVENC)
+		else if (data.outputOption.group == OutputGroup::VIDEO_NVENC)
 			mainWriter = std::make_shared<CudaFFmpegWriter>(data, *reader);
 		else
 			mainWriter = std::make_shared<OutputWriter>(data, *reader);

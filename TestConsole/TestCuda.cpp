@@ -165,13 +165,13 @@ void cudaTextureRead() {
 		reader.w = 1920;
 		reader.h = 1080;
 		reader.frameCount = 1;
-		data.probeCuda();
+		data.deviceInfoCuda = data.probeCuda();
 		data.collectDeviceInfo();
 		data.validate(reader);
 
 		OutputWriter writer(data, reader);
 		MovieFrameConsecutive frame(data, reader, writer);
-		CudaFrame frameExecutor(data, data.cudaInfo.devices[0], frame, frame.mPool);
+		CudaFrame frameExecutor(data, data.deviceInfoCuda[0], frame, frame.mPool);
 
 		frameExecutor.inputData(0, input);
 

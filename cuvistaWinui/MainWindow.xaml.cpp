@@ -49,15 +49,20 @@ namespace winrt::cuvistaWinui::implementation {
     //-------------------------------------------------------------------------
 
     CustomRuntimeXaml::CustomRuntimeXaml() :
-        object { &RuntimeBase::EMPTY }
+        CustomRuntimeXaml({}, {})
     {}
 
-    CustomRuntimeXaml::CustomRuntimeXaml(RuntimeBase* object) :
+    CustomRuntimeXaml::CustomRuntimeXaml(std::string name, std::any object) :
+        name { to_hstring(name) },
         object { object }
     {}
 
     hstring CustomRuntimeXaml::displayName() const {
-        return to_hstring(object->displayName());
+        return name;
+    }
+
+    template <class T> T CustomRuntimeXaml::get() {
+        return std::any_cast<T>(object);
     }
 
 
@@ -72,8 +77,8 @@ namespace winrt::cuvistaWinui::implementation {
         mData.console = &mData.nullStream;
         mData.printHeader = false;
         mData.printSummary = false;
-        mData.probeCuda();
-        mData.probeOpenCl();
+        mData.deviceInfoCuda = mData.probeCuda();
+        mData.deviceInfoOpenCl = mData.probeOpenCl();
         mData.collectDeviceInfo();
 
         //set modes list
@@ -324,8 +329,7 @@ namespace winrt::cuvistaWinui::implementation {
         mData.deviceSelected = comboDevice().SelectedIndex();
 
         IInspectable option = comboEncoding().SelectedValue();
-        RuntimeBase* ptr = option.as<cuvistaWinui::implementation::CustomRuntimeXaml>()->object;
-        mData.outputOption = *static_cast<OutputOption*>(ptr);
+        mData.outputOption = option.as<CustomRuntimeXaml>()->get<OutputOption>();
         mData.requestedCrf = mData.outputOption.percentToCrf(sliderQuality().Value());
         mData.radsec = spinRadius().Value();
         mData.zoomMin = 1.0 + spinZoomMin().Value();
@@ -364,9 +368,9 @@ namespace winrt::cuvistaWinui::implementation {
                 writer = std::make_shared<BmpImageWriter>(mData, mReader);
             else if (chkSequence().IsChecked().Value() && imageType == OutputOption::IMAGE_BMP)
                 writer = std::make_shared<JpegImageWriter>(mData, mReader);
-            else if (chkEncode().IsChecked().Value() && mData.outputOption.device == OutputGroup::VIDEO_NVENC)
+            else if (chkEncode().IsChecked().Value() && mData.outputOption.group == OutputGroup::VIDEO_NVENC)
                 writer = std::make_shared<CudaFFmpegWriter>(mData, mReader);
-            else if (chkEncode().IsChecked().Value() && mData.outputOption.device == OutputGroup::VIDEO_FFMPEG)
+            else if (chkEncode().IsChecked().Value() && mData.outputOption.group == OutputGroup::VIDEO_FFMPEG)
                 writer = std::make_shared<FFmpegWriter>(mData, mReader);
             else if (chkPlayer().IsChecked().Value())
                 writer = std::make_shared<PlayerWriter>(*this, *executor, mData, mReader);
@@ -480,21 +484,27 @@ namespace winrt::cuvistaWinui::implementation {
     fire_and_forget MainWindow::seekAsync(double frac) {
         //debugPrint("seek " + std::to_string(frac));
         if (mInputReady && mReader.seek(frac) && mReader.read(mInputYUV)) {
+            inputVideoFraction = frac;
             mInputYUV.toBaseRgb(mInputBGRA);
             DispatcherQueue().TryEnqueue([&, frac] {
                 mInputBGRA.invalidate();
-                inputPosition().Value(frac * 100.0);
+                double w = imageBackground().ActualWidth() * frac;
+                inputPosition().Width(w);
             });
         }
         co_return;
     }
 
+    void MainWindow::imageGridResize(const IInspectable& sender, const SizeChangedEventArgs& args) {
+        inputPosition().Width(imageBackground().ActualWidth() * inputVideoFraction);
+    }
+
     void MainWindow::comboDeviceChanged(const IInspectable& sender, const Controls::SelectionChangedEventArgs& args) {
         comboEncoding().Items().Clear();
         int32_t index = comboDevice().SelectedIndex();
-        for (OutputOption& o : mData.deviceList[index]->videoEncodingOptions) {
-            auto comPtr = winrt::make_self<cuvistaWinui::implementation::CustomRuntimeXaml>(&o);
-            comboEncoding().Items().Append(comPtr.as<IInspectable>());
+        for (OutputOption& op : mData.deviceList[index]->videoEncodingOptions) {
+            IInspectable obj = winrt::make<CustomRuntimeXaml>(op.displayName(), std::make_any<OutputOption>(op));
+            comboEncoding().Items().Append(obj);
         }
         comboEncoding().SelectedIndex(0);
     }
@@ -715,7 +725,7 @@ namespace winrt::cuvistaWinui::implementation {
 
         texInput().Text(L"");
         comboInputFile().Items().Clear();
-        inputPosition().Value(0.0);
+        inputPosition().Width(1.0);
         mInputBGRA = ImageXamlBGRA::create(imageInput(), 100, 100);
     }
 

@@ -11,7 +11,7 @@
   <Identity
     Name="RainerMtb.cuvista"
     Publisher="CN=24E5DFD5-C91A-4A90-A27E-EB39E6755150"
-    Version="1.7.2.0" />
+    Version="1.8.0.0" />
 
   <mp:PhoneIdentity PhoneProductId="2a02d5a1-ef69-4465-949d-d62d13b4c57e" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 

@@ -40,13 +40,14 @@ OpenClFrame::OpenClFrame(CoreData& data, DeviceInfoBase& deviceInfo, MovieFrame&
 	FrameExecutor(data, deviceInfo, frame, pool) {}
 
 //check available devices
-void cl::probeRuntime(OpenClInfo& info) {
+std::vector<DeviceInfoOpenCl> cl::probeRuntime() {
+	std::vector<DeviceInfoOpenCl> out;
+
 	try {
 		std::vector<Platform> platforms;
 		Platform::get(&platforms);
 
 		for (Platform& platform : platforms) {
-			info.version = platform.getInfo<CL_PLATFORM_VERSION>();
 			std::vector<Device> devices;
 			platform.getDevices(CL_DEVICE_TYPE_GPU, &devices);
 			for (Device& dev : devices) {
@@ -124,16 +125,20 @@ void cl::probeRuntime(OpenClInfo& info) {
 				devInfo.versionC = versionC;
 				devInfo.pitch = pitch;
 				devInfo.extensions = extensions;
-				info.devices.push_back(devInfo);
+				devInfo.platformVersion = platform.getInfo<CL_PLATFORM_VERSION>();
+
+				out.push_back(devInfo);
 			}
 		}
 
 	} catch (const Error& err) {
-		info.warning = std::format("OpenCL init error: {}", err.what());
+		DeviceInfoOpenCl::warning = std::format("OpenCL init error: {}", err.what());
 
 	} catch (...) {
-		info.warning = "unknown error loading Open CL";
+		DeviceInfoOpenCl::warning = "unknown error loading Open CL";
 	}
+
+	return out;
 }
 
 //set up device to use

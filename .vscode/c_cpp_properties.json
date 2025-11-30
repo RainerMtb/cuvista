@@ -29,6 +29,7 @@
                 "${workspaceFolder}/CudaStuff",
                 "${workspaceFolder}/cuvistaCli",
                 "${workspaceFolder}/cuvistaGui",
+                "${workspaceFolder}/cuvistaWinui/**",
                 "${workspaceFolder}/Deshaker",
                 "${workspaceFolder}/include/**",
                 "${workspaceFolder}/Matrix",

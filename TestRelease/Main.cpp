@@ -118,8 +118,8 @@ static void testMain() {
 	std::cout << "--- Encoding to Cpu ---" << std::endl;
 	run("-i d:/VideoTest/02short.mp4 -o d:/videoTest/out/enc_av1.mp4 -enc ffmpeg:av1 -progress 0");
 	run("-i d:/VideoTest/02short.mp4 -o d:/videoTest/out/enc_hevc.mp4 -enc ffmpeg:hevc -progress 0");
-	run("-i d:/VideoTest/02short.mp4 -o d:/videoTest/out/enc_h264.mp4 -enc ffmpeg:h264 -progress 0");
-	run("-i d:/VideoTest/02short.mp4 -o d:/videoTest/out/enc_ffv1.mp4 -enc ffmpeg:ffv1 -progress 0");
+	run("-enc ffmpeg:h264 -i d:/VideoTest/02short.mp4 -o d:/videoTest/out/enc_h264.mp4 -progress 0");
+	run("-enc ffmpeg:ffv1 -i d:/VideoTest/02short.mp4 -o d:/videoTest/out/enc_ffv1.mp4 -progress 0");
 }
 
 static void testCrc() {

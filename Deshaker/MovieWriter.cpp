@@ -375,9 +375,12 @@ void AsfPipeWriter::open(OutputOption outputOption) {
 		throw AVException(av_make_error(result, "cannot allocate output format"));
 
 	//custom avio
-	int bufsiz = 4 * mData.h * mData.cpupitch;
+	int bufsiz = 64 * 1024;
 	mBuffer = (unsigned char*) av_malloc(bufsiz);
 	av_avio = avio_alloc_context(mBuffer, bufsiz, 1, this, nullptr, &AsfPipeWriter::writeBuffer, nullptr);
+	if (av_avio == NULL)
+		throw AVException("cannot create io context");
+
 	av_avio->seekable = 0; //no seek allowed
 	fmt->pb = av_avio;
 	fmt->flags |= AVFMT_FLAG_CUSTOM_IO;
@@ -401,7 +404,7 @@ int AsfPipeWriter::writeBuffer(void* opaque, const unsigned char* buf, int siz) 
 	//AsfPipeWriter* ptr = static_cast<AsfPipeWriter*>(opaque);
 	size_t bytes = fwrite(buf, 1, siz, stdout);
 	if (bytes != siz) {
-		errorLogger().logError("Pipe: error writing data", ErrorSource::WRITER);
+		errorLogger().logError("error writing data to pipe", ErrorSource::WRITER);
 	}
 	return (int) bytes;
 }

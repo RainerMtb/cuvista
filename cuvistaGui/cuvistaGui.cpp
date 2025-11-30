@@ -51,8 +51,8 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     mData.console = &mData.nullStream;
     mData.printHeader = false;
     mData.printSummary = false;
-    mData.probeCuda();
-    mData.probeOpenCl();
+    mData.deviceInfoCuda = mData.probeCuda();
+    mData.deviceInfoOpenCl = mData.probeOpenCl();
     mData.collectDeviceInfo();
 
     mInputImagePlaceholder.fill(Qt::transparent);
@@ -444,9 +444,9 @@ void cuvistaGui::stabilize() {
             mWriter = std::make_shared<JpegImageWriter>(mData, mReader);
         else if (ui.chkPlayer->isChecked())
             mWriter = std::make_shared<PlayerWriter>(mData, mReader, mPlayerWindow, mWorkingImage, audioStreamIndex);
-        else if (ui.chkEncode->isChecked() && mData.outputOption.device == OutputGroup::VIDEO_NVENC)
+        else if (ui.chkEncode->isChecked() && mData.outputOption.group == OutputGroup::VIDEO_NVENC)
             mWriter = std::make_shared<CudaFFmpegWriter>(mData, mReader);
-        else if (ui.chkEncode->isChecked() && mData.outputOption.device == OutputGroup::VIDEO_FFMPEG)
+        else if (ui.chkEncode->isChecked() && mData.outputOption.group == OutputGroup::VIDEO_FFMPEG)
             mWriter = std::make_shared<FFmpegWriter>(mData, mReader);
         else
             return;

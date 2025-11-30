@@ -37,16 +37,22 @@ static NvidiaDriverInfo probe(ptr_nvmlInit_v2 nvInit, ptr_nvmlSystemGetDriverVer
 	}
 	std::string warning = "";
 	nvmlReturn_t status;
+	const int siz = NVML_SYSTEM_DRIVER_VERSION_BUFFER_SIZE;
+	char version[siz] = "\0";
 
 	status = nvInit();
-	if (status != NVML_SUCCESS) warning = "error initializing nvml";
+	if (status != NVML_SUCCESS) {
+		warning = "error initializing nvml";
 
-	const int siz = NVML_SYSTEM_DRIVER_VERSION_BUFFER_SIZE;
-	char version[siz];
-	status = nvVersion(version, siz);
-	if (status != NVML_SUCCESS) warning = "error getting nvidia driver version";
+	} else {
+		status = nvVersion(version, siz);
+		if (status != NVML_SUCCESS) {
+			warning = "error getting nvidia driver version";
+		}
 
-	nvShutdown();
+		nvShutdown();
+	}
+
 	return { version, warning };
 }
 
@@ -105,8 +111,14 @@ NvidiaDriverInfo probeNvidiaDriver() {
 
 	NvidiaDriverInfo info;
 	void* nvml = nullptr;
-	nvml = dlopen("libnvidia-ml.so", RTLD_NOW);
-	if (nvml == nullptr) nvml = dlopen("libnvidia-ml.so.1", RTLD_NOW);
+	const char* libs[2] = {
+		"libnvidia-ml.so.1", 
+		"libnvidia-ml.so", 
+	};
+
+	for (int i = 0; nvml == nullptr && i < 2; i++) {
+		nvml = dlopen(libs[i], RTLD_NOW);
+	}
 
 	if (nvml != nullptr) {
 		ptr_nvmlInit_v2 nvInit = (ptr_nvmlInit_v2) dlsym(nvml, "nvmlInit_v2");

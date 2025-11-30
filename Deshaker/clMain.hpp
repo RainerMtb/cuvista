@@ -59,5 +59,5 @@ private:
 
 namespace cl {
 
-	void probeRuntime(OpenClInfo& clinfo); //called on startup
+	std::vector<DeviceInfoOpenCl> probeRuntime(); //called on startup
 }

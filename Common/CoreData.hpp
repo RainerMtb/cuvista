@@ -48,7 +48,7 @@ inline constexpr struct {
 	int irMin = 0, irMax = 3;
 	int modeMax = 6;
 	
-	int encodingQuality = 70;
+	int encodingQuality = 60;
 
 	uint8_t bgColorRed = 0;
 	uint8_t bgColorGreen = 150;

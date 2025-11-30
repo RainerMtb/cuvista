@@ -152,7 +152,9 @@ bool DeviceInfoCuda::operator < (const DeviceInfoCuda& other) const {
 	return props->major == other.props->major ? props->minor < other.props->minor : props->major < other.props->major;
 }
 
-std::vector<DeviceInfoCuda> CudaInfo::probeCuda() {
+std::vector<DeviceInfoCuda> DeviceInfoCuda::probeCuda() {
+	std::vector<DeviceInfoCuda> out;
+
 	//check Nvidia Driver
 	NvidiaDriverInfo driverInfo = probeNvidiaDriver();
 	nvidiaDriverVersion = driverInfo.version;
@@ -180,9 +182,10 @@ std::vector<DeviceInfoCuda> CudaInfo::probeCuda() {
 			cuda.nvenc->probeSupportedCodecs(cuda);
 		}
 
-		devices.push_back(cuda);
+		out.push_back(cuda);
 	}
-	return devices;
+
+	return out;
 }
 
 std::string DeviceInfoCuda::getNameShort() const {
@@ -194,19 +197,19 @@ std::shared_ptr<FrameExecutor> DeviceInfoCuda::create(MainData& data, MovieFrame
 }
 
 
-std::string CudaInfo::runtimeToString() const {
+std::string DeviceInfoCuda::runtimeToString() {
 	return std::to_string(cudaRuntimeVersion / 1000) + "." + std::to_string(cudaRuntimeVersion % 1000 / 10);
 }
 
-std::string CudaInfo::driverToString() const {
+std::string DeviceInfoCuda::driverToString() {
 	return std::to_string(cudaDriverVersion / 1000) + "." + std::to_string(cudaDriverVersion % 1000 / 10);
 }
 
-std::string CudaInfo::nvencApiToString() const {
+std::string DeviceInfoCuda::nvencApiToString() {
 	return std::to_string(nvencVersionApi / 1000) + "." + std::to_string(nvencVersionApi % 1000 / 10);
 }
 
-std::string CudaInfo::nvencDriverToString() const {
+std::string DeviceInfoCuda::nvencDriverToString() {
 	return std::to_string(nvencVersionDriver / 1000) + "." + std::to_string(nvencVersionDriver % 1000 / 10);
 }
 

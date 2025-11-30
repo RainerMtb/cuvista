@@ -21,13 +21,6 @@
 #include <vector>
 #include <string>
 
-struct RuntimeBase {
-
-	static RuntimeBase EMPTY;
-
-	virtual std::string displayName() const;
-};
-
 enum class OutputGroup {
 	VIDEO_NVENC,
 	VIDEO_FFMPEG,
@@ -39,17 +32,17 @@ enum class OutputGroup {
 	AUTO,
 };
 
-struct OutputOption : RuntimeBase {
+struct OutputOption {
 
 private:
-	OutputOption(int id, std::string group, std::string name, int qualityMin, int qualityMax, int qualityPercent, OutputGroup device) :
+	OutputOption(int id, std::string nameGroup, std::string nameDetail, int qualityMin, int qualityMax, int qualityPercent, OutputGroup group) :
 		id { id },
-		group { group },
-		name { name },
+		nameGroup { nameGroup },
+		nameDetail { nameDetail },
 		qualityMin { qualityMin },
 		qualityMax { qualityMax },
 		qualityPercent { qualityPercent },
-		device { device }
+		group { group }
 	{}
 
 	static std::vector<OutputOption> videoOptions();
@@ -58,12 +51,12 @@ private:
 
 public:
 	int id;
-	std::string group;
-	std::string name;
+	std::string nameGroup;
+	std::string nameDetail;
 	int qualityMin;
 	int qualityMax;
 	int qualityPercent;
-	OutputGroup device;
+	OutputGroup group;
 
 	static OutputOption FFMPEG_AV1;
 	static OutputOption FFMPEG_HEVC;
@@ -93,7 +86,7 @@ public:
 	{}
 
 	//name of encoding option for user selection
-	std::string displayName() const override;
+	std::string displayName() const;
 
 	//name of encoding option for cli input
 	std::string fullName() const;

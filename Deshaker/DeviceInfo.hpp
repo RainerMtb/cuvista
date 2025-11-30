@@ -57,6 +57,9 @@ public:
 	int versionC = 0;
 	int pitch = 0;
 	std::vector<std::string> extensions;
+	std::string platformVersion;
+
+	inline static std::string warning = "";
 
 	DeviceInfoOpenCl(int64_t maxPixel);
 
@@ -68,23 +71,33 @@ public:
 	friend std::ostream& operator << (std::ostream& os, const DeviceInfoOpenCl& info);
 };
 
-struct OpenClInfo {
-	std::vector<DeviceInfoOpenCl> devices;
-	std::string version = "";
-	std::string warning = "";
-};
-
 struct cudaDeviceProp;
 class NvEncoder;
 
 //Cuda
 class DeviceInfoCuda : public DeviceInfoBase {
+
+private:
+	inline static int cudaRuntimeVersion = 0;
+	inline static int cudaDriverVersion = 0;
+	inline static uint32_t nvencVersionApi = 0;
+	inline static uint32_t nvencVersionDriver = 0;
+
 public:
 	std::shared_ptr<cudaDeviceProp> props;
 	std::shared_ptr<NvEncoder> nvenc;
 	int cudaIndex = 0;
 
+	inline static std::string nvidiaDriverVersion = "";
+	inline static std::string warning = "";
+
 	DeviceInfoCuda(int64_t maxPixel);
+
+	static std::vector<DeviceInfoCuda> probeCuda();
+	static std::string runtimeToString();
+	static std::string driverToString();
+	static std::string nvencApiToString();
+	static std::string nvencDriverToString();
 
 	DeviceType getType() const override;
 	std::string getName() const override;
@@ -94,31 +107,6 @@ public:
 	friend std::ostream& operator << (std::ostream& os, const DeviceInfoCuda& info);
 
 	bool operator < (const DeviceInfoCuda& other) const;
-};
-
-//info about cuda devices
-class CudaInfo {
-public:
-	std::vector<DeviceInfoCuda> devices;
-
-	std::string nvidiaDriverVersion = "";
-	std::string warning = "";
-
-	int cudaRuntimeVersion = 0;
-	int cudaDriverVersion = 0;
-	uint32_t nvencVersionApi = 0;
-	uint32_t nvencVersionDriver = 0;
-
-	int nppMajor = 0;
-	int nppMinor = 0;
-	int nppBuild = 0;
-
-	std::string runtimeToString() const;
-	std::string driverToString() const;
-	std::string nvencApiToString() const;
-	std::string nvencDriverToString() const;
-
-	std::vector<DeviceInfoCuda> probeCuda();
 };
 
 //Null Device
