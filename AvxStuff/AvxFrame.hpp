@@ -84,5 +84,8 @@ private:
 	void yuvToRgb(const uchar* y, const uchar* u, const uchar* v, int h, int w, int stride, ImageBaseRgb& dest) const;
 	void yuvToRgb(const float* y, const float* u, const float* v, int h, int w, int stride, ImageBaseRgb& dest) const;
 
+	static V16f yuvToRgbLoadUchar(const uchar* src);
+	static V16f yuvToRgbLoadFloat(const float* src);
+
 	V8d sd(int c1, int c2, int y0, int x0, const AvxMatf& Y);
 };

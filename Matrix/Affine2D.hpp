@@ -94,6 +94,10 @@ public:
 
 	std::array<double, 6> toArray() const;
 
+	Mat<double> toMat() const;
+
+	Mat<double> toParamsMat() const;
+
 	std::string toString(const std::string& title = "", int digits = -1) const override;
 
 	std::wstring toWString(const std::string& title = "", int digits = -1) const override;

@@ -33,9 +33,12 @@ Matd similarTransformFunc(std::vector<PointResult>& points, AffineSolver& solver
 }
 
 void similarTransform() {
-	//load PointResults
-	Matd::precision(10);
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_real_distribution<> dis(0.0, 10.0);
+	Matd::precision(8);
 
+	//load PointResults
 	int w = 100;
 	int h = 75;
 	int n = w * h;
@@ -45,8 +48,8 @@ void similarTransform() {
 			PointResult& pr = points[1ll * y * w + x];
 			pr.x = x;
 			pr.y = y;
-			pr.u = 4 + std::sin(x);
-			pr.v = 3 + std::sin(y);
+			pr.u = 4 + std::sin(x) * dis(gen);
+			pr.v = 3 + std::sin(y) * dis(gen);
 		}
 	}
 	std::cout << n << " points" << std::endl;
@@ -64,9 +67,26 @@ void similarTransform() {
 	AffineSolverAvx s3(points.size());
 	Matd x3 = similarTransformFunc(points, s3);
 
-	std::cout << std::endl;
-	std::cout << "results equal 1-2: " << (x1 == x2 ? "YES" : "NO") << std::endl;
-	std::cout << "results equal 1-3: " << (x1 == x3 ? "YES" : "NO") << std::endl;
+	for (int i = 0; i < 10; i++) {
+		std::ranges::shuffle(points, gen);
+
+		AffineSolverSimple s1(points.size());
+		AffineSolver& solver1 = s1;
+		Matd t1 = solver1.computeSimilar(points).toParamsMat();
+
+		ThreadPool thr(8);
+		AffineSolverFast s2(thr, points.size());
+		AffineSolver& solver2 = s2;
+		Matd t2 = solver2.computeSimilar(points).toParamsMat();
+
+		AffineSolverAvx s3(points.size());
+		AffineSolver& solver3 = s3;
+		Matd t3 = solver3.computeSimilar(points).toParamsMat();
+
+		std::cout << std::endl;
+		std::cout << "results equal 1-2: " << t1.minus(t2).timesTransposed().scalar() << ", ";
+		std::cout << "results equal 2-3: " << t2.minus(t3).timesTransposed().scalar() << std::endl;
+	}
 }
 
 void readAndWriteOneFrame() {
@@ -150,9 +170,11 @@ void draw(const std::string& filename) {
 	for (double angle = 0.0; angle < 360.0; angle += 15.0) {
 		double x1 = cx + len * std::cos(angle * std::numbers::pi / 180.0);
 		double y1 = cy + len * std::sin(angle * std::numbers::pi / 180.0);
-		bgr.drawLine(cx, cy, x1, y1, Color::BLUE);
+		bgr.drawLine(cx, cy, x1, y1, Color::BLUE, 1.0 - angle / 360.0);
 		bgr.drawMarker(x1, y1, Color::RED, r);
 	}
+
+	bgr.drawLine(150, 550, 250, 550, Color::BLUE, 1.0);
 
 	//dots at fractional pixel values
 	for (int i = 0; i < 5; i++) {

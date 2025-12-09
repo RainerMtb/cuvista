@@ -47,6 +47,9 @@ private:
 	ThreadPoolBase& mPool;
 	std::unique_ptr<AffineSolver> mAffineSolver;
 	AffineTransform mBestTransform;
-	std::vector<PointContext> mConsList, mList1, mList2;
+	std::vector<PointContext> mConsList, mConsListCopy;
 	std::vector<PointContext*> mRegion;
+
+	AffineTransform computeClassic(size_t numValid);
+	void computeDbScan();
 };

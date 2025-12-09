@@ -73,6 +73,7 @@ public:
 
 	static OutputOption VIDEO_STACK;
 	static OutputOption VIDEO_FLOW;
+	static OutputOption VIDEO_RESULTS;
 	static OutputOption PIPE_RAW;
 	static OutputOption PIPE_ASF;
 	static OutputOption IMAGE_BMP;

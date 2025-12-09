@@ -109,6 +109,8 @@ static void testMain() {
 	run("-device 2 -i d:/VideoTest/01.mp4 -o d:/videoTest/out/flow.mp4 -flow -noheader -progress 0");
 	run("-device 1 -i d:/VideoTest/02short.mp4 -o d:/videoTest/out/raw02.yuv -noheader -progress 0");
 	run("-device 1 -i d:/VideoTest/02short.mp4 -o d:/videoTest/out/raw02.nv12 -noheader -progress 0");
+	run("-device 2 -i d:/VideoTest/02short.mp4 -o d:/videoTest/out/res.nv12 -resvid -noheader -progress 0");
+	run("-device 3 -i d:/VideoTest/02short.mp4 -o d:/videoTest/out/bgmode.mkv -zoom -5 -bgmode color -bgcolor #F09B59 -noheader -progress 0");
 
 	std::cout << "--- Encode Nvenc ---" << std::endl;
 	run("-i d:/VideoTest/02short.mp4 -o d:/videoTest/out/nvenc00.mp4 -device 0 -enc nvenc:hevc -noheader -progress 0");

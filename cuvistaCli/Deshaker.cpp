@@ -68,8 +68,6 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 			mainWriter = std::make_shared<RawYuvWriter>(data, *reader);
 		else if (data.outputOption == OutputOption::RAW_NV12)
 			mainWriter = std::make_shared<RawNv12Writer>(data, *reader);
-		else if (data.outputOption == OutputOption::IMAGE_RESULTS)
-			mainWriter = std::make_shared<ResultImageWriter>(data, *reader);
 		else if (data.outputOption.group == OutputGroup::VIDEO_FFMPEG)
 			mainWriter = std::make_shared<FFmpegWriter>(data, *reader);
 		else if (data.outputOption.group == OutputGroup::VIDEO_NVENC)
@@ -86,6 +84,12 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 		}
 		if (!data.resultsFile.empty()) {
 			writer->addWriter(std::make_unique<ResultDetailsWriter>(data));
+		}
+		if (data.outputOption == OutputOption::IMAGE_RESULTS) {
+			writer->addWriter(std::make_shared<ResultImageWriter>(data, *reader));
+		}
+		if (data.outputOption == OutputOption::VIDEO_RESULTS) {
+			writer->addWriter(std::make_shared<ResultVideoWriter>(data, *reader));
 		}
 		if (externalWriter) {
 			writer->addWriter(externalWriter);

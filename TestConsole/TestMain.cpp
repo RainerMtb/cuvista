@@ -60,7 +60,7 @@ int main() {
 	//flow();
 	//pinvTest();
 	//compareInv();
-	//similarTransform();
+	similarTransform();
 
 	//testSampler();
 	//compareFramesPlatforms();
@@ -68,7 +68,7 @@ int main() {
 	//avxTest();
 
 	//testZoom();
-	testVideo1();
+	//testVideo1();
 
 	//createTransformImages();
 }

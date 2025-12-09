@@ -54,6 +54,7 @@ following options may be provided after -o parameter
                 -f rawvideo -video_size w:h -framerate n -pix_fmt yuv444p 
                 refer to pipe mechanism of your OS for further information
                 piping does not work in Windows PowerShell, use Command Line
+-resvid         write video in nv12 format showing transform vectors
 -resim          write bmp images showing transform vectors
                 green: point is consens / red: point is not consens
 -flow           produce video of calculated optical flow
@@ -96,7 +97,7 @@ quality and performance settings:
                 default: green
 -bgcolor rgb    background colors separated by colons in format RRR:GGG:BBB
                 color values must be between 0 and 255
--bgcolor web    background color given as a web color string in format #RRGGBB
+-bgcolor web    background color given as web color string in format "#RRGGBB"
 -cputhreads n   number of threads on the cpu to use for various tasks
                 default: 3/4 of hardware threads
 -crf n          constant rate factor used for encoding

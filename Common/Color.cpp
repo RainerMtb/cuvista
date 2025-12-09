@@ -49,14 +49,14 @@ Color Color::CYAN =    Color(  0, 255, 255);
 Color Color::BLACK_SEMI = Color(0, 0, 0, 0.7);
 
 Color Color::web(const std::string& webColor) {
-	Color color;
+	int r = 0, g = 0, b = 0;
 	std::smatch matcher;
 	if (std::regex_match(webColor, matcher, std::regex("#([[:xdigit:]]{2})([[:xdigit:]]{2})([[:xdigit:]]{2})$"))) {
-		for (int i = 0; i < 3; i++) {
-			color.colorData[i] = std::stoi(matcher[i].str(), nullptr, 16);
-		}
+		r = std::stoi(matcher[1].str(), nullptr, 16);
+		g = std::stoi(matcher[2].str(), nullptr, 16);
+		b = std::stoi(matcher[3].str(), nullptr, 16);
 	}
-	return color;
+	return Color(r, g, b, 1.0);
 }
 
 Color Color::rgbDouble(double red, double green, double blue) {

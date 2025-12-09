@@ -149,7 +149,6 @@ struct PointContext {
 	double angle = 0.0;
 	double uu = 0.0;
 	double vv = 0.0;
-	int clusterIdx = 0;
 
 	PointContext(PointResult& pr) : ptr { &pr } {}
 	PointContext() : ptr { nullptr } {}

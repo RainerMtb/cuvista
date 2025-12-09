@@ -24,20 +24,21 @@ OutputOption OutputOption::FFMPEG_HEVC = { 1, "FFMPEG", "HEVC", 51, 1, 45, Outpu
 OutputOption OutputOption::FFMPEG_H264 = { 2, "FFMPEG", "H264", 51, 1, 55, OutputGroup::VIDEO_FFMPEG };
 OutputOption OutputOption::FFMPEG_FFV1 = { 3, "FFMPEG", "FFV1",  0, 0,  0, OutputGroup::VIDEO_FFMPEG };
 
-OutputOption OutputOption::NVENC_AV1 =  { 4, "NVENC",  "AV1", 63, 1, 55, OutputGroup::VIDEO_NVENC };
-OutputOption OutputOption::NVENC_HEVC = { 5, "NVENC", "HEVC", 51, 1, 45, OutputGroup::VIDEO_NVENC };
-OutputOption OutputOption::NVENC_H264 = { 6, "NVENC", "H264", 51, 1, 55, OutputGroup::VIDEO_NVENC };
+OutputOption OutputOption::NVENC_AV1 =  { 10, "NVENC",  "AV1", 63, 1, 55, OutputGroup::VIDEO_NVENC };
+OutputOption OutputOption::NVENC_HEVC = { 11, "NVENC", "HEVC", 51, 1, 45, OutputGroup::VIDEO_NVENC };
+OutputOption OutputOption::NVENC_H264 = { 12, "NVENC", "H264", 51, 1, 55, OutputGroup::VIDEO_NVENC };
 
-OutputOption OutputOption::VIDEO_STACK =    { 10, "FFMPEG", "H264", 51,  1, 55, OutputGroup::VIDEO_OTHER };
-OutputOption OutputOption::VIDEO_FLOW =     { 11, "FFMPEG", "H264", 51,  1, 55, OutputGroup::VIDEO_OTHER };
-OutputOption OutputOption::PIPE_RAW =       { 12,   "PIPE",  "RAW",  0,  0,  0, OutputGroup::PIPE };
-OutputOption OutputOption::PIPE_ASF =       { 13,   "PIPE",  "ASF",  0,  0,  0, OutputGroup::PIPE };
-OutputOption OutputOption::IMAGE_BMP =      { 14,  "IMAGE",  "BMP",  0,  0,  0, OutputGroup::IMAGE_SEQUENCE };
-OutputOption OutputOption::IMAGE_JPG =      { 15,  "IMAGE",  "JPG", 31,  1, 80, OutputGroup::IMAGE_SEQUENCE };
-OutputOption OutputOption::IMAGE_RESULTS =  { 16,  "IMAGE",  "BMP",  0,  0,  0, OutputGroup::IMAGE_SEQUENCE };
+OutputOption OutputOption::VIDEO_STACK =    { 20, "FFMPEG", "H264", 51,  1, 55, OutputGroup::VIDEO_OTHER };
+OutputOption OutputOption::VIDEO_FLOW =     { 21, "FFMPEG", "H264", 51,  1, 55, OutputGroup::VIDEO_OTHER };
+OutputOption OutputOption::VIDEO_RESULTS =  { 22,    "RAW", "NV12",  0,  0,  0, OutputGroup::VIDEO_OTHER };
+OutputOption OutputOption::PIPE_RAW =       { 23,   "PIPE",  "RAW",  0,  0,  0, OutputGroup::PIPE };
+OutputOption OutputOption::PIPE_ASF =       { 24,   "PIPE",  "ASF",  0,  0,  0, OutputGroup::PIPE };
+OutputOption OutputOption::IMAGE_BMP =      { 25,  "IMAGE",  "BMP",  0,  0,  0, OutputGroup::IMAGE_SEQUENCE };
+OutputOption OutputOption::IMAGE_JPG =      { 26,  "IMAGE",  "JPG", 31,  1, 80, OutputGroup::IMAGE_SEQUENCE };
+OutputOption OutputOption::IMAGE_RESULTS =  { 27,  "IMAGE",  "BMP",  0,  0,  0, OutputGroup::IMAGE_SEQUENCE };
 
-OutputOption OutputOption::RAW_YUV444 = { 20, "RAW",  "YUV444",  0, 0,  0, OutputGroup::VIDEO_OTHER };
-OutputOption OutputOption::RAW_NV12 =   { 21, "RAW",    "NV12",  0, 0,  0, OutputGroup::VIDEO_OTHER };
+OutputOption OutputOption::RAW_YUV444 = { 30, "RAW",  "YUV444",  0, 0,  0, OutputGroup::VIDEO_OTHER };
+OutputOption OutputOption::RAW_NV12 =   { 31, "RAW",    "NV12",  0, 0,  0, OutputGroup::VIDEO_OTHER };
 
 OutputOption OutputOption::OPTION_AUTO =    { 90, "AUTO", "AUTO", 0, 0, 0, OutputGroup::AUTO };
 OutputOption OutputOption::OPTION_NONE =    { 91,     "",     "", 0, 0, 0, OutputGroup::NONE };

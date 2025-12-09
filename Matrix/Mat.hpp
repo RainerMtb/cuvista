@@ -533,11 +533,13 @@ public:
 		return trans().norm1();
 	}
 
+	//extract diagonal elements into column vector
 	Mat<T> diag() const {
 		size_t s = std::min(rows(), cols());
 		return Mat<double>::generate(s, 1, [&] (size_t r, size_t c) { return at(r, r); });
 	}
 
+	//calculate crc value
 	uint64_t crc() const {
 		util::CRC64 crc64;
 		for (size_t r = 0; r < rows(); r++) {
@@ -866,18 +868,6 @@ public:
 		return out;
 	}
 
-	//make matrix symmetric by taking average values
-	Mat<T> averageSymmetric() const {
-		assert(cols() == rows() && "dimensions do not agree");
-		Mat<T> out = Mat<T>::allocate(rows(), cols());
-		for (size_t r = 0; r < rows(); r++) {
-			for (size_t c = r; c < cols(); c++) {
-				out.at(r, c) = out.at(c, r) = (at(r, c) + at(c, r)) / 2.0;
-			}
-		}
-		return out;
-	}
-
 	//multiplication A * A'
 	Mat<T> timesTransposed() const {
 		Mat<T> out = Mat<T>::zeros(rows(), rows());
@@ -895,9 +885,14 @@ public:
 		return out;
 	}
 
-	//reshape all values into one column
+	//concat all columns into one
 	Mat<T> flatToCol() const {
 		return reshape(this->numel(), 1);
+	}
+
+	//concat by rows into one
+	Mat<T> flatToRow() const {
+		return reshape(1, this->numel());
 	}
 
 	Mat<T> reshape(size_t rows, size_t cols) const {

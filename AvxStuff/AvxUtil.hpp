@@ -25,7 +25,7 @@
 
 namespace avx {
 
-	void yuvToRgbaPacked(V4f y, V4f u, V4f v, unsigned char* dest, V16f fu, V16f fv);
+	void yuvToRgbaPacked(V16f y, V16f u, V16f v, unsigned char* dest, V16f fu, V16f fv);
 
 	void inv(std::span<V8d> v);
 	void inv(std::span<V8d> v, std::span<size_t> piv);

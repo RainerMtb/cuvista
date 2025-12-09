@@ -183,6 +183,11 @@ public:
 		return *addr(row, col);
 	}
 
+	//extract first value
+	T scalar() const {
+		return at(0, 0);
+	}
+
 	//pointer to data array
 	T* data() {
 		return array;

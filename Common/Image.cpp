@@ -137,10 +137,6 @@ template <> int ImageBase<float>::colorValue(float pixelValue) const {
 	return int(pixelValue * 255.0f);
 }
 
-template <> int ImageBase<double>::colorValue(double pixelValue) const {
-	return int(pixelValue * 255.0);
-}
-
 template <class T> bool ImageBase<T>::operator == (const ImageBase<T>& other) const {
 	return compareTo(other) == 0.0;
 }
@@ -299,10 +295,11 @@ template <class T> Size ImageBase<T>::writeText(std::string_view text, int x, in
 
 template <class T> void ImageBase<T>::plot(int x, int y, double a, const LocalColor<T>& localColor) {
 	double alpha = a * localColor.alpha;
-	if (x >= 0 && x < w && y >= 0 && y < h) {
+	if (alpha > 0.0 && x >= 0 && x < w && y >= 0 && y < h) {
 		for (int z = 0; z < numPlanes && z < localColor.colorData.size(); z++) {
-			T* pix = addr(z, y, x);
-			*pix = T(*pix * (1.0 - alpha) + localColor.colorData[z] * alpha);
+			T val = at(z, y, x);
+			double pix = val * (1.0 - alpha) + localColor.colorData[z] * alpha;
+			at(z, y, x) = (T) pix;
 		}
 	}
 }

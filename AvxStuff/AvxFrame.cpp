@@ -621,15 +621,20 @@ void AvxFrame::yuvToRgb(const uchar* y, const uchar* u, const uchar* v, int h, i
 	auto vidx = dest.indexRgba();
 	V16f factorU = { fu[vidx[0]], fu[vidx[1]], fu[vidx[2]], fu[vidx[3]] };
 	V16f factorV = { fv[vidx[0]], fv[vidx[1]], fv[vidx[2]], fv[vidx[3]] };
+	uint16_t mask = 0b0001'0001'0001'0001;
 
-	for (int r = 0; r < h; r++) {
-		for (int c = 0; c < w; c += 4) {
-			V4f vecy = y + r * stride + c;
-			V4f vecu = u + r * stride + c;
-			V4f vecv = v + r * stride + c;
-			avx::yuvToRgbaPacked(vecy, vecu, vecv, dest.addr(0, r, c), factorU, factorV);
+	for (int threadIdx = 0; threadIdx < mData.cpuThreads; threadIdx++) mPool.add([&, threadIdx] {
+		for (int r = threadIdx; r < h; r += mData.cpuThreads) {
+			for (int c = 0; c < w; c += 4) {
+				int offset = r * stride + c;
+				V16f yy = _mm512_cvtepi32_ps(_mm512_cvtepu8_epi32(_mm_maskz_expandloadu_epi8(mask, y + offset)));
+				V16f uu = _mm512_cvtepi32_ps(_mm512_cvtepu8_epi32(_mm_maskz_expandloadu_epi8(mask, u + offset)));
+				V16f vv = _mm512_cvtepi32_ps(_mm512_cvtepu8_epi32(_mm_maskz_expandloadu_epi8(mask, v + offset)));
+				avx::yuvToRgbaPacked(yy, uu, vv, dest.addr(0, r, c), factorU, factorV);
+			}
 		}
-	}
+	});
+	mPool.wait();
 }
 
 //from float yuv to uchar rgb
@@ -637,14 +642,19 @@ void AvxFrame::yuvToRgb(const float* y, const float* u, const float* v, int h, i
 	auto vidx = dest.indexRgba();
 	V16f factorU = { fu[vidx[0]], fu[vidx[1]], fu[vidx[2]], fu[vidx[3]] };
 	V16f factorV = { fv[vidx[0]], fv[vidx[1]], fv[vidx[2]], fv[vidx[3]] };
+	uint16_t mask = 0b0001'0001'0001'0001;
+	V16f f = 255.0f;
 
-	V4f f = 255.0f;
-	for (int r = 0; r < h; r++) {
-		for (int c = 0; c < w; c += 4) {
-			V4f vecy = y + r * stride + c;
-			V4f vecu = u + r * stride + c;
-			V4f vecv = v + r * stride + c;
-			avx::yuvToRgbaPacked(vecy * f, vecu * f, vecv * f, dest.addr(0, r, c), factorU, factorV);
+	for (int threadIdx = 0; threadIdx < mData.cpuThreads; threadIdx++) mPool.add([&, threadIdx] {
+		for (int r = threadIdx; r < h; r += mData.cpuThreads) {
+			for (int c = 0; c < w; c += 4) {
+				int offset = r * stride + c;
+				V16f yy = _mm512_mul_ps(f, _mm512_maskz_expandloadu_ps(mask, y + offset));
+				V16f uu = _mm512_mul_ps(f, _mm512_maskz_expandloadu_ps(mask, u + offset));
+				V16f vv = _mm512_mul_ps(f, _mm512_maskz_expandloadu_ps(mask, v + offset));
+				avx::yuvToRgbaPacked(yy, uu, vv, dest.addr(0, r, c), factorU, factorV);
+			}
 		}
-	}
+	});
+	mPool.wait();
 }

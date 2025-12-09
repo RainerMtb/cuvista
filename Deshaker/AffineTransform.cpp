@@ -19,32 +19,23 @@
 #include "AffineTransform.hpp"
 #include "AvxUtil.hpp"
 
-const AffineTransform& AffineTransform::computeAffineDirect(const PointResult& p1, const PointResult& p2, const PointResult& p3) {
-	//set up A and b, members of AffineTransform
-	double* ap = A.data();
-	double* bp = b.data();
-	for (const PointResult& pr : { p1, p2, p3}) {
-		ap[0] = pr.x;	ap[1] = pr.y;	ap[2] = 1.0;	ap[3] = 0.0;    ap[4] = 0.0;   ap[5] = 0.0;
-		ap[6] = 0.0;    ap[7] = 0.0;    ap[8] = 0.0;    ap[9] = pr.x;  ap[10] = pr.y; ap[11] = 1.0;
-		ap += 12; //move two rows of A
+const AffineTransform& AffineSolver::computeSimilar(std::span<PointResult> points) {
+	assert(points.size() >= 2 && "similar transform needs at least two points");
+	std::vector<PointBase> vectorBase(points.begin(), points.end());
+	return computeSimilar(vectorBase);
+}
 
-		bp[0] = pr.x + pr.u;
-		bp[1] = pr.y + pr.v;
-		bp += 2; //move two rows of b
-	}
-
-	//solve and write the 6 result values directly to this AffineTransform
-	LUDecompositor<double> ludec(A);
-	ludec.solveAffine(b.data(), array);
-	setParam(array[0], array[1], array[2], array[3], array[4], array[5]);
-	return *this;
+const AffineTransform& AffineSolver::computeSimilar(std::span<PointContext> points) {
+	assert(points.size() >= 2 && "similar transform needs at least two points");
+	std::vector<PointBase> vectorBase(points.begin(), points.end());
+	return computeSimilar(vectorBase);
 }
 
 const AffineTransform& AffineTransform::computeSimilarDirect(const PointResult& p1, const PointResult& p2) {
 	Matd As = A.share(4, 4);
-	As[0][0] = p1.x;   As[0][1] =  p1.y;   As[0][2] = 1.0;   As[0][3] = 0.0;
+	As[0][0] = p1.x;   As[0][1] = p1.y;   As[0][2] = 1.0;   As[0][3] = 0.0;
 	As[1][0] = p1.y;   As[1][1] = -p1.x;   As[1][2] = 0.0;   As[1][3] = 1.0;
-	As[2][0] = p2.x;   As[2][1] =  p2.y;   As[2][2] = 1.0;   As[2][3] = 0.0;
+	As[2][0] = p2.x;   As[2][1] = p2.y;   As[2][2] = 1.0;   As[2][3] = 0.0;
 	As[3][0] = p2.y;   As[3][1] = -p2.x;   As[3][2] = 0.0;   As[3][3] = 1.0;
 
 	double* bp = b.data();
@@ -59,47 +50,7 @@ const AffineTransform& AffineTransform::computeSimilarDirect(const PointResult& 
 	return *this;
 }
 
-bool AffineTransform::computeAffine(std::vector<PointResult>& points) {
-	size_t count = points.size();
-	assert(count >= 3 && "transform needs at least three points");
-	Matd A = Matd::zeros(count * 2, 6);
-	Matd b = Matd::zeros(count * 2, 1);
-	const PointResult* p = points.data();
-	for (size_t i = 0, k = 0; i < count; i++) {
-		double xx = p->x;
-		double yy = p->y;
-
-		A[k][0] = xx;
-		A[k][1] = yy;
-		A[k][2] = 1.0;
-		b[k][0] = xx + p->u;
-		k++;
-
-		A[k][3] = xx;
-		A[k][4] = yy;
-		A[k][5] = 1.0;
-		b[k][0] = yy + p->v;
-		k++;
-
-		p++;
-	}
-	auto res = A.solveInPlace(b);
-	setParam(res->at(0, 0), res->at(1, 0), res->at(2, 0), res->at(3, 0), res->at(4, 0), res->at(5, 0));
-	return res.has_value();
-}
-
-const AffineTransform& AffineSolver::computeSimilar(std::span<PointResult> points) {
-	std::vector<PointBase> vectorBase(points.begin(), points.end());
-	return computeSimilar(vectorBase);
-}
-
-const AffineTransform& AffineSolver::computeSimilar(std::span<PointContext> points) {
-	std::vector<PointBase> vectorBase(points.begin(), points.end());
-	return computeSimilar(vectorBase);
-}
-
 const AffineTransform& AffineSolverSimple::computeSimilar(std::span<PointBase> points) {
-	assert(points.size() >= 2 && "similar transform needs at least two points");
 	size_t m = points.size() * 2;
 	Matd A = Adata.share(m, 4);
 	A.setValues(0.0);
@@ -131,7 +82,6 @@ const AffineTransform& AffineSolverSimple::computeSimilar(std::span<PointBase> p
 }
 
 const AffineTransform& AffineSolverFast::computeSimilar(std::span<PointBase> points) {
-	assert(points.size() >= 2 && "similar transform needs at least two points");
 	size_t m = points.size() * 2;
 	Matd A = Adata.share(6, m);  //A is transposed when compared to loop version
 
@@ -272,4 +222,54 @@ const AffineTransform& AffineSolverAvx::computeSimilar(std::span<PointBase> poin
 std::ostream& operator << (std::ostream& os, const AffineTransform& trf) {
 	os << "trf: scale=" << trf.scale() << ", rotm=" << trf.rotMinutes() << ", dx=" << trf.dX() << ", dy=" << trf.dY();
 	return os;
+}
+
+const AffineTransform& AffineTransform::computeAffineDirect(const PointResult& p1, const PointResult& p2, const PointResult& p3) {
+	//set up A and b, members of AffineTransform
+	double* ap = A.data();
+	double* bp = b.data();
+	for (const PointResult& pr : { p1, p2, p3 }) {
+		ap[0] = pr.x;	ap[1] = pr.y;	ap[2] = 1.0;	ap[3] = 0.0;    ap[4] = 0.0;   ap[5] = 0.0;
+		ap[6] = 0.0;    ap[7] = 0.0;    ap[8] = 0.0;    ap[9] = pr.x;  ap[10] = pr.y; ap[11] = 1.0;
+		ap += 12; //move two rows of A
+
+		bp[0] = pr.x + pr.u;
+		bp[1] = pr.y + pr.v;
+		bp += 2; //move two rows of b
+	}
+
+	//solve and write the 6 result values directly to this AffineTransform
+	LUDecompositor<double> ludec(A);
+	ludec.solveAffine(b.data(), array);
+	setParam(array[0], array[1], array[2], array[3], array[4], array[5]);
+	return *this;
+}
+
+bool AffineTransform::computeAffine(std::vector<PointResult>& points) {
+	size_t count = points.size();
+	assert(count >= 3 && "transform needs at least three points");
+	Matd A = Matd::zeros(count * 2, 6);
+	Matd b = Matd::zeros(count * 2, 1);
+	const PointResult* p = points.data();
+	for (size_t i = 0, k = 0; i < count; i++) {
+		double xx = p->x;
+		double yy = p->y;
+
+		A[k][0] = xx;
+		A[k][1] = yy;
+		A[k][2] = 1.0;
+		b[k][0] = xx + p->u;
+		k++;
+
+		A[k][3] = xx;
+		A[k][4] = yy;
+		A[k][5] = 1.0;
+		b[k][0] = yy + p->v;
+		k++;
+
+		p++;
+	}
+	auto res = A.solveInPlace(b);
+	setParam(res->at(0, 0), res->at(1, 0), res->at(2, 0), res->at(3, 0), res->at(4, 0), res->at(5, 0));
+	return res.has_value();
 }

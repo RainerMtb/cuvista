@@ -493,8 +493,28 @@ public:
 	void start() override {}
 	void writeInput(const FrameExecutor& executor) override;
 
-	void writeImage(const AffineTransform& trf, std::span<PointResult> res, int64_t idx, const ImageYuv& yuv, ThreadPoolBase& pool);
-	void writeImage(const AffineTransform& trf, std::span<PointResult> res, int64_t idx, const ImageYuv& yuv, const std::string& outFile);
+	static void writeImage(const AffineTransform& trf, std::span<PointResult> res, int64_t idx, Image8& dest, ThreadPoolBase& pool);
+
+	void write(const AffineTransform& trf, std::span<PointResult> res, int64_t idx, const ImageYuv& yuv, ThreadPoolBase& pool);
+	void write(const AffineTransform& trf, std::span<PointResult> res, int64_t idx, const ImageYuv& yuv, const std::string& outFile);
+};
+
+
+//--------------- write individual images to show point results ---------------------
+class ResultVideoWriter : public MovieWriterBase {
+
+private:
+	std::ofstream file;
+	ImageNV12 nv12;
+	ImageYuv yuv;
+
+public:
+	ResultVideoWriter(MainData& data, MovieReader& reader) :
+		MovieWriterBase(data)
+	{}
+
+	void open(OutputOption outputOption) override;
+	void writeInput(const FrameExecutor& executor) override;
 };
 
 

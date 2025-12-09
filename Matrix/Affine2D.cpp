@@ -142,6 +142,14 @@ std::array<double, 6> Affine2D::toArray() const {
 	return { array[0], array[1], array[2], array[3], array[4], array[5] };
 }
 
+Mat<double> Affine2D::toMat() const {
+	return *this;
+}
+
+Mat<double> Affine2D::toParamsMat() const {
+	return Mat<double>::fromRow({ array[0], array[1], array[2], array[3], array[4], array[5] });
+}
+
 Affine2D::operator AffineDataFloat() const {
 	return { float(array[0]), float(array[1]), float(array[2]), float(array[3]), float(array[4]), float(array[5]) };
 }

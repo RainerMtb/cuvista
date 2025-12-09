@@ -264,7 +264,7 @@ void createTransformImages() {
 
 		//std::cout << "writing result" << std::endl;
 		ResultImageWriter riw(data);
-		riw.writeImage(trf, frame.mResultPoints, i, im2, outFile);
+		riw.write(trf, frame.mResultPoints, i, im2, outFile);
 
 		std::cout << "done" << std::endl;
 	}

@@ -134,6 +134,10 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 			//produce and write transformation images
 			outputOption = OutputOption::IMAGE_RESULTS;
 
+		} else if (args.nextArg("resvid")) {
+			//produce and write transformation video
+			outputOption = OutputOption::VIDEO_RESULTS;
+
 		} else if (args.nextArg("flow")) {
 			//optical flow video
 			outputOption = OutputOption::VIDEO_FLOW;
@@ -549,7 +553,9 @@ std::ostream& MainData::showDeviceInfo(std::ostream& os) const {
 	os << "libavformat identifier:   " << LIBAVFORMAT_IDENT << std::endl;
 	os << "libswscale identifier:    " << LIBSWSCALE_IDENT << std::endl;
 	os << "libswresample identifier: " << LIBSWRESAMPLE_IDENT << std::endl;
-	if (ffmpeg_check_versions() == false) os << "warning: different version of ffmpeg was used at buildtime" << std::endl;
+	if (ffmpeg_check_versions() == false) {
+		os << "warning: different versions of ffmpeg are used at compiletime and runtime" << std::endl;
+	}
 
 	//display nvidia info
 	os << std::endl;

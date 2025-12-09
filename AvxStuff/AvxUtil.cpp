@@ -23,12 +23,11 @@
 
 
 //convert individual vectors in float for Y U V to one vector holding uchar packed RGB
-void avx::yuvToRgbaPacked(V4f y, V4f u, V4f v, unsigned char* dest, V16f fu, V16f fv) {
+void avx::yuvToRgbaPacked(V16f y, V16f u, V16f v, unsigned char* dest, V16f fu, V16f fv) {
 	//distribute y, u, v values to 16 places
-	__m512i index = _mm512_setr_epi32(0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3);
-	V16f yy = _mm512_permutexvar_ps(index, _mm512_castps128_ps512(y));
-	V16f uu = _mm512_permutexvar_ps(index, _mm512_castps128_ps512(u));
-	V16f vv = _mm512_permutexvar_ps(index, _mm512_castps128_ps512(v));
+	V16f yy = _mm512_permute_ps(y, 0);
+	V16f uu = _mm512_permute_ps(u, 0);
+	V16f vv = _mm512_permute_ps(v, 0);
 	
 	//convert color
 	V16f ps255 = 255.0f;
@@ -147,7 +146,6 @@ void avx::toConsole(V8d v, int digits) {
 
 //compute similar transform using avx
 void avx::computeSimilar(std::span<PointBase> points, Matd& M, Affine2D& affine) {
-	assert(points.size() >= 2 && "similar transform needs at least two points");
 	size_t m = points.size() * 2;
 	Matd A = M.share(6, m + 8);
 
@@ -247,7 +245,7 @@ void avx::computeSimilar(std::span<PointBase> points, Matd& M, Affine2D& affine)
 		for (size_t i = k; i < m; i += 8) {
 			V8d a = A.addr(k, i);
 			V8d b = A.addr(5, i);
-			s += _mm512_reduce_add_pd(a.mul(b));
+			s += _mm512_reduce_add_pd(a * b);
 		}
 		s /= -A[k][k];
 		V8d pd_s = s;
