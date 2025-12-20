@@ -241,18 +241,34 @@ void avx::computeSimilar(std::span<PointBase> points, Matd& M, Affine2D& affine)
 
 	//back substitution step 1
 	for (size_t k = 0; k < 4; k++) {
-		double s = 0.0;
+		__m512d s = _mm512_set1_pd(0.0);
+		__m512d x = _mm512_set1_pd(-A[k][k]);
+
+		//inner product, first loop
 		for (size_t i = k; i < m; i += 8) {
-			V8d a = A.addr(k, i);
-			V8d b = A.addr(5, i);
-			s += _mm512_reduce_add_pd(a * b);
+			__m512d a = _mm512_loadu_pd(A.addr(k, i));
+			__m512d b = _mm512_loadu_pd(A.addr(5, i));
+			s = _mm512_fmadd_pd(a, b, s);
 		}
-		s /= -A[k][k];
-		V8d pd_s = s;
+
+		//horizontal sum
+		__m512d b;
+		b = _mm512_shuffle_pd(s, s, 0b01010101);
+		s = _mm512_add_pd(s, b);
+
+		b = _mm512_shuffle_f64x2(s, s, 0b10110001);
+		s = _mm512_add_pd(s, b);
+
+		b = _mm512_shuffle_f64x2(s, s, 0b01001110);
+		s = _mm512_add_pd(s, b);
+
+		//second loop
+		s = _mm512_div_pd(s, x);
 		for (size_t i = k; i < m; i += 8) {
-			V8d a = A.addr(k, i);
-			V8d b = A.addr(5, i);
-			(b + a * s).storeu(A.addr(5, i));
+			__m512d a = _mm512_loadu_pd(A.addr(k, i));
+			__m512d b = _mm512_loadu_pd(A.addr(5, i));
+			__m512d result = _mm512_fmadd_pd(s, a, b);
+			_mm512_storeu_pd(A.addr(5, i), result);
 		}
 	}
 

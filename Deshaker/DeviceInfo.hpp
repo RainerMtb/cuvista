@@ -33,7 +33,6 @@ public:
 	std::string getName() const override;
 	std::string getNameShort() const override;
 	std::shared_ptr<FrameExecutor> create(MainData& data, MovieFrame& frame) override;
-	cpu_features::X86Features getCpuFeatures() const;
 };
 
 //AvxFrame
@@ -45,6 +44,10 @@ public:
 	std::string getName() const override;
 	std::string getNameShort() const override;
 	std::shared_ptr<FrameExecutor> create(MainData& data, MovieFrame& frame) override;
+
+	bool hasAvx10() const;
+	bool hasAvx512() const;
+	bool hasAvx2() const;
 };
 
 namespace cl { class Device; }

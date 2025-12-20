@@ -177,6 +177,8 @@ public:
 
 	std::string getCpuName() const;
 
+	bool hasAvx10() const;
+
 	bool hasAvx512() const;
 
 	bool hasAvx2() const;

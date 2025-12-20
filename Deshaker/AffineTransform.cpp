@@ -229,7 +229,7 @@ const AffineTransform& AffineTransform::computeAffineDirect(const PointResult& p
 	double* ap = A.data();
 	double* bp = b.data();
 	for (const PointResult& pr : { p1, p2, p3 }) {
-		ap[0] = pr.x;	ap[1] = pr.y;	ap[2] = 1.0;	ap[3] = 0.0;    ap[4] = 0.0;   ap[5] = 0.0;
+		ap[0] = pr.x;   ap[1] = pr.y;   ap[2] = 1.0;    ap[3] = 0.0;    ap[4] = 0.0;   ap[5] = 0.0;
 		ap[6] = 0.0;    ap[7] = 0.0;    ap[8] = 0.0;    ap[9] = pr.x;  ap[10] = pr.y; ap[11] = 1.0;
 		ap += 12; //move two rows of A
 

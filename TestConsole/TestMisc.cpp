@@ -67,7 +67,7 @@ void similarTransform() {
 	AffineSolverAvx s3(points.size());
 	Matd x3 = similarTransformFunc(points, s3);
 
-	for (int i = 0; i < 10; i++) {
+	for (int i = 0; i < 15; i++) {
 		std::ranges::shuffle(points, gen);
 
 		AffineSolverSimple s1(points.size());
@@ -83,9 +83,8 @@ void similarTransform() {
 		AffineSolver& solver3 = s3;
 		Matd t3 = solver3.computeSimilar(points).toParamsMat();
 
-		std::cout << std::endl;
 		std::cout << "results equal 1-2: " << t1.minus(t2).timesTransposed().scalar() << ", ";
-		std::cout << "results equal 2-3: " << t2.minus(t3).timesTransposed().scalar() << std::endl;
+		std::cout << "results equal 1-3: " << t1.minus(t3).timesTransposed().scalar() << std::endl;
 	}
 }
 

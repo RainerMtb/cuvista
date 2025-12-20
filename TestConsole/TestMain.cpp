@@ -60,11 +60,11 @@ int main() {
 	//flow();
 	//pinvTest();
 	//compareInv();
-	similarTransform();
+	//similarTransform();
 
 	//testSampler();
 	//compareFramesPlatforms();
-	//avxCompute();
+	avxCompute();
 	//avxTest();
 
 	//testZoom();

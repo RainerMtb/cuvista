@@ -30,6 +30,8 @@ void __syncthreads();
 void __trap();
 long long int clock64();
 float __saturatef(float);
+double min(double, double);
+double max(double, double);
 
 namespace cu {
 	const int THREAD_COUNT = 16;	//number of threads used in kernels to access textures

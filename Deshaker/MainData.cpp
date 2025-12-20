@@ -372,7 +372,7 @@ void MainData::collectDeviceInfo() {
 	deviceList.push_back(&deviceInfoCpu);
 
 	//check for Avx512
-	if (hasAvx512()) {
+	if (deviceInfoAvx.hasAvx512()) {
 		deviceInfoAvx.videoEncodingOptions = deviceInfoCpu.videoEncodingOptions;
 		deviceList.push_back(&deviceInfoAvx);
 	}
@@ -668,12 +668,14 @@ std::string MainData::getCpuName() const {
 	return deviceInfoCpu.getName();
 }
 
+bool MainData::hasAvx10() const {
+	return deviceInfoAvx.hasAvx10();
+}
+
 bool MainData::hasAvx512() const {
-	auto features = deviceInfoCpu.getCpuFeatures();
-	return features.avx512f & features.avx512vl & features.avx512bw & features.avx512dq & features.sse3 & features.avx2;
+	return deviceInfoAvx.hasAvx512();
 }
 
 bool MainData::hasAvx2() const {
-	auto features = deviceInfoCpu.getCpuFeatures();
-	return features.sse3 & features.avx2;
+	return deviceInfoAvx.hasAvx2();
 }

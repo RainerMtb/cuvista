@@ -20,4 +20,7 @@
 
 #include <string>
 
-inline std::string CUVISTA_VERSION = "1.8.0";
+inline int CUVISTA_VERSION_MAJOR = 1;
+inline int CUVISTA_VERSION_MINOR = 9;
+inline int CUVISTA_VERSION_PATCH = 0;
+inline std::string CUVISTA_VERSION = std::format("{}.{}.{}", CUVISTA_VERSION_MAJOR, CUVISTA_VERSION_MINOR, CUVISTA_VERSION_PATCH);

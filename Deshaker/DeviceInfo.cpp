@@ -55,10 +55,6 @@ std::shared_ptr<FrameExecutor> DeviceInfoCpu::create(MainData& data, MovieFrame&
 	return std::make_shared<CpuFrame>(data, *this, frame, frame.mPool);
 }
 
-cpu_features::X86Features DeviceInfoCpu::getCpuFeatures() const {
-	return cpuInfo.features;
-}
-
 
 //Avx Device Info -----------------------------------
 
@@ -81,6 +77,22 @@ std::string DeviceInfoAvx::getNameShort() const {
 std::shared_ptr<FrameExecutor> DeviceInfoAvx::create(MainData& data, MovieFrame& frame) {
 	return std::make_shared<AvxFrame>(data, *this, frame, frame.mPool);
 }
+
+bool DeviceInfoAvx::hasAvx512() const {
+	auto features = cpuInfo.features;
+	return features.avx512f & features.avx512vl & features.avx512bw & features.avx512dq & features.avx512vbmi2 & features.sse3 & features.avx2;
+}
+
+bool DeviceInfoAvx::hasAvx10() const {
+	auto features = cpuInfo.features;
+	return false; //how to get this from cpu_features ???
+}
+
+bool DeviceInfoAvx::hasAvx2() const {
+	auto features = cpuInfo.features;
+	return features.sse3 & features.avx2;
+}
+
 
 
 //OPENCL Info -----------------------------------
