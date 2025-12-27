@@ -52,6 +52,8 @@ namespace util {
         ~ConsoleTimer();
     };
 
+    void enableAnsiSupport();
+
 
     //output sent to this ostream will be suppressed
     class NullOutstream : public std::ostream {

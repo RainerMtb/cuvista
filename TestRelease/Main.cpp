@@ -17,6 +17,7 @@
  */
 
 #include "Deshaker.hpp"
+#include "Util.hpp"
 #include <sstream>
 #include <regex>
 #include <filesystem>
@@ -239,6 +240,7 @@ static void testSpeed() {
 }
 
 int main() {
+	util::enableAnsiSupport();
 	std::vector<std::string> folders = { "d:/videoTest/out", "d:/videoTest/out/images" };
 	for (const std::string& folder : folders) {
 		std::cout << "--- Delete " << folder << " ---" << std::endl;

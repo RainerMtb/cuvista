@@ -61,6 +61,40 @@ void ffmpeg_log(void* avclass, int level, const char* fmt, va_list args) {
         char ffmpeg_logbuf[ffmpeg_bufsiz];
         std::vsnprintf(ffmpeg_logbuf, ffmpeg_bufsiz, fmt, args);
 
+        //remove ANSI escape sequences and control characters
+        char* src = ffmpeg_logbuf;
+        char* dst = ffmpeg_logbuf;
+        while (*src) {
+            if (*src == '\033' || *src == '\x1b') { // ESC character
+                src++;
+                if (*src == '[') {
+                    // CSI sequence: ESC [ parameters command
+                    src++;
+                    // Skip parameter bytes (0x30-0x3F: digits, semicolon, <>=?)
+                    while (*src && (*src >= 0x30 && *src <= 0x3F)) {
+                        src++;
+                    }
+                    // Skip intermediate bytes (0x20-0x2F: space, punctuation)
+                    while (*src && (*src >= 0x20 && *src <= 0x2F)) {
+                        src++;
+                    }
+                    // Skip final byte (0x40-0x7E: the command character)
+                    if (*src && (*src >= 0x40 && *src <= 0x7E)) {
+                        src++;
+                    }
+                } else if (*src) {
+                    // Other escape sequences, skip the next character
+                    src++;
+                }
+            } else if ((unsigned char)*src < 0x20 && *src != '\n' && *src != '\r' && *src != '\t') {
+                // Skip other control characters except newline, carriage return, tab
+                src++;
+            } else {
+                *dst++ = *src++;
+            }
+        }
+        *dst = '\0';
+
         //trim trailing newline
         char* ptr = ffmpeg_logbuf;
         while (ptr != ffmpeg_logbuf + ffmpeg_bufsiz && *ptr != '\0') {

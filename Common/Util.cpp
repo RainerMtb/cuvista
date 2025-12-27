@@ -25,7 +25,32 @@
 #include <regex>
 #include "Util.hpp"
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 namespace util {
+
+	void enableAnsiSupport() {
+#ifdef _WIN32
+		HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+		if (hOut != INVALID_HANDLE_VALUE) {
+			DWORD dwMode = 0;
+			if (GetConsoleMode(hOut, &dwMode)) {
+				dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+				SetConsoleMode(hOut, dwMode);
+			}
+		}
+		hOut = GetStdHandle(STD_ERROR_HANDLE);
+		if (hOut != INVALID_HANDLE_VALUE) {
+			DWORD dwMode = 0;
+			if (GetConsoleMode(hOut, &dwMode)) {
+				dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+				SetConsoleMode(hOut, dwMode);
+			}
+		}
+#endif
+	}
 
 	void ConsoleTimer::interval(const std::string& name) {
 		auto interval = std::chrono::steady_clock::now();
