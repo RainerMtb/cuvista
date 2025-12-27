@@ -17,8 +17,10 @@
  */
 
 #include "Deshaker.hpp"
+#include "Util.hpp"
 
 int main(int argsCount, char** args) {
+	util::enableAnsiSupport();
 	std::vector<std::string> argsInput(args + 1, args + argsCount);
 	return deshake(argsInput, &std::cout, {}).statusCode;
 }
