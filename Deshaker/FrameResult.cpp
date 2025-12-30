@@ -82,7 +82,7 @@ const AffineTransform& FrameResult::computeTransform(std::span<PointResult> resu
 
 		if (mConsList.size() < numValid / 5) {
 			// STEP 2
-			// using dbscan
+			// try dbscan
 			computeDbScan();
 		}
 
@@ -172,6 +172,7 @@ AffineTransform FrameResult::computeClassic(size_t numValid) {
 	return trf1;
 }
 
+//adaptation of dbscan to find clusters of movements
 void FrameResult::computeDbScan() {
-
+	
 }

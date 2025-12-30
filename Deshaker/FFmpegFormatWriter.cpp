@@ -119,6 +119,13 @@ void FFmpegFormatWriter::openFormat(AVCodecID codecId) {
             //https://ffmpeg.org/doxygen/trunk/remuxing_8c-example.html
             osc.outputStream->codecpar->codec_tag = 0;
 
+            //create default channel layout if unspecified
+            if (osc.outputStream->codecpar->codec_type == AVMEDIA_TYPE_AUDIO && 
+                osc.outputStream->codecpar->ch_layout.nb_channels > 0 &&
+                osc.outputStream->codecpar->ch_layout.order == AV_CHANNEL_ORDER_UNSPEC) {
+                av_channel_layout_default(&osc.outputStream->codecpar->ch_layout, osc.outputStream->codecpar->ch_layout.nb_channels);
+            }
+
         } else if (osc.handling == StreamHandling::STREAM_TRANSCODE) {
             osc.outputStream = createNewStream(fmt_ctx, inStream);
 
@@ -133,6 +140,11 @@ void FFmpegFormatWriter::openFormat(AVCodecID codecId) {
             int retval = avcodec_parameters_to_context(osc.audioInCtx, inStream->codecpar);
             if (retval < 0)
                 throw AVException(av_make_error(retval, "cannot copy audio parameters to input context"));
+
+            //create default channel layout if unspecified
+            if (osc.audioInCtx->ch_layout.nb_channels > 0 && osc.audioInCtx->ch_layout.order == AV_CHANNEL_ORDER_UNSPEC) {
+                av_channel_layout_default(&osc.audioInCtx->ch_layout, osc.audioInCtx->ch_layout.nb_channels);
+            }
             retval = avcodec_open2(osc.audioInCtx, osc.audioInCodec, NULL);
             if (retval < 0)
                 throw AVException(av_make_error(retval, "cannot open audio decoder"));

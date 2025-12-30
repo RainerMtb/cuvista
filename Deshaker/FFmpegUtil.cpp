@@ -36,20 +36,20 @@ void ffmpeg_log_error(int errnum, const char* msg, ErrorSource source) {
 }
 
 static constexpr FFmpegVersions ffmpeg_build_versions = { 
-    LIBAVUTIL_VERSION_INT, 
-    LIBAVCODEC_VERSION_INT, 
-    LIBAVFORMAT_VERSION_INT, 
-    LIBSWSCALE_VERSION_INT, 
-    LIBSWRESAMPLE_VERSION_INT 
+    .avutil = LIBAVUTIL_VERSION_INT, 
+    .avcodec = LIBAVCODEC_VERSION_INT, 
+    .avformat = LIBAVFORMAT_VERSION_INT, 
+    .swscale = LIBSWSCALE_VERSION_INT, 
+    .swresample = LIBSWRESAMPLE_VERSION_INT 
 };
 
 bool ffmpeg_check_versions() {
     FFmpegVersions ffmpeg_runtime_versions = {
-        avutil_version(),
-        avcodec_version(),
-        avformat_version(),
-        swscale_version(),
-        swresample_version()
+        .avutil = avutil_version(),
+        .avcodec = avcodec_version(),
+        .avformat = avformat_version(),
+        .swscale = swscale_version(),
+        .swresample = swresample_version()
     };
     return ffmpeg_build_versions == ffmpeg_runtime_versions;
 }
@@ -145,11 +145,11 @@ StreamInfo StreamContext::inputStreamInfo() const {
 
     AVCodecParameters* param = inputStream->codecpar;
     return { 
-        av_get_media_type_string(param->codec_type), 
-        avcodec_get_name(param->codec_id), 
-        tstr, 
-        param->codec_type, 
-        inputStream->index 
+        .streamType = av_get_media_type_string(param->codec_type), 
+        .codec = avcodec_get_name(param->codec_id), 
+        .durationString = tstr, 
+        .mediaType = param->codec_type, 
+        .index = inputStream->index 
     };
 }
 
