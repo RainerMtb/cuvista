@@ -144,7 +144,7 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 
 		} else if (args.nextArg("mode", next)) {
 			int i = std::stoi(next);
-			if (i >= 0 && i <= defaults.modeMax) mode = i;
+			if (i >= 0 && i <= defaultParam.modeMax) mode = i;
 			else throw AVException("invalid value for mode: " + next);
 
 		} else if (args.nextArg("radius", next)) {
@@ -215,6 +215,9 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 		} else if (args.nextArg("cputhreads", next)) {
 			//number of threads to use on cpu
 			cpuThreadsRequired = { std::stoul(next) };
+
+		} else if (args.nextArg("cudathreads", next)) {
+			cudaThreadCount = std::stoi(next);
 
 		} else if (args.nextArg("crf", next)) {
 			requestedCrf = std::stoi(next); //output encoder crf value
@@ -400,10 +403,11 @@ void MainData::validate(const MovieReader& reader) {
 
 	//pyramid levels to compute
 	this->zMax = pyramidLevelsRequested - 1;
+
 	int div0 = 1 << zMax;
-	int points = std::max(w / div0, h / div0);
-	while (points > MAX_POINTS_COUNT) {
-		points /= 2;
+	int numPoints = (w / div0) * (h / div0);
+	while (numPoints > maxResultCount) {
+		numPoints /= 4;
 		zMax++;
 	}
 	this->zMin = zMax - pyramidLevelsRequested + 1;
@@ -418,11 +422,12 @@ void MainData::validate(const MovieReader& reader) {
 	}
 	this->pyramidRowCount = rowCount;
 
-	//number of point to compute, leave one pixel around the border for computing delta values
+	//number of points to compute, leaving one pixel around the border so delta values can be computed
 	int div = 1 << zMax;
 	this->ixCount = w / div - 2 * ir - 3;
 	this->iyCount = h / div - 2 * ir - 3;
 	this->resultCount = ixCount * iyCount;
+	//std::cout << "zMin " << zMin << ", zMax " << zMax << ", ixCount " << ixCount << ", iyCount " << iyCount << std::endl;
 
 	//check background color value
 	for (int i = 0; i < 3; i++) {
@@ -461,21 +466,21 @@ void MainData::validate(const MovieReader& reader) {
 	}
 
 	//check certain values ranges for sanity
-	if (radsec < defaults.radsecMin || radsec > defaults.radsecMax) throw AVException("invalid temporal radius: " + std::to_string(radsec));
-	if (radius < defaults.radiusMin || radius > defaults.radiusMax) throw AVException("invalid image radius: " + std::to_string(radius));
-	if (w < defaults.wMin) throw AVException("invalid input video width: " + std::to_string(w));
-	if (h < defaults.hMin) throw AVException("invalid input video height: " + std::to_string(h));
+	if (radsec < defaultParam.radsecMin || radsec > defaultParam.radsecMax) throw AVException("invalid temporal radius: " + std::to_string(radsec));
+	if (radius < defaultParam.radiusMin || radius > defaultParam.radiusMax) throw AVException("invalid image radius: " + std::to_string(radius));
+	if (w < defaultParam.wMin) throw AVException("invalid input video width: " + std::to_string(w));
+	if (h < defaultParam.hMin) throw AVException("invalid input video height: " + std::to_string(h));
 	size_t mp = deviceList[deviceSelected]->maxPixel;
 	if (w > mp) throw AVException("frame width exceeds maximum of " + std::to_string(mp) + " px");
 	if (h > mp) throw AVException("frame height exceeds maximum of " + std::to_string(mp) + " px");
 	if (w % 2 != 0 || h % 2 != 0) throw AVException("width and height must be factors of two");
 	if (zoomMin > zoomMax) throw AVException("invalid zoom values, max zoom must be greater min zoom");
-	if (zoomMin < defaults.imZoomMin || zoomMin > defaults.imZoomMax) throw AVException("invalid zoom value");
-	if (zoomMax < defaults.imZoomMin || zoomMax > defaults.imZoomMax) throw AVException("invalid zoom value");
+	if (zoomMin < defaultParam.imZoomMin || zoomMin > defaultParam.imZoomMax) throw AVException("invalid zoom value");
+	if (zoomMax < defaultParam.imZoomMin || zoomMax > defaultParam.imZoomMax) throw AVException("invalid zoom value");
 	if (ixCount < 8 || iyCount < 8) throw AVException("invalid settings");
 
-	if (pyramidLevelsRequested < defaults.levelsMin || pyramidLevelsRequested > defaults.levelsMax) throw AVException("invalid pyramid levels: " + std::to_string(pyramidLevels));
-	if (ir < defaults.irMin || ir > defaults.irMax) throw AVException("invalid integration radius: " + std::to_string(ir));
+	if (pyramidLevelsRequested < defaultParam.levelsMin || pyramidLevelsRequested > defaultParam.levelsMax) throw AVException("invalid pyramid levels: " + std::to_string(pyramidLevels));
+	if (ir < defaultParam.irMin || ir > defaultParam.irMax) throw AVException("invalid integration radius: " + std::to_string(ir));
 
 	//check ffmpeg versions
 	//if (ffmpeg_check_versions() == false) {

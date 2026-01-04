@@ -23,14 +23,26 @@
 #include <algorithm>
 #include <fstream>
 
-//parameter structure
+//parameter structure used in device code
 //all values must be initialized to be used as __constant__ variable in device code, no constructor calls
 __constant__ CoreData d_core;
+
+//parameter structure used in host code
 CudaData cudaData;
 
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------- HOST CODE ------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
+
+dim3 configThreads() {
+	return { cudaData.cudaThreadCount, cudaData.cudaThreadCount };
+}
+
+dim3 configBlocks(dim3 threads, int width, int height) {
+	uint bx = (width + threads.x - 1) / threads.x;
+	uint by = (height + threads.y - 1) / threads.y;
+	return { bx, by };
+}
 
 static void handleStatus(cudaError_t status, std::string&& title) {
 	if (status != cudaSuccess) {
@@ -186,6 +198,9 @@ CudaExecutor::CudaExecutor(CoreData& data, DeviceInfoBase& deviceInfo, MovieFram
 void CudaExecutor::cudaInit(CoreData& core, int devIdx, const cudaDeviceProp& prop, ImageYuv& yuvFrame) {
 	//copy device prop structure
 	props = prop;
+
+	//copy value for cuda threads
+	cudaData.cudaThreadCount = core.cudaThreadCount;
 
 	//pin memory of transfer object
 	registeredMemPtr = yuvFrame.data();

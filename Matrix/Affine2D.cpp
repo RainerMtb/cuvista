@@ -126,6 +126,10 @@ double Affine2D::rotMinutes() const {
 	return rot() * 180.0 / std::numbers::pi * 60.0;
 }
 
+double Affine2D::rotDegrees() const {
+	return rot() * 180.0 / std::numbers::pi;
+}
+
 double Affine2D::dX() const {
 	return at(0, 2);
 }

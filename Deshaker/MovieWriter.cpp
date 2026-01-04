@@ -785,9 +785,9 @@ void ResultImageWriter::writeImage(const AffineTransform& trf, std::span<PointRe
 
 	//write text info
 	double frac = numConsidered == 0 ? 0.0 : 100.0 * numConsens / numConsidered;
-	std::string s2 = std::format("transform dx={:.1f}, dy={:.1f}, scale={:.5f}, rot={:.1f}", trf.dX(), trf.dY(), trf.scale(), trf.rotMinutes());
+	std::string s2 = std::format("transform dx={:.1f} px, dy={:.1f} px, scale={:.5f}, rot={:.5f} deg", trf.dX(), trf.dY(), trf.scale(), trf.rotDegrees());
 	Size s = dest.writeText(s2, 0, h);
-	std::string s1 = std::format("index {}, consensus {}/{} ({:.1f}%)", idx, numConsens, numConsidered, frac);
+	std::string s1 = std::format("frame {}, consensus {}/{} ({:.1f}%)", idx, numConsens, numConsidered, frac);
 	dest.writeText(s1, 0, h - s.h);
 }
 

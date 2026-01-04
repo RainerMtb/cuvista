@@ -223,11 +223,11 @@ void CpuFrame::computeTerminate(int64_t frameIndex, std::vector<PointResult>& re
 
 						err = eta[0] * eta[0] + eta[1] * eta[1];
 						if (std::isnan(err)) result = PointResultType::FAIL_ETA_NAN;
-						if (err < mData.COMP_MAX_TOL) result = PointResultType::SUCCESS_ABSOLUTE_ERR;
-						if (std::abs(err - bestErr) / bestErr < mData.COMP_MAX_TOL * mData.COMP_MAX_TOL) result = PointResultType::SUCCESS_STABLE_ITER;
+						if (err < mData.compMaxTol) result = PointResultType::SUCCESS_ABSOLUTE_ERR;
+						if (std::abs(err - bestErr) / bestErr < mData.compMaxTol * mData.compMaxTol) result = PointResultType::SUCCESS_STABLE_ITER;
 						if (err < bestErr) bestErr = err;
 						iter++;
-						if (iter == mData.COMP_MAX_ITER && result == PointResultType::RUNNING) result = PointResultType::FAIL_ITERATIONS;
+						if (iter == mData.compMaxIter && result == PointResultType::RUNNING) result = PointResultType::FAIL_ITERATIONS;
 					}
 
 					//center of integration window on next level

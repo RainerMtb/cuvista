@@ -24,17 +24,20 @@ FrameResult::FrameResult(MainData& data, ThreadPoolBase& threadPool) :
 	mData { data },
 	mPool { threadPool }
 {
+	size_t siz = data.resultCount;
 
 	//create solver class
 	if (data.hasAvx512()) {
-		mAffineSolver = std::make_unique<AffineSolverAvx>(data.resultCount);
+		mAffineSolver = std::make_unique<AffineSolverAvx>(siz);
 	} else {
-		mAffineSolver = std::make_unique<AffineSolverFast>(threadPool, data.resultCount);
+		mAffineSolver = std::make_unique<AffineSolverFast>(threadPool, siz);
 	}
 
-	//prepare result lists
-	mConsList.reserve(data.resultCount);
-	mConsListCopy.resize(data.resultCount);
+	//prepare lists
+	mConsList.reserve(siz);
+	mPointList.resize(siz);
+	mWork.resize(siz);
+	mCluster.resize(siz);
 }
 
 const AffineTransform& FrameResult::getTransform() const {
@@ -50,9 +53,7 @@ void FrameResult::reset() {
 using namespace util;
 
 const AffineTransform& FrameResult::computeTransform(std::span<PointResult> results, int64_t frameIndex) {
-	const size_t cMinConsensPoints = 8;	              //min numbers of points for consensus set
 
-	//util::ConsoleTimer ic("computeTransform");
 	mAffineSolver->reset();
 	mAffineSolver->frameIndex = frameIndex;
 
@@ -72,19 +73,22 @@ const AffineTransform& FrameResult::computeTransform(std::span<PointResult> resu
 	size_t numValid = mConsList.size();
 	
 	//second copy of initial points
-	mConsListCopy = mConsList;
+	mPointList = mConsList;
 
+	const size_t cMinConsensPoints = 8; //min numbers of points for consensus set
 	if (numValid > cMinConsensPoints) {
-		// STEP 1
-		// traditional method
-		mBestTransform = computeClassic(numValid);
-		//std::cout << "frame " << frameIndex << " mConsList size " << mConsList.size() << std::endl;
+		//util::ConsoleTimer ic("trf " + std::to_string(frameIndex));
 
-		if (mConsList.size() < numValid / 5) {
-			// STEP 2
-			// try dbscan
-			computeDbScan();
+		// STEP 1 traditional method
+		mBestTransform = computeClassic(numValid, frameIndex);
+		//std::cout << "frame " << frameIndex << " mConsList size " << mConsList.size() << std::endl;
+		//ic.interval("trf classic");
+
+		if (mConsList.size() < numValid / 10) {
+			// STEP 2 dbscan
+			mBestTransform = computeDbScan(frameIndex);
 		}
+		//ic.interval("trf dbscan");
 
 		for (PointContext& pc : mConsList) pc.ptr->isConsens = true;
 	}
@@ -93,7 +97,7 @@ const AffineTransform& FrameResult::computeTransform(std::span<PointResult> resu
 	return mBestTransform;
 }
 
-AffineTransform FrameResult::computeClassic(size_t numValid) {
+AffineTransform FrameResult::computeClassic(size_t numValid, int64_t frameIndex) {
 	auto sortDist = [] (const PointContext& pc1, const PointContext& pc2) { return pc1.distance < pc2.distance; };
 	auto sortDelta = [] (const PointContext& pc1, const PointContext& pc2) { return pc1.delta < pc2.delta; };
 	auto sortRel = [] (const PointContext& pc1, const PointContext& pc2) { return pc1.distanceRelative < pc2.distanceRelative; };
@@ -118,7 +122,7 @@ AffineTransform FrameResult::computeClassic(size_t numValid) {
 
 	std::sort(mConsList.begin(), mConsList.end(), sortDelta);
 	mConsList.resize(numValid * cConsLoopPercent / 100);
-	AffineTransform trf1, trf2;
+	AffineTransform trf;
 
 	size_t numCons = 0;
 	for (int i = 0; i < cConsLoopCount; i++) {
@@ -130,7 +134,7 @@ AffineTransform FrameResult::computeClassic(size_t numValid) {
 		averageLength /= mConsList.size();
 
 		//transform for selected points
-		trf1 = mAffineSolver->computeSimilar(mConsList);
+		trf = mAffineSolver->computeSimilar(mConsList);
 
 		size_t numConsAbsolute = 0;
 		size_t numConsRelative = 0;
@@ -167,12 +171,23 @@ AffineTransform FrameResult::computeClassic(size_t numValid) {
 			mConsList.resize(cutoff);
 		}
 	}
-	mConsList.resize(numCons);
 
-	return trf1;
+	mConsList.resize(numCons);
+	return trf;
 }
 
 //adaptation of dbscan to find clusters of movements
-void FrameResult::computeDbScan() {
-	
+AffineTransform FrameResult::computeDbScan(int64_t frameIndex) {
+
+	return mBestTransform;
+}
+
+bool FrameResult::checkSizes() {
+	int sum = std::count_if(mPointList.begin(), mPointList.end(), [&] (const PointContext& pc) { return pc.clusterIndex < 0; });
+	for (const ClusterSize& cs : mClusterSizes) sum += cs.siz;
+	return sum == mPointList.size();
+}
+
+std::ostream& operator << (std::ostream& out, const ClusterSize& cs) {
+	return out << cs.siz << "-" << cs.index;
 }

@@ -128,12 +128,12 @@ namespace winrt::cuvistaWinui::implementation {
         spinZoomMax().NumberFormatter(percentFormatter);
 
         //limits
-        spinRadius().Minimum(defaults.radsecMin);
-        spinRadius().Maximum(defaults.radsecMax);
-        spinZoomMin().Minimum(defaults.imZoomMin - 1.0);
-        spinZoomMin().Maximum(defaults.imZoomMax - 1.0);
-        spinZoomMax().Minimum(defaults.imZoomMin - 1.0);
-        spinZoomMax().Maximum(defaults.imZoomMax - 1.0);
+        spinRadius().Minimum(defaultParam.radsecMin);
+        spinRadius().Maximum(defaultParam.radsecMax);
+        spinZoomMin().Minimum(defaultParam.imZoomMin - 1.0);
+        spinZoomMin().Maximum(defaultParam.imZoomMax - 1.0);
+        spinZoomMax().Minimum(defaultParam.imZoomMin - 1.0);
+        spinZoomMax().Maximum(defaultParam.imZoomMax - 1.0);
 
         //load recent files list without opening files
         for (int idx = 0; idx < 6; idx++) {
@@ -160,14 +160,14 @@ namespace winrt::cuvistaWinui::implementation {
 
         //more settings
         chkOverwrite().IsChecked(localValues.Lookup(L"overwrite").try_as<bool>().value_or(false));
-        spinRadius().Value(localValues.Lookup(L"radius").try_as<double>().value_or(defaults.radsec));
-        spinZoomMin().Value(localValues.Lookup(L"zoomMin").try_as<double>().value_or(defaults.zoomMin - 1.0));
-        spinZoomMax().Value(localValues.Lookup(L"zoomMax").try_as<double>().value_or(defaults.zoomMax - 1.0));
+        spinRadius().Value(localValues.Lookup(L"radius").try_as<double>().value_or(defaultParam.radsec));
+        spinZoomMin().Value(localValues.Lookup(L"zoomMin").try_as<double>().value_or(defaultParam.zoomMin - 1.0));
+        spinZoomMax().Value(localValues.Lookup(L"zoomMax").try_as<double>().value_or(defaultParam.zoomMax - 1.0));
         chkDynamicZoom().IsChecked(localValues.Lookup(L"zoomDynamic").try_as<bool>().value_or(true));
-        spinFrameLimit().Value(localValues.Lookup(L"limitValue").try_as<double>().value_or(defaults.frameLimit));
+        spinFrameLimit().Value(localValues.Lookup(L"limitValue").try_as<double>().value_or(defaultParam.frameLimit));
         //chkFrameLimit().IsChecked(localValues.Lookup(L"limitEnabled").try_as<bool>().value_or(false));
 
-        sliderQuality().Value(localValues.Lookup(L"encodingQuality").try_as<double>().value_or(defaults.encodingQuality));
+        sliderQuality().Value(localValues.Lookup(L"encodingQuality").try_as<double>().value_or(defaultParam.encodingQuality));
         sliderLevels().Value(3.0);
 
         //load file when given as command line argument or when file was dropped on the app icon
@@ -707,18 +707,18 @@ namespace winrt::cuvistaWinui::implementation {
     }
 
     void MainWindow::btnResetClick(const IInspectable& sender, const RoutedEventArgs& args) {
-        setBackgroundColor(Windows::UI::ColorHelper::FromArgb(255, defaults.bgColorRed, defaults.bgColorGreen, defaults.bgColorBlue));
+        setBackgroundColor(Windows::UI::ColorHelper::FromArgb(255, defaultParam.bgColorRed, defaultParam.bgColorGreen, defaultParam.bgColorBlue));
 
         chkOverwrite().IsChecked(false);
-        spinRadius().Value(defaults.radsec);
-        spinZoomMin().Value(defaults.zoomMin - 1.0);
-        spinZoomMax().Value(defaults.zoomMax - 1.0);
+        spinRadius().Value(defaultParam.radsec);
+        spinZoomMin().Value(defaultParam.zoomMin - 1.0);
+        spinZoomMax().Value(defaultParam.zoomMax - 1.0);
         chkDynamicZoom().IsChecked(true);
         chkFrameLimit().IsChecked(false);
-        spinFrameLimit().Value(defaults.frameLimit);
+        spinFrameLimit().Value(defaultParam.frameLimit);
 
-        sliderLevels().Value(defaults.levels);
-        sliderQuality().Value(defaults.encodingQuality);
+        sliderLevels().Value(defaultParam.levels);
+        sliderQuality().Value(defaultParam.encodingQuality);
 
         mReader.close();
         mInputFile = {};

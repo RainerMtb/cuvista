@@ -68,7 +68,7 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
         ui.lblLevels->setText(QString::number(value));
     };
     connect(ui.sliderLevels, &QSlider::valueChanged, this, fcnSliderLevels);
-    ui.sliderLevels->setValue(defaults.levels);
+    ui.sliderLevels->setValue(defaultParam.levels);
 
     //modes list
     ui.comboMode->addItem(QString("Combined - Single Pass"));
@@ -104,7 +104,7 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     //trigger setting encoding options
     ui.comboDevice->setCurrentIndex(ui.comboDevice->count() - 1);
     //encoding quality
-    int encodingQuality = mSettings.value("qt/encoding/quality", defaults.encodingQuality).toInt();
+    int encodingQuality = mSettings.value("qt/encoding/quality", defaultParam.encodingQuality).toInt();
     ui.sliderQuality->setValue(encodingQuality);
     //enable quality slider for appropriate settings
     auto fcnQualityEnable = [&] (int _) {
@@ -143,12 +143,12 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     ui.comboImageType->addItem("JPG", QVariant::fromValue(OutputOption::IMAGE_JPG));
 
     //limits
-    ui.spinRadius->setMinimum(defaults.radsecMin);
-    ui.spinRadius->setMaximum(defaults.radsecMax);
-    ui.spinZoomMin->setMinimum(defaults.imZoomMin * 100 - 100);
-    ui.spinZoomMin->setMaximum(defaults.imZoomMax * 100 - 100);
-    ui.spinZoomMax->setMinimum(defaults.imZoomMin * 100 - 100);
-    ui.spinZoomMax->setMaximum(defaults.imZoomMax * 100 - 100);
+    ui.spinRadius->setMinimum(defaultParam.radsecMin);
+    ui.spinRadius->setMaximum(defaultParam.radsecMax);
+    ui.spinZoomMin->setMinimum(defaultParam.imZoomMin * 100 - 100);
+    ui.spinZoomMin->setMaximum(defaultParam.imZoomMax * 100 - 100);
+    ui.spinZoomMax->setMinimum(defaultParam.imZoomMin * 100 - 100);
+    ui.spinZoomMax->setMaximum(defaultParam.imZoomMax * 100 - 100);
 
     auto fcnEnable = [&] (Qt::CheckState state) { ui.spinZoomMax->setEnabled(state == Qt::CheckState::Checked); };
     connect(ui.chkDynamicZoom, &QCheckBox::checkStateChanged, this, fcnEnable);
@@ -245,11 +245,11 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
 
     //other settings
     ui.chkOverwrite->setChecked(mSettings.value("qt/overwrite", false).toBool());
-    ui.spinRadius->setValue(mSettings.value("qt/radius", defaults.radsec).toDouble());
-    ui.spinZoomMin->setValue(mSettings.value("qt/zoom/min", std::round(defaults.zoomMin * 100 - 100)).toInt());
-    ui.spinZoomMax->setValue(mSettings.value("qt/zoom/max", std::round(defaults.zoomMax * 100 - 100)).toInt());
+    ui.spinRadius->setValue(mSettings.value("qt/radius", defaultParam.radsec).toDouble());
+    ui.spinZoomMin->setValue(mSettings.value("qt/zoom/min", std::round(defaultParam.zoomMin * 100 - 100)).toInt());
+    ui.spinZoomMax->setValue(mSettings.value("qt/zoom/max", std::round(defaultParam.zoomMax * 100 - 100)).toInt());
     ui.chkDynamicZoom->setChecked(mSettings.value("qt/zoom/dynamic", true).toBool());
-    ui.spinFrameLimit->setValue(mSettings.value("qt/limit/value", defaults.frameLimit).toInt());
+    ui.spinFrameLimit->setValue(mSettings.value("qt/limit/value", defaultParam.frameLimit).toInt());
     //ui.chkFrameLimit->setChecked(mSettings.value("qt/limit/enable", false).toBool());
 }
 
@@ -639,21 +639,21 @@ void InfoDialog::closeEvent(QCloseEvent* event) {
 
 //reset gui options to defaults
 void cuvistaGui::resetGui() {
-    setBackgroundColor(QColor::fromRgb(defaults.bgColorRed, defaults.bgColorGreen, defaults.bgColorBlue));
+    setBackgroundColor(QColor::fromRgb(defaultParam.bgColorRed, defaultParam.bgColorGreen, defaultParam.bgColorBlue));
 
     mPlayerWindow->move(50, 50);
     mPlayerWindow->resize(640, 480);
     mFileInput = {};
 
     ui.chkOverwrite->setChecked(false);
-    ui.spinRadius->setValue(defaults.radsec);
-    ui.spinZoomMin->setValue(std::round(defaults.zoomMin * 100.0 - 100.0));
-    ui.spinZoomMax->setValue(std::round(defaults.zoomMax * 100.0 - 100.0));
+    ui.spinRadius->setValue(defaultParam.radsec);
+    ui.spinZoomMin->setValue(std::round(defaultParam.zoomMin * 100.0 - 100.0));
+    ui.spinZoomMax->setValue(std::round(defaultParam.zoomMax * 100.0 - 100.0));
     ui.chkDynamicZoom->setChecked(true);
     ui.chkFrameLimit->setChecked(false);
-    ui.spinFrameLimit->setValue(defaults.frameLimit);
-    ui.sliderQuality->setValue(defaults.encodingQuality);
-    ui.sliderLevels->setValue(defaults.levels);
+    ui.spinFrameLimit->setValue(defaultParam.frameLimit);
+    ui.sliderQuality->setValue(defaultParam.encodingQuality);
+    ui.sliderLevels->setValue(defaultParam.levels);
 
     mReader.close();
     ui.texInput->clear();

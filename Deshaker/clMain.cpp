@@ -157,9 +157,9 @@ void OpenClFrame::init() {
 
 		//constant core data structure
 		KernelData data = { 
-			mData.COMP_MAX_TOL, mData.deps, mData.dmin, mData.dmax, mData.dnan,
+			mData.compMaxTol, mData.deps, mData.dmin, mData.dmax, mData.dnan,
 			mData.w, mData.h, mData.ir, mData.iw, mData.zMin, mData.zMax, 
-			mData.COMP_MAX_ITER, mData.pyramidRowCount 
+			mData.compMaxIter, mData.pyramidRowCount 
 		};
 		clData.core = Buffer(clData.context, CL_MEM_READ_ONLY, sizeof(KernelData));
 		clData.queue.enqueueWriteBuffer(clData.core, CL_FALSE, 0, sizeof(KernelData), &data);

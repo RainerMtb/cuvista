@@ -22,6 +22,10 @@
 #include <chrono>
 #include <iostream>
 
+//declare here to mitigate red underlines
+template<class T> __device__ T tex2D(cudaTextureObject_t tex, float x, float y);
+template<class T> __device__ T tex2Dgather(cudaTextureObject_t tex, float x, float y, int comp);
+
 extern __constant__ CoreData d_core;
 
 struct KernelContext {
@@ -44,20 +48,6 @@ __constant__ CudaFilterKernel filterKernels[4] = {
 	{3, {-0.5f, 0.0f, 0.5f}},
 };
 
-//declare here to mitigate red underlines
-template<class T> __device__ T tex2D(cudaTextureObject_t tex, float x, float y);
-template<class T> __device__ T tex2Dgather(cudaTextureObject_t tex, float x, float y, int comp);
-
-
-dim3 configThreads() {
-	return { cu::THREAD_COUNT, cu::THREAD_COUNT };
-}
-
-dim3 configBlocks(dim3 threads, int width, int height) {
-	uint bx = (width + threads.x - 1) / threads.x;
-	uint by = (height + threads.y - 1) / threads.y;
-	return { bx, by };
-}
 
 //create texture for reading data in kernel
 template <class T> KernelContext prepareTexture(T* src, int lineCount, int texw, int texh, int thrw, int thrh) {

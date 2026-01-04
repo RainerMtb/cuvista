@@ -21,12 +21,6 @@
 #include "cuUtil.cuh"
 #include "AffineData.hpp"
 
-using uchar = unsigned char;
-using uint = unsigned int;
-using cuMatf = cu::Mat<float>;
-using cuMatf4 = cu::Mat<float4>;
-using cuMatc = cu::Mat<uchar>;
-
 namespace cu {
 	cudaError_t scale_8u32f(uchar* src, int srcStep, float* dest, int destStep, int w, int h, cudaStream_t cs = 0);
 	cudaError_t scale_8u32f_3(uchar* src, int srcStep, float4* dest, int destStep, int w, int h, cudaStream_t cs = 0);

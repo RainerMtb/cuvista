@@ -64,3 +64,7 @@ std::ostream& operator << (std::ostream& out, const PointResult& res) {
 bool PointContext::operator == (const PointContext& other) const {
 	return *this->ptr == *other.ptr;
 }
+
+bool PointBase::operator == (const PointBase& other) const {
+	return x == other.x && y == other.y && u == other.u && v == other.v;
+}

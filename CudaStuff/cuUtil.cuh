@@ -25,7 +25,7 @@
 #include <cassert>
 #include <iostream>
 
-//define device functions here to avoid red underlines
+ //define device functions here to avoid red underlines
 void __syncthreads();
 void __trap();
 long long int clock64();
@@ -34,8 +34,6 @@ double min(double, double);
 double max(double, double);
 
 namespace cu {
-	const int THREAD_COUNT = 16;	//number of threads used in kernels to access textures
-
 	//check if first thread is running
 	__device__ bool firstThread();
 
@@ -59,8 +57,8 @@ namespace cu {
 		int h, w, stride;
 		T* data;
 
-		__host__ __device__ Mat(T* data, int h, int w, int stride) : 
-			data { data }, h { h }, w { w }, stride { stride } 
+		__host__ __device__ Mat(T* data, int h, int w, int stride) :
+			data { data }, h { h }, w { w }, stride { stride }
 		{}
 
 		__device__ T& at(int row, int col) {
@@ -116,8 +114,8 @@ namespace cu {
 	private:
 		char* mStr = nullptr;
 
-		__device__ string(size_t length, bool dummy) : 
-			mStr { new char[length] } 
+		__device__ string(size_t length, bool dummy) :
+			mStr { new char[length] }
 		{}
 
 	public:
@@ -166,3 +164,9 @@ namespace cu {
 		debugData[0] += h * w + 2; //update size
 	}
 }
+
+using uchar = unsigned char;
+using uint = unsigned int;
+using cuMatf = cu::Mat<float>;
+using cuMatf4 = cu::Mat<float4>;
+using cuMatc = cu::Mat<uchar>;

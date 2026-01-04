@@ -24,6 +24,12 @@
 #include "ThreadPoolBase.h"
 
 
+struct ClusterSize {
+	int index, siz;
+
+	friend std::ostream& operator << (std::ostream& out, const ClusterSize& cs);
+};
+
 //compute and hold transform for one video frame
 class FrameResult {
 
@@ -47,9 +53,13 @@ private:
 	ThreadPoolBase& mPool;
 	std::unique_ptr<AffineSolver> mAffineSolver;
 	AffineTransform mBestTransform;
-	std::vector<PointContext> mConsList, mConsListCopy;
-	std::vector<PointContext*> mRegion;
+	std::vector<PointContext> mConsList, mPointList;
+	std::vector<PointContext*> mWork;
+	std::vector<ClusterSize> mClusterSizes;
+	std::vector<PointBase> mCluster;
 
-	AffineTransform computeClassic(size_t numValid);
-	void computeDbScan();
+	AffineTransform computeClassic(size_t numValid, int64_t frameIndex);
+	AffineTransform computeDbScan(int64_t frameIndex);
+
+	bool checkSizes();
 };

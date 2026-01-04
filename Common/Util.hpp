@@ -22,7 +22,6 @@
 #include <chrono>
 #include <string>
 #include <span>
-#include <ostream>
 
 #include "ImageData.hpp"
 
@@ -143,6 +142,31 @@ namespace util {
 
     //decode base64 string to bytes
     std::vector<unsigned char> base64_decode(const std::string& base64string);
+
+    //print content of collection to string
+    template <class T> std::string collectionToString(std::vector<T> items, size_t maxItems) {
+        size_t i = 0;
+        std::ostringstream ss;
+
+        ss << "{ ";
+        for (; i + 1 < items.size() && i + 1 < maxItems; i++) {
+            ss << items[i];
+            ss << ", ";
+        }
+        if (items.size() > 0) {
+            ss << items[i];
+        }
+        if (items.size() > i + 1) {
+            ss << ", ...";
+        }
+        ss << " }";
+        return ss.str();
+    }
+
+    //print content of collection to string
+    template <class T> std::string collectionToString(std::vector<T> items) {
+        return collectionToString(items, items.size());
+    }
 
     //math stuff
     double sqr(double value);

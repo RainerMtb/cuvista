@@ -73,7 +73,7 @@ void CudaFFmpegWriter::open(OutputOption outputOption) {
     params->width = mData.w;
     params->height = mData.h;
     params->extradata_size = nvenc->mExtradataSize;
-    params->extradata = (uint8_t*) av_mallocz(0ull + nvenc->mExtradataSize + AV_INPUT_BUFFER_PADDING_SIZE);
+    params->extradata = (uint8_t*) av_mallocz(0ull + nvenc->mExtradataSize + AV_INPUT_BUFFER_PADDING_SIZE); //freed via avformat_free_context
     std::memcpy(params->extradata, nvenc->mExtradata.data(), nvenc->mExtradataSize);
 
     int result;

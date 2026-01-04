@@ -58,13 +58,13 @@ public:
 
 class AffineSolver : public AffineTransform {
 
-protected:
+public:
 	//compute similar transform, no shear
 	virtual const AffineTransform& computeSimilar(std::span<PointBase> points) = 0;
 
-public:
 	virtual const AffineTransform& computeSimilar(std::span<PointContext> points);
 	virtual const AffineTransform& computeSimilar(std::span<PointResult> points);
+	
 	virtual ~AffineSolver() {}
 };
 

@@ -64,11 +64,11 @@ int main() {
 
 	//testSampler();
 	//compareFramesPlatforms();
-	avxCompute();
+	//avxCompute();
 	//avxTest();
 
 	//testZoom();
-	//testVideo1();
+	testVideo1();
 
 	//createTransformImages();
 }

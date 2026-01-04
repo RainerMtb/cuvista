@@ -61,6 +61,7 @@ static void testMain() {
 	run("-frames 3 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/003.mp4 -noheader -progress 0 -y");
 	run("-frames 40 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/004.mp4 -noheader -progress 0 -y");
 	run({ "-frames",  "40", "-i", "d:/VideoTest/example space.mp4", "-o", "d:/videoTest/out/000 space.mp4", "-noheader",  "-progress", "0", "-y" });
+	run("-i d:/VideoTest/example.mp4 -o d:/videoTest/out/copy.mp4 -copyframes -noheader -progress 0 -y");
 
 	run("-mode 1 -frames 0 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/005null.mp4 -noheader -progress 0 -y");
 	run("-mode 1 -frames 1 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/006.mp4 -noheader -progress 0 -y");

@@ -27,19 +27,23 @@
 
 namespace util {
 
+	static void printTime(long long int delta, const std::string& str) {
+		if (delta < 1000) std::cout << str << "=" << delta << " us" << std::endl;
+		else if (delta < 1'000'000) std::cout << str << "=" << delta / 1000.0 << " ms" << std::endl;
+		else std::cout << str << "=" << delta / 1e6 << " s" << std::endl;
+	}
+
 	void ConsoleTimer::interval(const std::string& name) {
 		auto interval = std::chrono::steady_clock::now();
-		auto delta = std::chrono::duration_cast<std::chrono::microseconds>(interval - mInterval);
+		auto delta = std::chrono::duration_cast<std::chrono::microseconds>(interval - mInterval).count();
 		mInterval = interval;
-		std::cout << mName << ":" << name << "=" << delta.count() / 1000.0 << " ms" << std::endl;
+		printTime(delta, name);
 	}
 
 	ConsoleTimer::~ConsoleTimer() {
 		auto stop = std::chrono::steady_clock::now();
-		long long int delta = std::chrono::duration_cast<std::chrono::microseconds>(stop - mStart).count();
-		if (delta < 1000) std::cout << mName << "=" << delta << " us" << std::endl;
-		else if (delta < 1'000'000) std::cout << mName << "=" << delta / 1000.0 << " ms" << std::endl;
-		else std::cout << mName << "=" << delta / 1e6 << " s" << std::endl;
+		auto delta = std::chrono::duration_cast<std::chrono::microseconds>(stop - mStart).count();
+		printTime(delta, mName);
 	}
 
 	std::string concatStrings(std::span<std::string_view> strings) {

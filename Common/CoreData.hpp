@@ -54,13 +54,13 @@ inline constexpr struct {
 	uint8_t bgColorGreen = 150;
 	uint8_t bgColorBlue = 0;
 	int frameLimit = 500;
-} defaults;
+} defaultParam;
 
 struct CoreData {
-	int MAX_POINTS_COUNT = 150;	   //max number of points in x or y direction
-	int COMP_MAX_ITER = 20;		   //max loop iterations
-	double COMP_MAX_TOL = 0.15;	   //tolerance to stop window pattern matching
-								   
+	int maxResultCount = 12'000;   //max number of result points to calculate
+	int compMaxIter = 20;          //max loop iterations
+	double compMaxTol = 0.15;      //tolerance to stop window pattern matching
+
 	int w = 0;                     //frame width
 	int h = 0;					   //frame height
 	int ir = 3;					   //integration window, radius around point to integrate
@@ -69,7 +69,7 @@ struct CoreData {
 	int iyCount = -1;			   
 	int zMin = -1;				   
 	int zMax = -1;				   //pyramid steps used for actual computing
-	int pyramidLevelsRequested = defaults.levels;  //number of pyramid levels wanted for stabilization
+	int pyramidLevelsRequested = defaultParam.levels;  //number of pyramid levels wanted for stabilization
 	int pyramidLevels = -1;        //number of pyramid levels to create
 	int pyramidRowCount = -1;	   //number of rows for one pyramid, all the rows of Y data for all levels
 	int pyramidCount = 2;	       //number of pyramids to allocate in memory
@@ -88,15 +88,16 @@ struct CoreData {
 	BackgroundMode bgmode = BackgroundMode::BLEND;   //fill gap with previous frames or not
 
 	int radius = -1;                    //temporal radius, number of frames before and after used for smoothing
-	double radsec = defaults.radsec;    //temporal radius in seconds
+	double radsec = defaultParam.radsec;    //temporal radius in seconds
 	int bufferCount = -1;               //number of frames to buffer, set by MovieFrame
 
-	double zoomMin = defaults.zoomMin;  //min additional zoom
-	double zoomMax = defaults.zoomMax;  //max additioanl zoom
+	double zoomMin = defaultParam.zoomMin;  //min additional zoom
+	double zoomMax = defaultParam.zoomMax;  //max additioanl zoom
 	double zoomFallbackTotal = 0.025;   //fallback rate for dynamic zoom, to be divided by temporal radius
 	double zoomFallback = 0.0;          //fallback rate for dynamic zoom, to be applied per frame
 	
-	int cpuThreads = 1;   //cpu threads to use in cpu-compute and computing transform parameters, leave room for other things
+	int cpuThreads = 1;                 //cpu threads to use in different places, leave room for other things
+	unsigned int cudaThreadCount = 16;  //thread count used for texture reading
 };
 
 //result type of one computed point
@@ -125,8 +126,8 @@ public:
 	int direction;
 
 	double length;        //displacement vector length
-	bool isConsidered;    //flag for result computing
-	bool isConsens;       //flag for result computing
+	bool isConsidered;    //flag for computing frame result
+	bool isConsens;       //flag for computing frame result
 
 	//is valid when numeric stable result was found
 	bool isValid() const;
@@ -146,9 +147,8 @@ struct PointContext {
 	double delta = 0.0;
 	double distance = 0.0;
 	double distanceRelative = 0.0;
-	double angle = 0.0;
-	double uu = 0.0;
-	double vv = 0.0;
+	int clusterIndex = -2;
+	int clusterGeneration = 0;
 
 	PointContext(PointResult& pr) : ptr { &pr } {}
 	PointContext() : ptr { nullptr } {}
@@ -160,6 +160,9 @@ struct PointBase {
 	double x, y;
 	double u, v;
 
+	PointBase() : x { 0.0 }, y { 0.0 }, u { 0.0 }, v { 0.0 } {}
 	PointBase(const PointResult& pr) : x { pr.x }, y { pr.y }, u { pr.u }, v { pr.v } {}
 	PointBase(const PointContext& pc) : x { pc.ptr->x }, y { pc.ptr->y }, u { pc.ptr->u }, v { pc.ptr->v } {}
+
+	bool operator == (const PointBase& other) const;
 };

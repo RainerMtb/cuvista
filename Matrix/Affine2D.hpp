@@ -86,6 +86,8 @@ public:
 
 	double rotMinutes() const;
 
+	double rotDegrees() const;
+
 	double dX() const;
 
 	double dY() const;

@@ -44,6 +44,8 @@ struct CudaData {
 	int3 computeBlocks = {};
 	int3 computeThreads = {};
 
+	uint cudaThreadCount = 0;
+
 	int strideChar = 0;      //row length in bytes for char values
 	int strideFloat = 0;     //row lenhth in bytes for float values
 	int strideFloatN = 0;    //number of float values in a row including padding
@@ -177,3 +179,6 @@ CudaProbeResult cudaProbeRuntime();
 //encode given nv12 data
 void encodeNvData(const ImageNV12& image, unsigned char* nvencPtr);
 
+//size parameters for texture reading
+dim3 configThreads();
+dim3 configBlocks(dim3 threads, int width, int height);

@@ -709,12 +709,12 @@ public:
 	}
 
 	//spaceship operator
-	template <class R> auto operator <=> (const Mat<R>& other) const { return compare(other); }
+	template <class R = T> auto operator <=> (const Mat<R>& other) const { return compare(other); }
 
 	//equals operator is not derived from <=> ??
-	template <class R> bool operator == (const Mat<R>& other) const { return compare(other) == 0; }
+	template <class R = T> bool operator == (const Mat<R>& other) const { return compare(other) == 0; }
 
-	template <class R> bool operator != (const Mat<R>& other) const { return compare(other) != 0; }
+	template <class R = T> bool operator != (const Mat<R>& other) const { return compare(other) != 0; }
 
 	explicit operator bool() const { return this->numel() > 0; }
 

@@ -100,6 +100,8 @@ quality and performance settings:
 -bgcolor web    background color given as web color string in format "#RRGGBB"
 -cputhreads n   number of threads on the cpu to use for various tasks
                 default: 3/4 of hardware threads
+-cudathreads n  value between 1 and 32, affects performance of cuda devices
+                default: 16
 -crf n          constant rate factor used for encoding
                 lower value represents higher quality and bigger file size
                 valid range and effect depends on codec in use

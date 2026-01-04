@@ -225,11 +225,11 @@ __global__ void kernelCompute(ComputeTextures tex, CudaPointResult* results, Com
 			//analyse result, decide on continuing loop
 			err = eta[0] * eta[0] + eta[1] * eta[1];
 			if (isnan(err)) result = PointResultType::FAIL_ETA_NAN; //leave loop with fail message FAIL_ETA_NAN
-			if (err < d_core.COMP_MAX_TOL) result = PointResultType::SUCCESS_ABSOLUTE_ERR; //leave loop with success SUCCESS_ABSOLUTE_ERR
-			if (fabs(err - bestErr) / bestErr < d_core.COMP_MAX_TOL * d_core.COMP_MAX_TOL) result = PointResultType::SUCCESS_STABLE_ITER;
+			if (err < d_core.compMaxTol) result = PointResultType::SUCCESS_ABSOLUTE_ERR; //leave loop with success SUCCESS_ABSOLUTE_ERR
+			if (fabs(err - bestErr) / bestErr < d_core.compMaxTol * d_core.compMaxTol) result = PointResultType::SUCCESS_STABLE_ITER;
 			bestErr = min(err, bestErr);
 			iter++;
-			if (iter == d_core.COMP_MAX_ITER && result == PointResultType::RUNNING) result = PointResultType::FAIL_ITERATIONS; //leave with fail
+			if (iter == d_core.compMaxIter && result == PointResultType::RUNNING) result = PointResultType::FAIL_ITERATIONS; //leave with fail
 		}
 
 		//displacement * 2 for next level
