@@ -255,7 +255,8 @@ void CpuFrame::computeTerminate(int64_t frameIndex, std::vector<PointResult>& re
 				double x0 = xm - mData.w / 2.0 + u * direction;
 				double y0 = ym - mData.h / 2.0 + v * direction;
 				double fdir = 1.0 - 2.0 * direction;
-				results[idx] = { idx, ix0, iy0, x0, y0, u * fdir, v * fdir, result, zp, direction };
+				double length = std::sqrt(u * u + v * v);
+				results[idx] = { idx, ix0, iy0, x0, y0, u * fdir, v * fdir, result, zp, direction, length };
 			}
 		}
 	});

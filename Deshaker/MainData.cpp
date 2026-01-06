@@ -217,7 +217,7 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 			cpuThreadsRequired = { std::stoul(next) };
 
 		} else if (args.nextArg("cudathreads", next)) {
-			cudaThreadCount = std::stoi(next);
+			cudaThreads = std::stoi(next);
 
 		} else if (args.nextArg("crf", next)) {
 			requestedCrf = std::stoi(next); //output encoder crf value

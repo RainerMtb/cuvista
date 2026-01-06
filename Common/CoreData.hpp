@@ -87,17 +87,28 @@ struct CoreData {
 	Triplet bgcolorYuv = {};                         //background fill colors in yuv
 	BackgroundMode bgmode = BackgroundMode::BLEND;   //fill gap with previous frames or not
 
-	int radius = -1;                    //temporal radius, number of frames before and after used for smoothing
+	int radius = -1;                        //temporal radius, number of frames before and after used for smoothing
 	double radsec = defaultParam.radsec;    //temporal radius in seconds
-	int bufferCount = -1;               //number of frames to buffer, set by MovieFrame
+	int bufferCount = -1;                   //number of frames to buffer, set by MovieFrame
 
 	double zoomMin = defaultParam.zoomMin;  //min additional zoom
 	double zoomMax = defaultParam.zoomMax;  //max additioanl zoom
-	double zoomFallbackTotal = 0.025;   //fallback rate for dynamic zoom, to be divided by temporal radius
-	double zoomFallback = 0.0;          //fallback rate for dynamic zoom, to be applied per frame
+	double zoomFallbackTotal = 0.025;       //fallback rate for dynamic zoom, to be divided by temporal radius
+	double zoomFallback = 0.0;              //fallback rate for dynamic zoom, to be applied per frame
 	
 	int cpuThreads = 1;                 //cpu threads to use in different places, leave room for other things
-	unsigned int cudaThreadCount = 16;  //thread count used for texture reading
+	unsigned int cudaThreads = 16;      //thread count used for texture reading
+
+	size_t cudaMemTotal = 0;
+	size_t cudaUsedMem = 0;
+	size_t cudaComputeSharedMem = 0;
+	int cudaOutBufferCount = 6;  //number of images to hold as buffers for output generation
+
+	int strideChar = 0;      //row length in bytes for char values
+	int strideFloat = 0;     //row lenhth in bytes for float values
+	int strideFloatN = 0;    //number of float values in a row including padding
+	int strideFloat4 = 0;    //row length in bytes for float4 struct
+	int strideFloat4N = 0;   //number of float4 values
 };
 
 //result type of one computed point

@@ -19,7 +19,6 @@
 #include <iostream>
 #include <format>
 #include <fstream>
-#include <cassert>
 #include <numbers>
 #include <cmath>
 #include <regex>
@@ -33,11 +32,11 @@ namespace util {
 		else std::cout << str << "=" << delta / 1e6 << " s" << std::endl;
 	}
 
-	void ConsoleTimer::interval(const std::string& name) {
+	void ConsoleTimer::interval(const std::string& str) {
 		auto interval = std::chrono::steady_clock::now();
 		auto delta = std::chrono::duration_cast<std::chrono::microseconds>(interval - mInterval).count();
 		mInterval = interval;
-		printTime(delta, name);
+		printTime(delta, mName + str);
 	}
 
 	ConsoleTimer::~ConsoleTimer() {
@@ -238,15 +237,6 @@ namespace util {
 	//----------------------------------------
 	//---------- MATH STUFF ------------------
 	//----------------------------------------
-
-	double sqr(double value) {
-		return value * value;
-	}
-
-	int alignValue(int numToAlign, int alignment) {
-		assert(alignment && "factor must not be 0");
-		return numToAlign >= 0 ? ((numToAlign + alignment - 1) / alignment) * alignment : numToAlign / alignment * alignment;
-	}
 
 	constexpr double PI = std::numbers::pi;
 

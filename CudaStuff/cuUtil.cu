@@ -36,10 +36,6 @@ __device__ void cu::memcpy(void* dest, const void* src, size_t count) {
 	}
 }
 
-__device__ double cu::sqr(double x) {
-	return x * x;
-}
-
 __device__ size_t cu::clampUnsigned(size_t valueToAdd, size_t valueToSubtract, size_t lo, size_t hi) {
 	return (size_t) cu::clamp(int64_t(valueToAdd) - int64_t(valueToSubtract), int64_t(lo), int64_t(hi));
 }

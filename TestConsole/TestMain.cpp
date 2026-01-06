@@ -63,12 +63,12 @@ int main() {
 	//similarTransform();
 
 	//testSampler();
-	//compareFramesPlatforms();
+	compareFramesPlatforms();
 	//avxCompute();
 	//avxTest();
 
 	//testZoom();
-	testVideo1();
+	//testVideo1();
 
 	//createTransformImages();
 }

@@ -8,7 +8,7 @@ else()
 		cuDecompose.cu
 		cuDeshaker.cu
 		cuKernelCompute.cu
-		cuNPP.cu
+		cuKernels.cu
 		cuTest.cu
 		cuUtil.cu
 	)

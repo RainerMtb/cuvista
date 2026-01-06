@@ -45,6 +45,7 @@ namespace cl {
 		cl_char result;
 		cl_int zp;
 		cl_int direction;
+		cl_double length;
 		cl_char computed;
 	};
 

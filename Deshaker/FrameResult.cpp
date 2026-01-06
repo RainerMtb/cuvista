@@ -38,6 +38,7 @@ FrameResult::FrameResult(MainData& data, ThreadPoolBase& threadPool) :
 	mPointList.resize(siz);
 	mWork.resize(siz);
 	mCluster.resize(siz);
+	mPoints.resize(siz);
 }
 
 const AffineTransform& FrameResult::getTransform() const {
@@ -52,8 +53,8 @@ void FrameResult::reset() {
 
 using namespace util;
 
-const AffineTransform& FrameResult::computeTransform(std::span<PointResult> results, int64_t frameIndex) {
 
+const AffineTransform& FrameResult::computeTransform(std::span<PointResult> results, int64_t frameIndex) {
 	mAffineSolver->reset();
 	mAffineSolver->frameIndex = frameIndex;
 
@@ -82,13 +83,11 @@ const AffineTransform& FrameResult::computeTransform(std::span<PointResult> resu
 		// STEP 1 traditional method
 		mBestTransform = computeClassic(numValid, frameIndex);
 		//std::cout << "frame " << frameIndex << " mConsList size " << mConsList.size() << std::endl;
-		//ic.interval("trf classic");
 
 		if (mConsList.size() < numValid / 10) {
 			// STEP 2 dbscan
 			mBestTransform = computeDbScan(frameIndex);
 		}
-		//ic.interval("trf dbscan");
 
 		for (PointContext& pc : mConsList) pc.ptr->isConsens = true;
 	}
@@ -102,15 +101,14 @@ AffineTransform FrameResult::computeClassic(size_t numValid, int64_t frameIndex)
 	auto sortDelta = [] (const PointContext& pc1, const PointContext& pc2) { return pc1.delta < pc2.delta; };
 	auto sortRel = [] (const PointContext& pc1, const PointContext& pc2) { return pc1.distanceRelative < pc2.distanceRelative; };
 
-	const int cConsLoopCount = 8;			          //max number of loops when searching for consensus set
-	const int cConsLoopPercent = 95;		          //percentage of points for next loop 0..100
-	const double cConsensDistanceSqr = sqr(1.25);     //max offset for a point to be in the consensus set
-	const double cConsensDistRelative = 0.2;          //max offset normalized by length
+	constexpr int cConsLoopCount = 8;                     //max number of loops when searching for consensus set
+	constexpr int cConsLoopPercent = 95;                  //percentage of points for next loop 0..100
+	constexpr double cConsensDistRelative = 0.2;          //max offset normalized by length
+	constexpr double cConsensDistanceSqr = sqr(1.25);     //max offset for a point to be in the consensus set
 
 	//calculate average displacement distance and cut off outsiders
 	double averageLength = 0.0;
 	for (PointContext& pc : mConsList) {
-		pc.ptr->length = std::sqrt(sqr(pc.ptr->u) + sqr(pc.ptr->v));
 		averageLength += pc.ptr->length;
 	}
 	averageLength /= numValid;

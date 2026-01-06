@@ -370,7 +370,7 @@ void OpenClFrame::computeTerminate(int64_t frameIndex, std::vector<PointResult>&
 			double x0 = pr.xm - mData.w / 2.0 + pr.u * pr.direction;
 			double y0 = pr.ym - mData.h / 2.0 + pr.v * pr.direction;
 			double fdir = 1.0 - 2.0 * pr.direction;
-			results[i] = { pr.idx, pr.ix0, pr.iy0, x0, y0, pr.u * fdir, pr.v * fdir, PointResultType(pr.result), pr.zp, pr.direction };
+			results[i] = { pr.idx, pr.ix0, pr.iy0, x0, y0, pr.u * fdir, pr.v * fdir, PointResultType(pr.result), pr.zp, pr.direction, pr.length };
 		}
 
 	} catch (const Error& err) {

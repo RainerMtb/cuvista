@@ -54,7 +54,8 @@ struct PointResult {
 	char result;
 	int zp;
 	int direction;
-    char computed; //do not use bool
+	double length;
+	char computed; //do not use bool
 };
 
 //core data in opencl structure
@@ -265,6 +266,8 @@ __kernel void compute(long frameIndex, __read_only image2d_array_depth_t Y,
 		while (z < 0) { xm /= 2; ym /= 2; u /= 2; v /= 2; z++; }
 		while (z > 0) { xm *= 2; ym *= 2; u *= 2; v *= 2; z--; }
 
+		double length = sqrt(u * u + v * v);
+
 		results[blockIndex].idx = blockIndex;
 		results[blockIndex].ix0 = ix0;
 		results[blockIndex].iy0 = iy0;
@@ -275,6 +278,7 @@ __kernel void compute(long frameIndex, __read_only image2d_array_depth_t Y,
 		results[blockIndex].result = result;
 		results[blockIndex].zp = zp;
 		results[blockIndex].direction = direction;
+		results[blockIndex].length = length;
 		results[blockIndex].computed = 1;
 	}
 }

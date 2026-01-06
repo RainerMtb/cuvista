@@ -49,6 +49,10 @@ public:
 	void reset();
 
 private:
+	struct PointData {
+		double u, v, length;
+	};
+
 	const MainData& mData;
 	ThreadPoolBase& mPool;
 	std::unique_ptr<AffineSolver> mAffineSolver;
@@ -57,6 +61,7 @@ private:
 	std::vector<PointContext*> mWork;
 	std::vector<ClusterSize> mClusterSizes;
 	std::vector<PointBase> mCluster;
+	std::vector<PointData> mPoints;
 
 	AffineTransform computeClassic(size_t numValid, int64_t frameIndex);
 	AffineTransform computeDbScan(int64_t frameIndex);

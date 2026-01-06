@@ -43,8 +43,6 @@ namespace cu {
 	//memory copy on device
 	__device__ void memcpy(void* dest, const void* src, size_t count);
 
-	__device__ double sqr(double x);
-
 	__device__ size_t clampUnsigned(size_t valueToAdd, size_t valueToSubtract, size_t lo, size_t hi);
 
 	__device__ double clamp(double val, double lo, double hi);

@@ -160,7 +160,7 @@ static void testCrc() {
 		}
 
 		{
-			uint64_t crcExpected = 0xcc66bbb8c0acc17c;
+			uint64_t crcExpected = 0xfa097438954d39cd;
 			bool match = crcExpected == crc;
 			std::string color = match ? ansiGreen : ansiRed;
 			std::cout << color << std::hex << "trajectory crc expected: " << crcExpected << ", actual crc: " << crc

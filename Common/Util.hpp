@@ -22,6 +22,7 @@
 #include <chrono>
 #include <string>
 #include <span>
+#include <cassert>
 
 #include "ImageData.hpp"
 
@@ -169,9 +170,19 @@ namespace util {
     }
 
     //math stuff
-    double sqr(double value);
+    constexpr double sqr(double value) { 
+        return value * value; 
+    }
 
-    int alignValue(int numToAlign, int alignment);
+    constexpr int alignValue(int numToAlign, int alignment) {
+        assert(alignment && "factor must not be 0");
+        return numToAlign >= 0 ? ((numToAlign + alignment - 1) / alignment) * alignment : numToAlign / alignment * alignment;
+    }
+
+    constexpr size_t alignValue(size_t numToAlign, size_t alignment) {
+        assert(alignment && "factor must not be 0");
+        return (numToAlign + alignment - 1) / alignment * alignment;
+    }
 
     double cosd(double angleDegrees);
 

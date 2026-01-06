@@ -667,7 +667,7 @@ public:
 	}
 
 	Mat<T> setData(T value) {
-		std::fill(this->data(), this->data() + this->numel(), value);
+		std::fill_n(this->data(), this->numel(), value);
 		return *this;
 	}
 

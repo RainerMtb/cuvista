@@ -95,6 +95,8 @@ __global__ void kernelCompute(ComputeTextures tex, CudaPointResult* results, Com
 	//center point of image patch in this block
 	int ym = iy0 + ir + 1;
 	int xm = ix0 + ir + 1;
+
+	//result state
 	PointResultType result = PointResultType::RUNNING;
 
 	//pyramid level to start at
@@ -254,9 +256,11 @@ __global__ void kernelCompute(ComputeTextures tex, CudaPointResult* results, Com
 		while (z < 0) { xm /= 2; ym /= 2; u /= 2; v /= 2; z++; }
 		while (z > 0) { xm *= 2; ym *= 2; u *= 2; v *= 2; z--; }
 
+		double length = sqrt(u * u + v * v);
+
 		//store results object
 		int64_t timeStop = cu::globaltimer();
-		results[blockIndex] = { timeStart, timeStop, u, v, xm, ym, blockIndex, ix0, iy0, result, zp, direction, true };
+		results[blockIndex] = { u, v, length, xm, ym, blockIndex, ix0, iy0, result, zp, direction, true, timeStart, timeStop };
 	}
 }
 
