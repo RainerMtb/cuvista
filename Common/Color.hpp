@@ -35,6 +35,8 @@ public:
 	static Color WHITE;
 	static Color BLACK;
 	static Color GRAY;
+	static Color DARK_GRAY;
+	static Color LIGHT_GRAY;
 	static Color RED;
 	static Color GREEN;
 	static Color BLUE;

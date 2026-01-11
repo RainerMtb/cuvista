@@ -72,15 +72,13 @@ public:
 class MovieWriterCollection : public NullWriter {
 
 private:
-	std::shared_ptr<MovieWriter> mainWriter;
-	std::list<std::shared_ptr<MovieWriter>> auxWriters;
+	std::vector<std::shared_ptr<MovieWriter>> writers;
+	std::vector<int> hasFrames;
 
 	void updateStats();
 
 public:
-	MovieWriterCollection(MainData& data, MovieReader& reader, std::shared_ptr<MovieWriter> mainWriter);
-
-	void addWriter(std::shared_ptr<MovieWriter> writer);
+	MovieWriterCollection(MainData& data, MovieReader& reader, std::vector<std::shared_ptr<MovieWriter>> writers);
 
 	void open(OutputOption outputOption) override;
 	void start() override;
@@ -370,7 +368,6 @@ private:
 	int mWidth;
 	int mWidthTotal;
 	ImageYuv mInputFrame;
-	ImageYuv mInputFrameScaled;
 	ImageYuv mOutputFrame;
 
 public:
@@ -379,7 +376,6 @@ public:
 		mWidth { data.w - data.stackCrop.left - data.stackCrop.right },
 		mWidthTotal { 2 * mWidth },
 		mInputFrame(data.h, data.w, data.cpupitch),
-		mInputFrameScaled(data.h, mWidth),
 		mOutputFrame(data.h, data.w, data.cpupitch) 
 	{}
 

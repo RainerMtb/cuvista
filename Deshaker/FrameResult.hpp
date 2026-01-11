@@ -24,18 +24,18 @@
 #include "ThreadPoolBase.h"
 
 
-struct ClusterSize {
-	int index, siz;
-
-	friend std::ostream& operator << (std::ostream& out, const ClusterSize& cs);
-};
-
 //compute and hold transform for one video frame
 class FrameResult {
 
 	using SamplerPtr = std::shared_ptr<SamplerBase<PointContext>>;
 
 public:
+	struct ClusterSize {
+		int index, siz;
+
+		friend std::ostream& operator << (std::ostream& out, const ClusterSize& cs);
+	};
+
 	//construct lists and solver class
 	FrameResult(MainData& data, ThreadPoolBase& threadPool);
 
@@ -49,22 +49,21 @@ public:
 	void reset();
 
 private:
-	struct PointData {
-		double u, v, length;
-	};
-
 	const MainData& mData;
 	ThreadPoolBase& mPool;
 	std::unique_ptr<AffineSolver> mAffineSolver;
 	AffineTransform mBestTransform;
-	std::vector<PointContext> mConsList, mPointList;
+	std::vector<PointContext> mConsList;
+	
+	std::vector<PointContext> mPointList;
+	std::vector<PointContext> mBestCluster;
 	std::vector<PointContext*> mWork;
 	std::vector<ClusterSize> mClusterSizes;
-	std::vector<PointBase> mCluster;
-	std::vector<PointData> mPoints;
 
 	AffineTransform computeClassic(size_t numValid, int64_t frameIndex);
-	AffineTransform computeDbScan(int64_t frameIndex);
+	void computeDbScan(int64_t frameIndex);
+	bool clusterDistance(const PointContext& pc1, const PointContext& pc2);
 
 	bool checkSizes();
+	void writeVideo(const AffineTransform& trf, std::span<PointContext> res, int64_t frameIndex, const std::string& title);
 };

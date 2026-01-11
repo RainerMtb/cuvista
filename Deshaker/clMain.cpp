@@ -434,7 +434,7 @@ void OpenClFrame::getOutputYuv(int64_t frameIndex, ImageYuv& image) const {
 
 void OpenClFrame::getOutputImage(int64_t frameIndex, ImageBaseRgb& image) const {
 	try {
-		yuv_to_rgba(clData.kernels.yuv32f_to_rgba, clData.out[4], image.data(), clData, image.width(), image.height(), image.indexRgba());
+		yuv_to_rgba(clData.kernels.yuv32f_to_rgba, clData.out[4], image.data(), clData, image.w, image.h, image.stride, image.indexRgba());
 		image.setIndex(frameIndex);
 
 	} catch (const Error& err) {
@@ -505,7 +505,7 @@ void OpenClFrame::getInput(int64_t frameIndex, ImageYuv& image) const {
 void OpenClFrame::getInput(int64_t frameIndex, ImageBaseRgb& image) const {
 	try {
 		size_t fridx = frameIndex % clData.yuv.size();
-		yuv_to_rgba(clData.kernels.yuv8u_to_rgba, clData.yuv[fridx], image.data(), clData, image.w, image.h, image.indexRgba());
+		yuv_to_rgba(clData.kernels.yuv8u_to_rgba, clData.yuv[fridx], image.data(), clData, image.w, image.h, image.stride, image.indexRgba());
 
 	} catch (const Error& err) {
 		errorLogger().logError("OpenCL get input: ", err.what());
@@ -514,7 +514,7 @@ void OpenClFrame::getInput(int64_t frameIndex, ImageBaseRgb& image) const {
 
 void OpenClFrame::getWarped(int64_t frameIndex, ImageBaseRgb& image) {
 	try {
-		yuv_to_rgba(clData.kernels.yuv32f_to_rgba, clData.out[1], image.data(), clData, image.w, image.h, image.indexRgba());
+		yuv_to_rgba(clData.kernels.yuv32f_to_rgba, clData.out[1], image.data(), clData, image.w, image.h, image.stride, image.indexRgba());
 
 	} catch (const Error& err) {
 		errorLogger().logError("OpenCL get warped: ", err.what());

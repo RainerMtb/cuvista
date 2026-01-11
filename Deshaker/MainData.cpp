@@ -271,6 +271,7 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 			progressType = ProgressType::NONE;
 
 		} else if (args.nextArg("levels", next)) {
+			//pyramid levels to compute
 			pyramidLevelsRequested = std::stoi(next);
 
 		} else if (args.nextArg("ir", next)) {
@@ -279,6 +280,7 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 			iw = ir * 2 + 1;
 
 		} else if (args.nextArg("roicrop", next)) {
+			//define region of interest for computing
 			std::smatch matcher;
 			if (std::regex_match(next, matcher, std::regex("(\\d+):(\\d+)$")))
 				roiCrop = { std::stoi(matcher[1].str()), std::stoi(matcher[2].str()) };
@@ -292,6 +294,7 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 			throw AVException("invalid option, use -enc instead");
 
 		} else if (args.nextArg("frames", next)) {
+			//limit output frames
 			maxFrames = std::stoll(next);
 
 		} else if (args.nextArg("copyframes")) {
@@ -330,14 +333,17 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 
 	//check output file presence and permissions
 	std::string fileOutCheck = fileOut;
-	if (outputOption == OutputOption::IMAGE_BMP) {
+	if (outputOption.isVideoFile()) {
+		fileOutCheck = fileOut;
+
+	} else if (outputOption == OutputOption::IMAGE_BMP) {
 		fileOutCheck = ImageWriter::makeFilename(fileOut, 0, "bmp");
-	}
-	if (outputOption == OutputOption::IMAGE_JPG) {
+
+	} else if (outputOption == OutputOption::IMAGE_JPG) {
 		fileOutCheck = ImageWriter::makeFilename(fileOut, 0, "jpg");
 	}
 
-	if (outputOption == OutputOption::OPTION_AUTO || outputOption == OutputOption::IMAGE_BMP || outputOption == OutputOption::IMAGE_JPG) {
+	if (fileOutCheck.size() > 0) {
 		std::filesystem::path path1 = fileIn;
 		std::filesystem::path path2 = fileOutCheck;
 		std::error_code ec;
@@ -482,6 +488,8 @@ void MainData::validate(const MovieReader& reader) {
 	if (pyramidLevelsRequested < defaultParam.levelsMin || pyramidLevelsRequested > defaultParam.levelsMax) throw AVException("invalid pyramid levels: " + std::to_string(pyramidLevels));
 	if (ir < defaultParam.irMin || ir > defaultParam.irMax) throw AVException("invalid integration radius: " + std::to_string(ir));
 
+	if (cudaThreads > 32) throw AVException("invalid cuda threads parameter " + std::to_string(cudaThreads));
+
 	//check ffmpeg versions
 	//if (ffmpeg_check_versions() == false) {
 	//	throw AVException("different version of ffmpeg was used at buildtime");
@@ -503,10 +511,10 @@ void MainData::showIntro(const std::string& deviceName, const MovieReader& reade
 			<< ", duration: " << info.durationString
 			;
 
-		int k = 0;
-		for (std::shared_ptr<OutputStreamContext> ptr : sc.outputStreams) {
-			*console << " --> " << k << ":" << streamHandlerMap.at(ptr->handling);
-			k++;
+		*console << " --> ";
+		for (int idx = 0; idx < sc.outputStreams.size(); idx++) {
+			StreamHandling handling = sc.outputStreams[idx]->handling;
+			*console << idx << ":" << streamHandlerMap.at(handling);
 		}
 		*console << std::endl;
 	}
@@ -623,7 +631,7 @@ void MainData::showVersionInfo() const {
 
 void MainData::showHeader() const {
 	*console << "CUVISTA - Cuda Video Stabilizer, Version " << CUVISTA_VERSION << std::endl;
-	*console << "Copyright (c) 2025 Rainer Bitschi, cuvista@a1.net, https://github.com/RainerMtb/cuvista" << std::endl;
+	*console << "Copyright (c) 2026 Rainer Bitschi, cuvista@a1.net, https://github.com/RainerMtb/cuvista" << std::endl;
 }
 
 std::string MainData::str_toupper(const std::string& s) const {

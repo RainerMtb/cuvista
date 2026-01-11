@@ -38,26 +38,28 @@ void SimpleYuvWriter::write(ImageYuv& image) {
 // Writer Collection
 //-----------------------------------------------------------------------------------
 
-MovieWriterCollection::MovieWriterCollection(MainData& data, MovieReader& reader, std::shared_ptr<MovieWriter> mainWriter) :
+MovieWriterCollection::MovieWriterCollection(MainData& data, MovieReader& reader, std::vector<std::shared_ptr<MovieWriter>> writers) :
 	NullWriter(data, reader),
-	mainWriter { mainWriter } {}
-
-void MovieWriterCollection::addWriter(std::shared_ptr<MovieWriter> writer) {
-	auxWriters.push_back(writer);
+	writers { writers },
+	hasFrames(writers.size())
+{
+	if (writers.empty()) {
+		throw AVException("no output was specified");
+	}
 }
 
 void MovieWriterCollection::open(OutputOption outputOption) {
-	mainWriter->open(outputOption);
-	for (auto& writer : auxWriters) writer->open(outputOption);
+	for (auto& writer : writers) writer->open(outputOption);
 }
 
 void MovieWriterCollection::start() {
-	mainWriter->start();
-	for (auto& writer : auxWriters) writer->start();
+	for (auto& writer : writers) writer->start();
 }
 
 void MovieWriterCollection::updateStats() {
+	//take values from first writer
 	std::unique_lock<std::mutex> lock(mStatsMutex);
+	std::shared_ptr<MovieWriter> mainWriter = writers.front();
 	frameIndex = mainWriter->frameIndex;
 	frameEncoded = mainWriter->frameEncoded;
 	encodedBytesTotal = mainWriter->encodedBytesTotal;
@@ -65,27 +67,25 @@ void MovieWriterCollection::updateStats() {
 }
 
 void MovieWriterCollection::writeInput(const FrameExecutor& executor) {
-	mainWriter->writeInput(executor);
-	for (auto& writer : auxWriters) writer->writeInput(executor);
+	for (auto& writer : writers) writer->writeInput(executor);
 	updateStats();
 }
 
 void MovieWriterCollection::writeOutput(const FrameExecutor& executor) {
-	mainWriter->writeOutput(executor);
-	for (auto& writer : auxWriters) writer->writeOutput(executor);
+	for (auto& writer : writers) writer->writeOutput(executor);
 	updateStats();
 }
 
 bool MovieWriterCollection::flush() {
-	bool retval = mainWriter->flush();
-	for (auto& writer : auxWriters) writer->flush();
+	for (int i = 0; i < writers.size(); i++) {
+		hasFrames[i] = writers[i]->flush();
+	}
 	updateStats();
-	return retval;
+	return std::accumulate(hasFrames.begin(), hasFrames.end(), 0) > 0;
 }
 
 void MovieWriterCollection::close() {
-	mainWriter->close();
-	for (auto& writer : auxWriters) writer->close();
+	for (auto& writer : writers) writer->close();
 	updateStats();
 }
 
@@ -752,36 +752,34 @@ void ResultImageWriter::writeImage(const AffineTransform& trf, std::span<PointRe
 	int numConsidered = 0;
 	int numConsens = 0;
 	std::mutex mutex;
-	for (int thridx = 0; thridx < pool.size(); thridx++) {
-		auto func1 = [&] (size_t thridx) {
-			Color col;
-			for (size_t idx = thridx; idx < res.size(); idx += pool.size()) {
-				const PointResult& pr = res[idx];
-				if (pr.isConsidered) {
-					double px = pr.x + w / 2.0;
-					double py = pr.y + h / 2.0;
-					double x2 = px + pr.u;
-					double y2 = py + pr.v;
+	auto func1 = [&] (size_t thridx) {
+		Color col;
+		for (size_t idx = thridx; idx < res.size(); idx += pool.size()) {
+			const PointResult& pr = res[idx];
+			if (pr.isConsidered) {
+				double px = pr.x + w / 2.0;
+				double py = pr.y + h / 2.0;
+				double x2 = px + pr.u;
+				double y2 = py + pr.v;
 
-					int delta = 0;
-					if (pr.isConsens) {
-						col = Color::GREEN;
-						delta = 1;
+				int delta = 0;
+				if (pr.isConsens) {
+					col = Color::GREEN;
+					delta = 1;
 
-					} else {
-						col = Color::RED;
-					}
-					dest.drawLine(px, py, x2, y2, col);
-					dest.drawMarker(x2, y2, col, 1.4);
-
-					std::unique_lock<std::mutex> lock(mutex);
-					numConsidered++;
-					numConsens += delta;
+				} else {
+					col = Color::RED;
 				}
+				dest.drawLine(px, py, x2, y2, col);
+				dest.drawMarker(x2, y2, col, 1.4);
+
+				std::unique_lock<std::mutex> lock(mutex);
+				numConsidered++;
+				numConsens += delta;
 			}
-		};
-		pool.addAndWait(func1, 0, pool.size());
-	}
+		}
+	};
+	pool.addAndWait(func1, 0, pool.size());
 
 	//write text info
 	double frac = numConsidered == 0 ? 0.0 : 100.0 * numConsens / numConsidered;

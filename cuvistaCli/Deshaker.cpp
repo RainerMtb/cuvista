@@ -51,49 +51,49 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 		data.validate(*reader);
 
 		//----------- create appropriate MovieWriter
-		std::shared_ptr<MovieWriter> mainWriter;
+		std::vector<std::shared_ptr<MovieWriter>> writerList;
 		if (data.outputOption == OutputOption::VIDEO_STACK)
-			mainWriter = std::make_shared<StackedWriter>(data, *reader);
+			writerList.push_back(std::make_shared<StackedWriter>(data, *reader));
 		else if (data.outputOption == OutputOption::VIDEO_FLOW)
-			mainWriter = std::make_shared<OpticalFlowWriter>(data, *reader);
+			writerList.push_back(std::make_shared<OpticalFlowWriter>(data, *reader));
 		else if (data.outputOption == OutputOption::PIPE_RAW)
-			mainWriter = std::make_shared<RawPipeWriter>(data, *reader);
+			writerList.push_back(std::make_shared<RawPipeWriter>(data, *reader));
 		else if (data.outputOption == OutputOption::PIPE_ASF)
-			mainWriter = std::make_shared<AsfPipeWriter>(data, *reader);
+			writerList.push_back(std::make_shared<AsfPipeWriter>(data, *reader));
 		else if (data.outputOption == OutputOption::IMAGE_BMP)
-			mainWriter = std::make_shared<BmpImageWriter>(data, *reader);
+			writerList.push_back(std::make_shared<BmpImageWriter>(data, *reader));
 		else if (data.outputOption == OutputOption::IMAGE_JPG)
-			mainWriter = std::make_shared<JpegImageWriter>(data, *reader);
+			writerList.push_back(std::make_shared<JpegImageWriter>(data, *reader));
 		else if (data.outputOption == OutputOption::RAW_YUV444)
-			mainWriter = std::make_shared<RawYuvWriter>(data, *reader);
+			writerList.push_back(std::make_shared<RawYuvWriter>(data, *reader));
 		else if (data.outputOption == OutputOption::RAW_NV12)
-			mainWriter = std::make_shared<RawNv12Writer>(data, *reader);
+			writerList.push_back(std::make_shared<RawNv12Writer>(data, *reader));
+		else if (data.outputOption == OutputOption::OPTION_NONE)
+			writerList.push_back(std::make_shared<NullWriter>(data, *reader));
 		else if (data.outputOption.group == OutputGroup::VIDEO_FFMPEG)
-			mainWriter = std::make_shared<FFmpegWriter>(data, *reader);
+			writerList.push_back(std::make_shared<FFmpegWriter>(data, *reader));
 		else if (data.outputOption.group == OutputGroup::VIDEO_NVENC)
-			mainWriter = std::make_shared<CudaFFmpegWriter>(data, *reader);
-		else
-			mainWriter = std::make_shared<OutputWriter>(data, *reader);
+			writerList.push_back(std::make_shared<CudaFFmpegWriter>(data, *reader));
 
-		//create new collection of writers
-		writer = std::make_unique<MovieWriterCollection>(data, *reader, mainWriter);
-
-		//----------- create secondary Writers
+		//----------- add secondary Writers
 		if (!data.trajectoryFile.empty()) {
-			writer->addWriter(std::make_shared<TransformsWriter>(data));
+			writerList.push_back(std::make_shared<TransformsWriter>(data));
 		}
 		if (!data.resultsFile.empty()) {
-			writer->addWriter(std::make_unique<ResultDetailsWriter>(data));
+			writerList.push_back(std::make_unique<ResultDetailsWriter>(data));
 		}
 		if (data.outputOption == OutputOption::IMAGE_RESULTS) {
-			writer->addWriter(std::make_shared<ResultImageWriter>(data, *reader));
+			writerList.push_back(std::make_shared<ResultImageWriter>(data, *reader));
 		}
 		if (data.outputOption == OutputOption::VIDEO_RESULTS) {
-			writer->addWriter(std::make_shared<ResultVideoWriter>(data, *reader));
+			writerList.push_back(std::make_shared<ResultVideoWriter>(data, *reader));
 		}
 		if (externalWriter) {
-			writer->addWriter(externalWriter);
+			writerList.push_back(externalWriter);
 		}
+
+		//open writer collection
+		writer = std::make_unique<MovieWriterCollection>(data, *reader, writerList);
 		writer->open(data.outputOption);
 
 		//----------- create Frame Handler for selected loop

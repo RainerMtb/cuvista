@@ -18,7 +18,6 @@
 
 #pragma once
 
-#include <list>
 #include <map>
 #include "ErrorLogger.hpp"
 
@@ -111,11 +110,9 @@ struct StreamContext {
 	AVStream* inputStream = nullptr;
 	int64_t durationMillis = -1;
 
-	std::list<std::shared_ptr<OutputStreamContext>> outputStreams;
+	std::vector<std::shared_ptr<OutputStreamContext>> outputStreams;
 
 	StreamInfo inputStreamInfo() const;
-
-	~StreamContext();
 };
 
 //timing values for input packets

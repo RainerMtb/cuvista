@@ -96,20 +96,21 @@ void cl::unsharp(Image src, Image dest, Image gauss, Data& clData, cl_float4 fac
 	runKernel(kernel, src, dest, clData.queue);
 }
 
-void cl::yuv_to_rgba(Kernel kernel, Image src, unsigned char* imageData, const Data& clData, int w, int h, const std::vector<int>& index) {
+void cl::yuv_to_rgba(Kernel kernel, Image src, unsigned char* dest, const Data& clData, int w, int h, int stride, std::vector<int> index) {
 	cl_int4 offset4 = { index[0], index[1], index[2], index[3] };
 	kernel.setArg(0, src);
 	kernel.setArg(1, clData.rgbaOut);
 	kernel.setArg(2, offset4);
 	clData.queue.enqueueNDRangeKernel(kernel, NullRange, NDRange(w, h));
-	clData.queue.enqueueReadBuffer(clData.rgbaOut, CL_TRUE, 0, 4ull * w * h, imageData);
+	Size2 region(w * 4, h);
+	clData.queue.enqueueReadBufferRect(clData.rgbaOut, CL_TRUE, Size2(), Size2(), region, w * 4LL, 0, stride, 0, dest);
 }
 
-void cl::yuv_to_nv12(Kernel kernel, Image src, unsigned char* imageData, const Data& clData, int w, int h, int stride) {
+void cl::yuv_to_nv12(Kernel kernel, Image src, unsigned char* dest, const Data& clData, int w, int h, int stride) {
 	kernel.setArg(0, src);
 	kernel.setArg(1, clData.yuvOut);
 	kernel.setArg(2, stride);
 	kernel.setArg(3, h);
 	clData.queue.enqueueNDRangeKernel(kernel, NullRange, NDRange(w / 2, h / 2));
-	clData.queue.enqueueReadBuffer(clData.yuvOut, CL_TRUE, 0, 3ull * stride * h / 2, imageData);
+	clData.queue.enqueueReadBuffer(clData.yuvOut, CL_TRUE, 0, 3ull * stride * h / 2, dest);
 }

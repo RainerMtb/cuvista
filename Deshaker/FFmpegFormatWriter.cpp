@@ -65,9 +65,8 @@ void FFmpegFormatWriter::openFormat(AVCodecID codecId, AVFormatContext* ctx, int
                 osc->handling = StreamHandling::STREAM_IGNORE;
             }
         }
-
-        outputStreams.push_back(osc);
         sc.outputStreams.push_back(osc);
+        outputStreams.push_back(osc);
     }
 
     //saturate encoding buffer
@@ -77,16 +76,6 @@ void FFmpegFormatWriter::openFormat(AVCodecID codecId, AVFormatContext* ctx, int
 
     //allocate ffmpeg stuff
     openFormat(codecId);
-
-    //sort by output stream index
-    auto partFcn = [&] (std::shared_ptr<OutputStreamContext> ptr) {
-        return ptr->outputStream != nullptr;
-    };
-    auto iter = std::partition(outputStreams.begin(), outputStreams.end(), partFcn);
-    auto sortFcn = [&] (std::shared_ptr<OutputStreamContext> ptr1, std::shared_ptr<OutputStreamContext> ptr2) {
-        return ptr1->outputStream->index < ptr2->outputStream->index;
-    };
-    std::sort(outputStreams.begin(), iter, sortFcn);
 }
 
 void FFmpegFormatWriter::openFormat(AVCodecID codecId) {

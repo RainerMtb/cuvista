@@ -104,10 +104,6 @@ SidePacket::~SidePacket() {
     }
 }
 
-StreamContext::~StreamContext() {
-    outputStreams.clear();
-}
-
 OutputStreamContext::~OutputStreamContext() {
     sidePackets.clear();
 

@@ -58,7 +58,7 @@
         </Grid.Resources>
 
         <!-- ContentDialog is not a resource (?) -->
-        <!-- Info Dialo -->
+        <!-- Info Dialog -->
         <ContentDialog x:Name="infoDialog" Closing="infoDialogClosing">
             <StackPanel Spacing="8">
                 <TextBlock IsTextSelectionEnabled="True">
@@ -181,9 +181,10 @@
             </Grid>
         </Grid>
 
-        <TabView Grid.Row="1" VerticalAlignment="Stretch"
-                 IsAddTabButtonVisible="False" CanDragTabs="False" CanReorderTabs="False" CanTearOutTabs="False">
+        <TabView Grid.Row="1" VerticalAlignment="Stretch" IsAddTabButtonVisible="False" CanDragTabs="False" CanReorderTabs="False" CanTearOutTabs="False">
             <TabView.TabItems>
+                
+                <!-- Tab 1 ############# -->
                 <TabViewItem x:Name="tabBasic" Header="Stabilization Settings" IsClosable="false">
                     <!-- Basic Settings -->
                     <TabViewItem.HeaderTemplate>
@@ -196,9 +197,9 @@
                         <FontIconSource Glyph="&#xE700;"/>
                     </TabViewItem.IconSource>
 
-                    <Grid RowDefinitions="32, 32, 32, 32, 32, auto, 32"
+                    <Grid RowDefinitions="32, 32, 32, 32, 32"
                         ColumnDefinitions="auto, *"
-                        RowSpacing="12"
+                        RowSpacing="20"
                         ColumnSpacing="16"
                         BorderBrush="Gray"
                         BorderThickness="1"
@@ -234,18 +235,10 @@
                                 FlyoutBase.AttachedFlyout="{StaticResource ColorFlyoutKey}" Tapped="lblColorClick">
                             </Grid>
                         </StackPanel>
-
-                        <Line Grid.Row="5" X1="0" X2="1" Stretch="Fill" Stroke="Gray" StrokeThickness="1"></Line>
-
-                        <TextBlock Grid.Row="6" Text="Pyramid Levels" VerticalAlignment="Center" FontWeight="SemiBold"/>
-                        <Grid Grid.Row="6" Grid.Column="1" ColumnSpacing="16" ColumnDefinitions="auto, auto, *">
-                            <Slider x:Name="sliderLevels" Minimum="1" Maximum="6" Width="120" TickPlacement="TopLeft" TickFrequency="1"></Slider>
-                            <TextBlock Grid.Column="1" Text="{Binding ElementName=sliderLevels, Path=Value}" VerticalAlignment="Center" />
-                            <TextBlock Grid.Column="2" Text="(parameter for stabilization)" VerticalAlignment="Center" TextAlignment="Right"/>
-                        </Grid>
                     </Grid> 
                 </TabViewItem>
-                
+
+                <!-- Tab 2 ############# -->
                 <TabViewItem x:Name="tabOutput" Header="Output Settings" IsClosable="false">
                     <!-- Output Settings -->
                     <TabViewItem.HeaderTemplate>
@@ -258,8 +251,7 @@
                         <FontIconSource Glyph="&#xE700;"/>
                     </TabViewItem.IconSource>
                     
-                    <Grid Grid.Row="2"
-                        RowDefinitions="32, 32, 32, 32, auto, 32, 32, 32"
+                    <Grid RowDefinitions="32, 32, 32, 32, auto, 32, 32, 32"
                         ColumnDefinitions="auto, *"
                         RowSpacing="12"
                         ColumnSpacing="16"
@@ -269,7 +261,7 @@
                         Padding="12">
 
                         <!-- Output Encoding Video -->
-                        <RadioButton Grid.Row="0" GroupName="grpOutput" x:Name="chkEncode" Content="Encode Video" FontWeight="SemiBold" IsChecked="True"/>
+                        <RadioButton Grid.Row="0" GroupName="grpOutput" x:Name="chkEncode" Content="Encode Video" IsChecked="True"/>
                         <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="16">
                             <Image Width="24"  Stretch="Uniform" Source="/Assets/10_arrow.png"></Image>
                             <TextBlock Text="Encoder and Format" VerticalAlignment="Center"></TextBlock>
@@ -283,7 +275,7 @@
                         </StackPanel>
 
                         <!-- Output Encoding Images -->
-                        <RadioButton Grid.Row="1" GroupName="grpOutput" x:Name="chkSequence" Content="Image Sequence" FontWeight="SemiBold"/>
+                        <RadioButton Grid.Row="1" GroupName="grpOutput" x:Name="chkSequence" Content="Image Sequence"/>
                         <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="16">
                             <Image Width="24"  Stretch="Uniform" Source="/Assets/10_arrow.png"/>
                             <TextBlock Text="Format" VerticalAlignment="Center"/>
@@ -291,7 +283,7 @@
                         </StackPanel>
 
                         <!-- Output Stacked -->
-                        <RadioButton Grid.Row="2" GroupName="grpOutput" x:Name="chkStack" Content="Side by Side" FontWeight="SemiBold"/>
+                        <RadioButton Grid.Row="2" GroupName="grpOutput" x:Name="chkStack" Content="Side by Side"/>
                         <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Spacing="16">
                             <Image Width="24"  Stretch="Uniform" Source="/Assets/10_arrow.png"/>
                             <TextBlock Text="Pixel to Crop on Left" VerticalAlignment="Center"/>
@@ -305,7 +297,7 @@
                         </StackPanel>
 
                         <!-- Output Live Player -->
-                        <RadioButton Grid.Row="3" GroupName="grpOutput" x:Name="chkPlayer" Content="Live Playback" FontWeight="SemiBold"
+                        <RadioButton Grid.Row="3" GroupName="grpOutput" x:Name="chkPlayer" Content="Live Playback"
                             ToolTipService.ToolTip="Requires Combined Stabilization Mode"/>
                         <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Spacing="16">
                             <Image Width="24"  Stretch="Uniform" Source="/Assets/10_arrow.png"/>
@@ -316,7 +308,7 @@
                         <Line Grid.Row="4" X1="0" X2="1" Stretch="Fill" Stroke="Gray" StrokeThickness="1"></Line>
 
                         <!-- Encoder Quality -->
-                        <TextBlock Grid.Row="5" Text="Encoder Quality" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Row="5" Text="Encoder Quality" VerticalAlignment="Center"/>
                         <Grid Grid.Row="5" Grid.Column="1" ColumnDefinitions="auto, auto, *" ColumnSpacing="12">
                             <Slider x:Name="sliderQuality" Minimum="0" Maximum="100" Width="120" TickPlacement="TopLeft" TickFrequency="20"></Slider>
                             <TextBlock Grid.Column="1" Text="{Binding ElementName=sliderQuality, Path=Value}" VerticalAlignment="Center" />
@@ -324,7 +316,7 @@
                         </Grid>
 
                         <!-- Limit Output -->
-                        <CheckBox Grid.Row="6" x:Name="chkFrameLimit" Content="Limit Output" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                        <CheckBox Grid.Row="6" x:Name="chkFrameLimit" Content="Limit Output" VerticalAlignment="Center"/>
                         <Grid Grid.Row="6" Grid.Column="1" ColumnDefinitions="auto, auto, *" ColumnSpacing="12">
                             <NumberBox x:Name="spinFrameLimit" Width="110"  Value="500" SmallChange="1" LargeChange="10" SpinButtonPlacementMode="Compact"/>
                             <TextBlock Grid.Column="1" Text="Frames" VerticalAlignment="Center"/>
@@ -332,11 +324,72 @@
                         </Grid>
 
                         <!-- Always Overwrite -->
-                        <CheckBox Grid.Row="7" x:Name="chkOverwrite" Content="Always Overwrite" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                        <CheckBox Grid.Row="7" x:Name="chkOverwrite" Content="Always Overwrite" VerticalAlignment="Center"/>
                         <Grid Grid.Row="7" Grid.Column="1" ColumnDefinitions="*">
                             <TextBlock Text="(overwrite files without further notice)" VerticalAlignment="Center" TextAlignment="Right"/>
                         </Grid>
                     </Grid>
+                </TabViewItem>
+
+                <!-- Tab 3 ############# -->
+                <TabViewItem x:Name="tabAdvanced" Header="Advanced" IsClosable="false">
+                    <!-- Advanced Settings -->
+                    <TabViewItem.HeaderTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding}" FontSize="14" />
+                        </DataTemplate>
+                    </TabViewItem.HeaderTemplate>
+
+                    <TabViewItem.IconSource>
+                        <FontIconSource Glyph="&#xE700;"/>
+                    </TabViewItem.IconSource>
+
+                    <Grid RowDefinitions="auto, 32, 32, 32, 32"
+                        ColumnDefinitions="auto, *"
+                        RowSpacing="12"
+                        ColumnSpacing="20"
+                        BorderBrush="Gray"
+                        BorderThickness="1"
+                        CornerRadius="4"
+                        Padding="12">
+
+                        <TextBlock Grid.Row="0" Grid.ColumnSpan="2" VerticalAlignment="Center" TextWrapping="WrapWholeWords"
+                                   Text="changing these parameters may affect results and performance in unpredictable ways, there may actually be no significant effect, overall results depend on hardware and input video"
+                                   />
+
+                        <TextBlock Grid.Row="1" Text="Pyramid Levels" VerticalAlignment="Center"/>
+                        <Grid Grid.Row="1" Grid.Column="1" ColumnSpacing="16" ColumnDefinitions="auto, auto, *">
+                            <Slider x:Name="sliderLevels" Minimum="1" Maximum="6" Width="120" TickPlacement="TopLeft" 
+                                    TickFrequency="1" IsThumbToolTipEnabled="False"></Slider>
+                            <TextBlock Grid.Column="1" Text="{Binding ElementName=sliderLevels, Path=Value}" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="2" Text="(parameter for stabilization)" VerticalAlignment="Center" TextAlignment="Right"/>
+                        </Grid>
+                        
+                        <TextBlock Grid.Row="2" Text="Integration Radius" VerticalAlignment="Center"/>
+                        <Grid Grid.Row="2" Grid.Column="1" ColumnSpacing="16" ColumnDefinitions="auto, auto, *">
+                            <Slider x:Name="sliderIr" Minimum="1" Maximum="3" Width="120" TickPlacement="TopLeft" 
+                                    TickFrequency="1" IsThumbToolTipEnabled="False"></Slider>
+                            <TextBlock Grid.Column="1" Text="{Binding ElementName=sliderIr, Path=Value}" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="2" Text="(parameter for stabilization)" VerticalAlignment="Center" TextAlignment="Right"/>
+                        </Grid>
+                        
+                        <TextBlock Grid.Row="3" Text="Cpu Threads" VerticalAlignment="Center"/>
+                        <Grid Grid.Row="3" Grid.Column="1" ColumnSpacing="16" ColumnDefinitions="auto, auto, *">
+                            <Slider x:Name="sliderCpuThreads" Minimum="1" Maximum="1" Width="120" TickPlacement="TopLeft" 
+                                    TickFrequency="4" IsThumbToolTipEnabled="False"></Slider>
+                            <TextBlock Grid.Column="1" Text="{Binding ElementName=sliderCpuThreads, Path=Value}" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="2" Text="(performance parameter)" VerticalAlignment="Center" TextAlignment="Right"/>
+                        </Grid>
+                        
+                        <TextBlock Grid.Row="4" Text="Cuda Threads" VerticalAlignment="Center"/>
+                        <Grid Grid.Row="4" Grid.Column="1" ColumnSpacing="16" ColumnDefinitions="auto, auto, *">
+                            <Slider x:Name="sliderCudaThreads" Minimum="4" Maximum="32" Width="120" TickPlacement="TopLeft" 
+                                    TickFrequency="4" IsThumbToolTipEnabled="False" SnapsTo="Ticks"></Slider>
+                            <TextBlock Grid.Column="1" Text="{Binding ElementName=sliderCudaThreads, Path=Value}" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="2" Text="(performance parameter)" VerticalAlignment="Center" TextAlignment="Right"/>
+                        </Grid>
+                    </Grid>
+
                 </TabViewItem>
             </TabView.TabItems>
         </TabView>

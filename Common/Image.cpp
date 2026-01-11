@@ -115,6 +115,12 @@ template <class T> int ImageBase<T>::strideInBytes() const {
 	return stride * sizeof(T);
 }
 
+template <class T> int ImageBase<T>::sizeInBytes() const {
+	int siz = 0;
+	for (int i : arraySizes) siz += i;
+	return siz;
+}
+
 template <class T> void ImageBase<T>::setIndex(int64_t frameIndex) {
 	index = frameIndex;
 }
@@ -504,26 +510,26 @@ template <class T> void ImageBase<T>::drawMarker(double cx, double cy, const Col
 	}
 }
 
-template <class T> T ImageBase<T>::sample(size_t plane, double x, double y, double x0, double x1, double y0, double y1) const {
-	double cx = std::clamp(x, x0, x1), cy = std::clamp(y, y0, y1);
-	double flx = std::floor(cx), fly = std::floor(cy);
-	double dx = cx - flx, dy = cy - fly;
+template <class T> T ImageBase<T>::sample(size_t plane, float x, float y, float x0, float x1, float y0, float y1) const {
+	float cx = std::clamp(x, x0, x1), cy = std::clamp(y, y0, y1);
+	float flx = std::floor(cx), fly = std::floor(cy);
+	float dx = cx - flx, dy = cy - fly;
 	size_t ix = size_t(flx), iy = size_t(fly);
-	double f00 = at(plane, iy, ix);
 	size_t xd = dx != 0;
 	size_t yd = dy != 0;
-	double f01 = at(plane, iy, ix + xd);
-	double f10 = at(plane, iy + yd, ix);
-	double f11 = at(plane, iy + yd, ix + xd);
-	double result = ((1 - dx) * (1 - dy) * f00 + (1 - dx) * dy * f10 + dx * (1 - dy) * f01 + dx * dy * f11);
+	float f00 = at(plane, iy, ix);
+	float f01 = at(plane, iy, ix + xd);
+	float f10 = at(plane, iy + yd, ix);
+	float f11 = at(plane, iy + yd, ix + xd);
+	float result = ((1 - dx) * (1 - dy) * f00 + (1 - dx) * dy * f10 + dx * (1 - dy) * f01 + dx * dy * f11);
 	return (T) result;
 }
 
-template <class T> T ImageBase<T>::sample(size_t plane, double x, double y) const {
-	return sample(plane, x, y, 0.0, w - 1.0, 0.0, h - 1.0);
+template <class T> T ImageBase<T>::sample(size_t plane, float x, float y) const {
+	return sample(plane, x, y, 0.0f, w - 1.0f, 0.0f, h - 1.0f);
 }
 
-template <class T> T ImageBase<T>::sample(size_t plane, double x, double y, T defaultValue) const {
+template <class T> T ImageBase<T>::sample(size_t plane, float x, float y, T defaultValue) const {
 	return (x < 0.0 || x > w - 1.0 || y < 0.0 || y > h - 1.0) ? defaultValue : sample(plane, x, y);
 }
 
@@ -535,12 +541,6 @@ template <class T> std::vector<T> ImageBase<T>::rawBytes() const {
 		dest += arraySizes[i];
 	}
 	return data;
-}
-
-template <class T> int ImageBase<T>::sizeInBytes() const {
-	int siz = 0;
-	for (int i : arraySizes) siz += i;
-	return siz;
 }
 
 template <class T> bool ImageBase<T>::saveAsBMP(const std::string& filename, T scale) const {

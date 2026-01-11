@@ -40,6 +40,16 @@ dim3 configBlocks(dim3 threads, int width, int height) {
 	return { bx, by };
 }
 
+int3 CudaExecutor::computeBlocks() const {
+	return { mData.ixCount, mData.iyCount };
+}
+
+int3 CudaExecutor::computeThreads() const {
+	int rows = std::max(mData.iw, 6);
+	int ws = props.warpSize;
+	return { ws / rows, rows };
+}
+
 static void handleStatus(cudaError_t status, std::string&& title) {
 	if (status != cudaSuccess) {
 		errorLogger().logError(title + ": " + cudaGetErrorString(status));
@@ -103,16 +113,6 @@ template <class T> void writeDeviceDataToFile(const T* devData, size_t h, size_t
 	size_t sizT = sizeof(T);
 	file.write(reinterpret_cast<char*>(&sizT), sizeof(size_t));
 	file.write(reinterpret_cast<char*>(hostData.data()), hostData.size() * sizeof(T));
-}
-
-int3 CudaExecutor::computeBlocks() const {
-	return { mData.ixCount, mData.iyCount };
-}
-
-int3 CudaExecutor::computeThreads() const {
-	int rows = std::max(mData.iw, 6);
-	int ws = props.warpSize;
-	return { ws / rows, rows };
 }
 
 bool CudaExecutor::checkKernelParameters(int3 threads, int3 blocks, size_t shdsize) const {

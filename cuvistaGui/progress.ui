@@ -28,7 +28,7 @@
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout">
     <property name="spacing">
-     <number>10</number>
+     <number>12</number>
     </property>
     <property name="leftMargin">
      <number>10</number>
@@ -157,6 +157,12 @@
     </item>
     <item>
      <widget class="QProgressBar" name="progressBar">
+      <property name="maximumSize">
+       <size>
+        <width>16777215</width>
+        <height>20</height>
+       </size>
+      </property>
       <property name="maximum">
        <number>1000</number>
       </property>

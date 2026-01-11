@@ -23,6 +23,7 @@
 #include "Eula.h"
 
 int main(int argc, char** argv) {
+    QApplication::setStyle("Fusion");
     QApplication app(argc, argv);
 
     //load splash image

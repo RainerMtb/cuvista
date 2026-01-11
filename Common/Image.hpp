@@ -117,10 +117,10 @@ namespace im {
 		const T& at(size_t idx, size_t r, size_t c) const;
 
 		//set color value for all pixels in one plane
-		void setColorPlane(int plane, T colorValue);
+		virtual void setColorPlane(int plane, T colorValue);
 
 		//set color values per color plane
-		void setColor(const Color& color);
+		virtual void setColor(const Color& color);
 
 		//set color values for one pixel
 		void setPixel(size_t row, size_t col, std::vector<T> colors);
@@ -161,13 +161,13 @@ namespace im {
 		std::vector<T> rawBytes() const override;
 
 		//sample clamped to area
-		T sample(size_t plane, double x, double y, double x0, double x1, double y0, double y1) const;
+		T sample(size_t plane, float x, float y, float x0, float x1, float y0, float y1) const;
 
 		//sample clamped to image bounds
-		T sample(size_t plane, double x, double y) const;
+		T sample(size_t plane, float x, float y) const;
 
 		//sample from image, return defaultValue when outside
-		T sample(size_t plane, double x, double y, T defaultValue) const;
+		T sample(size_t plane, float x, float y, T defaultValue) const;
 
 		bool saveAsBMP(const std::string& filename, T scale = 1) const;
 

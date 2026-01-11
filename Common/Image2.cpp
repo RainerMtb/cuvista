@@ -73,6 +73,17 @@ ImageYuv ImageYuv::copy() const {
 	return copyImage;
 }
 
+void ImageYuv::setColorPlane(int z, unsigned char colorValue) {
+	std::fill_n(plane(z), stride * h, colorValue);
+}
+
+void ImageYuv::setColor(const Color& color) {
+	im::LocalColor<unsigned char> localColor = getLocalColor(color);
+	for (int z = 0; z < numPlanes; z++) {
+		setColorPlane(z, localColor.colorData[z]);
+	}
+}
+
 bool ImageYuv::saveAsColorBMP(const std::string& filename) const {
 	return toBGR().saveAsColorBMP(filename);
 }
@@ -103,7 +114,13 @@ void ImageYuv::readFromPGM(const std::string& filename) {
 	}
 }
 
+void ImageYuv::save(std::ostream& ostream) const {
+	ostream.write(reinterpret_cast<const char*>(data()), sizeInBytes());
+}
+
 void ImageYuv::toNV12(ImageNV12& dest, ThreadPoolBase& pool) const {
+	assert(dest.w >= w && dest.h >= h && "invalid dimensions");
+
 	//copy Y plane
 	for (int r = 0; r < h; r++) {
 		std::copy_n(addr(0, r, 0), w, dest.addr(0, r, 0));
@@ -189,9 +206,9 @@ void ImageNV12::toYuv(ImageYuv& dest, ThreadPoolBase& pool) const {
 	for (size_t z = 1; z < 3; z++) {
 		for (int r = 0; r < h; r++) {
 			for (int c = 0; c < w; c++) {
-				double py = (0.5 + r) * h2 / h - 0.5;
-				double px = (0.5 + c) * w2 / w - 0.5;
-				dest.at(z, r, c) = sample(z, px, py, 0.0, w2 - 1.0, 0.0, h2 - 1.0);
+				float py = (0.5f + r) * h2 / h - 0.5f;
+				float px = (0.5f + c) * w2 / w - 0.5f;
+				dest.at(z, r, c) = sample(z, px, py, 0.0f, w2 - 1.0f, 0.0f, h2 - 1.0f);
 			}
 		}
 	}
@@ -332,14 +349,14 @@ void ImageBaseRgb::copyTo(ImageBaseRgb& dest, size_t r0, size_t c0, ThreadPoolBa
 }
 
 void ImageBaseRgb::scaleToFit(ImageBaseRgb& dest, ThreadPoolBase& pool) const {
-	double scale = std::min(1.0 * dest.w / w, 1.0 * dest.h / h);
-	double dx = (dest.w - w * scale) / 2.0;
-	double dy = (dest.h - h * scale) / 2.0;
+	float scale = std::min(1.0f * dest.w / w, 1.0f * dest.h / h);
+	float dx = (dest.w - w * scale) / 2.0f;
+	float dy = (dest.h - h * scale) / 2.0f;
 	
 	auto fcn = [&] (size_t r) {
 		for (int c = 0; c < dest.w; c++) {
-			double x = (c - dx) / scale;
-			double y = (r - dy) / scale;
+			float x = (c - dx) / scale;
+			float y = (r - dy) / scale;
 			for (int idx = 0; idx < numPlanes && idx < dest.numPlanes; idx++) {
 				int srcidx = indexRgba().at(dest.indexRgba().at(idx));
 				dest.at(idx, r, c) = sample(srcidx, x, y, 0);

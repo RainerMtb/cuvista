@@ -629,7 +629,7 @@ namespace winrt::cuvistaWinui::implementation {
         infoLinkGit().Inlines().ReplaceAll({ gitRun });
 
         //header and footer
-        infoRunHeader().Text(std::format(L"CUVISTA - Cuda Video Stabilizer, Version {}\n\u00A9 2025 Rainer Bitschi ",
+        infoRunHeader().Text(std::format(L"CUVISTA - Cuda Video Stabilizer, Version {}\n\u00A9 2026 Rainer Bitschi ",
             to_hstring(CUVISTA_VERSION)
         ));
         using namespace Microsoft::Windows::ApplicationModel::WindowsAppRuntime;

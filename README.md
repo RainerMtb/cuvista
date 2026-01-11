@@ -23,12 +23,6 @@ Have a look at a sample video comparing an original recording side by side to th
 ## GPU Support
 For Cuda acceleration a device with Compute Version 7 or later is required. For OpenCL the device must support at least version 2.
 
-## Typical Performance
-On a RTX 3060 graphics card a typical video in FullHD resolution (1920 x 1080) should be processed at around 100 frames per second, including decoding, stabilizing and encoding.
-
-## Limitations
-Stabilization works best with *natural video footage* like a camera mounted on a vehicle. It does not really work with sudden scene changes like a movie cut. Sudden changes in brightness can also throw off computations. In such cases even more shaking can be introduced.
-
 # Using CUVISTA on Windows
 You can get the application ready to use in three ways
 

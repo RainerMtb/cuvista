@@ -36,15 +36,17 @@ Color::Color(int r, int g, int b, double alpha) {
 	this->alpha = alpha;
 }
 
-Color Color::WHITE =   Color(255, 255, 255);
-Color Color::BLACK =   Color(  0,   0,   0);
-Color Color::GRAY =    Color(128, 128, 128);
-Color Color::RED =     Color(255,   0,   0);
-Color Color::GREEN =   Color(  0, 255,   0);
-Color Color::BLUE =    Color(  0,   0, 255);
-Color Color::MAGENTA = Color(255,   0, 255);
-Color Color::YELLOW =  Color(255, 255,   0);
-Color Color::CYAN =    Color(  0, 255, 255);
+Color Color::WHITE =      Color(255, 255, 255);
+Color Color::BLACK =      Color(  0,   0,   0);
+Color Color::GRAY =       Color(128, 128, 128);
+Color Color::DARK_GRAY =  Color( 64,  64,  64);
+Color Color::LIGHT_GRAY = Color(192, 192, 192);
+Color Color::RED =        Color(255,   0,   0);
+Color Color::GREEN =      Color(  0, 255,   0);
+Color Color::BLUE =       Color(  0,   0, 255);
+Color Color::MAGENTA =    Color(255,   0, 255);
+Color Color::YELLOW =     Color(255, 255,   0);
+Color Color::CYAN =       Color(  0, 255, 255);
 
 Color Color::BLACK_SEMI = Color(0, 0, 0, 0.7);
 
@@ -126,15 +128,15 @@ namespace im {
 	}
 
 	void rgb_to_yuv(unsigned char r, unsigned char g, unsigned char b, unsigned char* y, unsigned char* u, unsigned char* v) {
-		*y = (unsigned char) (0.257 * r + 0.504 * g + 0.098 * b + 16.0);
-		*u = (unsigned char) (-0.148 * r - 0.291 * g + 0.439 * b + 128.0);
-		*v = (unsigned char) (0.439 * r - 0.368 * g - 0.071 * b + 128.0);
+		*y = (unsigned char) ( 0.257f * r + 0.504f * g + 0.098f * b + 16.0f);
+		*u = (unsigned char) (-0.148f * r - 0.291f * g + 0.439f * b + 128.0f);
+		*v = (unsigned char) ( 0.439f * r - 0.368f * g - 0.071f * b + 128.0f);
 	}
 
 	void rgb_to_yuv(unsigned char r, unsigned char g, unsigned char b, float* y, float* u, float* v) {
-		*y = (0.257f * r + 0.504f * g + 0.098f * b + 16.0f) / 255.0f;
+		*y = ( 0.257f * r + 0.504f * g + 0.098f * b + 16.0f) / 255.0f;
 		*u = (-0.148f * r - 0.291f * g + 0.439f * b + 128.0f) / 255.0f;
-		*v = (0.439f * r - 0.368f * g - 0.071f * b + 128.0f) / 255.0f;
+		*v = ( 0.439f * r - 0.368f * g - 0.071f * b + 128.0f) / 255.0f;
 	}
 
 	//input h [0..360], s [0..1], v [0..1]

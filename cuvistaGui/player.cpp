@@ -44,8 +44,7 @@ PlayerWindow::PlayerWindow(QWidget* parent) :
     connect(ui.sliderVolume, &QSlider::valueChanged, this, &PlayerWindow::sigVolume);
 }
 
-void PlayerWindow::open(const QVideoFrame& videoFrame, bool hasAudio) {
-    ui.videoWidget->videoSink()->videoFrameChanged(videoFrame);
+void PlayerWindow::open(bool hasAudio) {
     ui.lblStatus->setText("Buffering...");
     ui.sliderVolume->setEnabled(hasAudio);
     QPixmap speaker = hasAudio ? mSpeakerOn : mSpeakerOff;
@@ -135,7 +134,7 @@ void PlayerWriter::open(OutputOption outputOption) {
     }
 
     //open player window
-    mPlayer->open(mVideoFrame, mPlayAudio);
+    mPlayer->open(mPlayAudio);
     mPlayer->show();
 }
 
@@ -146,6 +145,8 @@ void PlayerWriter::setVolume(int volume) {
 
 //---- on frame executor thread
 void PlayerWriter::start() {
+    mPlayer->sigUpdate(mVideoFrame);
+
     if (mPlayAudio && mAudioStreamIndex != -1) {
         mAudioSink = new QAudioSink(mAudioDevice, mAudioFormat);
         mAudioSink->setVolume(mPlayer->getAudioVolume() / 100.0);

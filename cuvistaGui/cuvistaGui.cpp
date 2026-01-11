@@ -59,16 +59,20 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     ui.imageInput->setImage(mInputImagePlaceholder);
 
     //slider changes
-    auto fcnSliderQuality = [&] (int value) {
-        ui.lblQuality->setText(QString::number(value) + "%");
-    };
-    connect(ui.sliderQuality, &QSlider::valueChanged, this, fcnSliderQuality);
+    connect(ui.sliderQuality, &QSlider::valueChanged, this, [&] (int value) { ui.lblQuality->setText(QString::number(value) + "%"); });
 
-    auto fcnSliderLevels = [&] (int value) {
-        ui.lblLevels->setText(QString::number(value));
-    };
-    connect(ui.sliderLevels, &QSlider::valueChanged, this, fcnSliderLevels);
+    connect(ui.sliderLevels, &QSlider::valueChanged, this, [&] (int value) { ui.lblLevels->setText(QString::number(value)); });
     ui.sliderLevels->setValue(defaultParam.levels);
+
+    connect(ui.sliderIr, &QSlider::valueChanged, this, [&] (int value) { ui.lblIr->setText(QString::number(value)); });
+    ui.sliderIr->setValue(defaultParam.ir);
+
+    connect(ui.sliderCpuThreads, &QSlider::valueChanged, this, [&] (int value) { ui.lblCpuThreads->setText(QString::number(value)); });
+    ui.sliderCpuThreads->setMaximum(QThread::idealThreadCount());
+    ui.sliderCpuThreads->setValue(ui.sliderCpuThreads->maximum() * 3 / 4);
+
+    connect(ui.sliderCudaThreads, &QSlider::valueChanged, this, [&] (int value) { ui.lblCudaThreads->setText(QString::number(value * 4)); });
+    ui.sliderCudaThreads->setValue(defaultParam.cudaThreads / 4);
 
     //modes list
     ui.comboMode->addItem(QString("Combined - Single Pass"));
@@ -413,6 +417,10 @@ void cuvistaGui::stabilize() {
     mData.bgmode = ui.radioBlend->isChecked() ? BackgroundMode::BLEND : BackgroundMode::COLOR;
     mData.maxFrames = ui.chkFrameLimit->isChecked() ? ui.spinFrameLimit->value() : std::numeric_limits<int64_t>::max();
     mData.pyramidLevelsRequested = ui.sliderLevels->value();
+    mData.ir = ui.sliderIr->value();
+    mData.iw = mData.ir * 2 + 1;
+    mData.cpuThreadsRequired = { ui.sliderCpuThreads->value() };
+    mData.cudaThreads = ui.sliderCudaThreads->value() * 4;
 
     using uchar = unsigned char;
     uchar rgb[] = { (uchar) mBackgroundColor.red(), (uchar) mBackgroundColor.green(), (uchar) mBackgroundColor.blue() };
@@ -560,7 +568,7 @@ void cuvistaGui::showInfo() {
     std::string strGitHub = "https://github.com/RainerMtb/cuvista";
     QString headerText = qformat(
         "CUVISTA - Cuda Video Stabilizer, Version {}<br>"
-        "Copyright (c) 2025 Rainer Bitschi <a href='mailto:{}'>{}</a> <a href='{}'>{}</a><br>"
+        "Copyright (c) 2026 Rainer Bitschi <a href='mailto:{}'>{}</a> <a href='{}'>{}</a><br>"
         "License GNU GPLv3+: GNU GPL version 3 or later<br>"
         "Gui compiled with Qt version {}, running on version {}",
         CUVISTA_VERSION, strEmail, strEmail, strGitHub, strGitHub, QT_VERSION_STR, qVersion());

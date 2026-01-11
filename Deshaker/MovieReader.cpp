@@ -330,23 +330,24 @@ bool FFmpegReader::read(ImageYuv& inputFrame) {
             } else {
                 //provide side packets to writers
                 for (std::shared_ptr<OutputStreamContext> posc : mInputStreams[sidx].outputStreams) {
-                    if (posc->handling == StreamHandling::STREAM_COPY || posc->handling == StreamHandling::STREAM_TRANSCODE) {
-                        std::unique_lock<std::mutex> lock(posc->mMutexSidePackets);
+                    OutputStreamContext& osc = *posc;
+                    if (osc.handling == StreamHandling::STREAM_COPY || osc.handling == StreamHandling::STREAM_TRANSCODE) {
+                        std::unique_lock<std::mutex> lock(osc.mMutexSidePackets);
                         //we should store a packet from a secondary stream for processing
-                        posc->sidePackets.emplace_back(frameIndex, av_packet);
+                        osc.sidePackets.emplace_back(frameIndex, av_packet);
 
                         //limiting packets in memory
                         auto fcn = [] (int sum, const SidePacket& pkt) { return sum + pkt.packet->size; };
-                        int siz = std::accumulate(posc->sidePackets.begin(), posc->sidePackets.end(), 0, fcn);
+                        int siz = std::accumulate(osc.sidePackets.begin(), osc.sidePackets.end(), 0, fcn);
                         while (siz > sideDataMaxSize) {
-                            siz -= posc->sidePackets.front().packet->size;
-                            posc->sidePackets.pop_front();
+                            siz -= osc.sidePackets.front().packet->size;
+                            osc.sidePackets.pop_front();
                         }
 
-                    } else if (posc->handling == StreamHandling::STREAM_DECODE) {
+                    } else if (osc.handling == StreamHandling::STREAM_DECODE) {
                         //decode the packets and store raw bytes
                         StreamContext& sc = mInputStreams[sidx];
-                        response = avcodec_send_packet(posc->audioInCtx, av_packet);
+                        response = avcodec_send_packet(osc.audioInCtx, av_packet);
                         if (response == AVERROR_EOF) {
                             break;
 
@@ -360,7 +361,7 @@ bool FFmpegReader::read(ImageYuv& inputFrame) {
 
                         int bytesPerSample = av_get_bytes_per_sample(decodingSampleFormat);
                         while (response >= 0) {
-                            response = avcodec_receive_frame(posc->audioInCtx, posc->frameIn);
+                            response = avcodec_receive_frame(osc.audioInCtx, osc.frameIn);
                             if (response == AVERROR(EAGAIN) || response == AVERROR_EOF)
                                 break;
 
@@ -370,26 +371,26 @@ bool FFmpegReader::read(ImageYuv& inputFrame) {
                             }
 
                             //no sample rate conversion makes conversion functions simpler
-                            int sampleCount = swr_get_out_samples(posc->resampleCtx, posc->frameIn->nb_samples);
+                            int sampleCount = swr_get_out_samples(osc.resampleCtx, osc.frameIn->nb_samples);
                             int byteCount = sampleCount * bytesPerSample * 2; //two output channels in packed format
                             SidePacket sidePacket(frameIndex, timestamp, byteCount);
                             if (sampleCount > 0) {
                                 uint8_t* dest[AV_NUM_DATA_POINTERS] = { sidePacket.audioData.data() }; //must be an array of values
-                                const uint8_t** indata = (const uint8_t**) (posc->frameIn->data);
-                                int converted = swr_convert(posc->resampleCtx, dest, sampleCount, indata, posc->frameIn->nb_samples);
+                                const uint8_t** indata = (const uint8_t**) (osc.frameIn->data);
+                                int converted = swr_convert(osc.resampleCtx, dest, sampleCount, indata, osc.frameIn->nb_samples);
                                 if (converted > 0) {
                                     byteCount = converted * bytesPerSample * 2;
                                     sidePacket.audioData.resize(byteCount);
 
                                     //static std::ofstream file("f:/audio.raw", std::ios::binary);
                                     //file.write(reinterpret_cast<char*>(sidePacket.audioData.data()), sidePacket.audioData.size());
-                                    std::unique_lock<std::mutex> lock(posc->mMutexSidePackets);
-                                    posc->sidePackets.push_back(std::move(sidePacket));
+                                    std::unique_lock<std::mutex> lock(osc.mMutexSidePackets);
+                                    osc.sidePackets.push_back(std::move(sidePacket));
                                 }
                             }
                         }
                     } //end audio decoding
-                } //end loop output streams
+                } //end of stream
             }
         }
     }
@@ -459,12 +460,7 @@ void FFmpegReader::rewind() {
     startOfInput = true;
     mVideoPacketList.clear();
     for (StreamContext& s : mInputStreams) {
-        for (auto& ptr : s.outputStreams) {
-            ptr->sidePackets.clear();
-            ptr->packetsWritten = 0;
-            ptr->lastPts = 0;
-            ptr->pts = 0;
-        }
+        s.outputStreams.clear();
     }
 }
 

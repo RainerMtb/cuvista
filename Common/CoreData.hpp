@@ -45,7 +45,7 @@ inline constexpr struct {
 	int radiusMin = 1, radiusMax = 500;
 	int wMin = 100, hMin = 100;
 	int levelsMin = 1, levelsMax = 6, levels = 3;
-	int irMin = 0, irMax = 3;
+	int irMin = 0, irMax = 3, ir = 3;
 	int modeMax = 6;
 	
 	int encodingQuality = 60;
@@ -54,6 +54,7 @@ inline constexpr struct {
 	uint8_t bgColorGreen = 150;
 	uint8_t bgColorBlue = 0;
 	int frameLimit = 500;
+	unsigned int cudaThreads = 16;
 } defaultParam;
 
 struct CoreData {
@@ -63,17 +64,17 @@ struct CoreData {
 
 	int w = 0;                     //frame width
 	int h = 0;					   //frame height
-	int ir = 3;					   //integration window, radius around point to integrate
+	int ir = defaultParam.ir;	   //integration window, radius around point to integrate
 	int iw = 7;					   //integration window, 2 * ir + 1
-	int ixCount = -1;			   
-	int iyCount = -1;			   
-	int zMin = -1;				   
-	int zMax = -1;				   //pyramid steps used for actual computing
+	int ixCount = -1;              //number of results
+	int iyCount = -1;
+	int zMin = -1;                 //pyramid steps used for actual computing
+	int zMax = -1;
 	int pyramidLevelsRequested = defaultParam.levels;  //number of pyramid levels wanted for stabilization
 	int pyramidLevels = -1;        //number of pyramid levels to create
-	int pyramidRowCount = -1;	   //number of rows for one pyramid, all the rows of Y data for all levels
-	int pyramidCount = 2;	       //number of pyramids to allocate in memory
-	int resultCount = 0;		   //number of points to compute in a frame
+	int pyramidRowCount = -1;      //number of rows for one pyramid, all the rows of Y data for all levels
+	int pyramidCount = 2;          //number of pyramids to allocate in memory
+	int resultCount = 0;           //number of points to compute in a frame
 
 	int cpupitch = 0;
 
@@ -87,17 +88,17 @@ struct CoreData {
 	Triplet bgcolorYuv = {};                         //background fill colors in yuv
 	BackgroundMode bgmode = BackgroundMode::BLEND;   //fill gap with previous frames or not
 
-	int radius = -1;                        //temporal radius, number of frames before and after used for smoothing
-	double radsec = defaultParam.radsec;    //temporal radius in seconds
-	int bufferCount = -1;                   //number of frames to buffer, set by MovieFrame
-
-	double zoomMin = defaultParam.zoomMin;  //min additional zoom
-	double zoomMax = defaultParam.zoomMax;  //max additioanl zoom
-	double zoomFallbackTotal = 0.025;       //fallback rate for dynamic zoom, to be divided by temporal radius
-	double zoomFallback = 0.0;              //fallback rate for dynamic zoom, to be applied per frame
+	int radius = -1;                                 //temporal radius, number of frames before and after used for smoothing
+	double radsec = defaultParam.radsec;             //temporal radius in seconds
+	int bufferCount = -1;                            //number of frames to buffer, set by MovieFrame
+											         
+	double zoomMin = defaultParam.zoomMin;           //min additional zoom
+	double zoomMax = defaultParam.zoomMax;           //max additioanl zoom
+	double zoomFallbackTotal = 0.025;                //fallback rate for dynamic zoom, to be divided by temporal radius
+	double zoomFallback = 0.0;                       //fallback rate for dynamic zoom, to be applied per frame
 	
-	int cpuThreads = 1;                 //cpu threads to use in different places, leave room for other things
-	unsigned int cudaThreads = 16;      //thread count used for texture reading
+	int cpuThreads = 1;                                    //size of the cpu threadpool, leave room for other tasks like ffmpeg
+	unsigned int cudaThreads = defaultParam.cudaThreads;   //thread count used for texture reading
 
 	size_t cudaMemTotal = 0;
 	size_t cudaUsedMem = 0;
@@ -153,27 +154,27 @@ public:
 	friend std::ostream& operator << (std::ostream& out, const PointResult& res);
 };
 
-struct PointContext {
-	PointResult* ptr;
+struct PointBase {
+	double x, y;
+	double u, v;
+	double length;
+
+	PointBase() : x { 0.0 }, y { 0.0 }, u { 0.0 }, v { 0.0 }, length { 0.0 } {}
+	PointBase(const PointResult& pr) : x { pr.x }, y { pr.y }, u { pr.u }, v { pr.v }, length { pr.length } {}
+
+	bool operator == (const PointBase& other) const;
+};
+
+struct PointContext : PointBase {
 	double delta = 0.0;
 	double distance = 0.0;
 	double distanceRelative = 0.0;
 	int clusterIndex = -2;
 	int clusterGeneration = 0;
+	PointResult* ptr = nullptr;
 
-	PointContext(PointResult& pr) : ptr { &pr } {}
-	PointContext() : ptr { nullptr } {}
+	PointContext() {}
+	PointContext(PointResult& pr) : PointBase(pr), ptr { &pr } {}
 
 	bool operator == (const PointContext& other) const;
-};
-
-struct PointBase {
-	double x, y;
-	double u, v;
-
-	PointBase() : x { 0.0 }, y { 0.0 }, u { 0.0 }, v { 0.0 } {}
-	PointBase(const PointResult& pr) : x { pr.x }, y { pr.y }, u { pr.u }, v { pr.v } {}
-	PointBase(const PointContext& pc) : x { pc.ptr->x }, y { pc.ptr->y }, u { pc.ptr->u }, v { pc.ptr->v } {}
-
-	bool operator == (const PointBase& other) const;
 };

@@ -609,16 +609,16 @@ void AvxFrame::write(ImageNV12& image) const {
 			sum = _mm512_add_epi32(sum, x);
 			//divide sum by 4
 			sum = _mm512_srli_epi32(sum, 2);
-			__m128i uv8 = _mm512_cvtepi32_epi8(sum);
-			_mm_storeu_epi8(dest + c, uv8);
+			_mm512_mask_cvtusepi32_storeu_epi8(dest + c, 0xFFFF, sum);
 		}
 
 		dest += image.stride;
 	}
 }
 
-//from uchar yuv to uchar rgb
+//from uchar yuv to uchar rgba
 void AvxFrame::yuvToRgb(const uchar* y, const uchar* u, const uchar* v, int h, int w, int stride, ImageBaseRgb& dest) const {
+	assert(util::alignValue(w, 4) * 4 <= dest.strideInBytes() && "invalid image dimensions");
 	auto vidx = dest.indexRgba();
 	V16f factorU = { fu[vidx[0]], fu[vidx[1]], fu[vidx[2]], fu[vidx[3]] };
 	V16f factorV = { fv[vidx[0]], fv[vidx[1]], fv[vidx[2]], fv[vidx[3]] };
@@ -638,8 +638,9 @@ void AvxFrame::yuvToRgb(const uchar* y, const uchar* u, const uchar* v, int h, i
 	mPool.wait();
 }
 
-//from float yuv to uchar rgb
+//from float yuv to uchar rgba
 void AvxFrame::yuvToRgb(const float* y, const float* u, const float* v, int h, int w, int stride, ImageBaseRgb& dest) const {
+	assert(util::alignValue(w, 4) * 4 <= dest.strideInBytes() && "invalid image dimensions");
 	auto vidx = dest.indexRgba();
 	V16f factorU = { fu[vidx[0]], fu[vidx[1]], fu[vidx[2]], fu[vidx[3]] };
 	V16f factorV = { fv[vidx[0]], fv[vidx[1]], fv[vidx[2]], fv[vidx[3]] };

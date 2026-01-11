@@ -117,7 +117,7 @@ public:
 
 	//output related
 	util::NullOutstream nullStream;
-	OutputOption outputOption = OutputOption::OPTION_NONE;
+	OutputOption outputOption = OutputOption::OPTION_INVALID;
 	std::ostream* console = &std::cout;
 	DecideYNA overwriteOutput = DecideYNA::ASK;
 	int requestedCrf = -1;

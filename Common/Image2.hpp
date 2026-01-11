@@ -88,6 +88,12 @@ public:
 
 	//convert to ImageBGR and save to file, for repeated use BGR image should be preallocated
 	bool saveAsColorBMP(const std::string& filename) const;
+
+	void save(std::ostream& ostream) const;
+
+	void setColorPlane(int z, unsigned char colorValue) override;
+
+	void setColor(const Color& color) override;
 };
 
 

@@ -166,8 +166,8 @@ LoopResult MovieFrameCombined::runLoop(ProgressBase& progress, UserInput& input,
 			mTrajectory.computeSmoothZoom(mData, mWriter.frameIndex);
 			const AffineTransform& finalTransform = mTrajectory.getTransform(mData, mWriter.frameIndex);
 			executor->outputData(mWriter.frameIndex, finalTransform);
-			mWriter.writeOutput(*executor);
 			mWriter.writeInput(*executor);
+			mWriter.writeOutput(*executor);
 			//get computed flow for current frame
 			executor->computeTerminate(readIndex, mResultPoints);
 			//wait for async read to complete
@@ -185,8 +185,8 @@ LoopResult MovieFrameCombined::runLoop(ProgressBase& progress, UserInput& input,
 			mTrajectory.computeSmoothZoom(mData, mWriter.frameIndex);
 			const AffineTransform& finalTransform = mTrajectory.getTransform(mData, mWriter.frameIndex);
 			executor->outputData(mWriter.frameIndex, finalTransform);
-			mWriter.writeOutput(*executor);
 			mWriter.writeInput(*executor);
+			mWriter.writeOutput(*executor);
 
 		} else if (state == StateCombined::DRAIN_BUFFER) {
 			mTrajectory.computeSmoothZoom(mData, mWriter.frameIndex);

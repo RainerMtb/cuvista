@@ -44,7 +44,7 @@ public:
     bool hasAudio = false;
 
     PlayerWindow(QWidget* parent);
-    void open(const QVideoFrame& videoFrame, bool hasAudio);
+    void open(const bool hasAudio);
     void closeEvent(QCloseEvent* event) override;
     int getAudioVolume();
 
