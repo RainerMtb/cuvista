@@ -62,6 +62,7 @@ static void testMain() {
 	run("-frames 40 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/004.mp4 -noheader -progress 0 -y");
 	run({ "-frames",  "40", "-i", "d:/VideoTest/example space.mp4", "-o", "d:/videoTest/out/000 space.mp4", "-noheader",  "-progress", "0", "-y" });
 	run("-i d:/VideoTest/example.mp4 -o d:/videoTest/out/copy.mp4 -copyframes -noheader -progress 0 -y");
+	run("-i d:/VideoTest/01small.mkv -o d:/videoTest/out/01small.mkv -noheader -progress 0");
 
 	run("-mode 1 -frames 0 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/005null.mp4 -noheader -progress 0 -y");
 	run("-mode 1 -frames 1 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/006.mp4 -noheader -progress 0 -y");
@@ -106,7 +107,7 @@ static void testMain() {
 	run("-device 2 -i d:/VideoTest/07.mp4 -o d:/videoTest/out/07.ocl.mkv -noheader -progress 0");
 
 	std::cout << "--- Misc ---" << std::endl;
-	run("-device 2 -i d:/VideoTest/06.mp4 -o d:/videoTest/out/06_stack.mp4 -stack 250:250 -noheader -progress 0");
+	run("-device 2 -i d:/VideoTest/06.mp4 -o d:/videoTest/out/06_stack.mp4 -stack 250:250 -noheader -progress 0 -frames 250");
 	run("-device 2 -i d:/VideoTest/01.mp4 -o d:/videoTest/out/flow.mp4 -flow -noheader -progress 0");
 	run("-device 1 -i d:/VideoTest/02short.mp4 -o d:/videoTest/out/raw02.yuv -noheader -progress 0");
 	run("-device 1 -i d:/VideoTest/02short.mp4 -o d:/videoTest/out/raw02.nv12 -noheader -progress 0");

@@ -322,7 +322,8 @@ void OpenClFrame::compute(int64_t frameIndex, const CoreData& core, int rowStart
 
 	try {
 		//local memory size in bytes
-		int memsiz = (7LL * core.iw * core.iw + 108) * sizeof(cl_double) + 6 * sizeof(cl_double*);
+		size_t iw = 2LL * core.ir + 1;
+		size_t memsiz = (7 * iw * iw + 108) * sizeof(cl_double) + 6 * sizeof(cl_double*);
 		//set up compute kernel
 		Kernel& kernel = clData.kernels.compute;
 		kernel.setArg(0, (cl_long) frameIndex);
@@ -333,7 +334,9 @@ void OpenClFrame::compute(int64_t frameIndex, const CoreData& core, int rowStart
 		kernel.setArg(5, rowStart);
 
 		//threads
-		NDRange ndlocal = NDRange(core.iw, 32 / core.iw); //based on cuda warp
+		size_t nX = std::max(iw, size_t(6));
+		size_t nY = 4;
+		NDRange ndlocal = NDRange(nX, nY);
 		NDRange ndglobal = NDRange(ndlocal[0] * core.ixCount, ndlocal[1] * (rowEnd - rowStart));
 		clData.queue.enqueueNDRangeKernel(kernel, NullRange, ndglobal, ndlocal);
 
@@ -366,7 +369,7 @@ void OpenClFrame::computeTerminate(int64_t frameIndex, std::vector<PointResult>&
 
 		//convert from cl_PointResult to PointResult
 		for (size_t i = 0; i < results.size(); i++) {
-			cl_PointResult& pr = clData.cl_results[i];
+			const cl_PointResult& pr = clData.cl_results[i];
 			double x0 = pr.xm - mData.w / 2.0 + pr.u * pr.direction;
 			double y0 = pr.ym - mData.h / 2.0 + pr.v * pr.direction;
 			double fdir = 1.0 - 2.0 * pr.direction;

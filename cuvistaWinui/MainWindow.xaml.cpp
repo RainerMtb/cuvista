@@ -168,7 +168,12 @@ namespace winrt::cuvistaWinui::implementation {
         //chkFrameLimit().IsChecked(localValues.Lookup(L"limitEnabled").try_as<bool>().value_or(false));
 
         sliderQuality().Value(localValues.Lookup(L"encodingQuality").try_as<double>().value_or(defaultParam.encodingQuality));
-        sliderLevels().Value(3.0);
+        sliderLevels().Value(defaultParam.levels);
+        sliderIr().Value(defaultParam.ir);
+        unsigned int threads = std::thread::hardware_concurrency();
+        sliderCpuThreads().Maximum(threads);
+        sliderCpuThreads().Value(3.0 * threads / 4);
+        sliderCudaThreads().Value(defaultParam.cudaThreads);
 
         //load file when given as command line argument or when file was dropped on the app icon
         LPWSTR cmd = GetCommandLineW();
@@ -337,6 +342,9 @@ namespace winrt::cuvistaWinui::implementation {
         mData.bgmode = radioBlend().IsChecked().Value() ? BackgroundMode::BLEND : BackgroundMode::COLOR;
         mData.maxFrames = chkFrameLimit().IsChecked().Value() ? (int64_t) spinFrameLimit().Value() : std::numeric_limits<int64_t>::max();
         mData.pyramidLevelsRequested = (int) sliderLevels().Value();
+        mData.ir = (int) sliderIr().Value();
+        mData.cpuThreadsRequired = { (int) sliderCpuThreads().Value()};
+        mData.cudaThreads = (unsigned int) sliderCudaThreads().Value();
 
         mData.backgroundColor = Color::rgb(mBackgroundColor.R, mBackgroundColor.G, mBackgroundColor.B);
         mData.backgroundColor.toYUVfloat(&mData.bgcolorYuv.y, &mData.bgcolorYuv.u, &mData.bgcolorYuv.v);

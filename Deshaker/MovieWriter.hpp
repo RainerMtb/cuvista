@@ -65,6 +65,8 @@ public:
 		MovieWriterBase(data),
 		mReader { reader } 
 	{}
+
+	void writeOutput(const FrameExecutor& executor) override;
 };
 
 
@@ -389,10 +391,10 @@ class TransformsFile {
 
 protected:
 	inline static std::string id = "CUVI";
-	std::ofstream file;
+	std::ofstream mFile;
 
 	template <class T> void writeValue(T val) {
-		file.write(reinterpret_cast<const char*>(&val), sizeof(val));
+		mFile.write(reinterpret_cast<const char*>(&val), sizeof(val));
 	}
 
 public:

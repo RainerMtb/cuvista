@@ -213,16 +213,17 @@ void CudaExecutor::cudaInit(CoreData& coreData, int devIdx, const cudaDeviceProp
 	//cudaFree(0); //seems necessary in order to get a context later;
 
 	//sum up required shared memory for compute kernel
+	int iw =  coreData.iw;
 	int doublesCount = 0
-		+ coreData.iw * coreData.iw * 6   //sd
-		+ coreData.iw * coreData.iw * 1   //delta
-		+ 6 * 6		//S
-		+ 6 * 6     //g
-		+ 3 * 3  	//wp
-		+ 3 * 3     //dwp;
-		+ 6 * 1		//b
-		+ 6 * 1     //eta
-		+ 6 * 1		//temp
+		+ iw * iw * 6  //sd
+		+ iw * iw * 1  //delta
+		+ 6 * 6        //S
+		+ 6 * 6        //g
+		+ 3 * 3        //wp
+		+ 3 * 3        //dwp;
+		+ 6 * 1        //b
+		+ 6 * 1        //eta
+		+ 6 * 1        //temp
 		;
 	coreData.cudaComputeSharedMem = 0
 		+ doublesCount * sizeof(double)   //number of double values in shared memory

@@ -33,6 +33,10 @@ void SimpleYuvWriter::write(ImageYuv& image) {
 	}
 }
 
+void NullWriter::writeOutput(const FrameExecutor& executor) {
+	this->frameIndex++;
+}
+
 
 //-----------------------------------------------------------------------------------
 // Writer Collection
@@ -446,23 +450,23 @@ AsfPipeWriter::~AsfPipeWriter() {
 
 std::map<int64_t, TransformValues> TransformsFile::readTransformMap(const std::string& trajectoryFile) {
 	std::map<int64_t, TransformValues> transformsMap;
-	std::ifstream file(trajectoryFile, std::ios::binary);
-	if (file.is_open()) {
+	std::ifstream infile(trajectoryFile, std::ios::binary);
+	if (infile.is_open()) {
 		//read and check signature
 		std::string str = "    ";
-		file.get(str.data(), 5);
+		infile.get(str.data(), 5);
 		if (str != id) {
 			errorLogger().logError("transforms file '" + trajectoryFile + "' is not valid", ErrorSource::WRITER);
 
 		} else {
-			while (!file.eof()) {
+			while (!infile.eof()) {
 				int64_t frameIdx = 0;
 				double s = 0, dx = 0, dy = 0, da = 0;
-				file.read(reinterpret_cast<char*>(&frameIdx), sizeof(frameIdx));
-				file.read(reinterpret_cast<char*>(&s), sizeof(s));
-				file.read(reinterpret_cast<char*>(&dx), sizeof(dx));
-				file.read(reinterpret_cast<char*>(&dy), sizeof(dy));
-				file.read(reinterpret_cast<char*>(&da), sizeof(da));
+				infile.read(reinterpret_cast<char*>(&frameIdx), sizeof(frameIdx));
+				infile.read(reinterpret_cast<char*>(&s), sizeof(s));
+				infile.read(reinterpret_cast<char*>(&dx), sizeof(dx));
+				infile.read(reinterpret_cast<char*>(&dy), sizeof(dy));
+				infile.read(reinterpret_cast<char*>(&da), sizeof(da));
 
 				transformsMap[frameIdx] = { s, dx, dy, da / 60.0 * std::numbers::pi / 180.0 };
 			}
@@ -475,10 +479,10 @@ std::map<int64_t, TransformValues> TransformsFile::readTransformMap(const std::s
 }
 
 void TransformsFile::open(const std::string& trajectoryFile) {
-	file = std::ofstream(trajectoryFile, std::ios::binary);
-	if (file.is_open()) {
+	mFile = std::ofstream(trajectoryFile, std::ios::binary);
+	if (mFile.is_open()) {
 		//write signature
-		file << id;
+		mFile << id;
 
 	} else {
 		throw AVException("error opening outout file '" + trajectoryFile + "'");
@@ -495,11 +499,13 @@ void TransformsFile::writeTransform(const Affine2D& transform, int64_t frameInde
 
 void TransformsWriter::start() {
 	TransformsFile::open(mData.trajectoryFile);
+	outputBytesWritten = mFile.tellp();
 }
 
 void TransformsWriter::writeInput(const FrameExecutor& executor) {
 	writeTransform(executor.mFrame.mFrameResult.getTransform(), frameIndex);
 	this->frameIndex++;
+	outputBytesWritten = mFile.tellp();
 }
 
 
@@ -687,23 +693,23 @@ void  ResultDetailsWriter::start() {
 	} else {
 		throw AVException("cannot open file '" + mData.resultsFile + "'");
 	}
+
+	outputBytesWritten = mFile.tellp();
 }
 
 void ResultDetailsWriter::write(std::span<PointResult> results, int64_t frameIndex) {
-	//for better performace first write into buffer string
 	std::stringstream ss;
 	for (auto& item : results) {
 		ss << frameIndex << mDelim << item.ix0 << mDelim << item.iy0 
 			<< mDelim << item.x << mDelim << item.y << mDelim << item.u << mDelim << item.v 
 			<< mDelim << item.resultValue() << mDelim << item.isConsens << mDelim << item.direction << std::endl;
 	}
-	//write buffer to file
-	mFile << ss.str();
-}
 
-void ResultDetailsWriter::writeInput(const FrameExecutor& executor) {
-	write(executor.mFrame.mResultPoints, frameIndex);
-	this->frameIndex++;
+	//write buffer to file
+	std::string str = ss.str();
+	mFile << ss.str();
+
+	outputBytesWritten = mFile.tellp();
 }
 
 void ResultDetailsWriter::write(std::span<PointResult> results, const std::string& filename) {
@@ -713,6 +719,11 @@ void ResultDetailsWriter::write(std::span<PointResult> results, const std::strin
 	ResultDetailsWriter writer(data);
 	writer.start();
 	writer.write(results, 0);
+}
+
+void ResultDetailsWriter::writeInput(const FrameExecutor& executor) {
+	write(executor.mFrame.mResultPoints, frameIndex);
+	this->frameIndex++;
 }
 
 
@@ -823,6 +834,11 @@ void ResultImageWriter::write(const AffineTransform& trf, std::span<PointResult>
 	write(trf, res, idx, yuv, ThreadPool::defaultPool);
 	bgr.saveAsColorBMP(outFile);
 }
+
+
+//-----------------------------------------------------------------------------------
+// Result Video
+//-----------------------------------------------------------------------------------
 
 void ResultVideoWriter::open(OutputOption outputOption) {
 	file = std::ofstream(mData.fileOut, std::ios::binary);

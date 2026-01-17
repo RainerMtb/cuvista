@@ -418,7 +418,6 @@ void cuvistaGui::stabilize() {
     mData.maxFrames = ui.chkFrameLimit->isChecked() ? ui.spinFrameLimit->value() : std::numeric_limits<int64_t>::max();
     mData.pyramidLevelsRequested = ui.sliderLevels->value();
     mData.ir = ui.sliderIr->value();
-    mData.iw = mData.ir * 2 + 1;
     mData.cpuThreadsRequired = { ui.sliderCpuThreads->value() };
     mData.cudaThreads = ui.sliderCudaThreads->value() * 4;
 

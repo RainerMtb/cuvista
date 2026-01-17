@@ -188,8 +188,8 @@ void CpuFrame::computeTerminate(int64_t frameIndex, std::vector<PointResult>& re
 					while (result == PointResultType::RUNNING) {
 						//search for selected patch in current frame
 						jm.setValues([&] (size_t r, size_t c) {
-							double x = (double) (c) - mData.ir;
-							double y = (double) (r) - mData.ir;
+							double x = (double) (c) - ir;
+							double y = (double) (r) - ir;
 							double ix = xm + x * wp.at(0, 0) + y * wp.at(1, 0) + wp.at(0, 2);
 							double iy = ym + x * wp.at(0, 1) + y * wp.at(1, 1) + wp.at(1, 2);
 							return pyr0.mY[z].interp2(ix, iy).value_or(mData.dnan);
@@ -204,8 +204,8 @@ void CpuFrame::computeTerminate(int64_t frameIndex, std::vector<PointResult>& re
 						etaMat.setValuesByRow({ 0, 0, 1, 0, 0, 1 });
 						for (int r = 0; r < 6; r++) {
 							double b = 0.0;
-							for (int idx = 0, cc = 0; cc < mData.iw; cc++) {
-								for (int rr = 0; rr < mData.iw; rr++) {
+							for (int idx = 0, cc = 0; cc < iw; cc++) {
+								for (int rr = 0; rr < iw; rr++) {
 									b += sd.at(r, idx) * delta.at(rr, cc);
 									idx++;
 								}

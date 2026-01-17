@@ -6,7 +6,6 @@
 1. Collect device info
 1. Create subclass of MovieReader and open input
 1. Validate MainData variables with input
-1. Optional: create one or more Auxiliary Writers - those are called per input frame
 1. Create subclass of MovieWriter and open output - this is called per output frame
 1. Create subclass of MovieFrame handler class - this selects the loop mechanism
 1. Create subclass of FrameExecutor - this selects the device for computations

@@ -22,12 +22,12 @@
 #include "Image.hpp"
 #include "AffineData.hpp"
 
+//used in CoreData because in cuda _constant_ allocated symbols must be initialized
 struct Triplet {
 	float y, u, v;
 
 	float operator [] (size_t idx) const;
 };
-
 
 //how to deal with background when frame does not cover complete output canvas
 enum class BackgroundMode {
@@ -43,7 +43,7 @@ inline constexpr struct {
 	double zoomMin = 1.05, zoomMax = 1.15;
 
 	int radiusMin = 1, radiusMax = 500;
-	int wMin = 100, hMin = 100;
+	int pixelMin = 120, pixelMinAtZMax = 30;
 	int levelsMin = 1, levelsMax = 6, levels = 3;
 	int irMin = 0, irMax = 3, ir = 3;
 	int modeMax = 6;
@@ -97,7 +97,7 @@ struct CoreData {
 	double zoomFallbackTotal = 0.025;                //fallback rate for dynamic zoom, to be divided by temporal radius
 	double zoomFallback = 0.0;                       //fallback rate for dynamic zoom, to be applied per frame
 	
-	int cpuThreads = 1;                                    //size of the cpu threadpool, leave room for other tasks like ffmpeg
+	int cpuThreads = 1;                                    //size of the cpu threadpool
 	unsigned int cudaThreads = defaultParam.cudaThreads;   //thread count used for texture reading
 
 	size_t cudaMemTotal = 0;

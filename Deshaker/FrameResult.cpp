@@ -87,6 +87,7 @@ const AffineTransform& FrameResult::computeTransform(std::span<PointResult> resu
 
 		if (mConsList.size() < numValid * cDbScan) {
 			// STEP 2 dbscan
+			mClusterSizes.clear();
 			computeDbScan(frameIndex);
 
 			if (mClusterSizes.size() == 0) {
@@ -209,7 +210,6 @@ void FrameResult::computeDbScan(int64_t frameIndex) {
 	constexpr int minPts = 25;
 
 	//build clusters
-	mClusterSizes.clear();
 	for (PointContext& pc : mPointList) {
 		int idxRead = 0;
 		int idxWrite = 0;
