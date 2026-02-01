@@ -67,6 +67,8 @@ namespace im {
 
 	void yuv_to_rgb(float y, float u, float v, unsigned char* r, unsigned char* g, unsigned char* b);
 
+	unsigned char rgb_to_y(unsigned char r, unsigned char g, unsigned char b);
+
 	void rgb_to_yuv(unsigned char r, unsigned char g, unsigned char b, unsigned char* y, unsigned char* u, unsigned char* v);
 
 	void rgb_to_yuv(unsigned char r, unsigned char g, unsigned char b, float* y, float* u, float* v);

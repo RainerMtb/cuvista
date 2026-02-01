@@ -80,12 +80,14 @@ namespace util {
 	std::string byteSizeToString(int64_t bytes) {
 		if (bytes < 0)
 			return "N/A";
-		else if (bytes < 1024ull)
+		else if (bytes < 1024ll)
 			return std::format("{} bytes", bytes);
-		else if (bytes < 1024ull * 1024ull)
+		else if (bytes < 1024ll * 1024ll)
 			return std::format("{:.1f} kb", bytes / 1024.0);
-		else
+		else if (bytes < 1024ll * 1024ll * 1014ll)
 			return std::format("{:.1f} Mb", bytes / 1048576.0);
+		else
+			return std::format("{:.1f} Gb", bytes / 1073741824.0);
 	}
 
 

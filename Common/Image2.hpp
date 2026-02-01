@@ -68,9 +68,6 @@ public:
 
 	ImageYuv copy() const;
 
-	//convert to NV12 format
-	void toNV12(ImageNV12& dest, ThreadPoolBase& pool = defaultPool) const;
-
 	//convert to BGR format for bmp files
 	ImageBaseRgb& toBaseRgb(ImageBaseRgb& dest, ThreadPoolBase& pool = defaultPool) const;
 
@@ -80,7 +77,10 @@ public:
 
 	ImageBGRA toBGRA() const;
 
-	ImageNV12 toNV12(int strideNV12, ThreadPoolBase& pool = defaultPool) const;
+	//convert to NV12 format
+	void toNV12(ImageNV12& dest, ThreadPoolBase& pool = defaultPool) const;
+
+	ImageNV12 toNV12(int strideNV12) const;
 
 	ImageNV12 toNV12() const;
 
@@ -94,6 +94,12 @@ public:
 	void setColorPlane(int z, unsigned char colorValue) override;
 
 	void setColor(const Color& color) override;
+
+	void gray(ThreadPoolBase& pool = defaultPool);
+
+	double lumaRms() const;
+
+	void gamma(float value);
 };
 
 
@@ -105,6 +111,8 @@ private:
 
 public:
 	ImageNV12(int h, int w, int stride);
+
+	ImageNV12(int h, int w);
 
 	ImageNV12();
 
@@ -118,11 +126,13 @@ public:
 
 	const unsigned char* data() const;
 
-	void toYuv(ImageYuv& dest, ThreadPoolBase& pool = defaultPool) const;
+	void toYuv(ImageYuv& dest) const;
 
 	ImageYuv toYuv() const;
 
 	bool saveAsBMP(const std::string& filename, unsigned char scale = 1) const override;
+
+	void save(std::ostream& ostream) const;
 };
 
 
@@ -156,6 +166,16 @@ protected:
 
 public:
 	virtual std::vector<int> indexRgba() const = 0;
+
+	ImageYuv toYUV(ThreadPoolBase& pool = defaultPool) const;
+
+	void toYUV(ImageYuv& dest, ThreadPoolBase& pool = defaultPool) const;
+
+	ImageNV12 toNV12(ThreadPoolBase& pool = defaultPool) const;
+
+	void toNV12(ImageNV12& dest, ThreadPoolBase& pool = defaultPool) const;
+
+	void gray(ThreadPoolBase& pool = defaultPool);
 
 	void copyTo(ImageBaseRgb& dest, size_t r0 = 0, size_t c0 = 0, ThreadPoolBase& pool = defaultPool) const;
 
@@ -225,8 +245,6 @@ public:
 	ImageBGR(int h, int w);
 
 	ImageBGR();
-
-	ImageYuv toYUV() const;
 
 	static ImageBGR readFromBMP(const std::string& filename);
 };

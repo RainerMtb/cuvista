@@ -131,7 +131,7 @@ winrt::hstring selectFolder(HWND hwnd) {
 using namespace winrt::cuvistaWinui::implementation;
 
 //on background thread
-void ProgressGui::init() {
+void ProgressGui::init(const ProgressInfo& progress) {
     HRESULT hr = CoCreateInstance(CLSID_TaskbarList, NULL, CLSCTX_INPROC_SERVER, IID_ITaskbarList3, (void**) (&mTaskbarPtr));
     if (hr != S_OK) mTaskbarPtr = nullptr;
 }

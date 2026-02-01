@@ -36,6 +36,16 @@ public:
 		friend std::ostream& operator << (std::ostream& out, const ClusterSize& cs);
 	};
 
+	struct DebugData {
+		bool rundbscan = false;
+		std::vector<PointContext> classic;
+		std::vector<PointContext> dbscan;
+		std::vector<ClusterSize> clusterSizes;
+	};
+
+	inline static DebugData debugData;
+	inline static bool storeDebugData = false;
+
 	//construct lists and solver class
 	FrameResult(MainData& data, ThreadPoolBase& threadPool);
 
@@ -60,10 +70,27 @@ private:
 	std::vector<PointContext*> mWork;
 	std::vector<ClusterSize> mClusterSizes;
 
+	struct {
+		int consLoopCount = 8;                      //max number of loops when searching for consensus set
+		int consLoopPercent = 95;                   //percentage of points for next loop 0..100
+		double consDistRelative = 0.2;              //max offset normalized by length
+		double consDistanceSqr = util::sqr(1.25);   //max offset for a point to be in the consensus set
+
+		size_t minConsPoints = 8;      //min numbers of points for consensus set
+		double minDbScanRel = 0.08;    //when to try dbscan
+		int minDbScanAbs = 80;         //when to start dbscan
+		int minPts = 20;               //min cluster size
+		int finalSizePercent = 75;     //reduction of best cluster
+
+		double eps = -1.0;    //eps value for dbscan
+		double f1 = -1.0;     //factor for angle delta
+		double f2 = -1.0;     //factor for vector length
+	} params;
+
 	AffineTransform computeClassic(size_t numValid, int64_t frameIndex);
 	void computeDbScan(int64_t frameIndex);
-	bool clusterDistance(const PointContext& pc1, const PointContext& pc2);
+	bool clusterDistance(const PointContext& pc1, const PointContext& pc2) const;
 
-	bool checkSizes();
-	void writeVideo(const AffineTransform& trf, std::span<PointContext> res, int64_t frameIndex, const std::string& title);
+	bool checkSizes() const;
+	void writeVideo(std::span<PointContext> res, int64_t frameIndex, const std::string& title) const;
 };

@@ -71,7 +71,7 @@ public:
         mExecutor { executor }
     {}
 
-    void init() override;
+    void init(const ProgressInfo& progress) override;
     void update(const ProgressInfo& progress, bool force) override;
     void updateStatus(const std::string& msg) override;
     void terminate() override;

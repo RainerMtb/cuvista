@@ -18,6 +18,9 @@
 
 #pragma once
 
+#include <span>
+
+#include "AffineData.hpp"
 #include "DeviceInfoBase.hpp"
 #include "ThreadPoolBase.h"
 #include "Image2.hpp"
@@ -25,6 +28,7 @@
 
 template <class T> class Mat;
 class MovieFrame;
+class AffineTransform;
 
 class FrameExecutor {
 
@@ -46,11 +50,11 @@ public:
 	//get frame data from reader into frame object
 	virtual void inputData(int64_t frameIndex, const ImageYuv& inputFrame) = 0;
 	//set up image pyramid
-	virtual void createPyramid(int64_t frameIndex, AffineDataFloat trf, bool warp) = 0;
+	virtual void createPyramid(int64_t frameIndex, AffineDataFloat trf = {}, bool warp = false) = 0;
 	//start computation asynchronously for some part of a frame
-	virtual void computeStart(int64_t frameIndex, std::vector<PointResult>& results) = 0;
+	virtual void computeStart(int64_t frameIndex, std::span<PointResult> results) = 0;
 	//start computation asynchronously for second part and get results
-	virtual void computeTerminate(int64_t frameIndex, std::vector<PointResult>& results) = 0;
+	virtual void computeTerminate(int64_t frameIndex, std::span<PointResult> results) = 0;
 	//prepare data for output to writer
 	virtual void outputData(int64_t frameIndex, AffineDataFloat trf) = 0;
 	//prepare data for encoding on cpu
@@ -72,5 +76,9 @@ public:
 	//destructor
 	virtual ~FrameExecutor() {}
 
+	//identify executor type
 	DeviceType getType() const { return mDeviceInfo.getType(); }
+
+	//compute resulting transform for this frame
+	const AffineTransform& computeTransform(std::span<PointResult> results, int64_t frameIndex);
 };

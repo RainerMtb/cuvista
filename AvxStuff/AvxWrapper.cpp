@@ -98,9 +98,8 @@ std::vector<float> V16f::vector() const {
 }
 
 V16f V16f::rot(int i) const {
-	__m512i idx = _mm512_loadu_epi32(Iota::i32);
-	__m512i delta = _mm512_set1_epi32(i & 0xF);
-	idx = _mm512_add_epi32(idx, delta);
+	int offset = i & 0xF;
+	__m512i idx = _mm512_loadu_epi32(iotas.i32x16 + offset);
 	return _mm512_permutex2var_ps(a, idx, a);
 }
 
@@ -184,9 +183,8 @@ std::vector<float> V8f::vector() const {
 }
 
 V8f V8f::rot(int i) const {
-	__m256i idx = _mm256_loadu_epi32(Iota::i32);
-	__m256i delta = _mm256_set1_epi32(i & 0b111);
-	idx = _mm256_add_epi32(idx, delta);
+	int offset = i & 0x7;
+	__m256i idx = _mm256_loadu_epi32(iotas.i32x8 + offset);
 	return _mm256_permutex2var_ps(a, idx, a);
 }
 
@@ -360,9 +358,8 @@ std::vector<double> V8d::vector() const {
 }
 
 V8d V8d::rot(int i) const {
-	__m512i idx = _mm512_loadu_epi64(Iota::i64);
-	__m512i delta = _mm512_set1_epi64(i & 0b111);
-	idx = _mm512_add_epi64(idx, delta);
+	int offset = i & 0x7;
+	__m512i idx = _mm512_loadu_epi64(iotas.i64x8 + offset);
 	return _mm512_permutex2var_pd(a, idx, a);
 }
 

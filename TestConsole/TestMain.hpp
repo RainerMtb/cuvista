@@ -58,6 +58,7 @@ void openClnorm1Test();
 
 void compareFramesPlatforms();
 void testVideo1();
+void testVideo2();
 
 void flow();
 void pinvTest();

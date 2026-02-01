@@ -161,7 +161,7 @@ static void testCrc() {
 		}
 
 		{
-			uint64_t crcExpected = 0xfa097438954d39cd;
+			uint64_t crcExpected = 0x91ffd5e4d5b59bed;
 			bool match = crcExpected == crc;
 			std::string color = match ? ansiGreen : ansiRed;
 			std::cout << color << std::hex << "trajectory crc expected: " << crcExpected << ", actual crc: " << crc
@@ -170,7 +170,7 @@ static void testCrc() {
 
 		{
 			//check yuv
-			uint64_t crcExpectedYuv = 0xa0899de9a81fe6ae;
+			uint64_t crcExpectedYuv = 0xde5cf1c3ce13ae44;
 			util::CRC64 crcyuv;
 			for (const ImageYuv& image : externalWriter->outputFramesYuv) crcyuv.add(image);
 
@@ -181,7 +181,7 @@ static void testCrc() {
 
 		{
 			//check rgba
-			uint64_t crcExpectedRgba = 0xf0cc957f24f5ae28;
+			uint64_t crcExpectedRgba = 0xe90fd76d66d5c0ed;
 			util::CRC64 crcrgba;
 			for (const ImageRGBA& image : externalWriter->outputFramesRgba) crcrgba.add(image);
 
@@ -192,7 +192,7 @@ static void testCrc() {
 
 		{
 			//check bgra
-			uint64_t crcExpectedBgra = 0xf1cfe7cbe874441a;
+			uint64_t crcExpectedBgra = 0x5bbfb0158e897ba4;
 			util::CRC64 crcbgra;
 			for (const ImageBGRA& image : externalWriter->outputFramesBgra) crcbgra.add(image);
 
@@ -215,7 +215,7 @@ static void testCrc() {
 		std::shared_ptr<RawMemoryStoreWriter> externalWriter = std::make_shared<RawMemoryStoreWriter>(250, false, true);
 		DeshakerResult result = run(commandsMode2[i], externalWriter);
 
-		uint64_t crcExpected = 0x62cc4863807117aa;
+		uint64_t crcExpected = 0xe2819e6f94aef6c7;
 		util::CRC64 crcOutput;
 		for (const ImageYuv& image : externalWriter->outputFramesYuv) crcOutput.add(image);
 

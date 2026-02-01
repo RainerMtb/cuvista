@@ -731,35 +731,36 @@ void ResultDetailsWriter::writeInput(const FrameExecutor& executor) {
 // Result Images
 //-----------------------------------------------------------------------------------
 
-void ResultImageWriter::writeImage(const AffineTransform& trf, std::span<PointResult> res, int64_t idx, Image8& dest, ThreadPoolBase& pool) {
+void ResultImageWriter::writeImage(const AffineTransform& trf, std::span<PointResult> res, int64_t idx, 
+	ImageBaseRgb& dest, ThreadPoolBase& pool, bool drawTransformed) {
+
 	int h = dest.h;
 	int w = dest.w;
 	Color col = Color::web("#F09B59");
 
-	//draw lines
 	//draw transform indicator lines first
-	for (int thridx = 0; thridx < pool.size(); thridx++) {
-		auto func1 = [&] (size_t thridx) {
-			for (size_t idx = thridx; idx < res.size(); idx += pool.size()) {
-				const PointResult& pr = res[idx];
-				if (pr.isConsidered) {
-					double px = pr.x + w / 2.0;
-					double py = pr.y + h / 2.0;
-					double x2 = px + pr.u;
-					double y2 = py + pr.v;
+	if (drawTransformed) {
+		for (int thridx = 0; thridx < pool.size(); thridx++) {
+			auto func1 = [&] (size_t thridx) {
+				for (size_t idx = thridx; idx < res.size(); idx += pool.size()) {
+					const PointResult& pr = res[idx];
+					if (pr.isConsidered) {
+						double px = pr.x + w / 2.0;
+						double py = pr.y + h / 2.0;
+						double x2 = px + pr.u;
+						double y2 = py + pr.v;
 
-					//blue line to computed transformation
-					auto [tx, ty] = trf.transform(pr.x, pr.y);
-					dest.drawLine(px, py, tx + w / 2.0, ty + h / 2.0, col, 0.5);
+						//blue line to computed transformation
+						auto [tx, ty] = trf.transform(pr.x, pr.y);
+						dest.drawLine(px, py, tx + w / 2.0, ty + h / 2.0, col, 0.1);
+					}
 				}
-			}
-		};
-		pool.addAndWait(func1, 0, pool.size());
+			};
+			pool.addAndWait(func1, 0, pool.size());
+		}
 	}
 
-	//draw on top
-	//green line if point is consens
-	//red line if point is not consens
+	//green line if point is consens, red line if point is not consens
 	int numConsidered = 0;
 	int numConsens = 0;
 	std::mutex mutex;
@@ -800,27 +801,15 @@ void ResultImageWriter::writeImage(const AffineTransform& trf, std::span<PointRe
 	dest.writeText(s1, 0, h - s.h);
 }
 
-void ResultImageWriter::write(const AffineTransform& trf, std::span<PointResult> res, int64_t idx, const ImageYuv& yuv, ThreadPoolBase& pool) {
-	//copy Y plane of YUV to all planes in bgr image making it grayscale bgr
-	for (int z = 0; z < 3; z++) {
-		for (int r = 0; r < bgr.h; r++) {
-			for (int c = 0; c < bgr.w; c++) {
-				bgr.at(z, r, c) = yuv.at(0, r, c);
-			}
-		}
-	}
-
-	writeImage(trf, res, idx, bgr, pool);
-}
-
 void ResultImageWriter::writeInput(const FrameExecutor& executor) {
 	//get input image from buffers
-	executor.getInput(frameIndex, yuv);
+	executor.getInput(frameIndex, bgra);
+	bgra.gray();
 	std::string fname = ImageWriter::makeFilename(mData.fileOut, frameIndex, "bmp");
-	write(executor.mFrame.getTransform(), executor.mFrame.mResultPoints, frameIndex, yuv, executor.mPool);
+	writeImage(executor.mFrame.getTransform(), executor.mFrame.mResultPoints, frameIndex, bgra, executor.mPool);
 
 	//save image to file
-	bool result = bgr.saveAsColorBMP(fname);
+	bool result = bgra.saveAsColorBMP(fname);
 	if (result == false) {
 		errorLogger().logError("cannot write file '" + fname + "'", ErrorSource::WRITER);
 	}
@@ -830,11 +819,6 @@ void ResultImageWriter::writeInput(const FrameExecutor& executor) {
 	this->outputBytesWritten += std::filesystem::file_size(std::filesystem::path(fname));
 }
 
-void ResultImageWriter::write(const AffineTransform& trf, std::span<PointResult> res, int64_t idx, const ImageYuv& yuv, const std::string& outFile) {
-	write(trf, res, idx, yuv, ThreadPool::defaultPool);
-	bgr.saveAsColorBMP(outFile);
-}
-
 
 //-----------------------------------------------------------------------------------
 // Result Video
@@ -842,16 +826,15 @@ void ResultImageWriter::write(const AffineTransform& trf, std::span<PointResult>
 
 void ResultVideoWriter::open(OutputOption outputOption) {
 	file = std::ofstream(mData.fileOut, std::ios::binary);
+	bgra = ImageBGRA(mData.h, mData.w);
 	nv12 = ImageNV12(mData.h, mData.w, mData.w);
-	yuv = ImageYuv(mData.h, mData.w, mData.w);
 }
 
 void ResultVideoWriter::writeInput(const FrameExecutor& executor) {
-	executor.getInput(frameIndex, yuv);
-	yuv.setColorPlane(1, 128);
-	yuv.setColorPlane(2, 128);
-	ResultImageWriter::writeImage(executor.mFrame.getTransform(), executor.mFrame.mResultPoints, frameIndex, yuv, executor.mPool);
-	yuv.toNV12(nv12, executor.mPool);
+	executor.getInput(frameIndex, bgra);
+	bgra.gray(executor.mPool);
+	ResultImageWriter::writeImage(executor.mFrame.getTransform(), executor.mFrame.mResultPoints, frameIndex, bgra, executor.mPool, false);
+	bgra.toNV12(nv12, executor.mPool);
 	file.write(reinterpret_cast<const char*>(nv12.data()), nv12.sizeInBytes());
 
 	this->outputBytesWritten += nv12.sizeInBytes();

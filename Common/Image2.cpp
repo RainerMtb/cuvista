@@ -170,6 +170,36 @@ im::LocalColor<unsigned char> ImageYuv::getLocalColor(const Color& color) const 
 	return out;
 }
 
+void ImageYuv::gray(ThreadPoolBase& pool) {
+	setColorPlane(1, 128);
+	setColorPlane(2, 128);
+}
+
+double ImageYuv::lumaRms() const {
+	int64_t sum = 0;
+	for (int r = 0; r < h; r++) {
+		const unsigned char* ptr = addr(0, r, 0);
+		for (int c = 0; c < w; c++) {
+			int64_t val = ptr[c];
+			sum += val * val;
+		}
+	}
+	double s = w * h;
+	return std::sqrt(sum / s);
+}
+
+void ImageYuv::gamma(float value) {
+	float g = 1.0f / value;
+	for (int r = 0; r < h; r++) {
+		unsigned char* ptr = addr(0, r, 0);
+		for (int c = 0; c < w; c++) {
+			unsigned char& p = ptr[c];
+			float x = p / 255.0f;
+			p = (unsigned char) std::rint(std::pow(x, g) * 255.0f);
+		}
+	}
+}
+
 
 //------------------------
 // NV12 class
@@ -180,21 +210,25 @@ ImageNV12::ImageNV12(int h, int w, int stride) :
 	ImageBase<unsigned char>(h, w, stride, 3, { std::make_shared<unsigned char[]>(h * stride * 3 / 2) }, { h * stride * 3 / 2 })
 {}
 
+ImageNV12::ImageNV12(int h, int w) :
+	ImageNV12(h, w, w)
+{}
+
 ImageNV12::ImageNV12() :
 	ImageNV12(0, 0, 0)
 {}
 
-ImageNV12 ImageYuv::toNV12(int strideNV12, ThreadPoolBase& pool) const {
+ImageNV12 ImageYuv::toNV12(int strideNV12) const {
 	ImageNV12 out(h, w, strideNV12);
-	toNV12(out, pool);
+	toNV12(out);
 	return out;
 }
 
 ImageNV12 ImageYuv::toNV12() const {
-	return toNV12(w, defaultPool);
+	return toNV12(w);
 }
 
-void ImageNV12::toYuv(ImageYuv& dest, ThreadPoolBase& pool) const {
+void ImageNV12::toYuv(ImageYuv& dest) const {
 	//copy Y plane over
 	for (int r = 0; r < h; r++) {
 		std::copy_n(addr(0, r, 0), w, dest.addr(0, r, 0));
@@ -247,6 +281,10 @@ const unsigned char* ImageNV12::data() const {
 
 bool ImageNV12::saveAsBMP(const std::string& filename, unsigned char scale) const {
 	return toYuv().saveAsBMP(filename);
+}
+
+void ImageNV12::save(std::ostream& ostream) const {
+	ostream.write(reinterpret_cast<const char*>(data()), sizeInBytes());
 }
 
 
@@ -331,6 +369,75 @@ im::LocalColor<unsigned char> ImageBaseRgb::getLocalColor(const Color& color) co
 	}
 	local.alpha = color.getAlpha();
 	return local;
+}
+
+void ImageBaseRgb::toYUV(ImageYuv& dest, ThreadPoolBase& pool) const {
+	int ir = indexRgba().at(0);
+	int ig = indexRgba().at(1);
+	int ib = indexRgba().at(2);
+
+	auto fcn = [&] (size_t r) {
+		for (int c = 0; c < w; c++) {
+			const unsigned char* ptr = addr(0, r, c);
+			im::rgb_to_yuv(ptr[ir], ptr[ig], ptr[ib], dest.addr(0, r, c), dest.addr(1, r, c), dest.addr(2, r, c));
+		}
+	};
+	pool.addAndWait(fcn, 0, h);
+}
+
+ImageYuv ImageBaseRgb::toYUV(ThreadPoolBase& pool) const {
+	ImageYuv out(h, w);
+	toYUV(out, pool);
+	return out;
+}
+
+void ImageBaseRgb::toNV12(ImageNV12& dest, ThreadPoolBase& pool) const {
+	int ir = indexRgba().at(0);
+	int ig = indexRgba().at(1);
+	int ib = indexRgba().at(2);
+
+	auto fcn = [&] (size_t rr) {
+		size_t r = rr * 2;
+		for (size_t cc = 0; cc < w / 2; cc++) {
+			size_t c = cc * 2;
+			unsigned char u, v;
+			int sumU, sumV;
+
+			im::rgb_to_yuv(at(ir, r + 0, c + 0), at(ig, r + 0, c + 0), at(ib, r + 0, c + 0), dest.addr(0, r + 0, c + 0), &u, &v);
+			sumU = u; sumV = v;
+			im::rgb_to_yuv(at(ir, r + 0, c + 1), at(ig, r + 0, c + 1), at(ib, r + 0, c + 1), dest.addr(0, r + 0, c + 1), &u, &v);
+			sumU += u; sumV += v;
+			im::rgb_to_yuv(at(ir, r + 1, c + 0), at(ig, r + 1, c + 0), at(ib, r + 1, c + 0), dest.addr(0, r + 1, c + 0), &u, &v);
+			sumU += u; sumV += v;
+			im::rgb_to_yuv(at(ir, r + 1, c + 1), at(ig, r + 1, c + 1), at(ib, r + 1, c + 1), dest.addr(0, r + 1, c + 1), &u, &v);
+			sumU += u; sumV += v;
+
+			dest.at(1, rr, cc) = sumU / 4;
+			dest.at(2, rr, cc) = sumV / 4;
+		}
+	};
+	pool.addAndWait(fcn, 0, h / 2);
+}
+
+ImageNV12 ImageBaseRgb::toNV12(ThreadPoolBase& pool) const {
+	ImageNV12 dest(h, w);
+	toNV12(dest, pool);
+	return dest;
+}
+
+void ImageBaseRgb::gray(ThreadPoolBase& pool) {
+	int ir = indexRgba().at(0);
+	int ig = indexRgba().at(1);
+	int ib = indexRgba().at(2);
+
+	auto fcn = [&] (size_t r) {
+		for (size_t c = 0; c < w; c++) {
+			unsigned char* ptr = addr(0, r, c);
+			unsigned char y = im::rgb_to_y(ptr[ir], ptr[ig], ptr[ib]);
+			ptr[ir] = ptr[ig] = ptr[ib] = y;
+		}
+	};
+	pool.addAndWait(fcn, 0, h);
 }
 
 void ImageBaseRgb::copyTo(ImageBaseRgb& dest, size_t r0, size_t c0, ThreadPoolBase& pool) const {
@@ -484,16 +591,6 @@ ImageBGR ImageBGR::readFromBMP(const std::string& filename) {
 	}
 
 	return image;
-}
-
-ImageYuv ImageBGR::toYUV() const {
-	ImageYuv out(h, w);
-	for (int r = 0; r < h; r++) {
-		for (int c = 0; c < w; c++) {
-			im::rgb_to_yuv(at(2, r, c), at(1, r, c), at(0, r, c), out.addr(0, r, c), out.addr(1, r, c), out.addr(2, r, c));
-		}
-	}
-	return out;
 }
 
 

@@ -16,43 +16,18 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
-#include "TestMain.hpp"
+#include "Deshaker.hpp"
 
 int main() {
-	std::cout << "----------------------------" << std::endl << "TestMain:" << std::endl;
-	//qrdec();
-	//draw("f:/drawing.bmp"); 
-	//filterCompare();
-	//matPerf();
-	//matTest();
-	//subMat();
-	//iteratorTest();
-	//cudaInvSimple();
-	//cudaInvPerformanceTest();
-	//cudaInvEqualityTest();
-	//cudaInvParallel();
-	//cudaInvTest(1, 32);
-	//cudaTextureRead();
-	//readAndWriteOneFrame();
-	//checkVersions();
-	//transform();
+	std::cout << "------- CuvistaTest -------" << std::endl << std::endl;
 
-	//openClInvTest(1, 32);
-	//openClInvGroupTest(1, 9);
-	//openClnorm1Test();
-	//flow();
-	//pinvTest();
-	//compareInv();
-	//similarTransform();
+	std::vector<std::string> argsLines = {
+		"-i d:/VideoTest/02short.mp4 -o f:/videoOut.mp4 -y",
+		"-i d:/Documents/x.orig/beach.1.avi -o null -frames 100 -device 2",
+		"-i d:/Documents/x.orig/beach.1.avi -o f:/videoOut.mp4 -y -frames 100 -device 2"
+	};
 
-	//testSampler();
-	//compareFramesPlatforms();
-	//avxCompute();
-	//avxTest();
-
-	//testZoom();
-	//testVideo1();
-	testVideo2();
-
-	//createTransformImages();
+	std::string argsLine = argsLines[1];
+	auto args = util::splitString(argsLine, " ");
+	deshake(args, &std::cout, {});
 }

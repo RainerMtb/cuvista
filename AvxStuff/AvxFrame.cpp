@@ -152,10 +152,19 @@ void AvxFrame::getInput(int64_t index, ImageYuv& image) const {
 //----------------------------------------------------
 
 
+static V16f rotsum(V16f x, std::span<V16f> ks) {
+	V16f sum = x * ks[0];
+	for (int i = 1; i < ks.size(); i++) {
+		x = x.rot<1>();
+		sum = _mm512_fmadd_ps(x, ks[i], sum);
+	}
+	return sum;
+}
+
 void AvxFrame::filter(const AvxMatf& src, int r0, int h, int w, AvxMatf& dest, std::span<V16f> ks) {
 	//util::ConsoleTimer ic("avx filter " + std::to_string(w) + "x" + std::to_string(h));
 	__m512i vw = _mm512_set1_epi32(dest.w());
-	__m512i idx = _mm512_loadu_epi32(Iota::i32);
+	__m512i idx = _mm512_loadu_epi32(iotas.i32x16);
 	__m512i vidx = _mm512_mullo_epi32(vw, idx);
 	__mmask16 mask = 0x0FFF;
 
@@ -168,19 +177,19 @@ void AvxFrame::filter(const AvxMatf& src, int r0, int h, int w, AvxMatf& dest, s
 			//write first points adhering to border
 			//first broadcast border point, then overwrite other points
 			x = _mm512_mask_loadu_ps(_mm512_set1_ps(row[0]), 0xFFFC, row - 2);
-			result = x * ks[0] + x.rot<1>() * ks[1] + x.rot<2>() * ks[2] + x.rot<3>() * ks[3] + x.rot<4>() * ks[4];
+			result = rotsum(x, ks);
 			_mm512_mask_i32scatter_ps(dest.addr(0, r), mask, vidx, result, 4);
 
 			//main loop
 			for (int c = 12; c < w - 12; c += 12) {
 				x = V16f(row + c - 2);
-				result = x * ks[0] + x.rot<1>() * ks[1] + x.rot<2>() * ks[2] + x.rot<3>() * ks[3] + x.rot<4>() * ks[4];
+				result = rotsum(x, ks);
 				_mm512_mask_i32scatter_ps(dest.addr(c, r), mask, vidx, result, 4);
 			}
 
 			//write last points adhering to border
 			x = _mm512_mask_loadu_ps(_mm512_set1_ps(row[w - 1]), 0x3FFF, row + w - 14);
-			result = x * ks[0] + x.rot<1>() * ks[1] + x.rot<2>() * ks[2] + x.rot<3>() * ks[3] + x.rot<4>() * ks[4];
+			result = rotsum(x, ks);
 			_mm512_mask_i32scatter_ps(dest.addr(w - 12, r), mask, vidx, result, 4);
 		}
 	});
@@ -188,8 +197,8 @@ void AvxFrame::filter(const AvxMatf& src, int r0, int h, int w, AvxMatf& dest, s
 }
 
 void AvxFrame::downsample(const float* srcptr, int h, int w, int stride, float* destptr, int destStride) {
-	const __m512i idx1 = _mm512_setr_epi32(0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30);
-	const __m512i idx2 = _mm512_setr_epi32(1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31);
+	const __m512i idx1 = _mm512_setr_epi32(0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30); //sequence 0, 2, 4, ..., 30
+	const __m512i idx2 = _mm512_add_epi32(idx1, _mm512_set1_epi32(1)); // sequence 1, 3, 5, ..., 31
 	const V16f f = 0.5f;
 
 	for (int r = 0; r < h - 1; r += 2) {
@@ -251,9 +260,9 @@ V8d AvxFrame::sd(int c1, int c2, int y0, int x0, const AvxMatf& Y) {
 	return vd * f;
 }
 
-void AvxFrame::computeStart(int64_t frameIndex, std::vector<PointResult>& results) {}
+void AvxFrame::computeStart(int64_t frameIndex, std::span<PointResult> results) {}
 
-void AvxFrame::computeTerminate(int64_t frameIndex, std::vector<PointResult>& results) {
+void AvxFrame::computeTerminate(int64_t frameIndex, std::span<PointResult> results) {
 	//util::ConsoleTimer ct("avx compute");
 	size_t idx0 = frameIndex % mPyr.size();
 	size_t idx1 = (frameIndex - 1) % mPyr.size();
@@ -267,7 +276,7 @@ void AvxFrame::computeTerminate(int64_t frameIndex, std::vector<PointResult>& re
 		std::vector<double> wp(6);
 		std::vector<double> dwp(6);
 		__mmask8 maskIW = (1 << iw) - 1;
-		V8d iota = Iota::d;
+		V8d iota = iotas.dx8;
 
 		for (int iy0 = threadIdx; iy0 < mData.iyCount; iy0 += mData.cpuThreads) {
 			for (int ix0 = 0; ix0 < mData.ixCount; ix0++) {
@@ -472,7 +481,7 @@ void AvxFrame::warpBack(const AffineDataFloat& trf, const AvxMatf& input, AvxMat
 	V16f m10 = trf.m10;
 	V16f m11 = trf.m11;
 	V16f m12 = trf.m12;
-	V16f iota = Iota::f;
+	V16f iota = iotas.fx16;
 
 	for (int threadIdx = 0; threadIdx < mData.cpuThreads; threadIdx++) mPool.add([&, threadIdx] {
 		for (int r = threadIdx; r < mData.h; r += mData.cpuThreads) {

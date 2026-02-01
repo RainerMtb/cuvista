@@ -88,7 +88,7 @@
     </Link>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
-      <AdditionalOptions>-fmad=false -std=c++17 -Wno-deprecated-gpu-targets %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>-fmad=false -std=c++20 -Wno-deprecated-gpu-targets %(AdditionalOptions)</AdditionalOptions>
       <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
       <CodeGeneration>compute_75,sm_75;compute_80,sm_80;compute_89,sm_89;compute_90,sm_90;compute_100,sm_100;compute_110,sm_110;compute_120,sm_120;compute_121,sm_121</CodeGeneration>
       <Defines>BUILD_CUDA=1</Defines>
@@ -118,7 +118,7 @@
     </Link>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
-      <AdditionalOptions>-fmad=false -std=c++17 -Wno-deprecated-gpu-targets %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>-fmad=false -std=c++20 -Wno-deprecated-gpu-targets %(AdditionalOptions)</AdditionalOptions>
       <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
       <CodeGeneration>compute_75,sm_75;compute_80,sm_80;compute_89,sm_89;compute_90,sm_90;compute_100,sm_100;compute_110,sm_110;compute_120,sm_120;compute_121,sm_121</CodeGeneration>
       <Defines>BUILD_CUDA=1</Defines>

@@ -107,3 +107,7 @@ void ThreadPool::shutdown() {
 	}
 	mThreads.clear();
 }
+
+size_t ThreadPool::size() const {
+	return mThreads.size();
+}

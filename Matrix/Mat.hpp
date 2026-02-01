@@ -704,9 +704,7 @@ public:
 	//---------------------------------------------------------
 
 	//stream output
-	friend std::ostream& operator << (std::ostream& out, const Mat<T>& m) {
-		return m.print(out);
-	}
+	friend std::ostream& operator << (std::ostream& out, const Mat<T>& m) { return m.print(out); }
 
 	//spaceship operator
 	template <class R = T> auto operator <=> (const Mat<R>& other) const { return compare(other); }
@@ -806,22 +804,35 @@ public:
 	}
 
 	//filter mat in one dimension
-	Mat<T>& filter1D(const T* kernel, size_t siz, Direction dir, Mat<T>& dest, ThreadPoolBase& pool = defaultPool) {
+	Mat<T>& filter1D(const T* kernel, size_t ksiz, Direction dir, Mat<T>& dest, ThreadPoolBase& pool = defaultPool) {
 		//check matrix dimensions
 		assert(cols() == dest.cols() && rows() == dest.rows() && "dimension mismatch");
 
 		//delta values
-		size_t dy = 1 - (size_t) dir;
-		size_t dx = 1 - dy;
+		size_t dy = 1 - size_t(dir), dx = 1 - dy;
+		size_t dx0 = dx * ksiz / 2, dy0 = dy * ksiz / 2;
 
 		//function to filter for one point
 		auto func = [&] (size_t r, size_t c) {
 			T sum = 0;
-			for (int i = 0; i < siz; i++) {
-				size_t x = clampUnsigned(c + dx * i, dx * siz / 2, 0ull, cols() - 1);
-				size_t y = clampUnsigned(r + dy * i, dy * siz / 2, 0ull, rows() - 1);
-				sum += at(y, x) * kernel[i];
+
+			if (c < dx0 || r < dy0 || c > cols() - 1 - dx0 || r > rows() - 1 - dy0) {
+				//clamp to edges
+				for (int i = 0; i < ksiz; i++) {
+					size_t x = clampUnsigned(c + dx * i, dx0, 0ull, cols() - 1);
+					size_t y = clampUnsigned(r + dy * i, dy0, 0ull, rows() - 1);
+					sum = std::fma(at(y, x), kernel[i], sum);
+				}
+
+			} else {
+				//main loop
+				for (int i = 0; i < ksiz; i++) {
+					size_t x = c + dx * i - dx0;
+					size_t y = r + dy * i - dy0;
+					sum = std::fma(at(y, x), kernel[i], sum);
+				}
 			}
+
 			return sum;
 		};
 

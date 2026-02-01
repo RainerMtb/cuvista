@@ -26,7 +26,7 @@ struct ProgressInfo {
 class ProgressBase {
 
 public:
-	virtual void init() {}
+	virtual void init(const ProgressInfo& progress) {}
 	virtual void update(const ProgressInfo& progress, bool force = false) = 0;
 	virtual void terminate() {}
 	virtual void writeMessage(const std::string& msg) {}

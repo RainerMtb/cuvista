@@ -89,7 +89,7 @@ __kernel void filter_32f_1(__read_only image2d_depth_t src, __write_only image2d
 	int y = r - dy * siz / 2;
 	for (int i = 0; i < siz; i++) {
 		float val = read_imagef(src, sampler, (int2)(x, y));
-		result += val * k[i];
+		result = fma(val, k[i], result);
 		x += dx;
 		y += dy;
 	}
@@ -106,9 +106,9 @@ __kernel void filter_32f_3(__read_only image2d_t src, __write_only image2d_t des
 	int y = r - dy * siz / 2;
 	for (int i = 0; i < siz; i++) {
 		float4 val = read_imagef(src, sampler, (int2)(x, y));
-		result.x += val.x * filterKernels[0].k[i];
-		result.y += val.y * filterKernels[1].k[i];
-		result.z += val.z * filterKernels[2].k[i];
+		result.x = fma(val.x, filterKernels[0].k[i], result.x);
+		result.y = fma(val.y, filterKernels[1].k[i], result.y);
+		result.z = fma(val.z, filterKernels[2].k[i], result.z);
 		x += dx;
 		y += dy;
 	}

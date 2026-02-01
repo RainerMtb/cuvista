@@ -139,6 +139,10 @@ namespace im {
 		*v = ( 0.439f * r - 0.368f * g - 0.071f * b + 128.0f) / 255.0f;
 	}
 
+	unsigned char rgb_to_y(unsigned char r, unsigned char g, unsigned char b) {
+		return (unsigned char) (0.257f * r + 0.504f * g + 0.098f * b + 16.0f);
+	}
+
 	//input h [0..360], s [0..1], v [0..1]
 	//output r, g, b [0..255]
 	void hsv_to_rgb(double h, double s, double v, unsigned char* out_r, unsigned char* out_g, unsigned char* out_b) {

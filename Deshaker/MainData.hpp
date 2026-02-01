@@ -125,6 +125,7 @@ public:
 
 	bool printHeader = true;
 	bool printSummary = true;
+	bool runDbScan = true;
 
 	std::string fileIn;					//input file path
 	std::string fileOut;				//output file path

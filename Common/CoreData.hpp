@@ -18,9 +18,8 @@
 
 #pragma once
 
-#include "ErrorLogger.hpp"
-#include "Image.hpp"
-#include "AffineData.hpp"
+#include <limits>
+#include <iostream>
 
 //used in CoreData because in cuda _constant_ allocated symbols must be initialized
 struct Triplet {
@@ -177,4 +176,6 @@ struct PointContext : PointBase {
 	PointContext(PointResult& pr) : PointBase(pr), ptr { &pr } {}
 
 	bool operator == (const PointContext& other) const;
+
+	operator PointResult() const;
 };

@@ -98,6 +98,9 @@ public:
 	MovieFrame(MovieFrame&& other) = delete;
 	virtual ~MovieFrame();
 
+	//compute resulting transform for this frame
+	virtual const AffineTransform& computeTransform(std::span<PointResult> results, int64_t frameIndex);
+
 	// read transforms from previous pass
 	virtual std::map<int64_t, TransformValues> readTransforms() final;
 
@@ -105,7 +108,7 @@ public:
 	virtual const AffineTransform& getTransform() const final;
 
 	// play time for given frame
-	std::string ptsForFrameAsString(int64_t frameIndex) const;
+	virtual std::string ptsForFrameAsString(int64_t frameIndex) const;
 
 	//run loop in subclass
 	virtual LoopResult runLoop(ProgressBase& progress, UserInput& input, std::shared_ptr<FrameExecutor> executor);

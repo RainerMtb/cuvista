@@ -270,6 +270,12 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 			printSummary = false;
 			progressType = ProgressType::NONE;
 
+		} else if (args.nextArg("rundbscan")) {
+			runDbScan = true;
+
+		} else if (args.nextArg("nodbscan")) {
+			runDbScan = false;
+
 		} else if (args.nextArg("levels", next)) {
 			//pyramid levels to compute
 			pyramidLevelsRequested = std::stoi(next);
@@ -522,10 +528,13 @@ void MainData::showIntro(const std::string& deviceName, const MovieReader& reade
 			<< ", duration: " << info.durationString
 			;
 
-		*console << " --> ";
+		*console << " -->";
+		if (sc.outputStreams.size() == 0) {
+			*console << " other";
+		}
 		for (int idx = 0; idx < sc.outputStreams.size(); idx++) {
 			StreamHandling handling = sc.outputStreams[idx]->handling;
-			*console << idx << ":" << streamHandlerMap.at(handling);
+			*console << " " << idx << ":" << streamHandlerMap.at(handling);
 		}
 		*console << std::endl;
 	}
@@ -533,7 +542,7 @@ void MainData::showIntro(const std::string& deviceName, const MovieReader& reade
 	//video info
 	*console << "VIDEO w=" << w << ", h=" << h
 		<< ", frames=" << (reader.frameCount < 1 ? "unknown" : std::to_string(reader.frameCount))
-		<< ", fps=" << reader.fps() << " (" << reader.fpsNum << ":" << reader.fpsDen << ")"
+		<< ", fps=" << std::format("{:.3f}", reader.fps()) << " (" << reader.fpsNum << ":" << reader.fpsDen << ")"
 		<< ", radius=" << radius
 		<< std::endl;
 

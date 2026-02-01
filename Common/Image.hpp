@@ -62,8 +62,6 @@ namespace im {
 		std::vector<int> arraySizes;
 		std::vector<std::shared_ptr<T[]>> arrays;
 
-		static inline ThreadPoolBase defaultPool;
-
 		int colorValue(T pixelValue) const;
 
 		void plot4(double cx, double cy, double dx, double dy, double a, const LocalColor<T>& localColor);
@@ -111,10 +109,10 @@ namespace im {
 		void setIndex(int64_t frameIndex) override;
 
 		//access one pixel on plane idx and row / col
-		T& at(size_t idx, size_t r, size_t c);
+		virtual T& at(size_t idx, size_t r, size_t c);
 
 		//read access one pixel on plane idx and row / col
-		const T& at(size_t idx, size_t r, size_t c) const;
+		virtual const T& at(size_t idx, size_t r, size_t c) const;
 
 		//set color value for all pixels in one plane
 		virtual void setColorPlane(int plane, T colorValue);

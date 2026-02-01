@@ -86,6 +86,16 @@ template <class T> const T* ImageBase<T>::addr(size_t idx, size_t r, size_t c) c
 	return arrays[0].get() + idx * h * stride + r * stride + c;
 }
 
+//access one pixel on plane idx and row / col
+template <class T> T& ImageBase<T>::at(size_t idx, size_t r, size_t c) {
+	return *addr(idx, r, c);
+}
+
+//read access one pixel on plane idx and row / col
+template <class T> const T& ImageBase<T>::at(size_t idx, size_t r, size_t c) const {
+	return *addr(idx, r, c);
+}
+
 template <class T> T* im::ImageBase<T>::plane(size_t idx) {
 	return addr(idx, 0, 0);
 }
@@ -123,16 +133,6 @@ template <class T> int ImageBase<T>::sizeInBytes() const {
 
 template <class T> void ImageBase<T>::setIndex(int64_t frameIndex) {
 	index = frameIndex;
-}
-
-//access one pixel on plane idx and row / col
-template <class T> T& ImageBase<T>::at(size_t idx, size_t r, size_t c) {
-	return *addr(idx, r, c);
-}
-
-//read access one pixel on plane idx and row / col
-template <class T> const T& ImageBase<T>::at(size_t idx, size_t r, size_t c) const {
-	return *addr(idx, r, c);
 }
 
 template <class T> int ImageBase<T>::colorValue(T pixelValue) const {

@@ -345,7 +345,7 @@ void OpenClFrame::compute(int64_t frameIndex, const CoreData& core, int rowStart
 	}
 }
 
-void OpenClFrame::computeStart(int64_t frameIndex, std::vector<PointResult>& results) {
+void OpenClFrame::computeStart(int64_t frameIndex, std::span<PointResult> results) {
 	try {
 		//reset computed flag
 		clData.queue.enqueueFillBuffer<cl_char>(clData.results, 0, 0, sizeof(cl_PointResult) * mData.resultCount);
@@ -357,7 +357,7 @@ void OpenClFrame::computeStart(int64_t frameIndex, std::vector<PointResult>& res
 	compute(frameIndex, mData, 0, mData.iyCount / 4);
 }
 
-void OpenClFrame::computeTerminate(int64_t frameIndex, std::vector<PointResult>& results) {
+void OpenClFrame::computeTerminate(int64_t frameIndex, std::span<PointResult> results) {
 	//util::ConsoleTimer timer("ocl compute end");
 
 	//compute rest of points

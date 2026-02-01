@@ -38,5 +38,5 @@ void ThreadPoolBase::addAndWait(std::function<void(size_t)> job, size_t iterStar
 
 //number of threads
 size_t ThreadPoolBase::size() const {
-	return mThreads.size();
+	return 1;
 }

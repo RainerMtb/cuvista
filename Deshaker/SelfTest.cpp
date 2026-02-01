@@ -90,10 +90,12 @@ void runSelfTest(util::MessagePrinter& out, std::vector<DeviceInfoBase*> deviceL
 			//checks
 			//std::cout << "running checks" << std::endl;
 			if (uint64_t crc = input.crc(); crc != crcInput) {
+				//std::cout << std::hex << crc << " ";
 				out.print("FAIL input ");
 				check = false;
 			}
 			if (uint64_t crc = executor->getPyramid(0).crc(); crc != crcPyramid) {
+				//std::cout << std::hex << crc << " ";
 				out.print("FAIL pyramid ");
 				check = false;
 			}
@@ -104,7 +106,6 @@ void runSelfTest(util::MessagePrinter& out, std::vector<DeviceInfoBase*> deviceL
 			}
 			if (uint64_t crc = writer.getOutputFrame().crc(); crc != crcOutput) {
 				//std::cout << std::hex << crc << " ";
-				//writer.getOutputFrame().saveAsColorBMP("f:/test.bmp");
 				out.print("FAIL output ");
 				check = false;
 			}
@@ -120,6 +121,7 @@ void runSelfTest(util::MessagePrinter& out, std::vector<DeviceInfoBase*> deviceL
 				crc64.addDirect(pr.v);
 			}
 			if (uint64_t crc = crc64.result(); crc != crcResult) {
+				//std::cout << std::hex << crc << " ";
 				out.print("FAIL result ");
 				check = false;
 			}

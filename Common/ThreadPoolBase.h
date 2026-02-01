@@ -26,9 +26,6 @@
 //base class syncronously executes jobs
 class ThreadPoolBase {
 
-protected:
-	std::vector<std::thread> mThreads;
-
 public:
 	virtual ~ThreadPoolBase() = default;
 	virtual void wait() const {}
@@ -42,5 +39,7 @@ public:
 	virtual void addAndWait(std::function<void(size_t)> job, size_t iterStart, size_t iterEnd) const;
 
 	//number of threads
-	size_t size() const;
+	virtual size_t size() const;
 };
+
+inline ThreadPoolBase defaultPool;

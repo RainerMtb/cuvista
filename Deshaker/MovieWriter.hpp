@@ -475,13 +475,13 @@ class ResultImageWriter : public MovieWriterBase {
 
 private:
 	ImageYuv yuv;
-	ImageBGR bgr;
+	ImageBGRA bgra;
 
 public:
 	ResultImageWriter(MainData& data) :
 		MovieWriterBase(data),
 		yuv(data.h, data.w),
-		bgr(data.h, data.w) 
+		bgra(data.h, data.w) 
 	{}
 
 	ResultImageWriter(MainData& data, MovieReader& reader) :
@@ -491,10 +491,8 @@ public:
 	void start() override {}
 	void writeInput(const FrameExecutor& executor) override;
 
-	static void writeImage(const AffineTransform& trf, std::span<PointResult> res, int64_t idx, Image8& dest, ThreadPoolBase& pool);
-
-	void write(const AffineTransform& trf, std::span<PointResult> res, int64_t idx, const ImageYuv& yuv, ThreadPoolBase& pool);
-	void write(const AffineTransform& trf, std::span<PointResult> res, int64_t idx, const ImageYuv& yuv, const std::string& outFile);
+	static void writeImage(const AffineTransform& trf, std::span<PointResult> res, int64_t idx, ImageBaseRgb& dest, 
+		ThreadPoolBase& pool = defaultPool, bool drawTransformed = true);
 };
 
 
@@ -504,7 +502,7 @@ class ResultVideoWriter : public MovieWriterBase {
 private:
 	std::ofstream file;
 	ImageNV12 nv12;
-	ImageYuv yuv;
+	ImageBGRA bgra;
 
 public:
 	ResultVideoWriter(MainData& data, MovieReader& reader) :

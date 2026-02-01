@@ -44,7 +44,7 @@ public:
 	ProgressDisplayGraph(std::ostream* outstream) :
 		ProgressDisplayConsole(outstream) {}
 	
-	void init() override;
+	void init(const ProgressInfo& progress) override;
 	void update(const ProgressInfo& progress, bool force) override;
 	void terminate() override;
 	void writeMessage(const std::string& msg) override {}
@@ -69,7 +69,7 @@ public:
 	ProgressDisplayRewriteLine(std::ostream* outstream) :
 		ProgressDisplayConsole(outstream) {}
 	
-	void init() override;
+	void init(const ProgressInfo& progress) override;
 	void update(const ProgressInfo& progress, bool force) override;
 	void terminate() override;
 	void writeMessage(const std::string& msg) override;
@@ -90,7 +90,7 @@ public:
 	ProgressDisplayMultiLine(std::ostream* outstream) :
 		ProgressDisplayConsole(outstream, 200) {}
 	
-	void init() override;
+	void init(const ProgressInfo& progress) override;
 	void update(const ProgressInfo& progress, bool force) override;
 	void writeMessage(const std::string& msg) override;
 };

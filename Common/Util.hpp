@@ -169,7 +169,10 @@ namespace util {
         return collectionToString(items, items.size());
     }
 
-    //math stuff
+    //------------------------------------
+    //----------- math stuff -------------
+    //------------------------------------
+
     constexpr double sqr(double value) { 
         return value * value; 
     }
@@ -189,4 +192,12 @@ namespace util {
     double sind(double angleDegrees);
 
     double tand(double angleDegrees);
+
+    template <class T> std::vector<T> linspace(T a, T b, int sections) {
+        std::vector<T> result(sections);
+        for (int i = 0; i <= sections; i++) {
+            result[i] = a + (b - a) * i / sections;
+        }
+        return result;
+    }
 }

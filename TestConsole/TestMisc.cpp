@@ -105,13 +105,13 @@ void readAndWriteOneFrame() {
 		frame.mBufferFrame.index = 0;
 		reader.frameIndex = 0;
 		ex.inputData(reader.frameIndex, frame.mBufferFrame);
-		ex.createPyramid(frame.mReader.frameIndex, {}, false);
+		ex.createPyramid(frame.mReader.frameIndex);
 
 		frame.mBufferFrame.readFromPGM("D:/VideoTest/v01.pgm");
 		frame.mBufferFrame.index = 1;
 		reader.frameIndex = 1;
 		ex.inputData(reader.frameIndex, frame.mBufferFrame);
-		ex.createPyramid(frame.mReader.frameIndex, {}, false);
+		ex.createPyramid(frame.mReader.frameIndex);
 		ex.computeStart(frame.mReader.frameIndex, frame.mResultPoints);
 		ex.computeTerminate(frame.mReader.frameIndex, frame.mResultPoints);
 
@@ -175,6 +175,13 @@ void draw(const std::string& filename) {
 
 	bgr.drawLine(150, 550, 250, 550, Color::BLUE, 1.0);
 
+	//lines with alpha
+	Color col = Color::web("#F09B59");
+	for (int i = 0; i < 15; i++) {
+		double x = 400.0 + i * 20.0;
+		bgr.drawLine(x, 400.0, x + 40.0, 500.0, col, i / 15.0);
+	}
+
 	//dots at fractional pixel values
 	for (int i = 0; i < 5; i++) {
 		for (int k = 0; k < 5; k++) {
@@ -223,11 +230,11 @@ void flow() {
 	CpuFrame ex(data, *data.deviceList[0], frame, frame.mPool);
 	reader.read(frame.mBufferFrame);
 	ex.inputData(reader.frameIndex, frame.mBufferFrame);
-	ex.createPyramid(reader.frameIndex, {}, false);
+	ex.createPyramid(reader.frameIndex);
 
 	reader.read(frame.mBufferFrame);
 	ex.inputData(reader.frameIndex, frame.mBufferFrame);
-	ex.createPyramid(reader.frameIndex, {}, false);
+	ex.createPyramid(reader.frameIndex);
 
 	ex.computeStart(reader.frameIndex, frame.mResultPoints);
 	ex.computeTerminate(reader.frameIndex, frame.mResultPoints);

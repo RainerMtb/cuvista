@@ -35,9 +35,9 @@ public:
 	AvxFrame(CoreData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool);
 
 	void inputData(int64_t frameIndex, const ImageYuv& inputFrame) override;
-	void createPyramid(int64_t frameIndex, AffineDataFloat trf, bool warp) override;
-	void computeStart(int64_t frameIndex, std::vector<PointResult>& results) override;
-	void computeTerminate(int64_t frameIndex, std::vector<PointResult>& results) override;
+	void createPyramid(int64_t frameIndex, AffineDataFloat trf = {}, bool warp = false) override;
+	void computeStart(int64_t frameIndex, std::span<PointResult> results) override;
+	void computeTerminate(int64_t frameIndex, std::span<PointResult> results) override;
 	void outputData(int64_t frameIndex, AffineDataFloat trf) override;
 	void getOutputYuv(int64_t frameIndex, ImageYuv& image) const override;
 	void getOutputImage(int64_t frameIndex, ImageBaseRgb& image) const override;

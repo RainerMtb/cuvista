@@ -19,6 +19,7 @@
 #include "cuDeshaker.cuh"
 #include "cuKernels.cuh"
 #include "Image.hpp"
+#include "ErrorLogger.hpp"
 
 #include <algorithm>
 #include <fstream>
@@ -417,7 +418,7 @@ void CudaExecutor::createPyramid(int64_t frameIndex, AffineDataFloat trf, bool w
 //-------- COMPUTE
 //----------------------------------
 
-void CudaExecutor::computeStart(int64_t frameIndex, std::vector<PointResult>& results) {
+void CudaExecutor::computeStart(int64_t frameIndex, std::span<PointResult> results) {
 	int64_t pyrIdx = frameIndex % mData.pyramidCount;
 	int64_t pyrIdxPrev = (frameIndex - 1) % mData.pyramidCount;
 	assert(frameIndex > 0 && pyramidIndizes[pyrIdx] == pyramidIndizes[pyrIdxPrev] + 1 && "wrong frames to compute"); 
@@ -446,7 +447,7 @@ void CudaExecutor::computeStart(int64_t frameIndex, std::vector<PointResult>& re
 	handleStatus(cudaGetLastError(), "error @compute #20");
 }
 
-void CudaExecutor::computeTerminate(int64_t frameIndex, std::vector<PointResult>& results) {
+void CudaExecutor::computeTerminate(int64_t frameIndex, std::span<PointResult> results) {
 	//reset interrupt signal
 	handleStatus(cudaMemsetAsync(d_interrupt, 0, sizeof(char), cs[1]), "error @compute #50");
 

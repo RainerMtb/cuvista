@@ -25,6 +25,7 @@
 class ThreadPool : public ThreadPoolBase {
 
 private:
+	std::vector<std::thread> mThreads;
 	std::vector<int> mBusyArray; //do not use vector<bool> here
 	mutable std::queue<std::packaged_task<void()>> mJobs;
 	mutable std::mutex mMutex;
@@ -35,8 +36,6 @@ private:
 	bool isBusy() const;
 
 public:
-	static inline ThreadPoolBase defaultPool;
-
 	ThreadPool(size_t numThreads = 1);
 	~ThreadPool() override;
 
@@ -54,4 +53,7 @@ public:
 
 	//shutdown all threads
 	void shutdown() override;
+
+	//number of threads
+	size_t size() const override;
 };

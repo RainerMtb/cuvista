@@ -65,6 +65,10 @@ bool PointContext::operator == (const PointContext& other) const {
 	return *this->ptr == *other.ptr;
 }
 
+PointContext::operator PointResult() const {
+	return *ptr;
+}
+
 bool PointBase::operator == (const PointBase& other) const {
 	return x == other.x && y == other.y && u == other.u && v == other.v;
 }

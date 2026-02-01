@@ -71,7 +71,7 @@ void ProgressDisplayNewLine::update(const ProgressInfo& progress, bool force) {
 //---------------------------
 
 //rewrite one line on the console
-void ProgressDisplayRewriteLine::init() {
+void ProgressDisplayRewriteLine::init(const ProgressInfo& progress) {
 	*outstream << std::endl;
 }
 
@@ -96,7 +96,7 @@ void ProgressDisplayRewriteLine::writeMessage(const std::string& msg) {
 // Graph
 //---------------------------
 
-void ProgressDisplayGraph::init() {
+void ProgressDisplayGraph::init(const ProgressInfo& progress) {
 	std::string leadin = "|-------- progress indicator ";
 	*outstream << leadin;
 	for (size_t i = leadin.length() - 1; i < numStars; i++) *outstream << "-";
@@ -120,8 +120,8 @@ void ProgressDisplayGraph::terminate() {
 // Default mode multiple lines
 //------------------------------
 
-void ProgressDisplayMultiLine::init() {
-	*outstream << buildMessage({}) << std::flush;
+void ProgressDisplayMultiLine::init(const ProgressInfo& progress) {
+	*outstream << buildMessage(progress) << std::flush;
 }
 
 void ProgressDisplayMultiLine::update(const ProgressInfo& progress, bool force) {
@@ -166,7 +166,7 @@ std::string ProgressDisplayMultiLine::buildMessage(const ProgressInfo& progress)
 		mStatusMessage,
 		buildLine(progress.readIndex, progress.frameCount, graphLength, -1.0),
 		buildLine(progress.writeIndex, progress.frameCount, graphLength, -1.0),
-		buildLine(0, 0, graphLength, progress.totalProgress),
+		buildLine(0, progress.frameCount, graphLength, progress.totalProgress),
 		util::byteSizeToString(progress.outputBytesWritten),
 		progress.outputBytesWritten
 		);

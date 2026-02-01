@@ -109,9 +109,9 @@ void CpuFrame::createPyramid(int64_t frameIndex, AffineDataFloat trf, bool warp)
 	//if (status.frameInputIndex == 1) frame.Y[1].saveAsBinary("f:/cpu.dat");
 }
 
-void CpuFrame::computeStart(int64_t frameIndex, std::vector<PointResult>& results) {}
+void CpuFrame::computeStart(int64_t frameIndex, std::span<PointResult> results) {}
 
-void CpuFrame::computeTerminate(int64_t frameIndex, std::vector<PointResult>& results) {
+void CpuFrame::computeTerminate(int64_t frameIndex, std::span<PointResult> results) {
 	size_t idx0 = frameIndex % mPyr.size();
 	size_t idx1 = (frameIndex - 1) % mPyr.size();
 	assert(mPyr[idx0].frameIndex > 0 && mPyr[idx0].frameIndex == mPyr[idx1].frameIndex + 1 && "wrong frames to compute");

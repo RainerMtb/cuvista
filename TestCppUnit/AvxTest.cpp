@@ -29,7 +29,7 @@ namespace AvxTest {
 
 public:
 	TEST_METHOD(avxRotateConstant) {
-		V8d v = Iota::d;
+		V8d v = iotas.dx8;
 		Assert::AreEqual({ 1, 2, 3, 4, 5, 6, 7, 0 }, v.rot<1>().vector());
 		Assert::AreEqual({ 2, 3, 4, 5, 6, 7, 0, 1 }, v.rot<2>().vector());
 		Assert::AreEqual({ 5, 6, 7, 0, 1, 2, 3, 4 }, v.rot<5>().vector());
@@ -37,7 +37,7 @@ public:
 	}
 
 	TEST_METHOD(avxRotate1) {
-		V16f v = Iota::f;
+		V16f v = iotas.fx16;
 		Assert::AreEqual({ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 }, v.rot(0).vector());
 		Assert::AreEqual({ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0 }, v.rot(1).vector());
 		Assert::AreEqual({ 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1 }, v.rot(2).vector());
@@ -51,14 +51,14 @@ public:
 	}
 
 	TEST_METHOD(avxRotate2) {
-		V8d v = Iota::d;
+		V8d v = iotas.dx8;
 		Assert::AreEqual({ 0, 1, 2, 3, 4, 5, 6, 7 }, v.rot(0).vector());
 		Assert::AreEqual({ 1, 2, 3, 4, 5, 6, 7, 0 }, v.rot(1).vector());
-		Assert::AreEqual({ 7, 0, 1, 2, 3, 4, 5, 6 }, v.rot(-1).vector());
+		Assert::AreEqual({ 6, 7, 0, 1, 2, 3, 4, 5 }, v.rot(-2).vector());
 	}
 
 	TEST_METHOD(avxRotate3) {
-		V4f v = Iota::f;
+		V4f v = iotas.fx16;
 		Assert::AreEqual({ 0, 1, 2, 3 }, v.rot(0).vector());
 		Assert::AreEqual({ 1, 2, 3, 0 }, v.rot(1).vector());
 		Assert::AreEqual({ 2, 3, 0, 1 }, v.rot(2).vector());
@@ -68,7 +68,7 @@ public:
 	}
 
 	TEST_METHOD(avxRotate4) {
-		V8f v = Iota::f;
+		V8f v = iotas.fx16;
 		Assert::AreEqual({ 1, 2, 3, 4, 5, 6, 7, 0 }, v.rot<1>().vector());
 		Assert::AreEqual({ 2, 3, 4, 5, 6, 7, 0, 1 }, v.rot<2>().vector());
 		Assert::AreEqual({ 5, 6, 7, 0, 1, 2, 3, 4 }, v.rot<5>().vector());

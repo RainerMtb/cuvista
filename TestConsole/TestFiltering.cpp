@@ -38,11 +38,11 @@ static void runInit(MainData& data, std::unique_ptr<FrameExecutor>& ex, AffineTr
 	MovieReader& reader = ex->mFrame.mReader;
 	reader.read(ex->mFrame.mBufferFrame);
 	ex->inputData(reader.frameIndex, ex->mFrame.mBufferFrame);
-	ex->createPyramid(reader.frameIndex, {}, false);
+	ex->createPyramid(reader.frameIndex);
 
 	reader.read(ex->mFrame.mBufferFrame);
 	ex->inputData(reader.frameIndex, ex->mFrame.mBufferFrame);
-	ex->createPyramid(reader.frameIndex, {}, false);
+	ex->createPyramid(reader.frameIndex);
 
 	ex->computeStart(reader.frameIndex, ex->mFrame.mResultPoints);
 	ex->computeTerminate(reader.frameIndex, ex->mFrame.mResultPoints);

@@ -52,11 +52,11 @@ template <class T> Result runPyramid(MainData& data, int deviceIndex) {
 		std::cout << "running " << name << std::endl;
 		reader.read(frame.mBufferFrame);
 		executor->inputData(reader.frameIndex, frame.mBufferFrame);
-		executor->createPyramid(reader.frameIndex, {}, false);
+		executor->createPyramid(reader.frameIndex);
 
 		reader.read(frame.mBufferFrame);
 		executor->inputData(reader.frameIndex, frame.mBufferFrame);
-		executor->createPyramid(reader.frameIndex, {}, false);
+		executor->createPyramid(reader.frameIndex);
 
 		executor->computeStart(reader.frameIndex, frame.mResultPoints);
 		executor->computeTerminate(reader.frameIndex, frame.mResultPoints);
@@ -162,58 +162,6 @@ void compareFramesPlatforms() {
 	std::cout << errorLogger().getErrorMessage() << std::endl;
 }
 
-void testVideo1() {
-	std::string inFile = "f:/pic/input.mp4";
-	std::string outputFile = "f:/pic/videoOut.yuv";
-	std::string inputFile = "f:/pic/videoInput.yuv";
-	std::string resultsFile = "f:/pic/results.dat";
-
-	MainData data;
-	data.fileIn = inFile;
-	data.deviceRequested = true;
-	data.mode = 1;
-	std::vector<DeviceInfoCuda> cudaDevices = data.probeCuda();
-	data.collectDeviceInfo();
-	FFmpegReader reader;
-	reader.open(inFile);
-	data.validate(reader);
-
-	int maxFrames = 200;
-	RawMemoryStoreWriter writer(maxFrames);
-	std::shared_ptr<MovieFrame> frame = std::make_shared<MovieFrameConsecutive>(data, reader, writer);
-	std::shared_ptr<FrameExecutor> executor = std::make_shared<CudaFrame>(data, cudaDevices[0], *frame, frame->mPool);
-	executor->init();
-	frame->runLoop(executor);
-
-	//output raw yuv files
-	writer.writeYuvFiles(outputFile, inputFile);
-
-	//write results binary
-	std::ofstream resfile(resultsFile, std::ios::binary);
-	auto writefcn = [&] (auto value) { resfile.write(reinterpret_cast<const char*>(&value), sizeof(value)); };
-	writefcn(data.w);
-	writefcn(data.h);
-
-	int idx = 0;
-	for (std::span<PointResult> spr : writer.results) {
-		for (const PointResult& pr : spr) {
-			writefcn(idx);
-			writefcn(pr.idx);
-			writefcn(pr.x);
-			writefcn(pr.y);
-			writefcn(pr.u);
-			writefcn(pr.v);
-			writefcn((char) pr.isValid());
-			writefcn((char) pr.isConsens);
-		}
-		idx++;
-	}
-
-	std::cout << std::endl << "results " << resultsFile << std::endl;
-	std::cout << "input frames " << writer.inputFrames.size() << " " << inputFile << std::endl;
-	std::cout << "output frames " << writer.outputFramesYuv.size() << " " << outputFile << std::endl;
-}
-
 // read and transform distinct images
 void createTransformImages() {
 	SimpleYuvWriter yuvFile("f:/pic/video.yuv");
@@ -242,11 +190,11 @@ void createTransformImages() {
 
 		reader.readImage(frame.mBufferFrame, im1);
 		cpuframe.inputData(reader.frameIndex, frame.mBufferFrame);
-		cpuframe.createPyramid(reader.frameIndex, {}, false);
+		cpuframe.createPyramid(reader.frameIndex);
 
 		reader.readImage(frame.mBufferFrame, im2);
 		cpuframe.inputData(reader.frameIndex, frame.mBufferFrame);
-		cpuframe.createPyramid(reader.frameIndex, {}, false);
+		cpuframe.createPyramid(reader.frameIndex);
 
 		//std::cout << "computing transform" << std::endl;
 		cpuframe.computeStart(reader.frameIndex, frame.mResultPoints);
@@ -263,8 +211,10 @@ void createTransformImages() {
 		yuvFile.write(imOut);
 
 		//std::cout << "writing result" << std::endl;
-		ResultImageWriter riw(data);
-		riw.write(trf, frame.mResultPoints, i, im2, outFile);
+		ImageBGR out = im2.toBGR();
+		out.gray();
+		ResultImageWriter::writeImage(trf, frame.mResultPoints, i, out);
+		out.saveAsColorBMP(outFile);
 
 		std::cout << "done" << std::endl;
 	}
