@@ -73,7 +73,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions512</EnableEnhancedInstructionSet>
-      <AdditionalIncludeDirectories>$(SolutionDir)Common;$(SolutionDir)Matrix;$(SolutionDir)CudaStuff;$(CUDA_PATH)\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Common;$(SolutionDir)Matrix</AdditionalIncludeDirectories>
       <EnableVectorLength>VectorLength512</EnableVectorLength>
     </ClCompile>
     <Link>
@@ -91,7 +91,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions512</EnableEnhancedInstructionSet>
-      <AdditionalIncludeDirectories>$(SolutionDir)Common;$(SolutionDir)Matrix;$(SolutionDir)CudaStuff;$(CUDA_PATH)\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Common;$(SolutionDir)Matrix</AdditionalIncludeDirectories>
       <EnableVectorLength>VectorLength512</EnableVectorLength>
     </ClCompile>
     <Link>

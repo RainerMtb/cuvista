@@ -1,4 +1,4 @@
-﻿<?define cuvistaVersion="1.9.0.0"?>
+﻿<?define cuvistaVersion="1.9.5.0"?>
 
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
 	<Package

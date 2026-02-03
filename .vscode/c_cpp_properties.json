@@ -15,7 +15,7 @@
                 "${workspaceFolder}/cpu_features/include",
                 "${workspaceFolder}/Matrix",
                 "/usr/local/cuda/include",
-                "~/Qt/6.10.0/gcc_64/include/**"
+                "~/Qt/6.10.1/gcc_64/include/**"
             ],
             "defines": [],
             "cStandard": "c17",

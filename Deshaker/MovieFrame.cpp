@@ -79,15 +79,13 @@ LoopResult MovieFrame::runLoop(std::shared_ptr<FrameExecutor> executor) {
 	return runLoop(progress, input, executor);
 }
 
-void MovieFrame::progressUpdate(ProgressInfo& progressInfo, ProgressBase& progress, double totalProgress, bool forceUpdate) {
+void MovieFrame::progressUpdate(ProgressInfo& progressInfo, ProgressBase& progress, double totalProgress, bool forceUpdate) const {
 	if (mReader.frameCount > 0) progressInfo.totalProgress = std::clamp(totalProgress, 0.0, 100.0);
 	else progressInfo.totalProgress = std::numeric_limits<double>::quiet_NaN();
-	std::unique_lock<std::mutex> lock(mWriter.mStatsMutex);
 	progressInfo.readIndex = mReader.frameIndex;
 	progressInfo.writeIndex = mWriter.frameIndex;
 	progressInfo.encodeIndex = mWriter.frameEncoded;
 	progressInfo.outputBytesWritten = mWriter.outputBytesWritten;
-	lock.unlock();
 	progress.update(progressInfo, forceUpdate);
 }
 

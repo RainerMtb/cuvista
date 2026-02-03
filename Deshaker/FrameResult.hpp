@@ -37,13 +37,13 @@ public:
 	};
 
 	struct DebugData {
-		bool rundbscan = false;
+		bool rundbscan;
 		std::vector<PointContext> classic;
 		std::vector<PointContext> dbscan;
 		std::vector<ClusterSize> clusterSizes;
 	};
 
-	inline static DebugData debugData;
+	inline static DebugData debugData = {};
 	inline static bool storeDebugData = false;
 
 	//construct lists and solver class

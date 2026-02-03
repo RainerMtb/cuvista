@@ -436,7 +436,6 @@ void FFmpegFormatWriter::writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsI
     writePacket(pkt);
 
     //update stats
-    std::unique_lock<std::mutex> lock(mStatsMutex);
     encodedBytesTotal += encodedBytes;
     outputBytesWritten = avio_tell(fmt_ctx->pb);
     frameEncoded++;

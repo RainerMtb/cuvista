@@ -23,11 +23,13 @@ int main() {
 
 	std::vector<std::string> argsLines = {
 		"-i d:/VideoTest/02short.mp4 -o f:/videoOut.mp4 -y",
+		"-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -y",
 		"-i d:/Documents/x.orig/beach.1.avi -o null -frames 100 -device 2",
 		"-i d:/Documents/x.orig/beach.1.avi -o f:/videoOut.mp4 -y -frames 100 -device 2"
 	};
+	int idx = 1;
 
-	std::string argsLine = argsLines[1];
+	std::string argsLine = argsLines[idx];
 	auto args = util::splitString(argsLine, " ");
 	deshake(args, &std::cout, {});
 }

@@ -20,6 +20,7 @@
 
 #include <limits>
 #include <iostream>
+#include <cstdint>
 
 //used in CoreData because in cuda _constant_ allocated symbols must be initialized
 struct Triplet {

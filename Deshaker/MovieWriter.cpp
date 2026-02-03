@@ -62,12 +62,11 @@ void MovieWriterCollection::start() {
 
 void MovieWriterCollection::updateStats() {
 	//take values from first writer
-	std::unique_lock<std::mutex> lock(mStatsMutex);
 	std::shared_ptr<MovieWriter> mainWriter = writers.front();
-	frameIndex = mainWriter->frameIndex;
-	frameEncoded = mainWriter->frameEncoded;
-	encodedBytesTotal = mainWriter->encodedBytesTotal;
-	outputBytesWritten = mainWriter->outputBytesWritten;
+	frameIndex.store(mainWriter->frameIndex);
+	frameEncoded.store(mainWriter->frameEncoded);
+	encodedBytesTotal.store(mainWriter->encodedBytesTotal);
+	outputBytesWritten.store(mainWriter->outputBytesWritten);
 }
 
 void MovieWriterCollection::writeInput(const FrameExecutor& executor) {
@@ -307,9 +306,8 @@ void RawNv12Writer::writeOutput(const FrameExecutor& executor) {
 	outputFrame.toNV12(nv12, executor.mPool);
 	file.write(reinterpret_cast<const char*>(nv12.data()), nv12.sizeInBytes());
 
-	std::unique_lock<std::mutex> lock(mStatsMutex);
 	this->outputBytesWritten += nv12.sizeInBytes();
-	this->encodedBytesTotal = outputBytesWritten;
+	this->encodedBytesTotal.store(outputBytesWritten);
 	this->frameIndex++;
 }
 
@@ -327,9 +325,8 @@ void RawYuvWriter::writeOutput(const FrameExecutor& executor) {
 	executor.getOutputYuv(frameIndex, outputFrame);
 	file.write(reinterpret_cast<const char*>(outputFrame.data()), outputFrame.sizeInBytes());
 
-	std::unique_lock<std::mutex> lock(mStatsMutex);
 	this->outputBytesWritten += 3ll * outputFrame.h * outputFrame.w;
-	this->encodedBytesTotal = outputBytesWritten;
+	this->encodedBytesTotal.store(outputBytesWritten);
 	this->frameIndex++;
 }
 
@@ -351,9 +348,8 @@ void RawPipeWriter::writeOutput(const FrameExecutor& executor) {
 		errorLogger().logError("Pipe: error writing data", ErrorSource::WRITER);
 	}
 
-	std::unique_lock<std::mutex> lock(mStatsMutex);
 	this->outputBytesWritten += bytes;
-	this->encodedBytesTotal = outputBytesWritten;
+	this->encodedBytesTotal.store(outputBytesWritten);
 	this->frameIndex++;
 }
 
@@ -644,7 +640,6 @@ void OpticalFlowWriter::writeAVFrame(AVFrame* av_frame) {
 				encodedBytesTotal += siz;
 			}
 
-			std::unique_lock<std::mutex> lock(mStatsMutex);
 			outputBytesWritten = avio_tell(fmt_ctx->pb);
 			frameEncoded++;
 		}
@@ -814,9 +809,9 @@ void ResultImageWriter::writeInput(const FrameExecutor& executor) {
 		errorLogger().logError("cannot write file '" + fname + "'", ErrorSource::WRITER);
 	}
 
-	this->frameIndex++;
-	this->encodedBytesTotal += 3ll * mData.h * mData.w;
 	this->outputBytesWritten += std::filesystem::file_size(std::filesystem::path(fname));
+	this->encodedBytesTotal += 3ll * mData.h * mData.w;
+	this->frameIndex++;
 }
 
 
@@ -838,6 +833,6 @@ void ResultVideoWriter::writeInput(const FrameExecutor& executor) {
 	file.write(reinterpret_cast<const char*>(nv12.data()), nv12.sizeInBytes());
 
 	this->outputBytesWritten += nv12.sizeInBytes();
-	this->encodedBytesTotal = outputBytesWritten;
+	this->encodedBytesTotal.store(outputBytesWritten);
 	this->frameIndex++;
 }

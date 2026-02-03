@@ -80,7 +80,7 @@ protected:
 
 	const MainData& mData;
 
-	void progressUpdate(ProgressInfo& progressInfo, ProgressBase& progress, double totalProgress, bool forceUpdate);
+	void progressUpdate(ProgressInfo& progressInfo, ProgressBase& progress, double totalProgress, bool forceUpdate) const;
 
 public:
 	MovieReader& mReader;

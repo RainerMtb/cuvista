@@ -19,7 +19,7 @@
 #pragma once
 
 #include "FFmpegUtil.hpp"
-
+#include <atomic>
 
 class ReaderStats {
 public:
@@ -42,9 +42,8 @@ public:
 
 class WriterStats {
 public:
-	std::mutex mStatsMutex;
-	int64_t frameIndex = 0;
-	int64_t frameEncoded = 0;
-	int64_t encodedBytesTotal = 0;
-	int64_t outputBytesWritten = 0;
+	std::atomic_int64_t frameIndex = 0;
+	std::atomic_int64_t frameEncoded = 0;
+	std::atomic_int64_t encodedBytesTotal = 0;
+	std::atomic_int64_t outputBytesWritten = 0;
 };
