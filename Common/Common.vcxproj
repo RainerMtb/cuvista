@@ -91,6 +91,7 @@
   <ItemGroup>
     <ClCompile Include="CoreData.cpp" />
     <ClCompile Include="ErrorLogger.cpp" />
+    <ClCompile Include="ImageClasses.cpp" />
     <ClCompile Include="OutputOption.cpp" />
     <ClCompile Include="Util.cpp" />
     <ClCompile Include="Color.cpp" />
@@ -105,7 +106,10 @@
     <ClInclude Include="DeviceInfoBase.hpp" />
     <ClInclude Include="ErrorLogger.hpp" />
     <ClInclude Include="FrameExecutor.hpp" />
+    <ClInclude Include="ImageBase.hpp" />
+    <ClInclude Include="ImageClasses.hpp" />
     <ClInclude Include="ImageData.hpp" />
+    <ClInclude Include="ImageInterface.hpp" />
     <ClInclude Include="OutputOption.hpp" />
     <ClInclude Include="Util.hpp" />
     <ClInclude Include="CharMap.hpp" />

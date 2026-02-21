@@ -16,38 +16,23 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
-#include "SystemStuff.hpp"
+#pragma once
 
+#include "ImageBase.hpp"
 
-#if defined(_WIN64)
-#include <windows.h>
+namespace im {
 
-//get console width from system calls
-int getSystemConsoleWidth() {
-	CONSOLE_SCREEN_BUFFER_INFO csbi;
-	GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
-	return csbi.srWindow.Right - csbi.srWindow.Left + 1;
+	class ImageBgrV2 : public ImageAdapter<uchar> {
+
+	public:
+		constexpr ImageType imageType() const { return ImageType::BGR; }
+
+		ImageBgrV2(int h, int w, int stride);
+		ImageBgrV2(int h, int w);
+		ImageBgrV2();
+
+		static ImageBgrV2 readBmpFile(const std::string& filename);
+
+		virtual void saveBmpColor(const std::string& filename) const override;
+	};
 }
-
-#elif defined(__linux__)
-
-extern "C" {
-#include <sys/ioctl.h>
-#include <unistd.h>
-}
-
-//get console width from system calls
-int getSystemConsoleWidth() {
-	winsize w;
-	ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
-	return w.ws_col;
-}
-
-#else
-
-//get console width
-int getSystemConsoleWidth() {
-	return 80;
-}
-
-#endif

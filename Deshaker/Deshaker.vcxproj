@@ -98,6 +98,7 @@
     <ClCompile Include="clMain.cpp" />
     <ClCompile Include="clTest.cpp" />
     <ClCompile Include="CudaFrame.cpp" />
+    <ClCompile Include="DebugLogger.cpp" />
     <ClCompile Include="DummyFrame.cpp" />
     <ClCompile Include="FrameResult.cpp" />
     <ClCompile Include="ImageYuvFFmpeg.cpp" />

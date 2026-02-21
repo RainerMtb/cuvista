@@ -10,6 +10,7 @@
     <ClCompile Include="ThreadPoolBase.cpp" />
     <ClCompile Include="ErrorLogger.cpp" />
     <ClCompile Include="OutputOption.cpp" />
+    <ClCompile Include="ImageClasses.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CoreData.hpp" />
@@ -26,6 +27,9 @@
     <ClInclude Include="AffineData.hpp" />
     <ClInclude Include="ImageData.hpp" />
     <ClInclude Include="OutputOption.hpp" />
+    <ClInclude Include="ImageBase.hpp" />
+    <ClInclude Include="ImageClasses.hpp" />
+    <ClInclude Include="ImageInterface.hpp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="CMakeLists.txt" />

@@ -611,22 +611,25 @@ std::ostream& MainData::showDeviceInfo(std::ostream& os) const {
 	}
 	os << std::endl;
 
+	os << "Number of Cuda devices found: " << deviceInfoCuda.size() << std::endl;
 	for (auto& info : deviceInfoCuda) {
 		os << "Cuda Device:" << std::endl;
-		os << info << std::endl;
+		os << info;
 	}
+	os << std::endl;
 
 	//display OpenCL info
-	os << "OpenCL devices found: " << deviceInfoOpenCl.size();
+	os << "Number of OpenCL devices found: " << deviceInfoOpenCl.size();
 	if (DeviceInfoOpenCl::warning.empty() == false) {
 		os << ", " << DeviceInfoOpenCl::warning;
 	}
-	os << std::endl << std::endl;
+	os << std::endl;
 
 	for (const DeviceInfoOpenCl& info : deviceInfoOpenCl) {
 		os << "OpenCL Device:" << std::endl;
-		os << info << std::endl;
+		os << info;
 	}
+	os << std::endl;
 
 	return os;
 }

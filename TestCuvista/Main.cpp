@@ -17,9 +17,17 @@
  */
 
 #include "Deshaker.hpp"
+#include "ImageClasses.hpp"
 
 int main() {
 	std::cout << "------- CuvistaTest -------" << std::endl << std::endl;
+
+	//debugLogger = std::make_shared<DebugLoggerTcp>("10.0.0.1", 5555);
+	//debugLogger->format("test tcp log {}", 1);
+
+	im::ImageBgrV2 im = im::ImageBgrV2::readBmpFile("d:/VideoTest/beach.86.bmp");
+	im.saveBmpPlanes("f:/test1.bmp");
+	im.saveBmpColor("f:/test2.bmp");
 
 	std::vector<std::string> argsLines = {
 		"-i d:/VideoTest/02short.mp4 -o f:/videoOut.mp4 -y",

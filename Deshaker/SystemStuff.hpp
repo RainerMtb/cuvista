@@ -18,14 +18,16 @@
 
 #pragma once
 
-#include <fstream>
 #include <optional>
+#include <format>
+#include <memory>
 
 int getSystemConsoleWidth();
 
 std::optional<char> getKeyboardInput();
 
 void keepSystemAlive();
+
 
 enum class UserInputEnum {
 	NONE,
@@ -34,6 +36,7 @@ enum class UserInputEnum {
 	QUIT,
 	HALT,
 };
+
 
 class UserInput {
 
@@ -60,3 +63,31 @@ public:
 
 	UserInputEnum checkState() override;
 };
+
+
+struct DebugLogger {
+	virtual void log(const std::string& msg) = 0;
+
+	template <class... Args> void format(std::format_string<Args...> fmt, Args&&... args) {
+		log(std::format(fmt, std::forward<Args>(args)...));
+	}
+};
+
+struct DebugLoggerNull : public DebugLogger {
+	void log(const std::string& msg) override;
+};
+
+struct DebugLoggerConsole : public DebugLogger {
+	void log(const std::string& msg) override;
+};
+
+struct DebugLoggerTcp : public DebugLogger {
+	int mIsConnected = -1;
+
+	DebugLoggerTcp(const char* ip, int port);
+	~DebugLoggerTcp();
+
+	void log(const std::string& msg) override;
+};
+
+inline std::shared_ptr<DebugLogger> debugLogger = std::make_shared<DebugLoggerNull>();

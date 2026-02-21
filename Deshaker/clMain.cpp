@@ -44,8 +44,14 @@ std::vector<DeviceInfoOpenCl> cl::probeRuntime() {
 	std::vector<DeviceInfoOpenCl> out;
 
 	try {
+		cl_uint n;
 		std::vector<Platform> platforms;
-		Platform::get(&platforms);
+
+		//first check number of platforms without raising an exception
+		cl_int err = clGetPlatformIDs(0, nullptr, &n);
+		if (err == CL_SUCCESS) {
+			Platform::get(&platforms);
+		}
 
 		for (Platform& platform : platforms) {
 			std::vector<Device> devices;
