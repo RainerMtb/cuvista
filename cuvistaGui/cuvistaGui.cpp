@@ -284,8 +284,8 @@ void cuvistaGui::setInputFile(const QString& inputPath) {
             mReader.read(mInputYUV);
 
             //set up converter to BGR for display in UI
-            mInputBGR = ImageBGR(mReader.h, mReader.w);
-            mInputImage = QImage(mInputBGR.data(), mReader.w, mReader.h, mReader.w * 3ull, QImage::Format_BGR888);
+            mInputBGR = ImageBgr(mReader.h, mReader.w);
+            mInputImage = QImage(mInputBGR.data(), mInputBGR.width(), mInputBGR.height(), mInputBGR.strideInBytes(), QImage::Format_BGR888);
             updateInputImage();
         }
 
@@ -349,7 +349,8 @@ void cuvistaGui::seek(double frac) {
 }
 
 void cuvistaGui::updateInputImage() {
-    mInputYUV.toBaseRgb(mInputBGR);
+    mInputYUV.convertTo(mInputBGR);
+    mInputYUV.saveBmpColor("f:/test.bmp");
     ui.imageInput->setImage(mInputImage);
 }
 

@@ -24,7 +24,7 @@
 class Color {
 
 private:
-	std::array<int, 4> colorData;
+	std::array<unsigned char, 4> colorData;
 	double alpha;
 
 	Color(int r, int g, int b, double alpha = 1.0);
@@ -58,20 +58,22 @@ public:
 	void setAlpha(double alpha);
 	double getAlpha() const;
 
-	int getChannel(size_t index) const;
+	unsigned char getChannel(size_t index) const;
 };
 
 namespace im {
 
 	void yuv_to_rgb(unsigned char y, unsigned char u, unsigned char v, unsigned char* r, unsigned char* g, unsigned char* b);
-
+	void yuv_to_rgb(unsigned char y, unsigned char u, unsigned char v, float* r, float* g, float* b);
 	void yuv_to_rgb(float y, float u, float v, unsigned char* r, unsigned char* g, unsigned char* b);
-
-	unsigned char rgb_to_y(unsigned char r, unsigned char g, unsigned char b);
+	void yuv_to_rgb(float y, float u, float v, float* r, float* g, float* b);
 
 	void rgb_to_yuv(unsigned char r, unsigned char g, unsigned char b, unsigned char* y, unsigned char* u, unsigned char* v);
-
 	void rgb_to_yuv(unsigned char r, unsigned char g, unsigned char b, float* y, float* u, float* v);
+	void rgb_to_yuv(float r, float g, float b, unsigned char* y, unsigned char* u, unsigned char* v);
+	void rgb_to_yuv(float r, float g, float b, float* y, float* u, float* v);
+
+	unsigned char rgb_to_y(unsigned char r, unsigned char g, unsigned char b);
 
 	void hsv_to_rgb(double h, double s, double v, unsigned char* out_r, unsigned char* out_g, unsigned char* out_b);
 }

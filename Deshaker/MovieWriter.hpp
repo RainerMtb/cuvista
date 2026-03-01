@@ -491,7 +491,7 @@ public:
 	void start() override {}
 	void writeInput(const FrameExecutor& executor) override;
 
-	static void writeImage(const AffineTransform& trf, std::span<PointResult> res, int64_t idx, ImageBaseRgb& dest, 
+	static void writeImage(const AffineTransform& trf, std::span<PointResult> res, int64_t idx, Image8& dest, 
 		ThreadPoolBase& pool = defaultPool, bool drawTransformed = true);
 };
 

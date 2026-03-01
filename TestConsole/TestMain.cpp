@@ -21,7 +21,7 @@
 int main() {
 	std::cout << "----------------------------" << std::endl << "TestMain:" << std::endl;
 	//qrdec();
-	//draw("f:/drawing.bmp"); 
+	draw("f:/drawing.bmp"); 
 	//filterCompare();
 	//matPerf();
 	//matTest();
@@ -52,7 +52,7 @@ int main() {
 
 	//testZoom();
 	//testVideo1();
-	testVideo2();
+	//testVideo2();
 
 	//createTransformImages();
 }

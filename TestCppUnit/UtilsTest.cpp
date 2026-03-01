@@ -18,7 +18,7 @@
 
 #include "pch.h"
 #include "CppUnitTest.h"
-#include "Image.hpp"
+#include "ImageClasses.hpp"
 #include "Utils.hpp"
 #include "Util.hpp"
 
@@ -34,13 +34,13 @@ public:
 		int w = 400;
 		int h = 200;
 		int stride = w + 12;
-		ImageYuv yuv(h, w, stride);
+		im::ImageYuv yuv(h, w, stride);
 		yuv.setColor(Color::yuv(50, 10, 20));
 		ImageNV12 nv12(h, w, stride);
-		yuv.toNV12(nv12);
+		yuv.convertTo(nv12);
 
-		ImageYuv dest(h, w, stride);
-		nv12.toYuv(dest);
+		im::ImageYuv dest(h, w, stride);
+		nv12.convertTo(dest);
 
 		Assert::AreEqual(yuv, dest, L"different images");
 	}

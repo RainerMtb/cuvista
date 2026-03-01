@@ -31,10 +31,9 @@ void avx::yuvToRgbaPacked(V16f y, V16f u, V16f v, unsigned char* dest, V16f fu, 
 	
 	//convert color
 	V16f ps255 = 255.0f;
-	V16f ps128 = 128.0f;
 	V16f ps0 = 0.0f;
 	V16f rgba;
-	rgba = yy + (uu - ps128) * fu + (vv - ps128) * fv;
+	rgba = (yy - 16.0f) * 1.164f + (uu - 128.0f) * fu + (vv - 128.0f) * fv;
 	rgba = _mm512_mask_max_ps(ps255, 0b0111'0111'0111'0111, rgba, ps0);
 
 	//convert floats to uint8, saturate and store

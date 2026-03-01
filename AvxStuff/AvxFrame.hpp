@@ -39,14 +39,12 @@ public:
 	void computeStart(int64_t frameIndex, std::span<PointResult> results) override;
 	void computeTerminate(int64_t frameIndex, std::span<PointResult> results) override;
 	void outputData(int64_t frameIndex, AffineDataFloat trf) override;
-	void getOutputYuv(int64_t frameIndex, ImageYuv& image) const override;
-	void getOutputImage(int64_t frameIndex, ImageBaseRgb& image) const override;
-	bool getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) const override;
+	void getOutputImage(int64_t frameIndex, Image8& image) const override;
+	bool getOutputNvenc(int64_t frameIndex, Image8& image, unsigned char* cudaNv12ptr) const override;
 	Matf getTransformedOutput() const override;
 	Matf getPyramid(int64_t frameIndex) const override;
-	void getInput(int64_t frameIndex, ImageYuv& image) const override;
-	void getInput(int64_t frameIndex, ImageBaseRgb& image) const override;
-	void getWarped(int64_t frameIndex, ImageBaseRgb& image) override;
+	void getInput(int64_t frameIndex, Image8& image) const override;
+	void getWarped(int64_t frameIndex, Image8& image) override;
 
 private:
 	int walign;  //align widths of matrices to this
@@ -66,12 +64,12 @@ private:
 	};
 
 	//factors for conversion yuv to rgb
-	std::vector<float> fu = { 0.0f, -0.337633f, 1.732446f, 0.0f };
-	std::vector<float> fv = { 1.370705f, -0.698001f, 0.0f, 0.0f };
+	std::vector<float> fu = { 0.0f, -0.392f, 2.017f, 0.0f };
+	std::vector<float> fv = { 1.596f, -0.813f, 0.0f, 0.0f };
 
 	void unsharp(const AvxMatf& warped, AvxMatf& gauss, float unsharp, AvxMatf& out);
-	void write(ImageYuv& dest) const;
-	void write(ImageNV12& image) const;
+	void writeYuv(Image8& dest) const;
+	void writeNV12(Image8& dest) const;
 	void downsample(const float* srcptr, int h, int w, int stride, float* destptr, int destStride);
 	void filter(const AvxMatf& src, int r0, int h, int w, AvxMatf& dest, std::span<V16f> ks);
 
@@ -81,11 +79,8 @@ private:
 	V16f interpolate(V16f f00, V16f f10, V16f f01, V16f f11, V16f dx, V16f dy, V16f dx1, V16f dy1);
 
 	void yuvToFloat(const ImageYuv& yuv, size_t plane, AvxMatf& dest);
-	void yuvToRgb(const uchar* y, const uchar* u, const uchar* v, int h, int w, int stride, ImageBaseRgb& dest) const;
-	void yuvToRgb(const float* y, const float* u, const float* v, int h, int w, int stride, ImageBaseRgb& dest) const;
-
-	static V16f yuvToRgbLoadUchar(const uchar* src);
-	static V16f yuvToRgbLoadFloat(const float* src);
+	void yuvToRgb(const uchar* y, const uchar* u, const uchar* v, int h, int w, int stride, Image8& dest) const;
+	void yuvToRgb(const float* y, const float* u, const float* v, int h, int w, int stride, Image8& dest) const;
 
 	V8d sd(int c1, int c2, int y0, int x0, const AvxMatf& Y);
 };

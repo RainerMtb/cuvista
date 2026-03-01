@@ -18,11 +18,9 @@
 
 #pragma once
 
-#include "Image2.hpp"
-#undef min
-#undef max
+#include "ImageClasses.hpp"
 
-class ImageXamlBGRA : public ImageBGRA {
+class ImageXamlBGRA : public im::ImageBGRA {
 
 private:
     winrt::Microsoft::UI::Xaml::Media::Imaging::WriteableBitmap bitmap;

@@ -18,7 +18,7 @@
 
 #include "cuDeshaker.cuh"
 #include "cuKernels.cuh"
-#include "Image.hpp"
+#include "ImageClasses.hpp"
 #include "ErrorLogger.hpp"
 
 #include <algorithm>
@@ -142,7 +142,7 @@ void CudaExecutor::writeText(const std::string& text, int x0, int y0, int scaleX
 	//create Image<float>
 	int imh = 10 * scaleY;
 	int siz = imh * mData.strideFloat;
-	im::ImageBase<float> im(imh, mData.w, mData.strideFloatN, 3);
+	ImageYuvFloat im(imh, mData.w, mData.strideFloatN);
 
 	//copy three horizontal stripes into host memory
 	for (size_t z = 0; z < 3; z++) {
@@ -359,7 +359,7 @@ void CudaExecutor::inputData(int64_t frameIndex, const ImageYuv& inputFrame) {
 	frameIndizes[fr] = frameIndex;
 	size_t frameSizeBytes = 3ull * mData.strideChar * mData.h;
 	unsigned char* d_frame = d_yuvData + fr * frameSizeBytes;
-	handleStatus(cudaMemcpy2D(d_frame, mData.strideChar, inputFrame.data(), inputFrame.stride,
+	handleStatus(cudaMemcpy2D(d_frame, mData.strideChar, inputFrame.data(), inputFrame.stride(),
 		mData.w, 3ull * mData.h, cudaMemcpyDefault), "error @read #10");
 	handleStatus(cudaGetLastError(), "error @read #20");
 }
@@ -519,27 +519,26 @@ void CudaExecutor::outputData(int64_t frameIndex, AffineDataFloat trf) {
 	//writeDeviceDataToFile(out.output, h, w, strideFloat4N, "f:/cuda.dat");
 }
 
-void CudaExecutor::getOutputYuv(int64_t frameIndex, ImageYuv& image) const {
-	cu::outputHost(out.output, mData.strideFloat4N, d_yuvOut, mData.strideChar, mData.w, mData.h, cs[1]);
-	for (int planeSize = mData.strideChar * mData.h, i = 0; i < 3; i++) {
-		cu::copy_32f_3(d_yuvOut + i * planeSize, mData.strideChar, image.addr(i, 0, 0), image.strideInBytes(), mData.w, mData.h, cs[1]);
+void CudaExecutor::getOutputImage(int64_t frameIndex, Image8& image) const {
+	if (image.colorBase() == ColorBase::YUV) {
+		cu::outputHost(out.output, mData.strideFloat4N, d_yuvOut, mData.strideChar, mData.w, mData.h, cs[1]);
+		for (int planeSize = mData.strideChar * mData.h, i = 0; i < 3; i++) {
+			cu::copy_32f_3(d_yuvOut + i * planeSize, mData.strideChar, image.addr(i, 0, 0), image.strideInBytes(), mData.w, mData.h, cs[1]);
+		}
+
+	} else if (image.colorBase() == ColorBase::RGB) {
+		auto idx = image.colorIndex();
+		int srcPitch = 4 * mData.w;
+		cu::yuv_to_rgba(out.output, mData.strideFloat4N, d_rgba, srcPitch, mData.w, mData.h, { idx[0], idx[1], idx[2], idx[3] }, cs[1]);
+		handleStatus(cudaMemcpy2DAsync(image.data(), image.strideInBytes(), d_rgba, srcPitch, srcPitch, mData.h, cudaMemcpyDefault, cs[1]), "error @output #94");
 	}
 	image.setIndex(frameIndex);
 	handleStatus(cudaStreamSynchronize(cs[1]), "error @output #90");
 	handleStatus(cudaGetLastError(), "error @output #91");
 }
 
-void CudaExecutor::getOutputImage(int64_t frameIndex, ImageBaseRgb& image) const {
-	const std::vector<int>& idx = image.indexRgba();
-	cu::yuv_to_rgba(out.output, mData.strideFloat4N, d_rgba, -1, mData.w, mData.h, { idx[0], idx[1], idx[2], idx[3] }, cs[1]);
-	handleStatus(cudaMemcpyAsync(image.plane(0), d_rgba, 4ull * mData.w * mData.h, cudaMemcpyDefault, cs[1]), "error @output #94");
-	image.setIndex(frameIndex);
-	handleStatus(cudaStreamSynchronize(cs[1]), "error @output #92");
-	handleStatus(cudaGetLastError(), "error @output #93");
-}
-
-bool CudaExecutor::getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) const {
-	cu::outputNvenc(out.output, mData.strideFloat4N, cudaNv12ptr, image.stride, mData.w, mData.h, cs[1]);
+bool CudaExecutor::getOutputNvenc(int64_t frameIndex, Image8& image, unsigned char* cudaNv12ptr) const {
+	cu::outputNvenc(out.output, mData.strideFloat4N, cudaNv12ptr, image.stride(), mData.w, mData.h, cs[1]);
 	handleStatus(cudaStreamSynchronize(cs[1]), "error @output #95");
 	handleStatus(cudaGetLastError(), "error @output #96");
 	//handleStatus(cudaMemcpy(image.data(), cudaNv12ptr, image.sizeInBytes(), cudaMemcpyDeviceToHost), "error");
@@ -566,26 +565,26 @@ void CudaExecutor::cudaGetPyramid(int64_t frameIndex, float* data) const {
 	handleStatus(cudaMemcpy2D(data, wbytes, devptr, mData.strideFloat, wbytes, mData.pyramidRowCount, cudaMemcpyDefault), "error @getPyramid");
 }
 
-void CudaExecutor::getInput(int64_t frameIndex, ImageYuv& image) const {
-	int fr = frameIndex % mData.bufferCount;
-	//start of input yuv data
-	unsigned char* yuvSrc = d_yuvData + fr * 3 * mData.h * mData.strideChar;
-	//copy 2D data without stride
-	handleStatus(cudaMemcpy2D(image.data(), image.stride, yuvSrc, mData.strideChar, image.w, 3ll * image.h, cudaMemcpyDefault), "error @getInput");
-}
-
-void CudaExecutor::getInput(int64_t frameIndex, ImageBaseRgb& image) const {
+void CudaExecutor::getInput(int64_t frameIndex, Image8& image) const {
 	int fridx = frameIndex % mData.bufferCount;
 	assert(frameIndizes[fridx] == frameIndex && "invalid frame in buffer");
 
-	const std::vector<int>& idx = image.indexRgba();
-	unsigned char* yuvSrc = d_yuvData + fridx * 3ull * mData.h * mData.strideChar;
-	cu::yuv_to_rgba(yuvSrc, mData.strideChar, d_rgba, -1, mData.w, mData.h, { idx[0], idx[1], idx[2], idx[3] });
-	handleStatus(cudaMemcpy(image.plane(0), d_rgba, 4ull * mData.w * mData.h, cudaMemcpyDefault), "error @progress input");
+	if (image.colorBase() == ColorBase::YUV) {
+		//start of input yuv data
+		unsigned char* yuvSrc = d_yuvData + fridx * 3 * mData.h * mData.strideChar;
+		//copy 2D data without stride
+		handleStatus(cudaMemcpy2D(image.data(), image.stride(), yuvSrc, mData.strideChar, image.width(), 3ll * image.height(), cudaMemcpyDefault), "error @getInput");
+
+	} else if (image.colorBase() == ColorBase::RGB) {
+		auto idx = image.colorIndex();
+		unsigned char* yuvSrc = d_yuvData + fridx * 3ull * mData.h * mData.strideChar;
+		cu::yuv_to_rgba(yuvSrc, mData.strideChar, d_rgba, -1, mData.w, mData.h, { idx[0], idx[1], idx[2], idx[3] });
+		handleStatus(cudaMemcpy(image.plane(0), d_rgba, 4ull * mData.w * mData.h, cudaMemcpyDefault), "error @progress input");
+	}
 }
 
-void CudaExecutor::getWarped(int64_t frameIndex, ImageBaseRgb& image) {
-	const std::vector<int>& idx = image.indexRgba();
+void CudaExecutor::getWarped(int64_t frameIndex, Image8& image) {
+	auto idx = image.colorIndex();
 	cu::yuv_to_rgba(out.warped, mData.strideFloat4N, d_rgba, -1, mData.w, mData.h, { idx[0], idx[1], idx[2], idx[3] });
 	handleStatus(cudaMemcpy(image.plane(0), d_rgba, 4ull * mData.w * mData.h, cudaMemcpyDefault), "error @progress output");
 }
@@ -615,7 +614,7 @@ void CudaExecutor::getDebugData(const std::string& imageFile, std::function<void
 	//get image of kernel timing values
 	int h = mData.resultCount;
 	int w = 6'000;
-	ImageBGR kernelTimerImage = ImageBGR(h, w);
+	ImageBgr kernelTimerImage = ImageBgr(h, w);
 	auto fcnMin = [] (CudaPointResult& r1, CudaPointResult& r2) { return r1.timeStart < r2.timeStart; };
 	auto minTime = std::min_element(h_results, h_results + mData.resultCount, fcnMin);
 	auto fcnMax = [] (CudaPointResult& r1, CudaPointResult& r2) { return r1.timeStop < r2.timeStop; };
@@ -632,7 +631,7 @@ void CudaExecutor::getDebugData(const std::string& imageFile, std::function<void
 			}
 		}
 	}
-	kernelTimerImage.saveAsColorBMP(imageFile);
+	kernelTimerImage.saveBmpColor(imageFile);
 }
 
 CudaExecutor::~CudaExecutor() {

@@ -421,16 +421,21 @@ void OpenClFrame::outputData(int64_t frameIndex, AffineDataFloat trf) {
 	}
 }
 
-void OpenClFrame::getOutputYuv(int64_t frameIndex, ImageYuv& image) const {
+void OpenClFrame::getOutputImage(int64_t frameIndex, Image8& image) const {
 	try {
-		//convert to YUV444 for output
-		scale_32f8u_3(clData.out[4], clData.yuvOut, mData.cpupitch, clData);
-		
-		//copy to cpu memory
-		Size2 region(image.strideInBytes(), mData.h);
-		for (int i = 0; i < 3; i++) {
-			Size2 offset(0, mData.h * i);
-			clData.queue.enqueueReadBufferRect(clData.yuvOut, CL_TRUE, offset, Size2(), region, mData.cpupitch, 0, 0, 0, image.addr(i, 0, 0));
+		if (image.colorBase() == ColorBase::YUV) {
+			//convert to YUV444 for output
+			scale_32f8u_3(clData.out[4], clData.yuvOut, mData.cpupitch, clData);
+
+			//copy to cpu memory
+			Size2 region(image.strideInBytes(), mData.h);
+			for (int i = 0; i < 3; i++) {
+				Size2 offset(0, mData.h * i);
+				clData.queue.enqueueReadBufferRect(clData.yuvOut, CL_TRUE, offset, Size2(), region, mData.cpupitch, 0, 0, 0, image.addr(i, 0, 0));
+			}
+
+		} else if (image.colorBase() == ColorBase::RGB) {
+			yuv_to_rgba(clData.kernels.yuv32f_to_rgba, clData.out[4], image.data(), clData, image.width(), image.height(), image.stride(), image.colorIndex());
 		}
 
 		//forward image index
@@ -441,19 +446,9 @@ void OpenClFrame::getOutputYuv(int64_t frameIndex, ImageYuv& image) const {
 	}
 }
 
-void OpenClFrame::getOutputImage(int64_t frameIndex, ImageBaseRgb& image) const {
+bool OpenClFrame::getOutputNvenc(int64_t frameIndex, Image8& image, unsigned char* cudaNv12ptr) const {
 	try {
-		yuv_to_rgba(clData.kernels.yuv32f_to_rgba, clData.out[4], image.data(), clData, image.w, image.h, image.stride, image.indexRgba());
-		image.setIndex(frameIndex);
-
-	} catch (const Error& err) {
-		errorLogger().logError("OpenCL output error: ", err.what());
-	}
-}
-
-bool OpenClFrame::getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) const {
-	try {
-		yuv_to_nv12(clData.kernels.yuv32f_to_nv12, clData.out[4], image.data(), clData, image.w, image.h, image.stride);
+		yuv_to_nv12(clData.kernels.yuv32f_to_nv12, clData.out[4], image.data(), clData, image.width(), image.height(), image.stride());
 		image.setIndex(frameIndex);
 
 	} catch (const Error& err) {
@@ -505,25 +500,26 @@ Matf OpenClFrame::getTransformedOutput() const {
 	return warped;
 }
 
-void OpenClFrame::getInput(int64_t frameIndex, ImageYuv& image) const {
-	int64_t fr = frameIndex % mData.bufferCount;
-	Image im = clData.yuv[fr];
-	clData.queue.enqueueReadImage(im, CL_TRUE, Size2(), Size2(image.w, image.h * 3), image.stride, 0, image.data());
-}
+void OpenClFrame::getInput(int64_t frameIndex, Image8& image) const {
+	int64_t fridx = frameIndex % mData.bufferCount;
 
-void OpenClFrame::getInput(int64_t frameIndex, ImageBaseRgb& image) const {
 	try {
-		size_t fridx = frameIndex % clData.yuv.size();
-		yuv_to_rgba(clData.kernels.yuv8u_to_rgba, clData.yuv[fridx], image.data(), clData, image.w, image.h, image.stride, image.indexRgba());
+		if (image.colorBase() == ColorBase::YUV) {
+			Image im = clData.yuv[fridx];
+			clData.queue.enqueueReadImage(im, CL_TRUE, Size2(), Size2(image.width(), image.height() * 3), image.stride(), 0, image.data());
+
+		} else if (image.colorBase() == ColorBase::RGB) {
+			yuv_to_rgba(clData.kernels.yuv8u_to_rgba, clData.yuv[fridx], image.data(), clData, image.width(), image.height(), image.stride(), image.colorIndex());
+		}
 
 	} catch (const Error& err) {
 		errorLogger().logError("OpenCL get input: ", err.what());
 	}
 }
 
-void OpenClFrame::getWarped(int64_t frameIndex, ImageBaseRgb& image) {
+void OpenClFrame::getWarped(int64_t frameIndex, Image8& image) {
 	try {
-		yuv_to_rgba(clData.kernels.yuv32f_to_rgba, clData.out[1], image.data(), clData, image.w, image.h, image.stride, image.indexRgba());
+		yuv_to_rgba(clData.kernels.yuv32f_to_rgba, clData.out[1], image.data(), clData, image.width(), image.height(), image.stride(), image.colorIndex());
 
 	} catch (const Error& err) {
 		errorLogger().logError("OpenCL get warped: ", err.what());

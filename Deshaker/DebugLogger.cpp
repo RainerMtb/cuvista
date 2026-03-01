@@ -22,6 +22,7 @@
 void DebugLoggerNull::log(const std::string& msg) {}
 
 void DebugLoggerConsole::log(const std::string& msg) {
+	std::lock_guard<std::mutex> lock(mutex);
 	std::cout << msg << std::endl;
 }
 
@@ -45,6 +46,7 @@ DebugLoggerTcp::DebugLoggerTcp(const char* ip, int port) {
 }
 
 void DebugLoggerTcp::log(const std::string& msg) {
+	std::lock_guard<std::mutex> lock(mutex);
 	if (mIsConnected == 0) {
 		send(sock, msg.c_str(), msg.size(), 0);
 		send(sock, "\n", 1, 0);
@@ -77,6 +79,7 @@ DebugLoggerTcp::DebugLoggerTcp(const char* ip, int port) {
 }
 
 void DebugLoggerTcp::log(const std::string& msg) {
+	std::lock_guard<std::mutex> lock(mutex);
 	if (mIsConnected == 0) {
 		send(sock, msg.c_str(), msg.size(), 0);
 		send(sock, "\n", 1, 0);

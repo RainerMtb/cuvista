@@ -101,13 +101,13 @@ void readAndWriteOneFrame() {
 		MovieFrame frame(data, reader, writer);
 		CudaFrame ex(data, *data.deviceList[2], frame, frame.mPool);
 
-		frame.mBufferFrame.readFromPGM("d:/VideoTest/v00.pgm");
+		frame.mBufferFrame = ImageYuv::readPgmFile("d:/VideoTest/v00.pgm");
 		frame.mBufferFrame.index = 0;
 		reader.frameIndex = 0;
 		ex.inputData(reader.frameIndex, frame.mBufferFrame);
 		ex.createPyramid(frame.mReader.frameIndex);
 
-		frame.mBufferFrame.readFromPGM("D:/VideoTest/v01.pgm");
+		frame.mBufferFrame = ImageYuv::readPgmFile("D:/VideoTest/v01.pgm");
 		frame.mBufferFrame.index = 1;
 		reader.frameIndex = 1;
 		ex.inputData(reader.frameIndex, frame.mBufferFrame);
@@ -122,7 +122,7 @@ void readAndWriteOneFrame() {
 		writer.writeOutput(ex);
 		std::string fileOut = "f:/test.bmp";
 		std::cout << "writing file " << fileOut << std::endl;
-		writer.getOutputFrame().saveAsColorBMP(fileOut);
+		writer.getOutputFrame().saveBmpColor(fileOut);
 	}
 	std::cout << errorLogger().getErrorMessage() << std::endl;
 }
@@ -141,14 +141,14 @@ void draw(const std::string& filename) {
 	using namespace im;
 
 	//draw into bgr image
-	ImageBGR bgr(600, 800);
+	ImageBgr bgr(600, 800);
 	bgr.setColor(Color::GRAY);
 	bgr.writeText("abcdefghijklmnopqrstuvwxyz", 10, 10, 2, 3, TextAlign::TOP_LEFT);
 	bgr.writeText("ABCDEFGHIJKLMNOPQRSTUVWXYZ", 10, 50, 2, 3, TextAlign::TOP_LEFT);
-	bgr.writeText("A quick brown fox", 10, 90, 2, 3, TextAlign::TOP_LEFT, Color::YELLOW, Color::BLACK);
-	bgr.writeText("jumps over a lazy dog", 10, 120, 2, 3, TextAlign::TOP_LEFT, Color::rgba(255, 255, 255, 0.75), Color::GREEN);
-	bgr.writeText("A quick brown fox", 10, 150, 2, 3, TextAlign::TOP_LEFT, Color::YELLOW, Color::rgba(0, 255, 255, 0.25));
-	bgr.writeText("jumps over a lazy dog", 10, 180, 2, 3, TextAlign::TOP_LEFT, Color::rgba(255, 0, 255, 0.5), Color::rgba(0, 255, 255, 0.5));
+	bgr.writeText("A quick brown fox      (yellow)", 10, 90, 2, 3, TextAlign::TOP_LEFT, Color::YELLOW, Color::BLACK);
+	bgr.writeText("jumps over a lazy dog   (white)", 10, 120, 2, 3, TextAlign::TOP_LEFT, Color::rgba(255, 255, 255, 0.75), Color::GREEN);
+	bgr.writeText("A quick brown fox      (yellow)", 10, 150, 2, 3, TextAlign::TOP_LEFT, Color::YELLOW, Color::rgba(0, 255, 255, 0.25));
+	bgr.writeText("jumps over a lazy dog (magenta)", 10, 180, 2, 3, TextAlign::TOP_LEFT, Color::rgba(255, 0, 255, 0.5), Color::rgba(0, 255, 255, 0.5));
 
 	//charachter map
 	int x0 = 500;
@@ -199,7 +199,7 @@ void draw(const std::string& filename) {
 
 	//save to file
 	std::cout << "save to " << filename << std::endl;
-	bgr.saveAsColorBMP(filename);
+	bgr.saveBmpColor(filename);
 }
 
 class OpticalFlowImageWriter : public OpticalFlowWriter {
@@ -211,7 +211,7 @@ public:
 
 	void writeFlow(const MovieFrame& frame, const std::string& fileName) {
 		OpticalFlowWriter::writeFlow(frame);
-		imageInterpolated.saveAsColorBMP("f:/flow.bmp");
+		imageInterpolated.saveBmpColor("f:/flow.bmp");
 	}
 };
 

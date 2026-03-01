@@ -20,11 +20,12 @@
 
 #include "AVException.hpp"
 #include "Stats.hpp"
-#include "Image2.hpp"
+#include "ImageClasses.hpp"
 
 #include <span>
 #include <optional>
 
+using namespace im;
 
 class MovieReader : public ReaderStats {
 

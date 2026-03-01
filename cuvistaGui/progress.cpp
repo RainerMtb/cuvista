@@ -91,14 +91,14 @@ void ProgressGui::update(const ProgressInfo& progress, bool force) {
 		mTimePoint = timePointNow;
 		uint64_t idx = progress.readIndex - 1;
 		mExecutor.getInput(idx, mInput);
-		QImage im(mInput.data(), mInput.w, mInput.h, QImage::Format_RGBX8888);
+		QImage im(mInput.data(), mInput.width(), mInput.height(), QImage::Format_RGBX8888);
 		mProgressWindow->sigUpdateInput(im, QString::fromStdString(mExecutor.mFrame.ptsForFrameAsString(idx)));
 	}
 	if (imageDue && progress.writeIndex > 0 && mProgressWindow->isVisible()) {
 		mTimePoint = timePointNow;
 		uint64_t idx = progress.writeIndex - 1;
 		mExecutor.getWarped(idx, mOutput);
-		QImage im(mOutput.data(), mOutput.w, mOutput.h, QImage::Format_RGBX8888);
+		QImage im(mOutput.data(), mOutput.width(), mOutput.height(), QImage::Format_RGBX8888);
 		mProgressWindow->sigUpdateOutput(im, QString::fromStdString(mExecutor.mFrame.ptsForFrameAsString(idx)));
 	}
 }

@@ -16,6 +16,8 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
+/*
+
 #include <format>
 #include <stdexcept>
 #include <cmath>
@@ -644,3 +646,5 @@ ImageBGRA::ImageBGRA() :
 ImageType ImageBGRA::type() const {
 	return ImageType::BGRA;
 }
+
+*/

@@ -23,14 +23,17 @@
 #include "AffineData.hpp"
 #include "DeviceInfoBase.hpp"
 #include "ThreadPoolBase.h"
-#include "Image2.hpp"
+#include "ImageClasses.hpp"
 #include "CoreData.hpp"
 
 template <class T> class Mat;
 class MovieFrame;
 class AffineTransform;
 
+using namespace im;
+
 class FrameExecutor {
+
 
 public:
 	CoreData& mData;
@@ -58,21 +61,17 @@ public:
 	//prepare data for output to writer
 	virtual void outputData(int64_t frameIndex, AffineDataFloat trf) = 0;
 	//prepare data for encoding on cpu
-	virtual void getOutputYuv(int64_t frameIndex, ImageYuv& image) const = 0;
-	//prepare data for encoding on cpu
-	virtual void getOutputImage(int64_t frameIndex, ImageBaseRgb& image) const = 0;
+	virtual void getOutputImage(int64_t frameIndex, Image8& image) const = 0;
 	//prepare data for encoding on cuda
-	virtual bool getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) const = 0;
+	virtual bool getOutputNvenc(int64_t frameIndex, Image8& image, unsigned char* cudaNv12ptr) const = 0;
 	//get transformed image as Mat<float> where YUV color planes are stacked vertically
 	virtual Mat<float> getTransformedOutput() const = 0;
 	//get image pyramid as single Mat<float> where images are stacked vertically from large to small
 	virtual Mat<float> getPyramid(int64_t frameIndex) const = 0;
 	//get input image as stored in frame buffers
-	virtual void getInput(int64_t frameIndex, ImageYuv& image) const = 0;
-	//get input image as stored in frame buffers
-	virtual void getInput(int64_t frameIndex, ImageBaseRgb& image) const = 0;
+	virtual void getInput(int64_t frameIndex, Image8& image) const = 0;
 	//output rgb data warped but not unsharped
-	virtual void getWarped(int64_t frameIndex, ImageBaseRgb& image) = 0;
+	virtual void getWarped(int64_t frameIndex, Image8& image) = 0;
 	//destructor
 	virtual ~FrameExecutor() {}
 

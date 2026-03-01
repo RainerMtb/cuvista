@@ -24,7 +24,7 @@
 #include <span>
 #include <cassert>
 
-#include "ImageData.hpp"
+#include "ImageInterface.hpp"
 
 //misc stuff
 namespace util {
@@ -97,7 +97,7 @@ namespace util {
             return addBytes(data.data(), data.size()); 
         }
 
-        template <class T> CRC64& add(const ImageData<T>& image) {
+        template <class T> CRC64& add(const im::IImage<T>& image) {
             for (int z = 0; z < image.planes(); z++) {
                 for (int r = 0; r < image.height(); r++) {
                     for (int c = 0; c < image.width(); c++) {

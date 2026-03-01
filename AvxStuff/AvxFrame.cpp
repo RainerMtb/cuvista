@@ -107,19 +107,19 @@ void AvxFrame::outputData(int64_t frameIndex, AffineDataFloat trf) {
 	}
 }
 
-void AvxFrame::getOutputYuv(int64_t frameIndex, ImageYuv& image) const {
-	write(image);
+void AvxFrame::getOutputImage(int64_t frameIndex, Image8& image) const {
+	//util::ConsoleTimer ic("avx output");
+	if (image.colorBase() == ColorBase::RGB) {
+		yuvToRgb(mOutput[0].data(), mOutput[1].data(), mOutput[2].data(), mData.h, mData.w, pitch, image);
+
+	} else if (image.colorBase() == ColorBase::YUV) {
+		writeYuv(image);
+	}
 	image.setIndex(frameIndex);
 }
 
-void AvxFrame::getOutputImage(int64_t frameIndex, ImageBaseRgb& image) const {
-	//util::ConsoleTimer ic("avx output rgba");
-	yuvToRgb(mOutput[0].data(), mOutput[1].data(), mOutput[2].data(), mData.h, mData.w, pitch, image);
-	image.setIndex(frameIndex);
-}
-
-bool AvxFrame::getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) const {
-	write(image);
+bool AvxFrame::getOutputNvenc(int64_t frameIndex, Image8& image, unsigned char* cudaNv12ptr) const {
+	writeNV12(image);
 	return true;
 }
 
@@ -127,7 +127,7 @@ Matf AvxFrame::getTransformedOutput() const {
 	return Matf::concatVert(mWarped[0].matShare(), mWarped[1].matShare(), mWarped[2].matShare());
 }
 
-void AvxFrame::getWarped(int64_t frameIndex, ImageBaseRgb& image) {
+void AvxFrame::getWarped(int64_t frameIndex, Image8& image) {
 	yuvToRgb(mWarped[0].data(), mWarped[1].data(), mWarped[2].data(), mData.h, mData.w, pitch, image);
 }
 
@@ -135,15 +135,15 @@ Matf AvxFrame::getPyramid(int64_t index) const {
 	return mPyr[index].matCopy();
 }
 
-void AvxFrame::getInput(int64_t frameIndex, ImageBaseRgb& image) const {
+void AvxFrame::getInput(int64_t frameIndex, Image8& image) const {
 	size_t idx = frameIndex % mYUV.size();
-	const ImageYuv& yuv = mYUV[idx];
-	yuvToRgb(yuv.plane(0), yuv.plane(1), yuv.plane(2), mData.h, mData.w, yuv.stride, image);
-}
+	if (image.colorBase() == ColorBase::RGB) {
+		const ImageYuv& yuv = mYUV[idx];
+		yuvToRgb(yuv.plane(0), yuv.plane(1), yuv.plane(2), mData.h, mData.w, yuv.stride(), image);
 
-void AvxFrame::getInput(int64_t index, ImageYuv& image) const {
-	size_t idx = index % mYUV.size();
-	mYUV[idx].copyTo(image);
+	} else if (image.colorBase() == ColorBase::YUV) {
+		mYUV[idx].copyTo(image);
+	}
 }
 
 
@@ -565,7 +565,8 @@ void AvxFrame::unsharp(const AvxMatf& warped, AvxMatf& gauss, float unsharp, Avx
 	mPool.wait();
 }
 
-void AvxFrame::write(ImageYuv& dest) const {
+void AvxFrame::writeYuv(Image8& dest) const {
+	assert(dest.imageType() == ImageType::YUV && "invalid image");
 	for (int z = 0; z < 3; z++) {
 		for (int r = 0; r < mData.h; r++) {
 			for (int c = 0; c < mData.w; c += 16) {
@@ -577,20 +578,21 @@ void AvxFrame::write(ImageYuv& dest) const {
 	}
 }
 
-void AvxFrame::write(ImageNV12& image) const {
+void AvxFrame::writeNV12(Image8& dest) const {
+	assert(dest.imageType() == ImageType::NV12 && "invalid image");
 	//util::ConsoleTimer ic("avx write nv12");
 	//Y-Plane
 	for (int r = 0; r < mData.h; r++) {
-		unsigned char* dest = image.addr(0, r, 0);
+		unsigned char* ptr = dest.addr(0, r, 0);
 		for (int c = 0; c < mData.w; c += 16) {
 			V16f out = mOutput[0].addr(r, c);
 			__m512i chars32 = _mm512_cvt_roundps_epi32(out * 255.0f, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
-			_mm512_mask_cvtusepi32_storeu_epi8(dest + c, 0xFFFF, chars32);
+			_mm512_mask_cvtusepi32_storeu_epi8(ptr + c, 0xFFFF, chars32);
 		}
 	}
 
 	//U-V-Planes
-	unsigned char* dest = image.data() + image.h * image.stride;
+	unsigned char* ptr = dest.data() + dest.height() * dest.stride();
 	for (int rr = 0; rr < mData.h / 2; rr++) {
 		int r = rr * 2;
 		__m512i a, b, x, sumU, sumV, sum;
@@ -618,17 +620,17 @@ void AvxFrame::write(ImageNV12& image) const {
 			sum = _mm512_add_epi32(sum, x);
 			//divide sum by 4
 			sum = _mm512_srli_epi32(sum, 2);
-			_mm512_mask_cvtusepi32_storeu_epi8(dest + c, 0xFFFF, sum);
+			_mm512_mask_cvtusepi32_storeu_epi8(ptr + c, 0xFFFF, sum);
 		}
 
-		dest += image.stride;
+		ptr += dest.stride();
 	}
 }
 
 //from uchar yuv to uchar rgba
-void AvxFrame::yuvToRgb(const uchar* y, const uchar* u, const uchar* v, int h, int w, int stride, ImageBaseRgb& dest) const {
+void AvxFrame::yuvToRgb(const uchar* y, const uchar* u, const uchar* v, int h, int w, int stride, Image8& dest) const {
 	assert(util::alignValue(w, 4) * 4 <= dest.strideInBytes() && "invalid image dimensions");
-	auto vidx = dest.indexRgba();
+	auto vidx = dest.colorIndex();
 	V16f factorU = { fu[vidx[0]], fu[vidx[1]], fu[vidx[2]], fu[vidx[3]] };
 	V16f factorV = { fv[vidx[0]], fv[vidx[1]], fv[vidx[2]], fv[vidx[3]] };
 	uint16_t mask = 0b0001'0001'0001'0001;
@@ -648,9 +650,9 @@ void AvxFrame::yuvToRgb(const uchar* y, const uchar* u, const uchar* v, int h, i
 }
 
 //from float yuv to uchar rgba
-void AvxFrame::yuvToRgb(const float* y, const float* u, const float* v, int h, int w, int stride, ImageBaseRgb& dest) const {
+void AvxFrame::yuvToRgb(const float* y, const float* u, const float* v, int h, int w, int stride, Image8& dest) const {
 	assert(util::alignValue(w, 4) * 4 <= dest.strideInBytes() && "invalid image dimensions");
-	auto vidx = dest.indexRgba();
+	auto vidx = dest.colorIndex();
 	V16f factorU = { fu[vidx[0]], fu[vidx[1]], fu[vidx[2]], fu[vidx[3]] };
 	V16f factorV = { fv[vidx[0]], fv[vidx[1]], fv[vidx[2]], fv[vidx[3]] };
 	uint16_t mask = 0b0001'0001'0001'0001;

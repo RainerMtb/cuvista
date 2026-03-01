@@ -103,7 +103,7 @@ void Color::setAlpha(double alpha) {
 	this->alpha = alpha; 
 }
 
-int Color::getChannel(size_t index) const {
+unsigned char Color::getChannel(size_t index) const {
 	assert(index >= 0 && index < 4 && "invalid index");
 	return colorData[index];
 }
@@ -113,31 +113,72 @@ int Color::getChannel(size_t index) const {
 
 namespace im {
 
+	//input float [0..255]
 	static void yuv_to_rgb_func(float yf, float uf, float vf, unsigned char* r, unsigned char* g, unsigned char* b) {
-		*r = (unsigned char) std::rint(std::clamp(yf + (1.370705f * (vf - 128.0f)), 0.0f, 255.0f));
-		*g = (unsigned char) std::rint(std::clamp(yf - (0.337633f * (uf - 128.0f)) - (0.698001f * (vf - 128.0f)), 0.0f, 255.0f));
-		*b = (unsigned char) std::rint(std::clamp(yf + (1.732446f * (uf - 128.0f)), 0.0f, 255.0f));
+		float y = yf - 16.0f;
+		float u = uf - 128.0f;
+		float v = vf - 128.0f;
+		*r = (unsigned char) std::rint(std::clamp(1.164f * y + 1.596f * v,              0.0f, 255.0f));
+		*g = (unsigned char) std::rint(std::clamp(1.164f * y - 0.392f * u - 0.813f * v, 0.0f, 255.0f));
+		*b = (unsigned char) std::rint(std::clamp(1.164f * y + 2.017f * u,              0.0f, 255.0f));
 	}
 
 	void yuv_to_rgb(unsigned char y, unsigned char u, unsigned char v, unsigned char* r, unsigned char* g, unsigned char* b) {
 		yuv_to_rgb_func(y, u, v, r, g, b);
 	}
 
+	//input float [0..1]
 	void yuv_to_rgb(float y, float u, float v, unsigned char* r, unsigned char* g, unsigned char* b) {
 		yuv_to_rgb_func(y * 255.0f, u * 255.0f, v * 255.0f, r, g, b);
 	}
 
-	void rgb_to_yuv(unsigned char r, unsigned char g, unsigned char b, unsigned char* y, unsigned char* u, unsigned char* v) {
-		*y = (unsigned char) ( 0.257f * r + 0.504f * g + 0.098f * b + 16.0f);
+	//input float [0..1]
+	static void yuv_to_rgb_func(float y, float u, float v, float* r, float* g, float* b) {
+		*r = 1.164f * y + 1.596f * v;
+		*g = 1.164f * y - 0.392f * u - 0.813f * v;
+		*b = 1.164f * y + 2.017f * u;
+	}
+
+	void yuv_to_rgb(float y, float u, float v, float* r, float* g, float* b) {
+		yuv_to_rgb_func(y, u, v, r, g, b);
+	}
+
+	void yuv_to_rgb(unsigned char y, unsigned char u, unsigned char v, float* r, float* g, float* b) {
+		float yf = (y - 16.0f) / 255.0f;
+		float uf = (y - 128.0f) / 255.0f;
+		float vf = (y - 128.0f) / 255.0f;
+		yuv_to_rgb_func(y, u, v, r, g, b);
+	}
+
+	//--------------------------------------------------------------------------------
+
+	static void rgb_to_yuv_func(float r, float g, float b, unsigned char* y, unsigned char* u, unsigned char* v) {
+		*y = (unsigned char) ( 0.257f * r + 0.504f * g + 0.098f * b +  16.0f);
 		*u = (unsigned char) (-0.148f * r - 0.291f * g + 0.439f * b + 128.0f);
 		*v = (unsigned char) ( 0.439f * r - 0.368f * g - 0.071f * b + 128.0f);
 	}
 
+	void rgb_to_yuv(unsigned char r, unsigned char g, unsigned char b, unsigned char* y, unsigned char* u, unsigned char* v) {
+		rgb_to_yuv_func(r, g, b, y, u, v);
+	}
+
+	void rgb_to_yuv(float r, float g, float b, unsigned char* y, unsigned char* u, unsigned char* v) {
+		rgb_to_yuv_func(r * 255.0f, g * 255.0f, b * 255.0f, y, u, v);
+	}
+
 	void rgb_to_yuv(unsigned char r, unsigned char g, unsigned char b, float* y, float* u, float* v) {
-		*y = ( 0.257f * r + 0.504f * g + 0.098f * b + 16.0f) / 255.0f;
+		*y = ( 0.257f * r + 0.504f * g + 0.098f * b +  16.0f) / 255.0f;
 		*u = (-0.148f * r - 0.291f * g + 0.439f * b + 128.0f) / 255.0f;
 		*v = ( 0.439f * r - 0.368f * g - 0.071f * b + 128.0f) / 255.0f;
 	}
+
+	void rgb_to_yuv(float r, float g, float b, float* y, float* u, float* v) {
+		*y =  0.257f * r + 0.504f * g + 0.098f * b;
+		*u = -0.148f * r - 0.291f * g + 0.439f * b;
+		*v =  0.439f * r - 0.368f * g - 0.071f * b;
+	}
+
+	//----------------------------------------------------------------------------------
 
 	unsigned char rgb_to_y(unsigned char r, unsigned char g, unsigned char b) {
 		return (unsigned char) (0.257f * r + 0.504f * g + 0.098f * b + 16.0f);

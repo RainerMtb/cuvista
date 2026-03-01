@@ -21,6 +21,8 @@
 #include <optional>
 #include <format>
 #include <memory>
+#include <chrono>
+#include <mutex>
 
 int getSystemConsoleWidth();
 
@@ -66,6 +68,9 @@ public:
 
 
 struct DebugLogger {
+	std::chrono::time_point<std::chrono::system_clock> start = std::chrono::system_clock::now();
+	std::mutex mutex;
+
 	virtual void log(const std::string& msg) = 0;
 
 	template <class... Args> void format(std::format_string<Args...> fmt, Args&&... args) {

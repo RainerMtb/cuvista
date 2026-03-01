@@ -79,7 +79,7 @@ private:
 
     MainData mData;
     ImageYuv mInputYUV;
-    ImageBGR mInputBGR;
+    ImageBgr mInputBGR;
     QImage mInputImage;
     FFmpegReader mReader;
 

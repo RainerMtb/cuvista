@@ -19,25 +19,24 @@
 #include "Deshaker.hpp"
 #include "ImageClasses.hpp"
 
+template class im::ImageBase<float>;
+template class im::ImageBase<uchar>;
+
 int main() {
 	std::cout << "------- CuvistaTest -------" << std::endl << std::endl;
 
 	//debugLogger = std::make_shared<DebugLoggerTcp>("10.0.0.1", 5555);
 	//debugLogger->format("test tcp log {}", 1);
 
-	im::ImageBgrV2 im = im::ImageBgrV2::readBmpFile("d:/VideoTest/beach.86.bmp");
-	im.saveBmpPlanes("f:/test1.bmp");
-	im.saveBmpColor("f:/test2.bmp");
-
 	std::vector<std::string> argsLines = {
 		"-i d:/VideoTest/02short.mp4 -o f:/videoOut.mp4 -y",
-		"-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -y",
+		"-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -y -device 0",
 		"-i d:/Documents/x.orig/beach.1.avi -o null -frames 100 -device 2",
 		"-i d:/Documents/x.orig/beach.1.avi -o f:/videoOut.mp4 -y -frames 100 -device 2"
 	};
-	int idx = 1;
 
-	std::string argsLine = argsLines[idx];
+	int idx = 1;
+		std::string argsLine = argsLines[idx];
 	auto args = util::splitString(argsLine, " ");
 	deshake(args, &std::cout, {});
 }

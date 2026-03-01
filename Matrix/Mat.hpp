@@ -40,7 +40,7 @@
 #include "MatIterator.hpp"
 #include "OutputLine.hpp"
 #include "Util.hpp"
-#include "Image.hpp"
+#include "ImageClasses.hpp"
 
 //---------------------------------------------------------
 //------------------------ CLASS MATROW FOR [][] INDEXING

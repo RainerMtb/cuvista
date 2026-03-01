@@ -21,22 +21,19 @@
 
 namespace im {
 
-	ImageBgrV2::ImageBgrV2(int h, int w, int stride) 
-	{
-		this->store = std::make_shared<ImageStoreLocal<uchar>>(h * stride, 3, 0);
-		this->type = std::make_shared<ImageTypePacked<uchar>>(this->store, h, w, stride);
-		this->color = std::make_shared<ImageColorRgb<uchar>>(this->type, std::vector<int>({ 2, 1, 0 }), 255);
+	ImageBgr::ImageBgr(int h, int w) {
+		int stride = util::alignValue(w * 3, 4);
+		storePtr = std::make_shared<ImageStoreLocal<uchar>>(h * stride);
+		typePtr = std::make_shared<ImageTypePacked<uchar>>(storePtr, h, w, stride, 3);
+		colorPtr = std::make_shared<ImageColorRgb<uchar>>(typePtr, std::array<int, 4>{ 2, 1, 0 }, 255);
 	}
 
-	ImageBgrV2::ImageBgrV2(int h, int w) :
-		ImageBgrV2(h, w, util::alignValue(w * 3, 4))
+	ImageBgr::ImageBgr() :
+		ImageBgr(0, 0)
 	{}
 
-	ImageBgrV2::ImageBgrV2() :
-		ImageBgrV2(0, 0)
-	{}
-
-	void ImageBgrV2::saveBmpColor(const std::string& filename) const {
+	void ImageBgr::saveBmpColor(const std::string& filename) const {
+		assert(strideInBytes() % 4 == 0 && "invalid stride");
 		std::ofstream os(filename, std::ios::binary);
 		BmpColorHeader(width(), height()).writeHeader(os);
 
@@ -45,8 +42,8 @@ namespace im {
 		}
 	}
 
-	ImageBgrV2 ImageBgrV2::ImageBgrV2::readBmpFile(const std::string& filename) {
-		ImageBgrV2 image;
+	ImageBgr ImageBgr::ImageBgr::readBmpFile(const std::string& filename) {
+		ImageBgr image;
 
 		auto readBytes = [] (const char* ptr, int byteCount) {
 			int out = 0;
@@ -87,12 +84,12 @@ namespace im {
 			//copy bytes to Image
 			int h = std::abs(height);
 			int stride = (siz - dataOffset) / h;
-			image = ImageBgrV2(h, w);
+			image = ImageBgr(h, w);
 
 			//when height is negative, rows are stored from top to bottom
 			const char* src = data.data() + dataOffset;
 			if (height < 0) {
-				uchar* dest = image.addr(0, 0, 0);
+				uchar* dest = image.row(0);
 				for (int r = 0; r < h; r++) {
 					std::copy_n(src, 3ull * w, dest);
 					src += stride;
@@ -100,7 +97,7 @@ namespace im {
 				}
 
 			} else {
-				uchar* dest = image.addr(0, h - 1ull, 0);
+				uchar* dest = image.row(h - 1ull);
 				for (int r = 0; r < h; r++) {
 					std::copy_n(src, 3ull * w, dest);
 					src += stride;
@@ -114,4 +111,169 @@ namespace im {
 
 		return image;
 	}
+
+
+	//-----------------------------------------------------------------------
+
+	ImageYuvFloat::ImageYuvFloat(int h, int w, int stride) {
+		storePtr = std::make_shared<ImageStoreLocal<float>>(h * stride * 3);
+		typePtr = std::make_shared<ImageTypePlanar<float>>(storePtr, h, w, stride, 3);
+		colorPtr = std::make_shared<ImageColorYuv<float>>(typePtr, std::array<int, 4>{ 0, 1, 2 }, 1.0f);
+	}
+
+	ImageYuvFloat::ImageYuvFloat(int h, int w) :
+		ImageYuvFloat(h, w, w) 
+	{}
+
+	ImageYuvFloat::ImageYuvFloat() :
+		ImageYuvFloat(0, 0)
+	{}
+
+
+	//-----------------------------------------------------------------------
+
+
+	ImageYuv::ImageYuv(int h, int w, int stride) {
+		storePtr = std::make_shared<ImageStoreLocal<uchar>>(h * stride * 3);
+		typePtr = std::make_shared<ImageTypePlanar<uchar>>(storePtr, h, w, stride, 3);
+		colorPtr = std::make_shared<ImageColorYuv<uchar>>(typePtr, std::array<int, 4>{ 0, 1, 2 }, 255);
+	}
+
+	ImageYuv::ImageYuv(int h, int w, size_t stride) :
+		ImageYuv(h, w, (int) stride)
+	{}
+
+	ImageYuv::ImageYuv(int h, int w) :
+		ImageYuv(h, w, w)
+	{}
+
+	ImageYuv::ImageYuv() :
+		ImageYuv(0, 0)
+	{}
+
+	ImageYuv ImageYuv::readPgmFile(const std::string& filename) {
+		ImageYuv yuv;
+		std::ifstream file(filename, std::ios::binary);
+		try {
+			std::string p5;
+			int w, h, maxVal;
+			file >> p5 >> w >> h >> maxVal;
+			if (p5 != "P5") throw std::runtime_error("file does not start with 'P5'");
+			if (maxVal != 255) throw std::runtime_error("max value must be 255");
+			file.get(); //read delimiter
+			yuv = ImageYuv(h, w);
+
+			for (int i = 0; i < 3; i++) {
+				for (size_t r = 0; r < h; r++) {
+					file.read(reinterpret_cast<char*>(yuv.data()), w);
+				}
+			}
+
+		} catch (const std::exception& e) {
+			printf("error reading from file: %s\n", e.what());
+
+		} catch (...) {
+			printf("error reading from file\n");
+		}
+		return yuv;
+	}
+
+	ImageYuv ImageYuv::readBmpFile(const std::string& filename) {
+		ImageBgr bgr = ImageBgr::readBmpFile(filename);
+		ImageYuv yuv(bgr.height(), bgr.width());
+		bgr.convertTo(yuv);
+		return yuv;
+	}
+
+	double ImageYuv::lumaRms() const {
+		int64_t sum = 0;
+		for (int r = 0; r < height(); r++) {
+			const unsigned char* ptr = row(0);
+			for (int c = 0; c < width(); c++) {
+				int64_t val = ptr[c];
+				sum += val * val;
+			}
+		}
+		double s = width() * height();
+		return std::sqrt(sum / s);
+	}
+
+	void ImageYuv::adjustGamma(float value) {
+		float g = 1.0f / value;
+		for (int r = 0; r < height(); r++) {
+			unsigned char* ptr = row(0);
+			for (int c = 0; c < width(); c++) {
+				unsigned char& p = ptr[c];
+				float x = p / 255.0f;
+				p = (unsigned char) std::rint(std::pow(x, g) * 255.0f);
+			}
+		}
+	}
+
+
+	//-----------------------------------------------------------------------
+
+	ImageNV12::ImageNV12(int h, int w, int stride) {
+		storePtr = std::make_shared<ImageStoreLocal<uchar>>(h * stride * 2);
+		typePtr = std::make_shared<ImageTypeNV12<uchar>>(storePtr, h, w, stride, 3);
+		colorPtr = std::make_shared<ImageColorYuv<uchar>>(typePtr, std::array<int, 4>{ 0, 1, 2 }, 255);
+	}
+
+	ImageNV12::ImageNV12(int h, int w) :
+		ImageNV12(h, w, w)
+	{}
+
+	ImageNV12::ImageNV12() :
+		ImageNV12(0, 0)
+	{}
+
+		
+	//-----------------------------------------------------------------------
+
+	ImageBGRA::ImageBGRA(int h, int w, int stride, uchar* data) {
+		std::span<uchar> span(data, h * stride);
+		storePtr = std::make_shared<ImageStoreSharedSingle<uchar>>(span);
+		typePtr = std::make_shared<ImageTypePacked<uchar>>(storePtr, h, w, stride, 4);
+		colorPtr = std::make_shared<ImageColorRgb<uchar>>(typePtr, std::array<int, 4>{ 2, 1, 0, 3 }, 255);
+	}
+
+	ImageBGRA::ImageBGRA(int h, int w, int stride) {
+		storePtr = std::make_shared<ImageStoreLocal<uchar>>(h * stride);
+		typePtr = std::make_shared<ImageTypePacked<uchar>>(storePtr, h, w, stride, 4);
+		colorPtr = std::make_shared<ImageColorRgb<uchar>>(typePtr, std::array<int, 4>{ 2, 1, 0, 3 }, 255);
+	}
+
+	ImageBGRA::ImageBGRA(int h, int w) :
+		ImageBGRA(h, w, w * 4)
+	{}
+
+	ImageBGRA::ImageBGRA() :
+		ImageBGRA(0, 0)
+	{}
+
+
+	//-----------------------------------------------------------------------
+
+
+	ImageRGBA::ImageRGBA(int h, int w, int stride, uchar* data) {
+		std::span<uchar> span(data, h * stride);
+		storePtr = std::make_shared<ImageStoreSharedSingle<uchar>>(span);
+		typePtr = std::make_shared<ImageTypePacked<uchar>>(storePtr, h, w, stride, 4);
+		colorPtr = std::make_shared<ImageColorRgb<uchar>>(typePtr, std::array<int, 4>{ 0, 1, 2, 3 }, 255);
+	}
+
+	ImageRGBA::ImageRGBA(int h, int w, int stride) {
+		storePtr = std::make_shared<ImageStoreLocal<uchar>>(h * stride);
+		typePtr = std::make_shared<ImageTypePacked<uchar>>(storePtr, h, w, stride, 4);
+		colorPtr = std::make_shared<ImageColorRgb<uchar>>(typePtr, std::array<int, 4>{ 0, 1, 2, 3 }, 255);
+	}
+
+	ImageRGBA::ImageRGBA(int h, int w) :
+		ImageRGBA(h, w, w * 4)
+	{}
+
+	ImageRGBA::ImageRGBA() :
+		ImageRGBA(0, 0)
+	{}
+
 }

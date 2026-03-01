@@ -171,9 +171,12 @@ __kernel void unsharp(__read_only image2d_t src, __write_only image2d_t dest, __
 
 //input float values in range 0..255
 void yuv_to_rgba_func(float yf, float uf, float vf, uchar* r, uchar* g, uchar* b, uchar* a) {
-	*r = (uchar) rint(clamp(yf + (1.370705f * (vf - 128.0f)), 0.0f, 255.0f));
-	*g = (uchar) rint(clamp(yf - (0.337633f * (uf - 128.0f)) - (0.698001f * (vf - 128.0f)), 0.0f, 255.0f));
-	*b = (uchar) rint(clamp(yf + (1.732446f * (uf - 128.0f)), 0.0f, 255.0f));
+	float y = yf - 16.0f;
+	float u = uf - 128.0f;
+	float v = vf - 128.0f;
+	*r = (uchar) rint(clamp(1.164f * y + 1.596f * v, 0.0f, 255.0f));
+	*g = (uchar) rint(clamp(1.164f * y - 0.392f * u - 0.813f * v, 0.0f, 255.0f));
+	*b = (uchar) rint(clamp(1.164f * y + 2.017f * u, 0.0f, 255.0f));
 	*a = 0xFF;
 }
 

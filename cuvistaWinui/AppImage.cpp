@@ -45,6 +45,8 @@ using namespace winrt::Windows::Graphics::Imaging;
 using namespace winrt::Windows::Storage::Streams;
 
 winrt::fire_and_forget ImageXamlBGRA::loadImageScaledToFit(winrt::hstring file) {
+    int w = width();
+    int h = height();
     int s = std::min(w, h);
 
     //load image scaled

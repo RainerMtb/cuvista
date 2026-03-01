@@ -339,11 +339,11 @@ std::ostream& operator << (std::ostream& out, const FrameResult::ClusterSize& cs
 void FrameResult::writeVideo(std::span<PointContext> res, int64_t frameIndex, const std::string& title) const {
 	static std::ofstream file("f:/resultVid.nv12", std::ios::binary);
 	static ImageNV12 im(mData.h, mData.w);
-	ImageBGR bgr(mData.h, mData.w);
+	ImageBgr bgr(mData.h, mData.w);
 	bgr.setColor(Color::DARK_GRAY);
 	std::vector<PointResult> resvec(res.begin(), res.end());
 	ResultImageWriter::writeImage({}, resvec, frameIndex, bgr, mPool, false);
 	bgr.writeText(title, mData.w / 2, 0, 2, 2, im::TextAlign::TOP_CENTER);
-	bgr.toNV12(im);
-	im.save(file);
+	bgr.convertTo(im);
+	im.write(file);
 }

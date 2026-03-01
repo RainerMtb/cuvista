@@ -24,7 +24,7 @@ void StackedWriter::open(OutputOption outputOption) {
 }
 
 void StackedWriter::writeOutput(const FrameExecutor& executor) {
-	executor.getOutputYuv(frameIndex, mOutputFrame);
+	executor.getOutputImage(frameIndex, mOutputFrame);
 	executor.getInput(frameIndex, mInputFrame);
 
 	int bufferIndex = 0;
@@ -53,12 +53,12 @@ void StackedWriter::writeOutput(const FrameExecutor& executor) {
 	auto color = mData.backgroundColor.getYUV();
 	for (int row = 0; row < mData.h * 3; row++) {
 		//output frame on right side
-		std::copy_n(out, combinedFrame.w / 2, dest + combinedFrame.w / 2);
+		std::copy_n(out, combinedFrame.width() / 2, dest + combinedFrame.width() / 2);
 		//middle 1% of width in background color
-		for (int col = combinedFrame.w * 99 / 200; col < combinedFrame.w * 101 / 200; col++) dest[col] = color[row / mData.h];
+		for (int col = combinedFrame.width() * 99 / 200; col < combinedFrame.width() * 101 / 200; col++) dest[col] = color[row / mData.h];
 
-		out += mOutputFrame.stride;
-		dest += combinedFrame.stride;
+		out += mOutputFrame.stride();
+		dest += combinedFrame.stride();
 	}
 	
 	combinedFrame.index = frameIndex;

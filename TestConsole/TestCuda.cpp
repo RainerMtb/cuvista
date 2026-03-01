@@ -132,8 +132,8 @@ void cudaInvParallel() {
 void cudaTextureRead() {
 	ImageYuv im1, im2;
 	ImageYuv input(1080, 1920);
-	for (int r = 0; r < input.h; r++) {
-		for (int c = 0; c < input.w; c++) {
+	for (int r = 0; r < input.height(); r++) {
+		for (int c = 0; c < input.width(); c++) {
 			input.at(0, r, c) = (unsigned char) (r);
 		}
 	}

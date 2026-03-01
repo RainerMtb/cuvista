@@ -412,7 +412,7 @@ bool FFmpegReader::read(ImageYuv& inputFrame) {
 
         //scale image data
         uint8_t* frame_buffer[] = { inputFrame.plane(0), inputFrame.plane(1), inputFrame.plane(2), nullptr };
-        int linesizes[] = { inputFrame.stride, inputFrame.stride, inputFrame.stride, 0 };
+        int linesizes[] = { inputFrame.stride(), inputFrame.stride(), inputFrame.stride(), 0};
         sws_scale(sws_scaler_ctx, av_frame->data, av_frame->linesize, 0, av_frame->height, frame_buffer, linesizes);
 
         //store parameters for writer

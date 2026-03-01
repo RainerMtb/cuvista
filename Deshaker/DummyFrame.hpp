@@ -33,12 +33,10 @@ public:
 	void computeStart(int64_t frameIndex, std::span<PointResult> results) override {};
 	void computeTerminate(int64_t frameIndex, std::span<PointResult> results) override {};
 	void outputData(int64_t frameIndex, AffineDataFloat trf) override;
-	void getOutputYuv(int64_t frameIndex, ImageYuv& image) const override;
-	void getOutputImage(int64_t frameIndex, ImageBaseRgb& image) const override;
-	bool getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) const override;
+	void getOutputImage(int64_t frameIndex, Image8& image) const override;
+	bool getOutputNvenc(int64_t frameIndex, Image8& image, unsigned char* cudaNv12ptr) const override;
 	Mat<float> getTransformedOutput() const override;
 	Mat<float> getPyramid(int64_t frameIndex) const override;
-	void getInput(int64_t frameIndex, ImageYuv& image) const override;
-	void getInput(int64_t frameIndex, ImageBaseRgb& image) const override;
-	void getWarped(int64_t frameIndex, ImageBaseRgb& image) override;
+	void getInput(int64_t frameIndex, Image8& image) const override;
+	void getWarped(int64_t frameIndex, Image8& image) override;
 };

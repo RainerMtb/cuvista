@@ -41,10 +41,10 @@ public:
 		for (int64_t z = 0; z < 3; z++) {
 			int64_t base = this->frameIndex * 2 + z * 5 + 30;
 			unsigned char* plane = frame.plane(z);
-			for (int64_t r = 0; r < frame.h; r++) {
-				for (int64_t c = 0; c < frame.w; c++) {
+			for (int64_t r = 0; r < frame.height(); r++) {
+				for (int64_t c = 0; c < frame.width(); c++) {
 					int64_t pix = std::clamp(base + r / 10, 0LL, 255LL);
-					plane[r * frame.stride + c] = (unsigned char) (pix);
+					plane[r * frame.stride() + c] = (unsigned char) (pix);
 				}
 			}
 		}
@@ -100,7 +100,7 @@ namespace Microsoft::VisualStudio::CppUnitTestFramework {
 	}
 
 	template <> static std::wstring ToString(const ImageYuv& im) {
-		return L"image w=" + std::to_wstring(im.w) + L" h=" + std::to_wstring(im.h);
+		return L"image w=" + std::to_wstring(im.width()) + L" h=" + std::to_wstring(im.height());
 	}
 
 	template <> static std::wstring ToString(const std::vector<double>& v) {

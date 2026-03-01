@@ -309,26 +309,25 @@ void CpuFrame::outputData(int64_t frameIndex, AffineDataFloat trf) {
 	mOutput.index = frameIndex;
 }
 
-void CpuFrame::getOutputYuv(int64_t frameIndex, ImageYuv& image) const {
+void CpuFrame::getOutputImage(int64_t frameIndex, Image8& image) const {
 	assert(frameIndex == mOutput.index && "invalid frame index");
-	mOutput.toYuv(image, mPool);
+	if (image.colorBase() == ColorBase::YUV) {
+		mOutput.convertTo(image, mPool);
+
+	} else if (image.colorBase() == ColorBase::RGB) {
+		mOutput.convertTo(image, mPool);
+	}
 	image.index = frameIndex;
 }
 
-void CpuFrame::getOutputImage(int64_t frameIndex, ImageBaseRgb& image) const {
+bool CpuFrame::getOutputNvenc(int64_t frameIndex, Image8& image, unsigned char* cudaNv12ptr) const {
 	assert(frameIndex == mOutput.index && "invalid frame index");
-	mOutput.toBaseRgb(image, mPool);
-	image.index = frameIndex;
-}
-
-bool CpuFrame::getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) const {
-	assert(frameIndex == mOutput.index && "invalid frame index");
-	mOutput.toNV12(image, mPool);
+	mOutput.convertTo(image, mPool);
 	return true;
 }
 
-void CpuFrame::getWarped(int64_t frameIndex, ImageBaseRgb& image) {
-	ImageYuvMatFloat(mData.h, mData.w, mData.w, mBuffer[0].data(), mBuffer[1].data(), mBuffer[2].data()).toBaseRgb(image, mPool);
+void CpuFrame::getWarped(int64_t frameIndex, Image8& image) {
+	ImageMatShared<float>(mData.h, mData.w, mData.w, mBuffer[0].data(), mBuffer[1].data(), mBuffer[2].data(), 1.0f).convertTo(image, mPool);
 }
 
 Matf CpuFrame::getTransformedOutput() const {
@@ -345,12 +344,12 @@ Matf CpuFrame::getPyramid(int64_t index) const {
 	return out;
 }
 
-void CpuFrame::getInput(int64_t frameIndex, ImageBaseRgb& image) const {
+void CpuFrame::getInput(int64_t frameIndex, Image8& image) const {
 	size_t idx = frameIndex % mYUV.size();
-	mYUV[idx].toBaseRgb(image, mPool);
-}
+	if (image.colorBase() == ColorBase::YUV) {
+		mYUV[idx].copyTo(image);
 
-void CpuFrame::getInput(int64_t index, ImageYuv& image) const {
-	size_t idx = index % mYUV.size();
-	mYUV[idx].copyTo(image);
+	} else if (image.colorBase() == ColorBase::RGB) {
+		mYUV[idx].convertTo(image, mPool);
+	}
 }

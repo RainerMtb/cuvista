@@ -19,10 +19,11 @@
 #include "pch.h"
 #include "CppUnitTest.h"
 #include "NvEncoder.hpp"
-#include "Image2.hpp"
+#include "ImageClasses.hpp"
 #include "FFmpegUtil.hpp"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
+using namespace im;
 
 namespace CudaTest {
 
@@ -55,7 +56,7 @@ private:
 
 		//set up a frame in nv12 format
 		ImageNV12 inputNV12(h, w, nvenc.cudaPitch);
-		inputFrame.toNV12(inputNV12);
+		inputFrame.convertTo(inputNV12);
 		CUdeviceptr devptr = (CUdeviceptr) nvenc.getNextInputFramePtr();
 		res = cuMemcpyHtoD_v2(devptr, inputNV12.addr(0, 0, 0), inputNV12.sizeInBytes());
 		Assert::IsTrue(res == CUDA_SUCCESS, toWString(res).c_str());

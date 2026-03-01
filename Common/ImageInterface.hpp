@@ -18,16 +18,62 @@
 
 #pragma once
 
+#include <cstdint>
 #include <vector>
+#include <array>
+#include <iostream>
+#include "ThreadPoolBase.h"
+
+#undef min
+#undef max
+
+struct Size {
+	int h, w;
+};
 
 namespace im {
 
 	using uchar = unsigned char;
 	using ushort = unsigned short;
 
+	enum class TextAlign {
+		TOP_LEFT,
+		TOP_CENTER,
+		TOP_RIGHT,
+		MIDDLE_LEFT,
+		MIDDLE_CENTER,
+		MIDDLE_RIGHT,
+		BOTTOM_LEFT,
+		BOTTOM_CENTER,
+		BOTTOM_RIGHT,
+	};
+
+	enum class MarkerType {
+		DOT,
+		BOX,
+		DIAMOND,
+	};
+
 	enum class ImageType {
 		BGR,
+		RGB,
+		RGBA,
+		BGRA,
 		YUV,
+		AYUV,
+		NV12,
+		NONE,
+	};
+
+	enum class ColorBase {
+		YUV,
+		RGB,
+		UNKNOWN,
+	};
+
+	template <class T> struct LocalColor {
+		std::array<T, 4> colorData;
+		double alpha;
 	};
 
 	//Interface to Image Classes
@@ -38,28 +84,33 @@ namespace im {
 
 		virtual constexpr ImageType imageType() const = 0;
 
+		void setIndex(int64_t index) { this->index = index; }
+
 		virtual T* addr(size_t idx, size_t r, size_t c) = 0;
 		virtual const T* addr(size_t idx, size_t r, size_t c) const = 0;
 
-		virtual T& at(size_t idx, size_t r, size_t c) { return *addr(idx, r, c); }
-		virtual const T& at(size_t idx, size_t r, size_t c) const { return *addr(idx, r, c); }
+		virtual T* row(size_t r) = 0;
+		virtual const T* row(size_t r) const = 0;
 
-		//virtual T* row(size_t r, size_t c) = 0;
-		//virtual const T* row(size_t r, size_t c) const = 0;
-
-		virtual int planes() const = 0;
 		virtual T* plane(size_t idx) = 0;
 		virtual const T* plane(size_t idx) const = 0;
 
+		virtual T& at(size_t idx, size_t r, size_t c) = 0;
+		virtual const T& at(size_t idx, size_t r, size_t c) const = 0;
+
 		virtual int height() const = 0;
 		virtual int width() const = 0;
-		virtual int widthInBytes() const = 0;
 		virtual int stride() const = 0;
 		virtual int strideInBytes() const = 0;
+		virtual int planes() const = 0;
+		virtual size_t sizeInBytes() const = 0;
 		virtual std::vector<T> bytes() const = 0;
+		virtual void write(std::ostream& os) const = 0;
 
 		virtual void saveBmpColor(const std::string& filename) const = 0;
 		virtual void saveBmpPlanes(const std::string& filename) const = 0;
+
+		virtual uint64_t crc() const = 0;
 
 		virtual ~IImage() = default;
 	};

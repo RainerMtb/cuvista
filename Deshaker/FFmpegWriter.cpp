@@ -173,8 +173,8 @@ void FFmpegWriter::write(int bufferIndex) {
         //fr.writeText(std::to_string(fr.index), 10, 10, 2, 3, ColorYuv::BLACK, ColorYuv::WHITE);
         //scale and put into av_frame
         uint8_t* src[] = { fr.plane(0), fr.plane(1), fr.plane(2), nullptr };
-        int strides[] = { fr.stride, fr.stride, fr.stride, 0 }; //if only three values are provided, we get a warning "data not aligned"
-        int sliceHeight = sws_scale(sws_scaler_ctx, src, strides, 0, fr.h, av_frame->data, av_frame->linesize);
+        int strides[] = { fr.stride(), fr.stride(), fr.stride(), 0}; //if only three values are provided, we get a warning "data not aligned"
+        int sliceHeight = sws_scale(sws_scaler_ctx, src, strides, 0, fr.height(), av_frame->data, av_frame->linesize);
 
         //set pts into frame to later name packet
         av_frame->pts = fr.index;
@@ -197,7 +197,7 @@ void FFmpegWriter::write(int bufferIndex) {
 
 void FFmpegWriter::writeOutput(const FrameExecutor& executor) {
     int64_t idx = frameIndex % imageBufferSize;
-    executor.getOutputYuv(frameIndex, imageBuffer[idx]);
+    executor.getOutputImage(frameIndex, imageBuffer[idx]);
     write(idx);
 }
 

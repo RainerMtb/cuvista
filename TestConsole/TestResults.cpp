@@ -82,20 +82,20 @@ void testVideo2() {
 	CudaFrame executor(data, cudaDevices[0], frame, frame.mPool);
 
 	executor.init();
-	ImageYuv src = ImageBGR::readFromBMP("D:/VideoTest/beach.86.bmp").toYUV();
+	ImageYuv src = ImageYuv::readBmpFile("D:/VideoTest/beach.86.bmp");
 	std::cout << "rms " << src.lumaRms() << std::endl;
 	executor.inputData(0, src);
 	executor.createPyramid(0);
 
-	ImageYuv im = ImageBGR::readFromBMP("D:/VideoTest/beach.87.bmp").toYUV();
+	ImageYuv im = ImageYuv::readBmpFile("D:/VideoTest/beach.87.bmp");
 	for (int i = 0; i < 5; i++) {
-		src = im.copy();
+		src = im;
 		float gamma = 1.0f - 0.05f * i;
 		std::string str = std::format("{:.3f}", gamma);
-		src.gamma(gamma);
+		src.adjustGamma(gamma);
 		std::cout << "gamma " << gamma << " lumaRms " << src.lumaRms() << std::endl;
 		src.writeText(str, 860, 0, 2, 2, im::TextAlign::TOP_CENTER);
-		src.saveAsColorBMP(std::format("f:/image{}a.bmp", i));
+		src.saveBmpColor(std::format("f:/image{}a.bmp", i));
 
 		executor.inputData(1, src);
 		executor.createPyramid(1);
@@ -106,7 +106,7 @@ void testVideo2() {
 		ImageRGBA dest(1080, 1920);
 		ResultImageWriter::writeImage(trf, frame.mResultPoints, 1, dest, frame.mPool, false);
 		dest.writeText(str, 860, 0, 2, 2, im::TextAlign::TOP_CENTER);
-		dest.saveAsColorBMP(std::format("f:/image{}b.bmp", i));
+		dest.saveBmpColor(std::format("f:/image{}b.bmp", i));
 
 		FrameResult::DebugData data = FrameResult::debugData;
 		std::cout << "[" << data.clusterSizes.size() << "] " << util::collectionToString(data.clusterSizes, 15) << std::endl;

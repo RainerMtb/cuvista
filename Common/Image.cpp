@@ -16,6 +16,7 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
+/*
 #include "Image.hpp"
 #include "ImageHeaders.hpp"
 #include "Util.hpp"
@@ -26,6 +27,7 @@
 #include <algorithm>
 #include <numeric>
 #include <map>
+
 
 using namespace im;
 
@@ -338,10 +340,8 @@ template <class T> double ImageBase<T>::rfpart(double d) {
 }
 
 template <class T> void ImageBase<T>::drawLine(double x0, double y0, double x1, double y1, const Color& color, double alpha) {
-	/*
-	Xiaolin Wu's line algorithm
-	https://en.wikipedia.org/wiki/Xiaolin_Wu%27s_line_algorithm
-	*/
+	//Xiaolin Wu's line algorithm
+	//https://en.wikipedia.org/wiki/Xiaolin_Wu%27s_line_algorithm
 	bool steep = std::abs(y1 - y0) > std::abs(x1 - x0);
 	if (steep) {
 		std::swap(x0, y0);
@@ -659,3 +659,5 @@ template class ImagePacked<float>;
 template class ImagePacked<unsigned char>;
 template class ImageMatShared<float>;
 template class ImageMatShared<unsigned char>;
+
+*/

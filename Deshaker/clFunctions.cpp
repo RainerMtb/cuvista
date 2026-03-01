@@ -96,7 +96,7 @@ void cl::unsharp(Image src, Image dest, Image gauss, Data& clData, cl_float4 fac
 	runKernel(kernel, src, dest, clData.queue);
 }
 
-void cl::yuv_to_rgba(Kernel kernel, Image src, unsigned char* dest, const Data& clData, int w, int h, int stride, std::vector<int> index) {
+void cl::yuv_to_rgba(Kernel kernel, Image src, unsigned char* dest, const Data& clData, int w, int h, int stride, std::span<int> index) {
 	cl_int4 offset4 = { index[0], index[1], index[2], index[3] };
 	kernel.setArg(0, src);
 	kernel.setArg(1, clData.rgbaOut);

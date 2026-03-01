@@ -235,11 +235,11 @@
     <ClInclude Include="ImageYuvFFmpeg.hpp">
       <Filter>Util</Filter>
     </ClInclude>
-    <ClInclude Include="CudaInterface.hpp">
-      <Filter>Main</Filter>
-    </ClInclude>
     <ClInclude Include="SystemStuff.hpp">
       <Filter>System</Filter>
+    </ClInclude>
+    <ClInclude Include="CudaInterface.hpp">
+      <Filter>Frame</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -18,9 +18,11 @@
 
 #pragma once
 
+/*
 #include "ThreadPoolBase.h"
 #include "ImageData.hpp"
 #include "Color.hpp"
+
 
 struct Size {
 	int h, w;
@@ -213,3 +215,5 @@ namespace im {
 }
 
 using Image8 = im::ImageBase<unsigned char>;
+
+*/

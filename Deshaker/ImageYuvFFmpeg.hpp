@@ -19,18 +19,20 @@
 #pragma once
 
 #include "FFmpegUtil.hpp"
-#include "ImageData.hpp"
+#include "ImageBase.hpp"
+
+using namespace im;
 
 //Image using ffmpeg frame buffer
-class ImageYuvFFmpeg : public ImageData<uint8_t> {
+class ImageYuvFFmpeg : public ImageBase<uint8_t> {
 
 private:
     AVFrame* av_frame;
 
 public:
-    int64_t index = 0;
-
     ImageYuvFFmpeg(AVFrame* av_frame = nullptr);
+
+    constexpr ImageType imageType() const override { return ImageType::NONE; }
 
     uint8_t* addr(size_t idx, size_t r, size_t c) override;
     const uint8_t* addr(size_t idx, size_t r, size_t c) const override;
@@ -38,10 +40,7 @@ public:
     int height() const override;
     int width() const override;
     int strideInBytes() const override;
-    int sizeInBytes() const override;
+    size_t sizeInBytes() const override;
 
-    void setIndex(int64_t frameIndex) override;
-    bool saveAsBMP(const std::string& filename, uint8_t scale = 1) const override;
-    std::vector<uint8_t> rawBytes() const override;
-    ImageType type() const override;
+    void saveBmpPlanes(const std::string& filename) const override;
 };

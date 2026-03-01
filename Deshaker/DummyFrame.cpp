@@ -41,33 +41,33 @@ void DummyFrame::outputData(int64_t frameIndex, AffineDataFloat trf) {
 	size_t idx = frameIndex % mFrames.size();
 }
 
-void DummyFrame::getOutputYuv(int64_t frameIndex, ImageYuv& image) const {
+void DummyFrame::getOutputImage(int64_t frameIndex, Image8& image) const {
 	size_t idx = frameIndex % mFrames.size();
-	mFrames[idx].copyTo(image, mPool);
+	if (image.colorBase() == ColorBase::YUV) {
+		mFrames[idx].copyTo(image, mPool);
+
+	} else if (image.colorBase() == ColorBase::RGB) {
+		mFrames[idx].convertTo(image, mPool);
+	}
 }
 
-bool DummyFrame::getOutputNvenc(int64_t frameIndex, ImageNV12& image, unsigned char* cudaNv12ptr) const {
+bool DummyFrame::getOutputNvenc(int64_t frameIndex, Image8& image, unsigned char* cudaNv12ptr) const {
 	size_t idx = frameIndex % mFrames.size();
-	mFrames[idx].toNV12(image, mPool);
+	mFrames[idx].convertTo(image, mPool);
 	return true;
 }
 
-void DummyFrame::getOutputImage(int64_t frameIndex, ImageBaseRgb& image) const {
+void DummyFrame::getWarped(int64_t frameIndex, Image8& image) {
 	size_t idx = frameIndex % mFrames.size();
-	mFrames[idx].toBaseRgb(image, mPool);
+	mFrames[idx].convertTo(image, mPool);
 }
 
-void DummyFrame::getWarped(int64_t frameIndex, ImageBaseRgb& image) {
+void DummyFrame::getInput(int64_t frameIndex, Image8& image) const {
 	size_t idx = frameIndex % mFrames.size();
-	mFrames[idx].toBaseRgb(image, mPool);
-}
+	if (image.colorBase() == ColorBase::YUV) {
+		mFrames[idx].copyTo(image);
 
-void DummyFrame::getInput(int64_t frameIndex, ImageYuv& image) const {
-	size_t idx = frameIndex % mFrames.size();
-	mFrames[idx].copyTo(image);
-}
-
-void DummyFrame::getInput(int64_t frameIndex, ImageBaseRgb& image) const {
-	size_t idx = frameIndex % mFrames.size();
-	mFrames[idx].toBaseRgb(image, mPool);
+	} else if (image.colorBase() == ColorBase::RGB) {
+		mFrames[idx].convertTo(image, mPool);
+	}
 }

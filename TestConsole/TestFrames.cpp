@@ -173,14 +173,14 @@ void createTransformImages() {
 		std::cout << "writing " << outFile << std::endl;
 
 		//std::cout << "reading images" << std::endl;
-		ImageYuv im1 = ImageBGR::readFromBMP(inFile1).toYUV();
-		ImageYuv im2 = ImageBGR::readFromBMP(inFile2).toYUV();
+		ImageYuv im1 = ImageYuv::readBmpFile(inFile1);
+		ImageYuv im2 = ImageYuv::readBmpFile(inFile2);
 
 		MainData data;
 		data.collectDeviceInfo();
 		ImageReader reader;
-		reader.h = im1.h;
-		reader.w = im1.w;
+		reader.h = im1.height();
+		reader.w = im1.width();
 		reader.frameCount = 2;
 		data.validate(reader);
 
@@ -211,10 +211,11 @@ void createTransformImages() {
 		yuvFile.write(imOut);
 
 		//std::cout << "writing result" << std::endl;
-		ImageBGR out = im2.toBGR();
+		ImageBgr out(im2.height(), im2.width());
+		im2.convertTo(out);
 		out.gray();
 		ResultImageWriter::writeImage(trf, frame.mResultPoints, i, out);
-		out.saveAsColorBMP(outFile);
+		out.saveBmpColor(outFile);
 
 		std::cout << "done" << std::endl;
 	}
