@@ -131,8 +131,4 @@ namespace im {
 		this->convertTo(bgr);
 		bgr.saveBmpColor(filename);
 	}
-
-	template <class T> void ImageBase<T>::saveBmpPlanes(const std::string& filename) const {
-		colorPtr->saveBmpPlanes(filename);
-	}
 }

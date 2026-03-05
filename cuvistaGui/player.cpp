@@ -166,7 +166,7 @@ void PlayerWriter::writeOutput(const FrameExecutor& executor) {
 
     } else {
         ImageRGBA image(mVideoFrame.height(), mVideoFrame.width(), mVideoFrame.bytesPerLine(0), mVideoFrame.bits(0));
-        executor.getOutputImage(frameIndex, image);
+        executor.getOutput(frameIndex, image);
         mVideoFrame.unmap();
     }
 

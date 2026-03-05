@@ -20,7 +20,7 @@
 
 #include <cstddef>
 
-inline const uint64_t crcInput =       0xc9b13bfde8df8beb;
+inline const uint64_t crcInput =       0xbe28a5a4e02a2bad;
 inline const uint64_t crcPyramid =     0xe44d1a26d300ba9f;
 inline const uint64_t crcTransformed = 0x4bcf565fc00542a9;
 inline const uint64_t crcOutput =      0x4676695bfefeacab;

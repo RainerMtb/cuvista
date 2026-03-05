@@ -24,7 +24,7 @@ void StackedWriter::open(OutputOption outputOption) {
 }
 
 void StackedWriter::writeOutput(const FrameExecutor& executor) {
-	executor.getOutputImage(frameIndex, mOutputFrame);
+	executor.getOutput(frameIndex, mOutputFrame);
 	executor.getInput(frameIndex, mInputFrame);
 
 	int bufferIndex = 0;

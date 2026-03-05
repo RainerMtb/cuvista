@@ -107,7 +107,7 @@ void AvxFrame::outputData(int64_t frameIndex, AffineDataFloat trf) {
 	}
 }
 
-void AvxFrame::getOutputImage(int64_t frameIndex, Image8& image) const {
+void AvxFrame::getOutput(int64_t frameIndex, Image8& image) const {
 	//util::ConsoleTimer ic("avx output");
 	if (image.colorBase() == ColorBase::RGB) {
 		yuvToRgb(mOutput[0].data(), mOutput[1].data(), mOutput[2].data(), mData.h, mData.w, pitch, image);
@@ -118,7 +118,7 @@ void AvxFrame::getOutputImage(int64_t frameIndex, Image8& image) const {
 	image.setIndex(frameIndex);
 }
 
-bool AvxFrame::getOutputNvenc(int64_t frameIndex, Image8& image, unsigned char* cudaNv12ptr) const {
+bool AvxFrame::getOutput(int64_t frameIndex, Image8& image, int cudaNv12stride, unsigned char* cudaNv12ptr) const {
 	writeNV12(image);
 	return true;
 }

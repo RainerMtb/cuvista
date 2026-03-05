@@ -80,7 +80,6 @@ void runSelfTest(util::MessagePrinter& out, std::vector<DeviceInfoBase*> deviceL
 			//input
 			ImageRGBA input(data.h, data.w);
 			executor->getInput(0, input);
-			//input.saveAsColorBMP(std::string("f:/input" + std::to_string(i) + ".bmp"));
 			//output
 			AffineTransform trf;
 			trf.addRotation(0.2).addTranslation(-40, 30);

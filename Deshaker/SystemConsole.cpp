@@ -29,6 +29,27 @@ int getSystemConsoleWidth() {
 	return csbi.srWindow.Right - csbi.srWindow.Left + 1;
 }
 
+//enable ansi formatting, seems to be necessary on some windows 10 systems
+void enableAnsiSupport() {
+	HANDLE h;
+	h = GetStdHandle(STD_OUTPUT_HANDLE);
+	if (h != INVALID_HANDLE_VALUE) {
+		DWORD dwMode = 0;
+		if (GetConsoleMode(h, &dwMode)) {
+			dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+			SetConsoleMode(h, dwMode);
+		}
+	}
+	h = GetStdHandle(STD_ERROR_HANDLE);
+	if (h != INVALID_HANDLE_VALUE) {
+		DWORD dwMode = 0;
+		if (GetConsoleMode(h, &dwMode)) {
+			dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+			SetConsoleMode(h, dwMode);
+		}
+	}
+}
+
 #elif defined(__linux__)
 
 extern "C" {
@@ -43,11 +64,17 @@ int getSystemConsoleWidth() {
 	return w.ws_col;
 }
 
+//enable ansi formatting, seems to be necessary on some windows 10 systems
+void enableAnsiSupport() {}
+
 #else
 
 //get console width
 int getSystemConsoleWidth() {
 	return 80;
 }
+
+//enable ansi formatting, seems to be necessary on some windows 10 systems
+void enableAnsiSupport() {}
 
 #endif

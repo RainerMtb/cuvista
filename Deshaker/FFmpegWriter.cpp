@@ -197,7 +197,7 @@ void FFmpegWriter::write(int bufferIndex) {
 
 void FFmpegWriter::writeOutput(const FrameExecutor& executor) {
     int64_t idx = frameIndex % imageBufferSize;
-    executor.getOutputImage(frameIndex, imageBuffer[idx]);
+    executor.getOutput(frameIndex, imageBuffer[idx]);
     write(idx);
 }
 

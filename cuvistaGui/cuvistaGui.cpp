@@ -350,7 +350,6 @@ void cuvistaGui::seek(double frac) {
 
 void cuvistaGui::updateInputImage() {
     mInputYUV.convertTo(mInputBGR);
-    mInputYUV.saveBmpColor("f:/test.bmp");
     ui.imageInput->setImage(mInputImage);
 }
 

@@ -519,7 +519,7 @@ void CudaExecutor::outputData(int64_t frameIndex, AffineDataFloat trf) {
 	//writeDeviceDataToFile(out.output, h, w, strideFloat4N, "f:/cuda.dat");
 }
 
-void CudaExecutor::getOutputImage(int64_t frameIndex, Image8& image) const {
+void CudaExecutor::getOutput(int64_t frameIndex, Image8& image) const {
 	if (image.colorBase() == ColorBase::YUV) {
 		cu::outputHost(out.output, mData.strideFloat4N, d_yuvOut, mData.strideChar, mData.w, mData.h, cs[1]);
 		for (int planeSize = mData.strideChar * mData.h, i = 0; i < 3; i++) {
@@ -537,8 +537,8 @@ void CudaExecutor::getOutputImage(int64_t frameIndex, Image8& image) const {
 	handleStatus(cudaGetLastError(), "error @output #91");
 }
 
-bool CudaExecutor::getOutputNvenc(int64_t frameIndex, Image8& image, unsigned char* cudaNv12ptr) const {
-	cu::outputNvenc(out.output, mData.strideFloat4N, cudaNv12ptr, image.stride(), mData.w, mData.h, cs[1]);
+bool CudaExecutor::getOutput(int64_t frameIndex, Image8& image, int cudaNv12stride, unsigned char* cudaNv12ptr) const {
+	cu::outputNvenc(out.output, mData.strideFloat4N, cudaNv12ptr, cudaNv12stride, mData.w, mData.h, cs[1]);
 	handleStatus(cudaStreamSynchronize(cs[1]), "error @output #95");
 	handleStatus(cudaGetLastError(), "error @output #96");
 	//handleStatus(cudaMemcpy(image.data(), cudaNv12ptr, image.sizeInBytes(), cudaMemcpyDeviceToHost), "error");
@@ -590,7 +590,7 @@ void CudaExecutor::getWarped(int64_t frameIndex, Image8& image) {
 }
 
 void encodeNvData(const ImageNV12& image, unsigned char* nvencPtr) {
-	handleStatus(cudaMemcpy(nvencPtr, image.data(), image.sizeInBytes(), cudaMemcpyHostToDevice), "error @simple encode #1 cannot copy to device");
+	handleStatus(cudaMemcpy(nvencPtr, image.data(), image.sizeInBytes(), cudaMemcpyHostToDevice), "error @encode cannot copy to device");
 }
 
 

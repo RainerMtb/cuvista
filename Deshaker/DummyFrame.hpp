@@ -33,8 +33,8 @@ public:
 	void computeStart(int64_t frameIndex, std::span<PointResult> results) override {};
 	void computeTerminate(int64_t frameIndex, std::span<PointResult> results) override {};
 	void outputData(int64_t frameIndex, AffineDataFloat trf) override;
-	void getOutputImage(int64_t frameIndex, Image8& image) const override;
-	bool getOutputNvenc(int64_t frameIndex, Image8& image, unsigned char* cudaNv12ptr) const override;
+	void getOutput(int64_t frameIndex, Image8& image) const override;
+	bool getOutput(int64_t frameIndex, Image8& image, int cudaNv12stride, unsigned char* cudaNv12ptr) const override;
 	Mat<float> getTransformedOutput() const override;
 	Mat<float> getPyramid(int64_t frameIndex) const override;
 	void getInput(int64_t frameIndex, Image8& image) const override;

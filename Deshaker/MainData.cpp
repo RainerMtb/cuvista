@@ -304,6 +304,8 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 
 		} else if (args.nextArg("copyframes")) {
 			dummyFrame = true;
+			deviceRequested = true;
+			deviceSelected = 0;
 
 		 } else if (args.nextArg("rng", next)) {
 		 	if (std::stoi(next) == 1) sampler = std::make_shared<UrbgSampler<PointContext, PseudoRandomSource>>();

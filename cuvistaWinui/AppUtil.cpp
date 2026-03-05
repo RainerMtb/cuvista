@@ -270,7 +270,7 @@ void PlayerWriter::start() {
 
 //on background thread
 void PlayerWriter::writeOutput(const FrameExecutor& executor) {
-    executor.getOutputImage(frameIndex, mainWindow.mProgressOutput);
+    executor.getOutput(frameIndex, mainWindow.mProgressOutput);
 
     //presentation time for next frame
     auto t1 = mReader.ptsForFrameAsMillis(frameIndex);

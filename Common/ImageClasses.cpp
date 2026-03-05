@@ -214,7 +214,7 @@ namespace im {
 	//-----------------------------------------------------------------------
 
 	ImageNV12::ImageNV12(int h, int w, int stride) {
-		storePtr = std::make_shared<ImageStoreLocal<uchar>>(h * stride * 2);
+		storePtr = std::make_shared<ImageStoreLocal<uchar>>(h * stride * 3 / 2);
 		typePtr = std::make_shared<ImageTypeNV12<uchar>>(storePtr, h, w, stride, 3);
 		colorPtr = std::make_shared<ImageColorYuv<uchar>>(typePtr, std::array<int, 4>{ 0, 1, 2 }, 255);
 	}

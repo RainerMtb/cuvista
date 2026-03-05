@@ -16,7 +16,6 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
-/*
 #include "Image.hpp"
 #include "ImageHeaders.hpp"
 #include "Util.hpp"
@@ -659,5 +658,3 @@ template class ImagePacked<float>;
 template class ImagePacked<unsigned char>;
 template class ImageMatShared<float>;
 template class ImageMatShared<unsigned char>;
-
-*/

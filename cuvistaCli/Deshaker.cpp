@@ -24,6 +24,7 @@ std::ostream& printError(std::ostream& os, const std::string& msg1) {
 }
 
 DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console, std::shared_ptr<MovieWriter> externalWriter) {
+	enableAnsiSupport();
 	std::set_terminate([] {
 		printError(std::cerr, "error: std::terminate was called");
 		std::exit(100);

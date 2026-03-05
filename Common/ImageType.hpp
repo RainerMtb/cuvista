@@ -23,6 +23,26 @@
 
 namespace im {
 
+	//container for pointers to one pixel
+	template <class T> struct ImagePixel {
+		T* x = nullptr;
+		T* y = nullptr;
+		T* z = nullptr;
+		T* w = nullptr;
+		int offset = 0;
+
+		void advance() {
+			x += offset;
+			y += offset;
+			z += offset;
+			if (w != nullptr) w += offset;
+		}
+
+		void writeTo(ColorBase srcColor, ColorBase destColor, ImagePixel<uchar>& dest) const;
+		void writeTo(ColorBase srcColor, ColorBase destColor, ImagePixel<float>& dest) const;
+	};
+
+
 	//Data Type
 	template <class T> class ImageTypeBase {
 
@@ -30,7 +50,6 @@ namespace im {
 		std::shared_ptr<ImageStoreBase<T>> storePtr;
 
 	public:
-
 		int h, w, stride, planes;
 
 		ImageTypeBase(std::shared_ptr<ImageStoreBase<T>> storePtr, int h, int w, int stride, int planes) :
@@ -46,6 +65,8 @@ namespace im {
 		{}
 
 		virtual int rows() const = 0;
+		virtual int cols() const = 0;
+		virtual int pixelOffset() const = 0;
 
 		virtual T* row(size_t r) { return storePtr->row(r, h, stride); }
 		virtual const T* row(size_t r) const { return storePtr->row(r, h, stride); }
@@ -63,7 +84,16 @@ namespace im {
 		virtual void setColor(const LocalColor<T>& localColor) = 0;
 
 		virtual void copyRow(size_t r, std::shared_ptr<ImageTypeBase<T>> dest) const = 0;
-		virtual void copy2D(size_t r0, size_t c0, size_t h0, size_t w0, std::shared_ptr<ImageTypeBase<T>> dest, size_t destRow, size_t destCol) const = 0;
+
+		ImagePixel<T> pixelAt(size_t r, size_t c, std::array<int, 4> colorIndex) {
+			ImagePixel<T> pix;
+			pix.x = addr(colorIndex[0], r, c);
+			pix.y = addr(colorIndex[1], r, c);
+			pix.z = addr(colorIndex[2], r, c);
+			if (planes == 4) pix.w = addr(colorIndex[3], r, c);
+			pix.offset = pixelOffset();
+			return pix;
+		}
 	};
 
 	template <class T> class ImageTypePacked : public ImageTypeBase<T> {
@@ -79,6 +109,14 @@ namespace im {
 
 		virtual int rows() const override {
 			return this->h;
+		}
+
+		virtual int cols() const override {
+			return this->w * this->planes;
+		}
+
+		virtual int pixelOffset() const override {
+			return this->planes;
 		}
 
 		virtual T* addr(size_t idx, size_t r, size_t c) override {
@@ -116,12 +154,6 @@ namespace im {
 		virtual void copyRow(size_t r, std::shared_ptr<ImageTypeBase<T>> dest) const override {
 			std::copy_n(this->row(r), this->w * this->planes, dest->row(r));
 		}
-
-		virtual void copy2D(size_t r0, size_t c0, size_t h0, size_t w0, std::shared_ptr<ImageTypeBase<T>> dest, size_t destRow, size_t destCol) const override {
-			for (size_t r = 0; r < h0; r++) {
-				std::copy_n(this->addr(0, r + r0, c0), w0 * this->planes, dest->addr(0, destRow + r, destCol));
-			}
-		}
 	};
 
 	template <class T> class ImageTypePlanar : public ImageTypeBase<T> {
@@ -137,6 +169,14 @@ namespace im {
 
 		virtual int rows() const override {
 			return this->h * this->planes;
+		}
+
+		virtual int cols() const override {
+			return this->w;
+		}
+
+		virtual int pixelOffset() const override {
+			return 1;
 		}
 
 		virtual T* addr(size_t idx, size_t r, size_t c) override {
@@ -162,14 +202,6 @@ namespace im {
 		virtual void copyRow(size_t r, std::shared_ptr<ImageTypeBase<T>> dest) const override {
 			std::copy_n(this->row(r), this->w, dest->row(r));
 		}
-
-		virtual void copy2D(size_t r0, size_t c0, size_t h0, size_t w0, std::shared_ptr<ImageTypeBase<T>> dest, size_t destRow, size_t destCol) const override {
-			for (size_t z = 0; z < this->planes; z++) {
-				for (size_t r = 0; r < h0; r++) {
-					std::copy_n(this->addr(z, r + r0, c0), w0, dest->addr(z, destRow + r, destCol));
-				}
-			}
-		}
 	};
 
 	template <class T> class ImageTypeNV12 : public ImageTypeBase<T> {
@@ -190,7 +222,15 @@ namespace im {
 		{}
 
 		virtual int rows() const override {
-			return this->h * 2;
+			return this->h * 3 / 2;
+		}
+
+		virtual int cols() const override {
+			return this->w;
+		}
+
+		virtual int pixelOffset() const override {
+			return 1;
 		}
 
 		virtual uchar* addr(size_t idx, size_t r, size_t c) override {
@@ -210,11 +250,7 @@ namespace im {
 		}
 
 		virtual void copyRow(size_t r, std::shared_ptr<ImageTypeBase<T>> dest) const override {
-			assert(false && "unsupported operation");
-		}
-
-		virtual void copy2D(size_t r0, size_t c0, size_t h0, size_t w0, std::shared_ptr<ImageTypeBase<T>> dest, size_t destRow, size_t destCol) const override {
-			assert(false && "unsupported operation");
+			std::copy_n(this->row(r), this->w, dest->row(r));
 		}
 	};
 

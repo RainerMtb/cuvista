@@ -181,7 +181,7 @@ static void testCrc() {
 
 		{
 			//check rgba
-			uint64_t crcExpectedRgba = 0xe90fd76d66d5c0ed;
+			uint64_t crcExpectedRgba = 0x20be0c0b8d84f958;
 			util::CRC64 crcrgba;
 			for (const ImageRGBA& image : externalWriter->outputFramesRgba) crcrgba.add(image);
 
@@ -192,7 +192,7 @@ static void testCrc() {
 
 		{
 			//check bgra
-			uint64_t crcExpectedBgra = 0x5bbfb0158e897ba4;
+			uint64_t crcExpectedBgra = 0x1cb407ed590ba0a0;
 			util::CRC64 crcbgra;
 			for (const ImageBGRA& image : externalWriter->outputFramesBgra) crcbgra.add(image);
 

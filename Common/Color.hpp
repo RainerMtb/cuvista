@@ -74,6 +74,7 @@ namespace im {
 	void rgb_to_yuv(float r, float g, float b, float* y, float* u, float* v);
 
 	unsigned char rgb_to_y(unsigned char r, unsigned char g, unsigned char b);
+	float rgb_to_y(float r, float g, float b);
 
 	void hsv_to_rgb(double h, double s, double v, unsigned char* out_r, unsigned char* out_g, unsigned char* out_b);
 }

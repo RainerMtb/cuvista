@@ -18,7 +18,6 @@
 
 #pragma once
 
-#include "Image2.hpp"
 #include <QLabel>
 
 class ImageLabel : public QLabel {

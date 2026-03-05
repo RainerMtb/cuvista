@@ -23,32 +23,32 @@
 
 namespace im {
 
-	template <class T> class ImageColorBase;
-
-	template <class T> struct ImagePixel {
-		T x = 0, y = 0, z = 0;
-		virtual void readFrom(const ImageColorBase<T>* src, size_t r, size_t c);
-		virtual void writeTo(ImageColorBase<uchar>* dest, size_t r, size_t c) const = 0;
-		virtual void writeTo(ImageColorBase<float>* dest, size_t r, size_t c) const = 0;
-	};
-
 	//Image Color
 	template <class T> class ImageColorBase {
 
 	private:
-		uchar convertValue(uchar value) const {
-			return value;
+		void convertValue(uchar value, uchar* dest) const {
+			*dest = value;
 		}
 
-		uchar convertValue(float value) const {
-			return (uchar) std::round(value * 255);
+		void convertValue(float value, uchar* dest) const {
+			*dest = (uchar) std::rint(value * 255);
+		}
+
+		void convertValue(uchar value, float* dest) const {
+			float f = 1.0 / 255.0f;
+			*dest = value * f;
+		}
+
+		void convertValue(float value, float* dest) const {
+			*dest = value;
 		}
 
 	protected:
 		std::shared_ptr<ImageTypeBase<T>> typePtr;
-		T maxValue;
 
 	public:
+		T maxValue;
 		std::array<int, 4> colorIndex;
 
 		ImageColorBase(std::shared_ptr<ImageTypeBase<T>> typePtr, std::array<int, 4> colorIndex, T maxValue) :
@@ -63,35 +63,109 @@ namespace im {
 
 		virtual LocalColor<T> getLocalColor(const Color& color) const = 0;
 
-		virtual constexpr ColorBase getColorBase() const = 0;
-
-		virtual std::shared_ptr<ImagePixel<T>> createPixel() const = 0;
+		virtual constexpr ColorBase colorBase() const = 0;
 
 		virtual void gray(ThreadPoolBase& pool = defaultPool) = 0;
 
-		const T& atColor(size_t colorIdx, size_t r, size_t c) const {
-			return typePtr->at(colorIndex[colorIdx], r, c);
+		ImagePixel<T> pixelAt(size_t r, size_t c) const {
+			return typePtr->pixelAt(r, c, colorIndex);
 		}
 
-		T& atColor(size_t colorIdx, size_t r, size_t c) {
-			return typePtr->at(colorIndex[colorIdx], r, c);
+		template <class R> friend class ImageColorBase;
+
+		template <class R> void convertValuesTo(std::shared_ptr<ImageColorBase<R>> dest, ThreadPoolBase& pool = defaultPool) const {
+			for (int r = 0; r < typePtr->rows(); r++) {
+				T* srcPtr = typePtr->row(r);
+				R* destPtr = dest->typePtr->row(r);
+				for (int c = 0; c < typePtr->cols(); c++) {
+					convertValue(*srcPtr, destPtr);
+					srcPtr++;
+					destPtr++;
+				}
+			}
 		}
 
-		T* addrColor(size_t colorIdx, size_t r, size_t c) {
-			return typePtr->addr(colorIndex[colorIdx], r, c);
-		}
-
-		template <class R> void convertTo(ImageColorBase<R>* dest, ThreadPoolBase& pool) const {
-			auto func = [&] (size_t r) {
-				auto pixel = createPixel();
-				for (int c = 0; c < typePtr->w; c++) {
-					pixel->readFrom(this, r, c);
-					pixel->writeTo(dest, r, c);
+		template <class R> void convertTo(std::shared_ptr<ImageColorBase<R>> dest, ThreadPoolBase& pool = defaultPool) const {
+			auto fcn = [&] (size_t r) {
+				ImagePixel<T> srcPixel = pixelAt(r, 0);
+				ImagePixel<R> destPixel = dest->pixelAt(r, 0);
+				for (size_t c = 0; c < typePtr->w; c++) {
+					srcPixel.writeTo(colorBase(), dest->colorBase(), destPixel);
+					srcPixel.advance();
+					destPixel.advance();
 				}
 			};
-			pool.addAndWait(func, 0, typePtr->h);
+			pool.addAndWait(fcn, 0, typePtr->h);
 		}
-		
+
+		void convertToNV12(std::shared_ptr<ImageColorBase<uchar>> dest, ThreadPoolBase& pool = defaultPool) const {
+			auto fcn = [&] (size_t r) {
+				uchar y = 0, u = 0, v = 0;
+				ImagePixel<uchar> p = { &y, &u, &v };
+				ImagePixel<T> src;
+				size_t rr = r * 2;
+				uchar* destY = dest->typePtr->row(rr);
+				uchar* destUV = dest->typePtr->row(dest->typePtr->h + r);
+				for (size_t c = 0; c < dest->typePtr->w / 2; c++) {
+					size_t cc = c * 2;
+					int sumU = 0, sumV = 0;
+
+					src = pixelAt(rr, cc);
+					src.writeTo(colorBase(), ColorBase::YUV, p);
+					destY[cc] = *p.x;
+					sumU += *p.y; sumV += *p.z;
+
+					src = pixelAt(rr, cc + 1);
+					src.writeTo(colorBase(), ColorBase::YUV, p);
+					destY[cc + 1] = *p.x;
+					sumU += *p.y; sumV += *p.z;
+
+					src = pixelAt(rr + 1, cc);
+					src.writeTo(colorBase(), ColorBase::YUV, p);
+					destY[cc + dest->typePtr->stride] = *p.x;
+					sumU += *p.y; sumV += *p.z;
+
+					src = pixelAt(rr + 1, cc + 1);
+					src.writeTo(colorBase(), ColorBase::YUV, p);
+					destY[cc + dest->typePtr->stride + 1] = *p.x;
+					sumU += *p.y; sumV += *p.z;
+
+					destUV[cc] = sumU / 4;
+					destUV[cc + 1] = sumV / 4;
+				}
+			};
+			pool.addAndWait(fcn, 0, dest->typePtr->h / 2);
+		}
+
+		template <class R> void convertFromNV12(std::shared_ptr<ImageColorBase<R>> dest, ThreadPoolBase& pool = defaultPool) const {
+			for (size_t r = 0; r < typePtr->h / 2; r++) {
+				size_t rr = r * 2;
+				uchar* srcY = typePtr->row(rr);
+				uchar* srcUV = typePtr->row(dest->typePtr->h + r);
+				ImagePixel<uchar> srcPix;
+				ImagePixel<R> destPix;
+				for (size_t c = 0; c < typePtr->w / 2; c++) {
+					size_t cc = c * 2;
+
+					srcPix = { srcY + cc, srcUV + cc, srcUV + cc + 1 };
+					destPix = dest->pixelAt(rr, cc);
+					srcPix.writeTo(ColorBase::YUV, dest->colorBase(), destPix);
+
+					srcPix = { srcY + cc + 1, srcUV + cc, srcUV + cc + 1 };
+					destPix = dest->pixelAt(rr, cc + 1);
+					srcPix.writeTo(ColorBase::YUV, dest->colorBase(), destPix);
+
+					srcPix = { srcY + typePtr->stride + cc, srcUV + cc, srcUV + cc + 1 };
+					destPix = dest->pixelAt(rr + 1, cc);
+					srcPix.writeTo(ColorBase::YUV, dest->colorBase(), destPix);
+
+					srcPix = { srcY + typePtr->stride + cc + 1, srcUV + cc, srcUV + cc + 1 };
+					destPix = dest->pixelAt(rr + 1, cc + 1);
+					srcPix.writeTo(ColorBase::YUV, dest->colorBase(), destPix);
+				}
+			}
+		}
+
 		void saveBmpPlanes(const std::string& filename) const {
 			std::ofstream os(filename, std::ios::binary);
 			int h = typePtr->h;
@@ -107,7 +181,7 @@ namespace im {
 				for (int r = h - 1; r >= 0; r--) {
 					//prepare one line of data
 					for (int c = 0; c < w; c++) {
-						imageRow[c] = convertValue(typePtr->at(idx, r, c));
+						convertValue(typePtr->at(idx, r, c), imageRow.data() + c);
 					}
 					//write strided line
 					os.write(reinterpret_cast<char*>(imageRow.data()), stridedWidth);
@@ -131,36 +205,6 @@ namespace im {
 		}
 	};
 
-	template <class T> void ImagePixel<T>::readFrom(const ImageColorBase<T>* src, size_t r, size_t c) {
-		x = src->atColor(0, r, c);
-		y = src->atColor(1, r, c);
-		z = src->atColor(2, r, c);
-	}
-
-	template <class T> struct ImagePixelRgb : public ImagePixel<T> {};
-
-	template <> struct ImagePixelRgb<uchar> : public ImagePixel<uchar> {
-		virtual void writeTo(ImageColorBase<uchar>* dest, size_t r, size_t c) const override;
-		virtual void writeTo(ImageColorBase<float>* dest, size_t r, size_t c) const override;
-	};
-
-	template <> struct ImagePixelRgb<float> : public ImagePixel<float> {
-		virtual void writeTo(ImageColorBase<uchar>* dest, size_t r, size_t c) const override;
-		virtual void writeTo(ImageColorBase<float>* dest, size_t r, size_t c) const override;
-	};
-
-	template <class T> struct ImagePixelYuv : public ImagePixel<T> {};
-
-	template <> struct ImagePixelYuv<uchar> : public ImagePixel<uchar> {
-		virtual void writeTo(ImageColorBase<uchar>* dest, size_t r, size_t c) const override;
-		virtual void writeTo(ImageColorBase<float>* dest, size_t r, size_t c) const override;
-	};
-
-	template <> struct ImagePixelYuv<float> : public ImagePixel<float> {
-		virtual void writeTo(ImageColorBase<uchar>* dest, size_t r, size_t c) const override;
-		virtual void writeTo(ImageColorBase<float>* dest, size_t r, size_t c) const override;
-	};
-
 
 	template <class T> class ImageColorRgb : public ImageColorBase<T> {
 
@@ -173,7 +217,7 @@ namespace im {
 			ImageColorRgb<T>({}, {}, 0)
 		{}
 
-		virtual constexpr ColorBase getColorBase() const override {
+		virtual constexpr ColorBase colorBase() const override {
 			return ColorBase::RGB;
 		}
 
@@ -186,15 +230,13 @@ namespace im {
 			return local;
 		}
 
-		virtual std::shared_ptr<ImagePixel<T>> createPixel() const override {
-			return std::make_shared<ImagePixelRgb<T>>();
-		}
-
 		virtual void gray(ThreadPoolBase& pool = defaultPool) override {
 			auto fcn = [&] (size_t r) {
+				ImagePixel<T> pixel = this->pixelAt(r, 0);
 				for (size_t c = 0; c < this->typePtr->w; c++) {
-					unsigned char y = im::rgb_to_y(this->atColor(0, r, c), this->atColor(1, r, c), this->atColor(2, r, c));
-					this->atColor(0, r, c) = this->atColor(1, r, c) = this->atColor(2, r, c) = y;
+					T gray = im::rgb_to_y(*pixel.x, *pixel.y, *pixel.z);
+					*pixel.x = *pixel.y = *pixel.z = gray;
+					pixel.advance();
 				}
 			};
 			pool.addAndWait(fcn, 0, this->typePtr->h);
@@ -213,7 +255,7 @@ namespace im {
 			ImageColorYuv<T>({}, {}, 0)
 		{}
 
-		virtual constexpr ColorBase getColorBase() const override {
+		virtual constexpr ColorBase colorBase() const override {
 			return ColorBase::YUV;
 		}
 
@@ -222,10 +264,6 @@ namespace im {
 			rgb_to_yuv(color.getChannel(0), color.getChannel(1), color.getChannel(2), &out.colorData[0], &out.colorData[1], &out.colorData[2]);
 			out.alpha = color.getAlpha();
 			return out;
-		}
-
-		virtual std::shared_ptr<ImagePixel<T>> createPixel() const override {
-			return std::make_shared<ImagePixelYuv<T>>();
 		}
 
 		virtual void gray(ThreadPoolBase& pool = defaultPool) override {

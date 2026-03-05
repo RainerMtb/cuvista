@@ -109,6 +109,7 @@ namespace im {
 
 		virtual void saveBmpColor(const std::string& filename) const = 0;
 		virtual void saveBmpPlanes(const std::string& filename) const = 0;
+		virtual void savePgm(const std::string& filename) const = 0;
 
 		virtual uint64_t crc() const = 0;
 

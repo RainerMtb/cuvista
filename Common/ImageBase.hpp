@@ -14,7 +14,7 @@ namespace im {
 
 		void plot(int x, int y, double a, const LocalColor<T>& localColor) {
 			double alpha = a * localColor.alpha;
-			if (alpha > 0.0 && x >= 0 && x < width() && y >= 0 && y < height()) {
+			if (x >= 0 && x < width() && y >= 0 && y < height()) {
 				for (int z = 0; z < planes() && z < localColor.colorData.size(); z++) {
 					T val = at(z, y, x);
 					double pix = val * (1.0 - alpha) + localColor.colorData[z] * alpha;
@@ -68,17 +68,29 @@ namespace im {
 		virtual std::vector<T> bytes()            const override { return storePtr->bytes(); }
 		virtual void write(std::ostream& os)               const { return storePtr->write(os); }
 
-		virtual void gray(ThreadPoolBase& pool = defaultPool) { return colorPtr->gray(pool); }
+		virtual void gray(ThreadPoolBase& pool = defaultPool)    { return colorPtr->gray(pool); }
 
+		virtual constexpr std::span<int> colorIndex()      const { return colorPtr->colorIndex; }
+		virtual constexpr ColorBase colorBase()            const { return colorPtr->colorBase(); }
+
+
+		virtual void saveBmpPlanes(const std::string& filename) const override { colorPtr->saveBmpPlanes(filename); }
 		virtual void saveBmpColor(const std::string& filename) const override;
-		virtual void saveBmpPlanes(const std::string& filename) const override;
 
-		virtual constexpr std::span<int> colorIndex() const {
-			return colorPtr->colorIndex;
-		}
+		virtual void savePgm(const std::string& filename) const override {
+			std::ofstream os(filename, std::ios::binary);
+			int w = width();
+			int h = height();
+			PgmHeader(w, h).writeHeader(os);
+			std::vector<char> data(w);
+			float scale = 255.0f / colorPtr->maxValue;
 
-		virtual constexpr ColorBase colorBase() const {
-			return colorPtr->getColorBase();
+			for (int z = 0; z < planes(); z++) {
+				for (int r = 0; r < h; r++) {
+					for (int c = 0; c < w; c++) data[c] = (uchar) std::round(at(z, r, c) * scale);
+					os.write(data.data(), data.size());
+				}
+			}
 		}
 
 		virtual uint64_t crc() const override {
@@ -333,43 +345,74 @@ namespace im {
 			for (size_t r = 0; r < typePtr->rows(); r++) {
 				typePtr->copyRow(r, dest.typePtr);
 			}
+			dest.setIndex(this->index);
 		}
 
-		virtual void copyTo(ImageBase<T>& dest, int y0, int x0, ThreadPoolBase& pool = defaultPool) const {
-			assert(this->imageType() == dest.imageType() && x0 + width() < dest.width() && y0 + height() < dest.height() && "invalid image for copy");
-			typePtr->copy2D(0, 0, height(), width(), dest.typePtr, y0, x0);
+		virtual void writeTo(ImageBase<T>& dest, int y0, int x0, T alpha, ThreadPoolBase& pool = defaultPool) const {
+			assert(this->colorBase() == dest.colorBase() && x0 + width() < dest.width() && y0 + height() < dest.height() && "invalid image for copy");
+			T mv = colorPtr->maxValue;
+			auto fcn = [&] (size_t r) {
+				for (size_t c = 0; c < width(); c++) {
+					float a = planes() < 4 ? mv : at(colorPtr->colorIndex[3], r, c);
+					float srcAlpha = a * alpha / mv;
+					float destAlpha = mv - srcAlpha;
+					for (int z = 0; z < 3 && z < planes() && z < dest.planes(); z++) {
+						float f1 = at(colorPtr->colorIndex[z], r, c) * srcAlpha;
+						T* ptr = dest.addr(dest.colorPtr->colorIndex[z], r + y0, c + x0);
+						float f2 = *ptr * destAlpha;
+						*ptr = (T) ((f1 + f2) / mv);
+					}
+				}
+			};
+			pool.addAndWait(fcn, 0, height());
 		}
 
 		template <class R> friend class ImageBase;
 
 		template <class R> void convertTo(ImageBase<R>& dest, ThreadPoolBase& pool = defaultPool) const {
-			if (this->imageType() == ImageType::NV12) {
-				assert(false && "not implemented"); //TODO
+			assert(width() <= dest.width() && height() <= dest.height() && "invalid conversion");
+			if (this->imageType() == dest.imageType()) {
+				colorPtr->convertValuesTo(dest.colorPtr, pool);
 
 			} else if (dest.imageType() == ImageType::NV12) {
-				assert(false && "not implemented"); //TODO
+				if constexpr (std::is_same_v<uchar, R>) {
+					colorPtr->convertToNV12(dest.colorPtr, pool);
+				}
+
+			} else if (this->imageType() == ImageType::NV12) {
+				if constexpr (std::is_same_v<uchar, T>) {
+					colorPtr->convertFromNV12(dest.colorPtr, pool);
+				}
 
 			} else {
-				colorPtr->convertTo(dest.colorPtr.get(), pool);
+				colorPtr->convertTo(dest.colorPtr, pool);
 			}
 		}
 
 		//sample clamped to area
 		virtual T sample(size_t plane, float x, float y, float x0, float x1, float y0, float y1) const {
-			assert(false && "not implemented"); //TODO
-			return 0;
+			float cx = std::clamp(x, x0, x1), cy = std::clamp(y, y0, y1);
+			float flx = std::floor(cx), fly = std::floor(cy);
+			float dx = cx - flx, dy = cy - fly;
+			size_t ix = size_t(flx), iy = size_t(fly);
+			size_t xd = dx != 0;
+			size_t yd = dy != 0;
+			float f00 = at(plane, iy, ix);
+			float f01 = at(plane, iy, ix + xd);
+			float f10 = at(plane, iy + yd, ix);
+			float f11 = at(plane, iy + yd, ix + xd);
+			float result = ((1 - dx) * (1 - dy) * f00 + (1 - dx) * dy * f10 + dx * (1 - dy) * f01 + dx * dy * f11);
+			return (T) result;
 		}
 
 		//sample clamped to image bounds
 		virtual T sample(size_t plane, float x, float y) const {
-			assert(false && "not implemented"); //TODO
-			return 0;
+			return sample(plane, x, y, 0.0f, width() - 1.0f, 0.0f, height() - 1.0f);
 		}
 
 		//sample from image, return defaultValue when outside
 		virtual T sample(size_t plane, float x, float y, T defaultValue) const {
-			assert(false && "not implemented"); //TODO
-			return 0;
+			return (x < 0.0 || x > width() - 1.0 || y < 0.0 || y > height() - 1.0) ? defaultValue : sample(plane, x, y);
 		}
 
 		//compute sum of squared deltas

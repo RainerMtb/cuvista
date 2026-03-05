@@ -110,6 +110,7 @@ public:
 	DeviceInfoAvx deviceInfoAvx;
 	bool deviceRequested = false;
 	size_t deviceSelected = 0;
+	int cudaEncodingDeviceIndex = 0;
 	DeviceInfoNull deviceInfoNull;
 	std::optional<int> cpuThreadsRequired = std::nullopt;
 

@@ -26,6 +26,8 @@
 
 int getSystemConsoleWidth();
 
+void enableAnsiSupport();
+
 std::optional<char> getKeyboardInput();
 
 void keepSystemAlive();

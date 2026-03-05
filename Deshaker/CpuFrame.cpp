@@ -309,7 +309,7 @@ void CpuFrame::outputData(int64_t frameIndex, AffineDataFloat trf) {
 	mOutput.index = frameIndex;
 }
 
-void CpuFrame::getOutputImage(int64_t frameIndex, Image8& image) const {
+void CpuFrame::getOutput(int64_t frameIndex, Image8& image) const {
 	assert(frameIndex == mOutput.index && "invalid frame index");
 	if (image.colorBase() == ColorBase::YUV) {
 		mOutput.convertTo(image, mPool);
@@ -320,7 +320,7 @@ void CpuFrame::getOutputImage(int64_t frameIndex, Image8& image) const {
 	image.index = frameIndex;
 }
 
-bool CpuFrame::getOutputNvenc(int64_t frameIndex, Image8& image, unsigned char* cudaNv12ptr) const {
+bool CpuFrame::getOutput(int64_t frameIndex, Image8& image, int cudaNv12stride, unsigned char* cudaNv12ptr) const {
 	assert(frameIndex == mOutput.index && "invalid frame index");
 	mOutput.convertTo(image, mPool);
 	return true;

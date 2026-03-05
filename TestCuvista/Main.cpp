@@ -19,24 +19,25 @@
 #include "Deshaker.hpp"
 #include "ImageClasses.hpp"
 
-template class im::ImageBase<float>;
-template class im::ImageBase<uchar>;
-
 int main() {
 	std::cout << "------- CuvistaTest -------" << std::endl << std::endl;
 
 	//debugLogger = std::make_shared<DebugLoggerTcp>("10.0.0.1", 5555);
-	//debugLogger->format("test tcp log {}", 1);
 
 	std::vector<std::string> argsLines = {
+		"-info",
 		"-i d:/VideoTest/02short.mp4 -o f:/videoOut.mp4 -y",
 		"-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -y -device 0",
+		"-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -y -device 0 -enc nvenc:hevc",
+		"-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -flow -y",
+		"-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -y -device 2",
+		"-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -copyframes -y",
 		"-i d:/Documents/x.orig/beach.1.avi -o null -frames 100 -device 2",
 		"-i d:/Documents/x.orig/beach.1.avi -o f:/videoOut.mp4 -y -frames 100 -device 2"
 	};
 
-	int idx = 1;
-		std::string argsLine = argsLines[idx];
+	int idx = 0;
+	std::string argsLine = argsLines[idx];
 	auto args = util::splitString(argsLine, " ");
 	deshake(args, &std::cout, {});
 }

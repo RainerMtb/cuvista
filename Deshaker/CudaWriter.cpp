@@ -34,23 +34,20 @@ void CudaFFmpegWriter::writePacketsToFile(std::list<NvPacket> nvpkts, bool termi
 void CudaFFmpegWriter::encodePackets() {}
 
 void CudaFFmpegWriter::open(OutputOption outputOption) {}
+void CudaFFmpegWriter::open(OutputOption outputOption, const DeviceInfoCuda* dic) {}
 void CudaFFmpegWriter::writeOutput(const FrameExecutor& executor) {}
 bool CudaFFmpegWriter::flush() { return false; }
 
 #else
 
+//cuda encoding contructor
 CudaFFmpegWriter::CudaFFmpegWriter(MainData& data, MovieReader& reader) :
     FFmpegFormatWriter(data, reader),
     nvPackets { std::make_unique<std::list<NvPacket>>() } {}
 
-//cuda encoding contructor
-void CudaFFmpegWriter::open(OutputOption outputOption) {
+//open cuda encoder
+void CudaFFmpegWriter::open(OutputOption outputOption, const DeviceInfoCuda* dic) {
     //select codec
-    const DeviceInfoBase* dev = mData.deviceList[mData.deviceSelected];
-    const DeviceInfoCuda* dic;
-    if (dev->getType() == DeviceType::CUDA) dic = static_cast<const DeviceInfoCuda*>(dev);
-    else dic = &mData.deviceInfoCuda[0];
-
     std::map<OutputOption, GUID> optionToGuidMap = {
         { OutputOption::NVENC_H264, NV_ENC_CODEC_H264_GUID },
         { OutputOption::NVENC_HEVC, NV_ENC_CODEC_HEVC_GUID },
@@ -77,7 +74,6 @@ void CudaFFmpegWriter::open(OutputOption outputOption) {
     std::memcpy(params->extradata, nvenc->mExtradata.data(), nvenc->mExtradataSize);
 
     int result;
-
     result = avformat_init_output(fmt_ctx, NULL);
     if (result < 0)
         throw AVException(av_make_error(result, "error initializing output"));
@@ -91,10 +87,23 @@ void CudaFFmpegWriter::open(OutputOption outputOption) {
     videoPacket = av_packet_alloc();
     if (!videoPacket)
         throw AVException("could not allocate encoder packet");
-
-    outputNV12 = ImageNV12(mReader.h, mReader.w, nvenc->cudaPitch);
 }
 
+void CudaFFmpegWriter::open(OutputOption outputOption) {
+    const DeviceInfoBase* dev = mData.deviceList[mData.deviceSelected];
+    const DeviceInfoCuda* dic;
+    if (dev->getType() == DeviceType::CUDA) {
+        dic = static_cast<const DeviceInfoCuda*>(dev);
+        open(outputOption, dic);
+        nv12stride = nvenc->cudaPitch;
+
+    } else {
+        dic = &mData.deviceInfoCuda[mData.cudaEncodingDeviceIndex];
+        open(outputOption, dic);
+        nv12stride = nvenc->cudaPitch;
+        outputNV12 = ImageNV12(mReader.h, mReader.w, nv12stride);
+    }
+}
 
 //write packets to ffmpeg stream
 void CudaFFmpegWriter::writePacketToFile(const NvPacket& nvpkt, bool terminate) {
@@ -135,7 +144,8 @@ void CudaFFmpegWriter::encodePackets() {
 
 void CudaFFmpegWriter::writeOutput(const FrameExecutor& executor) {
     unsigned char* cudaPtr = reinterpret_cast<unsigned char*>(nvenc->getNextInputFramePtr());
-    bool needsCopy = executor.getOutputNvenc(frameIndex, outputNV12, cudaPtr);
+    assert(cudaPtr != nullptr && "invalid cuda frame pointer");
+    bool needsCopy = executor.getOutput(frameIndex, outputNV12, nv12stride, cudaPtr);
     if (needsCopy) {
         encodeNvData(outputNV12, cudaPtr);
     }

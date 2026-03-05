@@ -98,7 +98,7 @@ void MovieWriterCollection::close() {
 //-----------------------------------------------------------------------------------
 
 void OutputWriter::writeOutput(const FrameExecutor& executor) {
-	executor.getOutputImage(frameIndex, outputFrame);
+	executor.getOutput(frameIndex, outputFrame);
 	this->frameIndex++;
 }
 
@@ -106,19 +106,19 @@ void RawMemoryStoreWriter::writeOutput(const FrameExecutor& executor) {
 	if (doWriteOutput) {
 		{
 			ImageYuv& frameYuv = outputFramesYuv.emplace_back(executor.mData.h, executor.mData.w);
-			executor.getOutputImage(frameIndex, frameYuv);
+			executor.getOutput(frameIndex, frameYuv);
 			while (outputFramesYuv.size() > maxFrameCount) outputFramesYuv.pop_front();
 		}
 
 		{
 			ImageRGBA& frameRgba = outputFramesRgba.emplace_back(executor.mData.h, executor.mData.w);
-			executor.getOutputImage(frameIndex, frameRgba);
+			executor.getOutput(frameIndex, frameRgba);
 			while (outputFramesRgba.size() > maxFrameCount) outputFramesRgba.pop_front();
 		}
 
 		{
 			ImageBGRA& frameBgra = outputFramesBgra.emplace_back(executor.mData.h, executor.mData.w);
-			executor.getOutputImage(frameIndex, frameBgra);
+			executor.getOutput(frameIndex, frameBgra);
 			while (outputFramesBgra.size() > maxFrameCount) outputFramesBgra.pop_front();
 		}
 	}
@@ -207,7 +207,7 @@ std::string ImageWriter::makeFilename(const std::string& extension) const {
 
 void BmpImageWriter::writeOutput(const FrameExecutor& executor) {
 	worker.join();
-	executor.getOutputImage(frameIndex, image);
+	executor.getOutput(frameIndex, image);
 	std::string fname = makeFilename("bmp");
 	worker = std::jthread([&, fname] { 
 		image.saveBmpColor(fname);
@@ -260,7 +260,7 @@ void JpegImageWriter::open(OutputOption outputOption) {
 }
 
 void JpegImageWriter::writeOutput(const FrameExecutor& executor) {
-	executor.getOutputImage(frameIndex, outputFrame);
+	executor.getOutput(frameIndex, outputFrame);
 
 	av_frame->pts = this->frameIndex;
 	int result = avcodec_send_frame(ctx, av_frame);
@@ -302,7 +302,7 @@ void RawNv12Writer::open(OutputOption outputOption) {
 }
 
 void RawNv12Writer::writeOutput(const FrameExecutor& executor) {
-	executor.getOutputImage(frameIndex, outputFrame);
+	executor.getOutput(frameIndex, outputFrame);
 	outputFrame.convertTo(nv12, executor.mPool);
 	file.write(reinterpret_cast<const char*>(nv12.data()), nv12.sizeInBytes());
 
@@ -322,7 +322,7 @@ void RawYuvWriter::open(OutputOption outputOption) {
 }
 
 void RawYuvWriter::writeOutput(const FrameExecutor& executor) {
-	executor.getOutputImage(frameIndex, outputFrame);
+	executor.getOutput(frameIndex, outputFrame);
 	file.write(reinterpret_cast<const char*>(outputFrame.data()), outputFrame.sizeInBytes());
 
 	this->outputBytesWritten += 3ll * outputFrame.height() * outputFrame.width();
@@ -341,7 +341,7 @@ void RawPipeWriter::open(OutputOption outputOption) {
 
 //get data via cuvista ... | ffmpeg -f rawvideo -pix_fmt yuv444p -video_size ww:hh -r xx -i pipe:0 -pix_fmt yuv420p outfile.mp4
 void RawPipeWriter::writeOutput(const FrameExecutor& executor) {
-	executor.getOutputImage(frameIndex, outputFrame);
+	executor.getOutput(frameIndex, outputFrame);
 
 	size_t bytes = fwrite(outputFrame.data(), 1, outputFrame.sizeInBytes(), stdout);
 	if (bytes != outputFrame.sizeInBytes()) {
@@ -410,7 +410,7 @@ int AsfPipeWriter::writeBuffer(void* opaque, const unsigned char* buf, int siz) 
 }
 
 void AsfPipeWriter::writeOutput(const FrameExecutor& executor) {
-	executor.getOutputImage(frameIndex, outputFrame);
+	executor.getOutput(frameIndex, outputFrame);
 	
 	av_frame->data[0] = outputFrame.plane(0);
 	av_frame->data[1] = outputFrame.plane(1);
@@ -651,7 +651,7 @@ void OpticalFlowWriter::writeInput(const FrameExecutor& executor) {
 	//imageInterpolated.saveAsBMP("f:/im.bmp");
 
 	//stamp color legend onto image
-	legend.copyTo(imageInterpolated, 0ull + mData.h - 10 - legendSize, 10);
+	legend.writeTo(imageInterpolated, 0ull + mData.h - 10 - legendSize, 10, 192, executor.mPool);
 	int tx = 10 + legendSize / 2;
 	int ty = 0ull + mData.h - 10 - legendSize / 2;
 	imageInterpolated.writeText(std::to_string(frameIndex), tx, ty, legendScale, legendScale, im::TextAlign::MIDDLE_CENTER);

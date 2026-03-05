@@ -237,11 +237,11 @@ DeviceType DeviceInfoNull::getType() const {
 }
 
 std::string DeviceInfoNull::getName() const {
-	return "";
+	return "None";
 }
 
 std::string DeviceInfoNull::getNameShort() const {
-	return "";
+	return "None";
 }
 
 std::shared_ptr<FrameExecutor> DeviceInfoNull::create(MainData& data, MovieFrame& frame) {

@@ -25,14 +25,16 @@ class NvEncoder;
 
 class CudaFFmpegWriter : public FFmpegFormatWriter {
 
-private:
+protected:
 	std::shared_ptr<NvEncoder> nvenc = nullptr;
 	std::unique_ptr<std::list<NvPacket>> nvPackets; //encoded packets
+	ImageNV12 outputNV12;
+	int nv12stride = 0;
 
+	void open(OutputOption outputOption, const DeviceInfoCuda* dic);
 	void writePacketToFile(const NvPacket& nvpkt, bool terminate);
 	void writePacketsToFile(std::list<NvPacket> nvpkts, bool terminate);
 	void encodePackets();
-	ImageNV12 outputNV12;
 
 public:
 	CudaFFmpegWriter(MainData& data, MovieReader& reader);

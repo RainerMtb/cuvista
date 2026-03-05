@@ -20,82 +20,54 @@
 
 using namespace im;
 
-void ImagePixelRgb<uchar>::writeTo(ImageColorBase<uchar>* dest, size_t r, size_t c) const {
-	if (dest->getColorBase() == ColorBase::RGB) {
-		dest->atColor(0, r, c) = x;
-		dest->atColor(1, r, c) = y;
-		dest->atColor(2, r, c) = z;
+//uchar to uchar
+template <> void ImagePixel<uchar>::writeTo(ColorBase srcColor, ColorBase destColor, ImagePixel<uchar>& dest) const {
+	if (srcColor == destColor) {
+		*dest.x = *x;
+		*dest.y = *y;
+		*dest.z = *z;
 
-	} else if (dest->getColorBase() == ColorBase::YUV) {
-		rgb_to_yuv(x, y, z, dest->addrColor(0, r, c), dest->addrColor(1, r, c), dest->addrColor(2, r, c));
+	} else if (srcColor == ColorBase::RGB && destColor == ColorBase::YUV) {
+		rgb_to_yuv(*x, *y, *z, dest.x, dest.y, dest.z);
+
+	} else if (srcColor == ColorBase::YUV && destColor == ColorBase::RGB) {
+		yuv_to_rgb(*x, *y, *z, dest.x, dest.y, dest.z);
 	}
+
+	if (dest.w != nullptr) *dest.w = 255;
 }
 
-void ImagePixelRgb<uchar>::writeTo(ImageColorBase<float>* dest, size_t r, size_t c) const {
-	if (dest->getColorBase() == ColorBase::RGB) {
+//uchar to float
+template <> void ImagePixel<uchar>::writeTo(ColorBase srcColor, ColorBase destColor, ImagePixel<float>& dest) const {
+	if (srcColor == destColor) {
 		float f = 1.0f / 255.0f;
-		dest->atColor(0, r, c) = x * f;
-		dest->atColor(1, r, c) = y * f;
-		dest->atColor(2, r, c) = z * f;
+		*dest.x = *x * f;
+		*dest.y = *y * f;
+		*dest.z = *z * f;
 
-	} else if (dest->getColorBase() == ColorBase::YUV) {
-		rgb_to_yuv(x, y, z, dest->addrColor(0, r, c), dest->addrColor(1, r, c), dest->addrColor(2, r, c));
+	} else if (srcColor == ColorBase::RGB && destColor == ColorBase::YUV) {
+		rgb_to_yuv(*x, *y, *z, dest.x, dest.y, dest.z);
+
+	} else if (srcColor == ColorBase::YUV && destColor == ColorBase::RGB) {
+		yuv_to_rgb(*x, *y, *z, dest.x, dest.y, dest.z);
 	}
+
+	if (dest.w != nullptr) *dest.w = 1.0f;
 }
 
+//float to uchar
+template <> void ImagePixel<float>::writeTo(ColorBase srcColor, ColorBase destColor, ImagePixel<uchar>& dest) const {
+	if (srcColor == destColor) {
+		*dest.x = (uchar) std::rint(*x * 255.0f);
+		*dest.y = (uchar) std::rint(*y * 255.0f);
+		*dest.z = (uchar) std::rint(*z * 255.0f);
 
-void ImagePixelRgb<float>::writeTo(ImageColorBase<uchar>* dest, size_t r, size_t c) const {
-	if (dest->getColorBase() == ColorBase::RGB) {
-		dest->atColor(0, r, c) = (uchar) (x * 255.0f);
-		dest->atColor(1, r, c) = (uchar) (y * 255.0f);
-		dest->atColor(2, r, c) = (uchar) (z * 255.0f);
+	} else if (srcColor == ColorBase::RGB && destColor == ColorBase::YUV) {
+		rgb_to_yuv(*x, *y, *z, dest.x, dest.y, dest.z);
 
-	} else if (dest->getColorBase() == ColorBase::YUV) {
-		rgb_to_yuv(x, y, z, dest->addrColor(0, r, c), dest->addrColor(1, r, c), dest->addrColor(2, r, c));
+	} else if (srcColor == ColorBase::YUV && destColor == ColorBase::RGB) {
+		yuv_to_rgb(*x, *y, *z, dest.x, dest.y, dest.z);
 	}
-}
 
-void ImagePixelRgb<float>::writeTo(ImageColorBase<float>* dest, size_t r, size_t c) const {
-	assert(false && "not implemented");
-}
-
-//------------------------------------------------------------------------------------------------------
-
-void ImagePixelYuv<uchar>::writeTo(ImageColorBase<uchar>* dest, size_t r, size_t c) const {
-	if (dest->getColorBase() == ColorBase::RGB) {
-		yuv_to_rgb(x, y, z, dest->addrColor(0, r, c), dest->addrColor(1, r, c), dest->addrColor(2, r, c));
-
-	} else if (dest->getColorBase() == ColorBase::YUV) {
-		dest->atColor(0, r, c) = x;
-		dest->atColor(1, r, c) = y;
-		dest->atColor(2, r, c) = z;
-	}
-}
-
-void ImagePixelYuv<uchar>::writeTo(ImageColorBase<float>* dest, size_t r, size_t c) const {
-	if (dest->getColorBase() == ColorBase::RGB) {
-		yuv_to_rgb(x, y, z, dest->addrColor(0, r, c), dest->addrColor(1, r, c), dest->addrColor(2, r, c));
-
-	} else if (dest->getColorBase() == ColorBase::YUV) {
-		float f = 1.0f / 255.0f;
-		dest->atColor(0, r, c) = x * f;
-		dest->atColor(1, r, c) = y * f;
-		dest->atColor(2, r, c) = z * f;
-	}
-}
-
-
-void ImagePixelYuv<float>::writeTo(ImageColorBase<uchar>* dest, size_t r, size_t c) const {
-	if (dest->getColorBase() == ColorBase::RGB) {
-		yuv_to_rgb(x, y, z, dest->addrColor(0, r, c), dest->addrColor(1, r, c), dest->addrColor(2, r, c));
-
-	} else if (dest->getColorBase() == ColorBase::YUV) {
-		dest->atColor(0, r, c) = (uchar) (x * 255.0f);
-		dest->atColor(1, r, c) = (uchar) (y * 255.0f);
-		dest->atColor(2, r, c) = (uchar) (z * 255.0f);
-	}
-}
-
-void ImagePixelYuv<float>::writeTo(ImageColorBase<float>* dest, size_t r, size_t c) const {
-	assert(false && "not implemented");
+	if (dest.w != nullptr) *dest.w = 255;
 }

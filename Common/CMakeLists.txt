@@ -6,6 +6,7 @@ add_library(Common STATIC
     ErrorLogger.cpp
     ImageClasses.cpp
     ImageHeaders.cpp
+    ImagePixel.cpp
     ThreadPoolBase.cpp
     Util.cpp
     OutputOption.cpp

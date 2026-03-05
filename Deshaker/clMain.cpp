@@ -421,7 +421,7 @@ void OpenClFrame::outputData(int64_t frameIndex, AffineDataFloat trf) {
 	}
 }
 
-void OpenClFrame::getOutputImage(int64_t frameIndex, Image8& image) const {
+void OpenClFrame::getOutput(int64_t frameIndex, Image8& image) const {
 	try {
 		if (image.colorBase() == ColorBase::YUV) {
 			//convert to YUV444 for output
@@ -446,7 +446,7 @@ void OpenClFrame::getOutputImage(int64_t frameIndex, Image8& image) const {
 	}
 }
 
-bool OpenClFrame::getOutputNvenc(int64_t frameIndex, Image8& image, unsigned char* cudaNv12ptr) const {
+bool OpenClFrame::getOutput(int64_t frameIndex, Image8& image, int cudaNv12stride, unsigned char* cudaNv12ptr) const {
 	try {
 		yuv_to_nv12(clData.kernels.yuv32f_to_nv12, clData.out[4], image.data(), clData, image.width(), image.height(), image.stride());
 		image.setIndex(frameIndex);

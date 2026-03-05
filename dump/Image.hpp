@@ -18,7 +18,6 @@
 
 #pragma once
 
-/*
 #include "ThreadPoolBase.h"
 #include "ImageData.hpp"
 #include "Color.hpp"
@@ -215,5 +214,3 @@ namespace im {
 }
 
 using Image8 = im::ImageBase<unsigned char>;
-
-*/
