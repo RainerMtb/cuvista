@@ -29,7 +29,6 @@
 #include "clMain.hpp"
 #include "AvxFrame.hpp"
 #include "FrameResult.hpp"
-#include "MatrixInverter.hpp"
 #include "cuTest.cuh"
 
 
@@ -43,14 +42,12 @@ void similarTransform();
 void readAndWriteOneFrame();
 void checkVersions();
 void draw(const std::string& filename);
-void filterCompare();
 
 void cudaInvSimple();
 void cudaInvPerformanceTest();
 void cudaInvEqualityTest();
 void cudaInvParallel();
 void cudaInvTest(size_t s1, size_t s2);
-void cudaTextureRead();
 
 void openClInvTest(size_t s1, size_t s2);
 void openClInvGroupTest(int w1, int w2);
@@ -58,9 +55,8 @@ void openClnorm1Test();
 
 void compareFramesPlatforms();
 void testVideo1();
-void testVideo2();
+void testLuma();
 
-void flow();
 void pinvTest();
 void compareInv();
 
@@ -69,4 +65,3 @@ void avxTest();
 
 void testZoom();
 void testSampler();
-void createTransformImages();

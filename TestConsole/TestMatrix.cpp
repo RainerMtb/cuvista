@@ -18,7 +18,6 @@
 
 #include "TestMain.hpp"
 #include "SubMat.hpp"
-#include "MatrixInverter.hpp"
 
 void compareInv() {
 	Mat slist = Matd::fromBinaryFile("d:/VideoTest/s.mat");
@@ -31,13 +30,6 @@ void compareInv() {
 
 		Matd s = S;
 		Matd svd = s.pinv();
-
-		s = S;
-		PseudoInverter psi(s, 6);
-		auto inv = psi.inv();
-		if (inv.has_value() && inv.value().minus(svd).normF2() < 0.2) {
-			countNew++;
-		}
 
 		s = S;
 		double ns = s.norm1();
@@ -69,36 +61,6 @@ void pinvTest() {
 	inv = inverter.inv().value();
 	inv.toConsole("inv 0");
 	std::cout << std::endl;
-
-	//A = m;
-	//IterativePseudoInverse1 p1(A, s);
-	//inv = p1.inv().value();
-	//inv.toConsole("inv 1");
-	//std::cout << std::endl;
-
-	//A = m;
-	//IterativePseudoInverse2 p2(A, s);
-	//inv = p2.inv().value();
-	//inv.toConsole("inv 2");
-	//std::cout << std::endl;
-
-	A = m;
-	PseudoInverter p(A, s);
-	inv = p.inv().value();
-	inv.toConsole("inv sym");
-	std::cout << std::endl;
-
-	//A = m;
-	//IterativePseudoInverse3 p3(A, s);
-	//inv = p3.inv().value();
-	//inv.toConsole("inv 3");
-	//std::cout << std::endl;
-
-	//A = m;
-	//IterativePseudoInverse4 p4(A, s);
-	//inv = p4.inv().value();
-	//inv.toConsole("inv 4");
-	//std::cout << std::endl;
 }
 
 void matTest() {

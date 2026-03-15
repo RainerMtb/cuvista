@@ -139,7 +139,7 @@ namespace util {
     std::string base64_encode(std::span<unsigned char> data);
 
     //encode bytes to file in 76 column wide text
-    void base64_encode(std::span<unsigned char> data, const std::string& filename);
+    void base64_encode(const std::string& inputFile, const std::string& outputFile);
 
     //decode base64 string to bytes
     std::vector<unsigned char> base64_decode(const std::string& base64string);

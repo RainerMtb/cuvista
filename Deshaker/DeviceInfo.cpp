@@ -149,7 +149,7 @@ std::ostream& operator << (std::ostream& os, const DeviceInfoCuda& info) {
 // Cuda Info -----------------------------------
 
 DeviceInfoCuda::DeviceInfoCuda(int64_t maxPixel) :
-	DeviceInfoBase(maxPixel) 
+	DeviceInfoCudaBase(maxPixel) 
 {}
 
 DeviceType DeviceInfoCuda::getType() const {

@@ -57,18 +57,18 @@ public:
 		FrameExecutor(data, deviceInfo, frame, pool)
 	{}
 
-	void cudaInit(CoreData& core, int devIdx, const cudaDeviceProp& prop, ImageYuv& yuvFrame) {}
-	void inputData(int64_t frameIndex, const ImageYuv& inputFrame) override {}
-	void createPyramid(int64_t frameIndex, AffineDataFloat trf = {}, bool warp = false) override {}
+	void init() override {}
+	void inputData(int64_t frameIndex, const Image8& inputFrame) override {}
+	int64_t createPyramid(int64_t frameIndex, AffineDataFloat trf = {}, bool warp = false) override { return 0; }
 	void computeStart(int64_t frameIndex, std::span<PointResult> results) override {}
 	void computeTerminate(int64_t frameIndex, std::span<PointResult> results) override {}
 	void outputData(int64_t frameIndex, AffineDataFloat trf) override {}
 	void getOutput(int64_t frameIndex, Image8& image) const override {}
 	bool getOutput(int64_t frameIndex, Image8& image, int cudaNv12stride, unsigned char* cudaNv12ptr) const override { return true; }
 	void getInput(int64_t frameIndex, Image8& image) const override {}
-	void getWarped(int64_t frameIndex, Image8& image) override {}
+	void getWarped(int64_t frameIndex, Image8bgr & image) override {}
 
-	void cudaGetTransformedOutput(float* data) const {}
+	void cudaGetTransformedOutput(float* data, size_t h, size_t w) const {}
 	void cudaGetPyramid(int64_t frameIndex, float* data) const {}
 };
 

@@ -101,16 +101,20 @@ void readAndWriteOneFrame() {
 		MovieFrame frame(data, reader, writer);
 		CudaFrame ex(data, *data.deviceList[2], frame, frame.mPool);
 
-		frame.mBufferFrame = ImageYuv::readPgmFile("d:/VideoTest/v00.pgm");
-		frame.mBufferFrame.index = 0;
+		ImageAyuv im0 = ImageAyuv::readPgmFile("d:/VideoTest/v00.pgm");
+		Image8& input0 = ex.inputDestination(0);
+		im0.copyTo(input0);
+		input0.index = 0;
 		reader.frameIndex = 0;
-		ex.inputData(reader.frameIndex, frame.mBufferFrame);
+		ex.inputData(reader.frameIndex);
 		ex.createPyramid(frame.mReader.frameIndex);
 
-		frame.mBufferFrame = ImageYuv::readPgmFile("D:/VideoTest/v01.pgm");
-		frame.mBufferFrame.index = 1;
+		ImageAyuv im1 = ImageAyuv::readPgmFile("D:/VideoTest/v01.pgm");
+		Image8& input1 = ex.inputDestination(1);
+		im1.copyTo(input1);
+		input1.index = 1;
 		reader.frameIndex = 1;
-		ex.inputData(reader.frameIndex, frame.mBufferFrame);
+		ex.inputData(reader.frameIndex);
 		ex.createPyramid(frame.mReader.frameIndex);
 		ex.computeStart(frame.mReader.frameIndex, frame.mResultPoints);
 		ex.computeTerminate(frame.mReader.frameIndex, frame.mResultPoints);
@@ -214,51 +218,6 @@ public:
 		imageInterpolated.saveBmpColor("f:/flow.bmp");
 	}
 };
-
-void flow() {
-	std::chrono::time_point t1 = std::chrono::system_clock::now();
-	std::cout << "-------- Test Flow" << std::endl;
-	std::string file = "d:/VideoTest/02.mp4";
-	MainData data;
-	data.collectDeviceInfo();
-	data.fileIn = file;
-	FFmpegReader reader;
-	reader.open(file);
-	data.validate(reader);
-	OutputWriter writer(data, reader);
-	MovieFrame frame(data, reader, writer);
-	CpuFrame ex(data, *data.deviceList[0], frame, frame.mPool);
-	reader.read(frame.mBufferFrame);
-	ex.inputData(reader.frameIndex, frame.mBufferFrame);
-	ex.createPyramid(reader.frameIndex);
-
-	reader.read(frame.mBufferFrame);
-	ex.inputData(reader.frameIndex, frame.mBufferFrame);
-	ex.createPyramid(reader.frameIndex);
-
-	ex.computeStart(reader.frameIndex, frame.mResultPoints);
-	ex.computeTerminate(reader.frameIndex, frame.mResultPoints);
-
-	OpticalFlowImageWriter fw(data, reader);
-	fw.writeFlow(frame, "f:/flow.bmp");
-
-	std::vector<PointResult>& pr = frame.mResultPoints;
-	for (PointResultType type : {
-		PointResultType::FAIL_SINGULAR, PointResultType::FAIL_ITERATIONS, PointResultType::FAIL_ETA_NAN,
-			PointResultType::RUNNING, PointResultType::SUCCESS_ABSOLUTE_ERR, PointResultType::SUCCESS_STABLE_ITER
-	}) {
-		auto num = std::count_if(pr.cbegin(), pr.cend(), [&] (const PointResult& pr) { return pr.result == type; });
-		std::cout << "type " << int(type) << ", count " << num << " = " << 100.0 * num / pr.size() << "%" << std::endl;
-	}
-
-	frame.mFrameResult.computeTransform(frame.mResultPoints, reader.frameIndex);
-	AffineTransform trf = frame.getTransform();
-	trf.toConsole("transform: ", 2);
-
-	std::chrono::time_point t2 = std::chrono::system_clock::now();
-	std::cout << "time [ms]: " << std::chrono::duration<double, std::milli>(t2 - t1).count() << std::endl;
-	std::cout << errorLogger().getErrorMessage() << std::endl;
-}
 
 void testZoom() {
 	std::cout << "testing zoom calculation..." << std::endl;

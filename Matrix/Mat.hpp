@@ -80,7 +80,6 @@ public:
 
 template <class T> class Mat : public CoreMat<T> {
 
-	friend class Affine2D;
 	friend class MatRow<T>;
 
 public:
@@ -102,9 +101,6 @@ protected:
 	//maximum width and height
 	static constexpr size_t MAX_DIM = 1 << 30;
 	static constexpr int MAX_DIGITS = 25;
-
-	//noop thread pool
-	inline static ThreadPoolBase defaultPool;
 
 	//create mat using existing data array, sharing memory
 	Mat(T* array, size_t rows, size_t cols, bool ownData) : 
@@ -184,15 +180,17 @@ private:
 			posDecimalMax = 0;
 			//iterate over rows
 			for (size_t r = 0; r < rows(); r++) {
-				//analyse a value
-				double d = (double) at(r, c);
-				double absd = std::abs(d);
-				//format value
-				std::string str = "";
-				if (absd < 1e5 && (d - rint(d)) == 0) str = std::format("{:.1f}", d);
-				else if (absd < 1e-5)                 str = std::format("{:.{}e}", d, digits);
-				else if (absd < 1e5)                  str = std::format("{:.{}f}", d, digits);
-				else                                  str = std::format("{:.{}e}", d, digits);
+				std::string str = "NaN";
+				if constexpr (std::is_arithmetic_v<T>) {
+					//analyse a value
+					double d = (double) at(r, c);
+					double absd = std::abs(d);
+					//format value
+					if (absd < 1e5 && (d - rint(d)) == 0) str = std::format("{:.1f}", d);
+					else if (absd < 1e-5)                 str = std::format("{:.{}e}", d, digits);
+					else if (absd < 1e5)                  str = std::format("{:.{}f}", d, digits);
+					else                                  str = std::format("{:.{}e}", d, digits);
+				}
 				//store value
 				lines[r].setNumStr(str, &posDecimalMax);
 			}
@@ -608,10 +606,10 @@ public:
 		}
 	}
 
-	void saveAsBMP(const std::string& filename, T scale = 1) const {
+	void saveAsBMP(const std::string& filename, T maxValue) const {
 		int h = int(this->h);
 		int w = int(this->w);
-		im::ImageMatShared(h, w, w, this->array).saveAsBMP(filename, scale);
+		im::ImageY<T>(h, w, w, this->array, maxValue).saveBmpPlanes(filename);
 	}
 
 	//---------------------------------------------------------
@@ -804,9 +802,10 @@ public:
 	}
 
 	//filter mat in one dimension
-	Mat<T>& filter1D(const T* kernel, size_t ksiz, Direction dir, Mat<T>& dest, ThreadPoolBase& pool = defaultPool) {
+	Mat<T>& filter1D(std::span<T> kernel, Direction dir, Mat<T>& dest, ThreadPoolBase& pool = defaultPool) {
 		//check matrix dimensions
 		assert(cols() == dest.cols() && rows() == dest.rows() && "dimension mismatch");
+		size_t ksiz = kernel.size();
 
 		//delta values
 		size_t dy = 1 - size_t(dir), dx = 1 - dy;

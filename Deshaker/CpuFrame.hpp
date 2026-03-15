@@ -25,19 +25,16 @@
 //---------- CPU FRAME ------------------------------------------------
 //---------------------------------------------------------------------
 
-struct FilterKernel {
-	static const int maxSize = 8;
-	int siz;
-	float k[maxSize];
-};
+using Matf4 = Mat<FloatAyuv>;
 
 class CpuFrame : public FrameExecutor {
 
 public:
 	CpuFrame(MainData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool);
 
-	void inputData(int64_t frameIndex, const ImageYuv& inputFrame) override;
-	void createPyramid(int64_t frameIndex, AffineDataFloat trf = {}, bool warp = false) override;
+	Image8& inputDestination(int64_t frameIndex) override;
+	void inputData(int64_t frameIndex) override;
+	int64_t createPyramid(int64_t frameIndex, AffineDataFloat trf = {}, bool warp = false) override;
 	void computeStart(int64_t frameIndex, std::span<PointResult> results) override;
 	void computeTerminate(int64_t frameIndex, std::span<PointResult> results) override;
 	void outputData(int64_t frameIndex, AffineDataFloat trf) override;
@@ -46,14 +43,17 @@ public:
 	Matf getTransformedOutput() const override;
 	Matf getPyramid(int64_t frameIndex) const override;
 	void getInput(int64_t frameIndex, Image8& image) const override;
-	void getWarped(int64_t frameIndex, Image8& image) override;
+	void getWarped(int64_t frameIndex, Image8bgr & image) override;
 
 private:
-	FilterKernel filterKernels[4] = {
-		{5, {0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f}},
-		{3, {0.25f, 0.5f, 0.25f}},
-		{3, {0.25f, 0.5f, 0.25f}},
-		{3, {-0.5f, 0.0f, 0.5f}},
+	std::vector<float> filterKernelY = { 0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f };
+
+	std::vector<FloatAyuv> filterKernel4 = {
+		{ 1.0f, 0.0625f, 0.0f,  0.0f },
+		{ 1.0f, 0.25f,   0.25f, 0.25f },
+		{ 1.0f, 0.375f,  0.5f,  0.5f },
+		{ 1.0f, 0.25f,   0.25f, 0.25f },
+		{ 1.0f, 0.0625f, 0.0f,  0.0f }
 	};
 
 	class CpuPyramid {
@@ -63,21 +63,22 @@ private:
 		std::vector<Matf> mY;
 
 		CpuPyramid(MainData& data);
+		Matf getCompletePyramid(int64_t index, size_t h, size_t w) const;
 	};
 
 	//frame input buffer, number of frames = frameBufferCount
-	std::vector<ImageYuv> mYUV;
+	std::vector<ImageAyuv> mInput;
 
 	//holds image pyramids
 	std::vector<CpuPyramid> mPyr;
 
-	//buffers the last output frame, 3 mats, to be used to blend background of next frame
-	std::vector<Matf> mPrevOut;
+	//buffers the last output frame, to be used to blend background of next frame
+	Matf4 mPrevOut;
 
 	//buffer for generating output from input yuv and transformation
-	std::vector<Matf> mBuffer;
-	Matf mYuvPlane, mFilterBuffer, mFilterResult;
+	Matf mFilterBuffer1, mFilterBuffer2;
+	Matf4 mBuffer4, mFilterBuffer4, mFilterResult4;
 
 	//final output
-	ImageYuvFloat mOutput;
+	ImageAyuvFloat mOutput;
 };

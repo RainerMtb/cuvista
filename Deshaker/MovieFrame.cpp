@@ -29,7 +29,6 @@ MovieFrame::MovieFrame(MainData& data, MovieReader& reader, MovieWriter& writer)
 	mWriter { writer },
 	mPool(data.cpuThreads),
 	mFrameResult(data, mPool),
-	mBufferFrame(data.h, data.w, data.cpupitch),
 	mResultPoints(data.resultCount)
 {
 	//set PointResult indizes
@@ -128,17 +127,17 @@ LoopResult MovieFrameCombined::runLoop(ProgressBase& progress, UserInput& input,
 			progress.init(progressInfo);
 			progress.updateStatus("Processing Frames...");
 			//read first frame from input into buffer
-			mReader.read(mBufferFrame);
+			mReader.read(*executor);
 			mReader.startOfInput = false;
 
 		} else if (state == StateCombined::READ_SECOND) {
-			executor->inputData(mReader.frameIndex, mBufferFrame); //input first frame
+			executor->inputData(mReader.frameIndex); //input first frame
 			executor->createPyramid(mReader.frameIndex);
-			mReader.read(mBufferFrame); //read second frame
+			mReader.read(*executor); //read second frame
 
 		} else if (state == StateCombined::FILL_BUFFER) {
 			//process current frame
-			executor->inputData(mReader.frameIndex, mBufferFrame);
+			executor->inputData(mReader.frameIndex);
 			executor->createPyramid(mReader.frameIndex);
 			//transform for previous frame
 			mFrameResult.computeTransform(mResultPoints, mReader.frameIndex - 1);
@@ -150,7 +149,7 @@ LoopResult MovieFrameCombined::runLoop(ProgressBase& progress, UserInput& input,
 			executor->computeStart(mReader.frameIndex, mResultPoints);
 			executor->computeTerminate(mReader.frameIndex, mResultPoints);
 			//read next frame into buffer
-			mReader.read(mBufferFrame);
+			mReader.read(*executor);
 
 		} else if (state == StateCombined::MAIN_LOOP) {
 			//process current frame, read next frame, output previous frame
@@ -159,11 +158,11 @@ LoopResult MovieFrameCombined::runLoop(ProgressBase& progress, UserInput& input,
 			int64_t readIndex = mReader.frameIndex;
 			assert(readIndex % mData.bufferCount != mWriter.frameIndex % mData.bufferCount && "accessing the same buffer for read and write");
 			//process current frame
-			executor->inputData(readIndex, mBufferFrame);
+			executor->inputData(readIndex);
 			executor->createPyramid(readIndex);
 			executor->computeStart(readIndex, mResultPoints);
 			//read next frame async
-			std::future<void> f = mReader.readAsync(mBufferFrame);
+			std::future<void> f = mReader.readAsync(*executor);
 			//now compute transform for previous frame while results for current frame are potentially computed on device
 			mFrameResult.computeTransform(mResultPoints, readIndex - 1);
 			const AffineTransform& currentTransform = mFrameResult.getTransform();
@@ -307,14 +306,14 @@ LoopResult MovieFrameConsecutive::runLoop(ProgressBase& progress, UserInput& inp
 			//init progress display
 			progress.init(progressInfo);
 			progress.updateStatus(std::format("Analyzing Video {}/{}...", currentPass, mData.mode));
-			mReader.read(mBufferFrame);
+			mReader.read(*executor);
 			mReader.startOfInput = false;
 
 		} else if (state == StateConsecutive::READ_SECOND_FRAME) {
 			//create pyramid for first frame, read second frame
-			executor->inputData(mReader.frameIndex, mBufferFrame); //input first frame
+			executor->inputData(mReader.frameIndex); //input first frame
 			executor->createPyramid(mReader.frameIndex);
-			mReader.read(mBufferFrame); //read second frame
+			mReader.read(*executor); //read second frame
 			mTrajectory.addTrajectoryTransform({}); //first frame has no transform applied
 			mWriter.writeInput(*executor);
 
@@ -322,8 +321,8 @@ LoopResult MovieFrameConsecutive::runLoop(ProgressBase& progress, UserInput& inp
 			//main loop, compute frame, read one frame ahead async
 			//reader will update frameIndex async
 			int64_t idx = mReader.frameIndex;
-			executor->inputData(idx, mBufferFrame);
-			std::future<void> f = mReader.readAsync(mBufferFrame);
+			executor->inputData(idx);
+			std::future<void> f = mReader.readAsync(*executor);
 			executor->createPyramid(idx);
 			executor->computeStart(idx, mResultPoints);
 			executor->computeTerminate(idx, mResultPoints);
@@ -336,7 +335,7 @@ LoopResult MovieFrameConsecutive::runLoop(ProgressBase& progress, UserInput& inp
 			progressUpdate(progressInfo, progress, progressPerReaderPass * currentPass * 100.0, true);
 			//prepare next iteration over input
 			mReader.rewind();
-			mReader.read(mBufferFrame);
+			mReader.read(*executor);
 			currentPass++;
 			progress.updateStatus(std::format("Analyzing Video {}/{}...", currentPass, mData.mode));
 			inputState = InputState::NONE;
@@ -347,16 +346,16 @@ LoopResult MovieFrameConsecutive::runLoop(ProgressBase& progress, UserInput& inp
 			//std::cout << mTrajectory << std::endl;
 
 		} else if (state == StateConsecutive::ITERATION_SECOND_FRAME) {
-			executor->inputData(mReader.frameIndex, mBufferFrame); //input first frame
+			executor->inputData(mReader.frameIndex); //input first frame
 			executor->createPyramid(mReader.frameIndex, mTrajectory.getTransform(mData, 0), true);
-			mReader.read(mBufferFrame); //read second frame
+			mReader.read(*executor); //read second frame
 			mTrajectory.setTrajectoryTransform({});
 
 		} else if (state == StateConsecutive::ITERATION) {
 			//compute again using transformed input frames
 			int64_t idx = mReader.frameIndex;
-			executor->inputData(idx, mBufferFrame);
-			std::future<void> f = mReader.readAsync(mBufferFrame);
+			executor->inputData(idx);
+			std::future<void> f = mReader.readAsync(*executor);
 			const AffineTransform& trf = mTrajectory.getTransform(mData, idx);
 			executor->createPyramid(idx, trf, true);
 			executor->computeStart(idx, mResultPoints);
@@ -372,7 +371,7 @@ LoopResult MovieFrameConsecutive::runLoop(ProgressBase& progress, UserInput& inp
 			//prepare for second pass, rewind reader and read first frame
 			mReader.rewind();
 			mReader.mStoreSidePackets = true;
-			mReader.read(mBufferFrame);
+			mReader.read(*executor);
 			currentPass++;
 			progress.updateStatus("Generating Output...");
 			inputState = InputState::NONE;
@@ -383,11 +382,11 @@ LoopResult MovieFrameConsecutive::runLoop(ProgressBase& progress, UserInput& inp
 
 		} else if (state == StateConsecutive::WRITE) {
 			//output stabilized frame, read next frame
-			executor->inputData(mReader.frameIndex, mBufferFrame);
+			executor->inputData(mReader.frameIndex);
 			const AffineTransform& tf = mTrajectory.getTransform(mData, mWriter.frameIndex);
 			executor->outputData(mWriter.frameIndex, tf);
 			mWriter.writeOutput(*executor);
-			mReader.read(mBufferFrame);
+			mReader.read(*executor);
 
 		} else if (state == StateConsecutive::QUIT) {
 			//start to flush the writer

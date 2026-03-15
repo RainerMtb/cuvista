@@ -27,22 +27,8 @@ namespace im {
 	template <class T> class ImageColorBase {
 
 	private:
-		void convertValue(uchar value, uchar* dest) const {
-			*dest = value;
-		}
-
-		void convertValue(float value, uchar* dest) const {
-			*dest = (uchar) std::rint(value * 255);
-		}
-
-		void convertValue(uchar value, float* dest) const {
-			float f = 1.0 / 255.0f;
-			*dest = value * f;
-		}
-
-		void convertValue(float value, float* dest) const {
-			*dest = value;
-		}
+		void convertValue(T value, uchar* dest) const;
+		void convertValue(T value, float* dest) const;
 
 	protected:
 		std::shared_ptr<ImageTypeBase<T>> typePtr;
@@ -177,16 +163,17 @@ namespace im {
 			std::vector<uchar> imageRow(stridedWidth);
 
 			for (int i = planes - 1; i >= 0; i--) {
-				int idx = colorIndex[i];
+				//int idx = colorIndex[i];
 				for (int r = h - 1; r >= 0; r--) {
 					//prepare one line of data
 					for (int c = 0; c < w; c++) {
-						convertValue(typePtr->at(idx, r, c), imageRow.data() + c);
+						convertValue(typePtr->at(i, r, c), imageRow.data() + c);
 					}
 					//write strided line
 					os.write(reinterpret_cast<char*>(imageRow.data()), stridedWidth);
 				}
 			}
+			assert(os.good() && "error writing file");
 		}
 
 		void setColorPlane(int plane, T colorValue) {

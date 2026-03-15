@@ -414,6 +414,12 @@ void MainData::validate(const MovieReader& reader) {
 	//video frame size
 	this->w = reader.w;
 	this->h = reader.h;
+	
+	this->stride = util::alignValue(w, 64);
+	this->stride4 = util::alignValue(w * 4, 64);
+	this->strideFloat = stride * sizeof(float);
+	this->strideFloat4 = stride4 * sizeof(float);
+
 	std::string strpx = std::to_string(defaultParam.pixelMin);
 	if (w < defaultParam.pixelMin || h < defaultParam.pixelMin) 
 		throw AVException("input video must be at least " + strpx + " x " + strpx + " pixels");
@@ -468,9 +474,7 @@ void MainData::validate(const MovieReader& reader) {
 	}
 	//set background yuv color vector
 	backgroundColor.toYUVfloat(&bgcolorYuv.y, &bgcolorYuv.u, &bgcolorYuv.v);
-
-	int pitchBase = 256;
-	cpupitch = (w + pitchBase - 1) / pitchBase * pitchBase;
+	backgroundColor.toYUVfloat(&bgcolorAyuv.y, &bgcolorAyuv.u, &bgcolorAyuv.v);
 
 	//number of frames to buffer
 	this->radius = (int) std::round(radsec * reader.fps());
@@ -500,14 +504,15 @@ void MainData::validate(const MovieReader& reader) {
 	//check certain values ranges for sanity
 	if (radsec < defaultParam.radsecMin || radsec > defaultParam.radsecMax) throw AVException("invalid temporal radius: " + std::to_string(radsec));
 	if (radius < defaultParam.radiusMin || radius > defaultParam.radiusMax) throw AVException("invalid image radius: " + std::to_string(radius));
-	size_t mp = deviceList[deviceSelected]->maxPixel;
+	int64_t mp = std::min(deviceList[deviceSelected]->maxPixel, defaultParam.pixelMax);
 	if (w > mp) throw AVException("video width exceeds maximum of " + std::to_string(mp) + " px");
 	if (h > mp) throw AVException("video height exceeds maximum of " + std::to_string(mp) + " px");
-	if (w % 2 != 0 || h % 2 != 0) throw AVException("video width and height must be factors of two");
-	if (zoomMin > zoomMax) throw AVException("invalid zoom values, max zoom must be greater min zoom");
-	if (zoomMin < defaultParam.imZoomMin || zoomMin > defaultParam.imZoomMax) throw AVException("invalid zoom value");
-	if (zoomMax < defaultParam.imZoomMin || zoomMax > defaultParam.imZoomMax) throw AVException("invalid zoom value");
-	if (cudaThreads > 32) throw AVException("invalid cuda threads parameter " + std::to_string(cudaThreads));
+	if (w % 2 != 0) throw AVException("video width must be factor of two");
+	if (w % 2 != 0) throw AVException("video height must be factor of two");
+	if (zoomMin > zoomMax) throw AVException("invalid zoom values");
+	if (zoomMin < defaultParam.imZoomMin || zoomMin > defaultParam.imZoomMax) throw AVException("invalid zoom values");
+	if (zoomMax < defaultParam.imZoomMin || zoomMax > defaultParam.imZoomMax) throw AVException("invalid zoom values");
+	if (cudaThreads > 32) throw AVException("invalid cuda threads parameter: " + std::to_string(cudaThreads));
 
 	//check ffmpeg versions
 	//if (ffmpeg_check_versions() == false) {

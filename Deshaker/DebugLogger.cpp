@@ -19,11 +19,24 @@
 #include "SystemStuff.hpp"
 #include <iostream>
 
+std::string DebugLogger::time() const {
+	std::chrono::time_point<std::chrono::system_clock> end = std::chrono::system_clock::now();
+	long long t = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+	long long s = t / 1'000'000;
+	t = t % 1'000'000;
+	return std::format("T+{:03d}.{:03d}.{:03d} ", s, t / 1000, t % 1000);
+}
+
 void DebugLoggerNull::log(const std::string& msg) {}
 
 void DebugLoggerConsole::log(const std::string& msg) {
 	std::lock_guard<std::mutex> lock(mutex);
-	std::cout << msg << std::endl;
+	std::cout << time() << msg << std::endl;
+}
+
+void DebugLoggerString::log(const std::string& msg) {
+	std::lock_guard<std::mutex> lock(mutex);
+	ss << time() << msg << std::endl;
 }
 
 #if defined(_WIN64)
@@ -48,6 +61,8 @@ DebugLoggerTcp::DebugLoggerTcp(const char* ip, int port) {
 void DebugLoggerTcp::log(const std::string& msg) {
 	std::lock_guard<std::mutex> lock(mutex);
 	if (mIsConnected == 0) {
+		std::string t = time();
+		send(sock, t.c_str(), t.size(), 0);
 		send(sock, msg.c_str(), msg.size(), 0);
 		send(sock, "\n", 1, 0);
 	}
@@ -81,6 +96,8 @@ DebugLoggerTcp::DebugLoggerTcp(const char* ip, int port) {
 void DebugLoggerTcp::log(const std::string& msg) {
 	std::lock_guard<std::mutex> lock(mutex);
 	if (mIsConnected == 0) {
+		std::string t = time();
+		send(sock, t.c_str(), t.size(), 0);
 		send(sock, msg.c_str(), msg.size(), 0);
 		send(sock, "\n", 1, 0);
 	}

@@ -31,13 +31,15 @@ class OpenClFrame : public FrameExecutor {
 
 private:
 	cl::Data clData;
+	ImageAyuv mInputFrame;
 
 public:
 	OpenClFrame(CoreData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool);
 
 	void init() override;
-	void inputData(int64_t frameIndex, const ImageYuv& inputFrame) override;
-	void createPyramid(int64_t frameIndex, AffineDataFloat trf = {}, bool warp = false) override;
+	Image8& inputDestination(int64_t frameIndex) override;
+	void inputData(int64_t frameIndex) override;
+	int64_t createPyramid(int64_t frameIndex, AffineDataFloat trf = {}, bool warp = false) override;
 	void computeStart(int64_t frameIndex, std::span<PointResult> results) override;
 	void computeTerminate(int64_t frameIndex, std::span<PointResult> results) override;
 	void outputData(int64_t frameIndex, AffineDataFloat trf) override;
@@ -46,7 +48,7 @@ public:
 	Matf getTransformedOutput() const override;
 	Matf getPyramid(int64_t frameIndex) const override;
 	void getInput(int64_t frameIndex, Image8& image) const override;
-	void getWarped(int64_t frameIndex, Image8& image) override;
+	void getWarped(int64_t frameIndex, Image8bgr & image) override;
 
 private:
 	void compute(int64_t frameIndex, const CoreData& core, int rowStart, int rowEnd);

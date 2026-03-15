@@ -33,26 +33,38 @@ void MessagePrinterConsole::printNewLine() {
 }
 
 void runSelfTest(util::MessagePrinter& out, std::vector<DeviceInfoBase*> deviceList) {
-	std::vector<unsigned char> movieData = util::base64_decode(movieTestData);
 	out.printNewLine();
 	out.print("Testing available devices...");
 	out.printNewLine();
 
+	std::vector<unsigned char> movieData = util::base64_decode(movieTestData);
+
+	uint64_t crcInputFirst =  0xe72e7c43c685dc4c;
+	uint64_t crcInputSecond = 0x8975f438e501390a;
+	uint64_t crcPyramid =     0x430664d35d1bddfa;
+	uint64_t crcLuma =        0x3586033f4901bd51;
+	uint64_t crcResult =      0x9a14e1549f60775f;
+	uint64_t crcTransformed = 0x7904805c67659a0f;
+	uint64_t crcOutput =      0xfc36c9a2927c627a;
+
+	//for (size_t i = 3; i < 4; i++) {
 	for (size_t i = 0; i < deviceList.size(); i++) {
 		errorLogger().clear();
 		out.print(" #");
 		out.print(std::to_string(i));
 		out.print(": ");
 		std::string name = deviceList[i]->getNameShort();
-		name.resize(10, ' ');
-		out.print(name);
+		std::string str = name;
+		str.resize(10, ' ');
+		out.print(str);
 		out.print(": testing... ");
 
 		MainData data;
 		data.backgroundColor = Color::rgb(0, 50, 0);
 		data.deviceList.push_back(deviceList[i]);
+		//data.cpuThreadsRequired = { 1 };
 		MemoryFFmpegReader reader(movieData);
-		reader.open("");
+		reader.open();
 		data.validate(reader);
 		OutputWriter writer(data, reader);
 		
@@ -66,62 +78,90 @@ void runSelfTest(util::MessagePrinter& out, std::vector<DeviceInfoBase*> deviceL
 
 			//first frame
 			//std::cout << "reading" << std::endl;
-			reader.read(frame.mBufferFrame);
-			executor->inputData(reader.frameIndex, frame.mBufferFrame);
-			executor->createPyramid(reader.frameIndex, {}, false);
+			reader.read(*executor);
+			executor->inputData(reader.frameIndex);
+			int64_t luma1 = executor->createPyramid(reader.frameIndex, {}, false);
 			//second frame
-			reader.read(frame.mBufferFrame);
-			executor->inputData(reader.frameIndex, frame.mBufferFrame);
-			executor->createPyramid(reader.frameIndex, {}, false);
+			reader.read(*executor);
+			executor->inputData(reader.frameIndex);
+			int64_t luma2 = executor->createPyramid(reader.frameIndex, {}, false);
 			//compute
 			//std::cout << "computing" << std::endl;
 			executor->computeStart(reader.frameIndex, frame.mResultPoints);
 			executor->computeTerminate(reader.frameIndex, frame.mResultPoints);
 			//input
-			ImageRGBA input(data.h, data.w);
-			executor->getInput(0, input);
+			ImageRGBA inputFirst(data.h, data.w);
+			executor->getInput(0, inputFirst);
+			//input
+			ImageAyuv inputSecond(data.h, data.w);
+			executor->getInput(1, inputSecond);
 			//output
 			AffineTransform trf;
 			trf.addRotation(0.2).addTranslation(-40, 30);
 			executor->outputData(0, trf);
 			writer.writeOutput(*executor);
 
-			//checks
-			//std::cout << "running checks" << std::endl;
-			if (uint64_t crc = input.crc(); crc != crcInput) {
-				//std::cout << std::hex << crc << " ";
-				out.print("FAIL input ");
+			//executing checks
+			//inputFirst.saveBmpPlanes(std::format("f:/in1_{}.bmp", name));
+			if (uint64_t crc = inputFirst.crc(); crc != crcInputFirst) {
+				debugLogger->format("{} fail input 1 {:x}", name, crc);
+				out.print("FAIL input 1 ");
 				check = false;
 			}
-			if (uint64_t crc = executor->getPyramid(0).crc(); crc != crcPyramid) {
-				//std::cout << std::hex << crc << " ";
+			//inputSecond.saveBmpPlanes(std::format("f:/in2_{}.bmp", name));
+			if (uint64_t crc = inputSecond.crc(); crc != crcInputSecond) {
+				debugLogger->format("{} fail input 2 {:x}", name, crc);
+				out.print("FAIL input 2 ");
+				check = false;
+			}
+
+			Matf pyramid = executor->getPyramid(0);
+			//pyramid.saveAsBMP(std::format("f:/pyr_{}.bmp", name), 1.0f);
+			if (uint64_t crc = pyramid.crc(); crc != crcPyramid) {
+				debugLogger->format("{} fail pyramid {:x}", name, crc);
 				out.print("FAIL pyramid ");
 				check = false;
 			}
-			if (uint64_t crc = executor->getTransformedOutput().crc(); crc != crcTransformed) {
-				//std::cout << std::hex << crc << " ";
+
+			if (uint64_t crc = util::CRC64().addDirect(luma1).addDirect(luma2).result(); crc != crcLuma) {
+				debugLogger->format("{} fail luma {:x}", name, crc);
+				out.print("FAIL luma ");
+				check = false;
+			}
+
+			{
+				util::CRC64 crc64;
+				for (const PointResult& pr : frame.mResultPoints) {
+					crc64.addDirect(pr.result);
+					crc64.addDirect(pr.idx);
+					crc64.addDirect(pr.ix0);
+					crc64.addDirect(pr.iy0);
+					crc64.addDirect(pr.x);
+					crc64.addDirect(pr.y);
+					crc64.addDirect(pr.u);
+					crc64.addDirect(pr.v);
+				}
+				if (uint64_t crc = crc64.result(); crc != crcResult) {
+					debugLogger->format("{} fail result {:x}", name, crc);
+					out.print("FAIL result ");
+					check = false;
+				}
+			}
+
+			Matf transformed = executor->getTransformedOutput();
+			//transformed.saveAsBinary(std::format("f:/trf_{}.mat", name));
+			transformed.saveAsBMP(std::format("f:/trf_{}.bmp", name), 1.0f);
+			if (uint64_t crc = transformed.crc(); crc != crcTransformed) {
+				debugLogger->format("{} fail transformed {:x}", name, crc);
 				out.print("FAIL transformed ");
 				check = false;
 			}
-			if (uint64_t crc = writer.getOutputFrame().crc(); crc != crcOutput) {
-				//std::cout << std::hex << crc << " ";
+
+			const ImageAyuv& output = writer.getOutputFrame();
+			//output.saveBmpPlanes(std::format("f:/out_{}.bmp", name));
+			if (uint64_t crc = output.crc(); crc != crcOutput) {
+				debugLogger->format("{} fail output {:x}", name, crc);
 				out.print("FAIL output ");
-				check = false;
-			}
-			util::CRC64 crc64;
-			for (const PointResult& pr : frame.mResultPoints) {
-				crc64.addDirect(pr.result);
-				crc64.addDirect(pr.idx);
-				crc64.addDirect(pr.ix0);
-				crc64.addDirect(pr.iy0);
-				crc64.addDirect(pr.x);
-				crc64.addDirect(pr.y);
-				crc64.addDirect(pr.u);
-				crc64.addDirect(pr.v);
-			}
-			if (uint64_t crc = crc64.result(); crc != crcResult) {
-				//std::cout << std::hex << crc << " ";
-				out.print("FAIL result ");
 				check = false;
 			}
 

@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include <map>
+#include <unordered_map>
 #include "ErrorLogger.hpp"
 
 extern "C" {
@@ -48,7 +48,7 @@ enum class StreamHandling {
 	STREAM_DECODE,
 };
 
-inline std::map<StreamHandling, std::string> streamHandlerMap = {
+inline std::unordered_map<StreamHandling, std::string> streamHandlerMap = {
 	{StreamHandling::STREAM_COPY, "copy"},
 	{StreamHandling::STREAM_IGNORE, "ignore"},
 	{StreamHandling::STREAM_STABILIZE, "stabilize"},
@@ -78,7 +78,7 @@ public:
 	~SidePacket();
 };
 
-//strcuture per output stream
+//structure per output stream
 struct OutputStreamContext {
 	AVStream* inputStream = nullptr;
 
@@ -135,7 +135,7 @@ struct Timings {
 //generate error string from ffmpeg return codes
 std::string av_make_error(int errnum, const char* msg = "", const std::string& str = "");
 
-//log error from ffmpeg retunr codes
+//log error from ffmpeg return codes
 void ffmpeg_log_error(int errnum, const char* msg, ErrorSource source);
 
 //callback from ffmpeg to report errors

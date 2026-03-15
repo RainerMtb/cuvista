@@ -20,6 +20,23 @@
 
 using namespace im;
 
+template <> void ImageColorBase<uchar>::convertValue(uchar value, uchar* dest) const {
+	*dest = value;
+}
+
+template <> void ImageColorBase<float>::convertValue(float value, uchar* dest) const {
+	*dest = (uchar) std::rint(value * 255.0f);
+}
+
+template <> void ImageColorBase<uchar>::convertValue(uchar value, float* dest) const {
+	float f = 1.0f / 255.0f;
+	*dest = value * f;
+}
+
+template <> void ImageColorBase<float>::convertValue(float value, float* dest) const {
+	*dest = value;
+}
+
 //uchar to uchar
 template <> void ImagePixel<uchar>::writeTo(ColorBase srcColor, ColorBase destColor, ImagePixel<uchar>& dest) const {
 	if (srcColor == destColor) {

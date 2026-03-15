@@ -121,7 +121,7 @@ void FFmpegWriter::open(OutputOption outputOption, AVPixelFormat pixfmt, int h, 
     std::span<std::string> codecNames = codecToNamesMap[codecID];
     open(codecNames, codecID, pixfmt, h, w, stride);
 
-    sws_scaler_ctx = sws_getContext(w, h, AV_PIX_FMT_YUV444P, w, h, pixfmt, SWS_BILINEAR, NULL, NULL, NULL);
+    sws_scaler_ctx = sws_getContext(w, h, AV_PIX_FMT_AYUV, w, h, pixfmt, SWS_BILINEAR, NULL, NULL, NULL);
     if (!sws_scaler_ctx) 
         throw AVException("Could not get scaler context");
 
@@ -134,7 +134,7 @@ void FFmpegWriter::open(OutputOption outputOption, AVPixelFormat pixfmt, int h, 
 
 //normal entry point for opening Writer
 void FFmpegWriter::open(OutputOption outputOption) {
-    open(outputOption, AV_PIX_FMT_YUV420P, mData.h, mData.w, mData.cpupitch, mData.fileOut);
+    open(outputOption, AV_PIX_FMT_YUV420P, mData.h, mData.w, mData.stride, mData.fileOut);
 }
 
 
@@ -169,11 +169,11 @@ int FFmpegWriter::writeFFmpegPacket(AVFrame* av_frame) {
 void FFmpegWriter::write(int bufferIndex) {
     assert(bufferIndex < imageBufferSize && frameIndex == imageBuffer[bufferIndex].index && "invalid frame index");
     auto fcn = [this, bufferIndex] {
-        ImageYuv& fr = imageBuffer[bufferIndex];
+        ImageAyuv& fr = imageBuffer[bufferIndex];
         //fr.writeText(std::to_string(fr.index), 10, 10, 2, 3, ColorYuv::BLACK, ColorYuv::WHITE);
         //scale and put into av_frame
-        uint8_t* src[] = { fr.plane(0), fr.plane(1), fr.plane(2), nullptr };
-        int strides[] = { fr.stride(), fr.stride(), fr.stride(), 0}; //if only three values are provided, we get a warning "data not aligned"
+        uint8_t* src[] = { fr.plane(0), nullptr, nullptr, nullptr };
+        int strides[] = { fr.stride(), 0, 0, 0 }; //if less than 4 values are provided, we get a warning "data not aligned"
         int sliceHeight = sws_scale(sws_scaler_ctx, src, strides, 0, fr.height(), av_frame->data, av_frame->linesize);
 
         //set pts into frame to later name packet

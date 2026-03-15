@@ -45,7 +45,7 @@ static void filter_32f_func(cl::Kernel& kernel, cl::Image src, cl::Image dest, i
 
 void cl::scale_8u32f_1(Image src, Image dest, Data& clData) {
 	assert(src.getImageInfo<CL_IMAGE_WIDTH>() == dest.getImageInfo<CL_IMAGE_WIDTH>() && "image width mismatch");
-	assert(src.getImageInfo<CL_IMAGE_HEIGHT>() == dest.getImageInfo<CL_IMAGE_HEIGHT>() * 3 && "image width mismatch");
+	assert(src.getImageInfo<CL_IMAGE_HEIGHT>() == dest.getImageInfo<CL_IMAGE_HEIGHT>() && "image width mismatch");
 	runKernel(clData.kernels.scale_8u32f_1, src, dest, clData.queue);
 }
 
@@ -108,9 +108,9 @@ void cl::yuv_to_rgba(Kernel kernel, Image src, unsigned char* dest, const Data& 
 
 void cl::yuv_to_nv12(Kernel kernel, Image src, unsigned char* dest, const Data& clData, int w, int h, int stride) {
 	kernel.setArg(0, src);
-	kernel.setArg(1, clData.yuvOut);
+	kernel.setArg(1, clData.ayuvOut);
 	kernel.setArg(2, stride);
 	kernel.setArg(3, h);
 	clData.queue.enqueueNDRangeKernel(kernel, NullRange, NDRange(w / 2, h / 2));
-	clData.queue.enqueueReadBuffer(clData.yuvOut, CL_TRUE, 0, 3ull * stride * h / 2, dest);
+	clData.queue.enqueueReadBuffer(clData.ayuvOut, CL_TRUE, 0, 3ull * stride * h / 2, dest);
 }

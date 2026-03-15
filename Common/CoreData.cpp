@@ -20,12 +20,71 @@
 #include <cassert>
 #include "CoreData.hpp"
 
+float Quartet::operator [] (size_t idx) const {
+	assert(idx < 4 && "invalid FloatAyuv index");
+	switch (idx) {
+	case 0: return a;
+	case 1: return y;
+	case 2: return u;
+	case 3: return v;
+	default: return std::numeric_limits<float>::quiet_NaN();
+	}
+}
+
+FloatAyuv::FloatAyuv(const Quartet& other) {
+	a = other.a;
+	y = other.y;
+	u = other.u;
+	v = other.v;
+}
+
+float FloatAyuv::operator [] (size_t idx) const {
+	assert(idx < 4 && "invalid FloatAyuv index");
+	switch (idx) {
+	case 0: return a;
+	case 1: return y;
+	case 2: return u;
+	case 3: return v;
+	default: return std::numeric_limits<float>::quiet_NaN();
+	}
+}
+
+FloatAyuv operator + (const FloatAyuv& a, const FloatAyuv& b) {
+	return { a.a + b.a, a.y + b.y, a.u + b.u, a.v + b.v };
+}
+
+FloatAyuv operator - (const FloatAyuv& a, const FloatAyuv& b) {
+	return { a.a - b.a, a.y - b.y, a.u - b.u, a.v - b.v };
+}
+
+FloatAyuv operator * (const FloatAyuv& a, const FloatAyuv& b) {
+	return { a.a * b.a, a.y * b.y, a.u * b.u, a.v * b.v };
+}
+
+FloatAyuv operator * (float f, const FloatAyuv& a) {
+	return { a.a * f, a.y * f, a.u * f, a.v * f };
+}
+
+FloatAyuv operator / (const FloatAyuv& a, const FloatAyuv& b) {
+	return { a.a / b.a, a.y / b.y, a.u / b.u, a.v / b.v };
+}
+
+FloatAyuv operator / (float f, const FloatAyuv& a) {
+	return { a.a / f, a.y / f, a.u / f, a.v / f };
+}
+
+FloatAyuv std::fma(const FloatAyuv& x, const FloatAyuv& y, const FloatAyuv& z) {
+	return { std::fma(x.a, y.a, z.a), std::fma(x.y, y.y, z.y), std::fma(x.u, y.u, z.u), std::fma(x.v, y.v, z.v) };
+}
+
 float Triplet::operator [] (size_t idx) const {
-	assert(idx < 3 && "invalid index");
-	if (idx == 0) return y;
-	if (idx == 1) return u;
-	if (idx == 2) return v;
-	return std::numeric_limits<float>::quiet_NaN();
+	assert(idx < 3 && "invalid Triplet index");
+	switch (idx) {
+	case 0: return y;
+	case 1: return u;
+	case 2: return v;
+	default: return std::numeric_limits<float>::quiet_NaN();
+	}
 }
 
 bool PointResult::isValid() const {

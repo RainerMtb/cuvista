@@ -172,7 +172,7 @@ static void testCrc() {
 			//check yuv
 			uint64_t crcExpectedYuv = 0xde5cf1c3ce13ae44;
 			util::CRC64 crcyuv;
-			for (const ImageYuv& image : externalWriter->outputFramesYuv) crcyuv.add(image);
+			for (const ImageAyuv& image : externalWriter->outputFramesYuv) crcyuv.add(image);
 
 			bool match = crcExpectedYuv == crcyuv;
 			std::cout << (match ? ansiGreen : ansiRed) << std::hex << "output yuv expected: " << crcExpectedYuv << ", actual crc: " << crcyuv
@@ -217,7 +217,7 @@ static void testCrc() {
 
 		uint64_t crcExpected = 0xe2819e6f94aef6c7;
 		util::CRC64 crcOutput;
-		for (const ImageYuv& image : externalWriter->outputFramesYuv) crcOutput.add(image);
+		for (const ImageAyuv& image : externalWriter->outputFramesYuv) crcOutput.add(image);
 
 		bool match = crcExpected == crcOutput;
 		std::cout << (match ? ansiGreen : ansiRed) << std::hex << "yuv file crc expected: " << crcExpected << ", actual crc: " << crcOutput

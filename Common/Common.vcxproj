@@ -100,7 +100,7 @@
     <ClCompile Include="ThreadPoolBase.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="AffineData.hpp" />
+    <ClInclude Include="BaseData.hpp" />
     <ClInclude Include="CoreData.hpp" />
     <ClInclude Include="DeviceInfoBase.hpp" />
     <ClInclude Include="ErrorLogger.hpp" />

@@ -21,8 +21,7 @@
 int main() {
 	std::cout << "----------------------------" << std::endl << "TestMain:" << std::endl;
 	//qrdec();
-	draw("f:/drawing.bmp"); 
-	//filterCompare();
+	//draw("f:/drawing.bmp"); 
 	//matPerf();
 	//matTest();
 	//subMat();
@@ -32,7 +31,6 @@ int main() {
 	//cudaInvEqualityTest();
 	//cudaInvParallel();
 	//cudaInvTest(1, 32);
-	//cudaTextureRead();
 	//readAndWriteOneFrame();
 	//checkVersions();
 	//transform();
@@ -40,7 +38,6 @@ int main() {
 	//openClInvTest(1, 32);
 	//openClInvGroupTest(1, 9);
 	//openClnorm1Test();
-	//flow();
 	//pinvTest();
 	//compareInv();
 	//similarTransform();
@@ -52,7 +49,7 @@ int main() {
 
 	//testZoom();
 	//testVideo1();
-	//testVideo2();
+	testLuma();
 
-	//createTransformImages();
+	//util::base64_encode("f:/testData.mp4", "f:/testData.txt");
 }

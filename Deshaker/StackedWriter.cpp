@@ -28,7 +28,7 @@ void StackedWriter::writeOutput(const FrameExecutor& executor) {
 	executor.getInput(frameIndex, mInputFrame);
 
 	int bufferIndex = 0;
-	ImageYuv& combinedFrame = imageBuffer[bufferIndex];
+	ImageAyuv& combinedFrame = imageBuffer[bufferIndex];
 	combinedFrame.setColor(mData.backgroundColor);
 	unsigned char* out = mOutputFrame.data() + mData.stackCrop.left;
 	unsigned char* dest = combinedFrame.data();

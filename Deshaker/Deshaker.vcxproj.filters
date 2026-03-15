@@ -104,9 +104,6 @@
     <ClCompile Include="ThreadPool.cpp">
       <Filter>Util</Filter>
     </ClCompile>
-    <ClCompile Include="MatrixInverter.cpp">
-      <Filter>Util</Filter>
-    </ClCompile>
     <ClCompile Include="SelfTest.cpp">
       <Filter>Util</Filter>
     </ClCompile>
@@ -115,9 +112,6 @@
     </ClCompile>
     <ClCompile Include="DummyFrame.cpp">
       <Filter>Frame</Filter>
-    </ClCompile>
-    <ClCompile Include="ImageYuvFFmpeg.cpp">
-      <Filter>Util</Filter>
     </ClCompile>
     <ClCompile Include="SystemInput.cpp">
       <Filter>System</Filter>
@@ -199,9 +193,6 @@
     <ClInclude Include="MovieWriter.hpp">
       <Filter>Writer</Filter>
     </ClInclude>
-    <ClInclude Include="MatrixInverter.hpp">
-      <Filter>Util</Filter>
-    </ClInclude>
     <ClInclude Include="MovieFrame.hpp">
       <Filter>Frame</Filter>
     </ClInclude>
@@ -231,9 +222,6 @@
     </ClInclude>
     <ClInclude Include="DummyFrame.hpp">
       <Filter>Frame</Filter>
-    </ClInclude>
-    <ClInclude Include="ImageYuvFFmpeg.hpp">
-      <Filter>Util</Filter>
     </ClInclude>
     <ClInclude Include="SystemStuff.hpp">
       <Filter>System</Filter>

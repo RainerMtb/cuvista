@@ -36,9 +36,9 @@ V16f::V16f(const float* data) : a { _mm512_loadu_ps(data) } {}
 
 V16f::V16f(const float* data, __mmask16 mask) : a { _mm512_maskz_loadu_ps(mask, data) } {}
 
-V16f::V16f(const unsigned char* data) : a { _mm512_cvtepu32_ps(_mm512_cvtepu8_epi32(_mm_loadu_epi8(data))) } {}
+V16f::V16f(const unsigned char* data) : a { _mm512_cvtepi32_ps(_mm512_cvtepu8_epi32(_mm_loadu_epi8(data))) } {}
 
-V16f::V16f(const unsigned char* data, __mmask16 mask) : a { _mm512_cvtepu32_ps(_mm512_cvtepu8_epi32(_mm_maskz_loadu_epi8(mask, data))) } {}
+V16f::V16f(const unsigned char* data, __mmask16 mask) : a { _mm512_cvtepi32_ps(_mm512_cvtepu8_epi32(_mm_maskz_loadu_epi8(mask, data))) } {}
 
 V16f V16f::operator + (V16f other) const { return _mm512_add_ps(a, other.a); }
 V16f V16f::operator - (V16f other) const { return _mm512_sub_ps(a, other.a); }
@@ -121,9 +121,9 @@ V8f::V8f(const float* data) : a { _mm256_loadu_ps(data) } {}
 
 V8f::V8f(const float* data, __mmask8 mask) : a { _mm256_maskz_loadu_ps(mask, data) } {}
 
-V8f::V8f(const unsigned char* data) : a { _mm256_cvtepu32_ps(_mm256_cvtepu8_epi32(_mm_maskz_loadu_epi8(0xFF, data))) } {}
+V8f::V8f(const unsigned char* data) : a { _mm256_cvtepi32_ps(_mm256_cvtepu8_epi32(_mm_maskz_loadu_epi8(0xFF, data))) } {}
 
-V8f::V8f(const unsigned char* data, __mmask8 mask) : a { _mm256_cvtepu32_ps(_mm256_cvtepu8_epi32(_mm_maskz_loadu_epi8(mask, data))) } {}
+V8f::V8f(const unsigned char* data, __mmask8 mask) : a { _mm256_cvtepi32_ps(_mm256_cvtepu8_epi32(_mm_maskz_loadu_epi8(mask, data))) } {}
 
 V8f V8f::operator + (V8f other) const { return _mm256_add_ps(a, other.a); }
 V8f V8f::operator - (V8f other) const { return _mm256_sub_ps(a, other.a); }
@@ -206,9 +206,9 @@ V4f::V4f(const float* data) : a { _mm_loadu_ps(data) } {}
 
 V4f::V4f(const float* data, __mmask8 mask) : a { _mm_maskz_loadu_ps(mask, data) } {}
 
-V4f::V4f(const unsigned char* data) : a { _mm_cvtepu32_ps(_mm_cvtepu8_epi32(_mm_maskz_loadu_epi8(0xF, data))) } {}
+V4f::V4f(const unsigned char* data) : a { _mm_cvtepi32_ps(_mm_cvtepu8_epi32(_mm_maskz_loadu_epi8(0xF, data))) } {}
 
-V4f::V4f(const unsigned char* data, __mmask8 mask) : a { _mm_cvtepu32_ps(_mm_cvtepu8_epi32(_mm_maskz_loadu_epi8(mask, data))) } {}
+V4f::V4f(const unsigned char* data, __mmask8 mask) : a { _mm_cvtepi32_ps(_mm_cvtepu8_epi32(_mm_maskz_loadu_epi8(mask, data))) } {}
 
 V4f V4f::operator + (V4f other) const { return _mm_add_ps(a, other.a); }
 V4f V4f::operator - (V4f other) const { return _mm_sub_ps(a, other.a); }
@@ -296,9 +296,9 @@ V8d::V8d(const double* data) : a { _mm512_loadu_pd(data) } {}
 
 V8d::V8d(const double* data, __mmask8 mask) : a { _mm512_maskz_loadu_pd(mask, data) } {}
 
-V8d::V8d(const unsigned char* data) : a { _mm512_cvtepu64_pd(_mm512_cvtepu8_epi64(_mm_maskz_loadu_epi8(0xFF, data))) } {}
+V8d::V8d(const unsigned char* data) : a { _mm512_cvtepi64_pd(_mm512_cvtepu8_epi64(_mm_maskz_loadu_epi8(0xFF, data))) } {}
 
-V8d::V8d(const unsigned char* data, __mmask8 mask) : a { _mm512_cvtepu64_pd(_mm512_cvtepu8_epi64(_mm_maskz_loadu_epi8(mask, data))) } {}
+V8d::V8d(const unsigned char* data, __mmask8 mask) : a { _mm512_cvtepi64_pd(_mm512_cvtepu8_epi64(_mm_maskz_loadu_epi8(mask, data))) } {}
 
 V8d V8d::operator + (V8d other) const { return _mm512_add_pd(a, other.a); }
 V8d V8d::operator - (V8d other) const { return _mm512_sub_pd(a, other.a); }

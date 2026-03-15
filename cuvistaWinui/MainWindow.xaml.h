@@ -103,7 +103,7 @@ namespace winrt::cuvistaWinui::implementation {
         Windows::Storage::ApplicationDataContainer mLocalSettings = Windows::Storage::ApplicationData::Current().LocalSettings();
 
         MainData mData;
-        ImageYuv mInputYUV;
+        ImageAyuv mInput;
         ImageXamlBGRA mInputBGRA;
         FFmpegReader mReader;
 

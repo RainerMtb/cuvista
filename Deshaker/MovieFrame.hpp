@@ -87,7 +87,6 @@ public:
 	MovieWriter& mWriter;
 	ThreadPool mPool;
 	FrameResult mFrameResult;
-	ImageYuv mBufferFrame;
 	Trajectory mTrajectory;
 	std::vector<PointResult> mResultPoints;
 

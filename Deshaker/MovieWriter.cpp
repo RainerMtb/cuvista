@@ -25,10 +25,10 @@ SimpleYuvWriter::SimpleYuvWriter(const std::string& file) {
 	os = std::ofstream(file, std::ios::binary);
 }
 
-void SimpleYuvWriter::write(ImageYuv& image) {
+void SimpleYuvWriter::write(ImageAyuv& image) {
 	const unsigned char* src = image.data();
-	for (int i = 0; i < 3ull * image.height(); i++) {
-		os.write(reinterpret_cast<const char*>(src), image.width());
+	for (int i = 0; i < image.height(); i++) {
+		os.write(reinterpret_cast<const char*>(src), image.width() * 4ull);
 		src += image.stride();
 	}
 }
@@ -94,18 +94,27 @@ void MovieWriterCollection::close() {
 
 
 //-----------------------------------------------------------------------------------
-// Raw Format Writers
+// primitive output writer class
 //-----------------------------------------------------------------------------------
+
+const ImageAyuv& OutputWriter::getOutputFrame() { 
+	return outputFrame; 
+}
 
 void OutputWriter::writeOutput(const FrameExecutor& executor) {
 	executor.getOutput(frameIndex, outputFrame);
 	this->frameIndex++;
 }
 
+
+//-----------------------------------------------------------------------------------
+// Raw Format Writers
+//-----------------------------------------------------------------------------------
+
 void RawMemoryStoreWriter::writeOutput(const FrameExecutor& executor) {
 	if (doWriteOutput) {
 		{
-			ImageYuv& frameYuv = outputFramesYuv.emplace_back(executor.mData.h, executor.mData.w);
+			ImageAyuv& frameYuv = outputFramesYuv.emplace_back(executor.mData.h, executor.mData.w);
 			executor.getOutput(frameIndex, frameYuv);
 			while (outputFramesYuv.size() > maxFrameCount) outputFramesYuv.pop_front();
 		}
@@ -129,7 +138,7 @@ void RawMemoryStoreWriter::writeInput(const FrameExecutor& executor) {
 	results.push_back(executor.mFrame.mResultPoints);
 	
 	if (doWriteInput) {
-		ImageYuv image(executor.mData.h, executor.mData.w);
+		ImageAyuv image(executor.mData.h, executor.mData.w);
 		executor.getInput(inputFrameIndex, image);
 		image.index = inputFrameIndex;
 		inputFrames.push_back(image);
@@ -140,7 +149,7 @@ void RawMemoryStoreWriter::writeInput(const FrameExecutor& executor) {
 
 void RawMemoryStoreWriter::writeYuvFiles(const std::string& inputFile, const std::string& outputFile) {
 	std::ofstream osin(inputFile, std::ios::binary);
-	for (ImageYuv& image : outputFramesYuv) {
+	for (ImageAyuv& image : outputFramesYuv) {
 		static ImageNV12 nv12(image.height(), image.width(), image.width());
 		std::string str = std::format(" frame {:04} ", image.index);
 		image.writeText(str, 0, image.height());
@@ -149,7 +158,7 @@ void RawMemoryStoreWriter::writeYuvFiles(const std::string& inputFile, const std
 	}
 
 	std::ofstream osout(outputFile, std::ios::binary);
-	for (ImageYuv& image : inputFrames) {
+	for (ImageAyuv& image : inputFrames) {
 		static ImageNV12 nv12(image.height(), image.width(), image.width());
 		std::string str = std::format(" frame {:04} ", image.index);
 		image.writeText(str, 0, image.height());
@@ -388,15 +397,15 @@ void AsfPipeWriter::open(OutputOption outputOption) {
 	//open ffmpeg
 	AVCodecID id = AV_CODEC_ID_FFVHUFF;
 	FFmpegFormatWriter::openFormat(id, fmt, 1);
-	FFmpegWriter::open({}, id, AV_PIX_FMT_YUV444P, mData.h, mData.w, mData.cpupitch);
+	FFmpegWriter::open({}, id, AV_PIX_FMT_YUV444P, mData.h, mData.w, mData.w * 3);
 
 	//allocate yuv frame based on av_Frame
-	outputFrame = ImageYuv(mData.h, mData.w, mData.cpupitch);
+	outputFrame = ImageAyuv(mData.h, mData.w, mData.stride);
 }
 
 //for ffmpeg 7
 int AsfPipeWriter::writeBuffer(void* opaque, unsigned char* buf, int siz) {
-	return writeBuffer(opaque, (const unsigned char*) buf, siz);
+	return writeBuffer(opaque, (const unsigned char*) buf, siz); //forward to new constified function
 }
 
 //for ffmpeg 8
@@ -413,11 +422,7 @@ void AsfPipeWriter::writeOutput(const FrameExecutor& executor) {
 	executor.getOutput(frameIndex, outputFrame);
 	
 	av_frame->data[0] = outputFrame.plane(0);
-	av_frame->data[1] = outputFrame.plane(1);
-	av_frame->data[2] = outputFrame.plane(2);
 	av_frame->linesize[0] = outputFrame.stride();
-	av_frame->linesize[1] = outputFrame.stride();
-	av_frame->linesize[2] = outputFrame.stride();
 	av_frame->pts = frameIndex;
 
 	//generate and write packet through ffmpeg writer
@@ -555,7 +560,7 @@ void OpticalFlowWriter::start(const std::string& sourceName, AVPixelFormat pixfm
 		sc.outputStreams.push_back(osc);
 	}
 
-	FFmpegWriter::open({}, AV_CODEC_ID_H264, pixfmt, mData.h, mData.w, mData.cpupitch);
+	FFmpegWriter::open({}, AV_CODEC_ID_H264, pixfmt, mData.h, mData.w, mData.stride);
 
 	//setup scaler to accept RGB
 	sws_scaler_ctx = sws_getContext(mData.w, mData.h, AV_PIX_FMT_RGBA, mData.w, mData.h, pixfmt, SWS_BILINEAR, NULL, NULL, NULL);

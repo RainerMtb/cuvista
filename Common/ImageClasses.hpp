@@ -18,30 +18,32 @@
 
 #pragma once
 
+#include "BaseData.hpp"
 #include "ImageBase.hpp"
 
 namespace im {
 
-	template <class T> class ImageMatShared : public ImageBase<T> {
+	template <class T> class ImageY : public ImageBase<T> {
 
 	public:
-		ImageMatShared(int h, int w, int stride, T* plane0, T* plane1, T* plane2, T maxValue) {
-			int planeSize = stride * h;
-			std::vector<std::span<T>> store = { 
-				std::span<T>(plane0, planeSize), 
-				std::span<T>(plane1, planeSize), 
-				std::span<T>(plane2, planeSize) 
-			};
-			this->storePtr = std::make_shared<ImageStoreShared<T>>(store);
-			this->typePtr = std::make_shared<ImageTypePlanar<T>>(this->storePtr, h, w, stride, 3);
-			this->colorPtr = std::make_shared<ImageColorRgb<T>>(this->typePtr, std::array<int, 4>{ 0, 1, 2 }, maxValue);
+		ImageY(int h, int w, int stride, T maxValue) {
+			this->storePtr = std::make_shared<ImageStoreLocal<T>>(h * stride);
+			this->typePtr = std::make_shared<ImageTypePlanar<T>>(this->storePtr, h, w, stride, 1);
+			this->colorPtr = std::make_shared<ImageColorYuv<T>>(this->typePtr, std::array<int, 4>{ 0, 1, 2, 3 }, maxValue);
 		}
 
-		ImageMatShared() :
-			ImageMatShared<T>(0, 0, 0, nullptr, nullptr, nullptr, 0)
+		ImageY(int h, int w, int stride, T* data, T maxValue) {
+			std::span<float> span(data, h * stride);
+			this->storePtr = std::make_shared<ImageStoreSharedSingle<T>>(span);
+			this->typePtr = std::make_shared<ImageTypePlanar<T>>(this->storePtr, h, w, stride, 1);
+			this->colorPtr = std::make_shared<ImageColorYuv<T>>(this->typePtr, std::array<int, 4>{ 0, 1, 2, 3 }, maxValue);
+		}
+
+		ImageY() :
+			ImageY<T>(0, 0, 0, 0)
 		{}
 
-		constexpr ImageType imageType() const override { return ImageType::RGB; }
+		constexpr ImageType imageType() const override { return ImageType::Y; }
 	};
 
 
@@ -53,6 +55,18 @@ namespace im {
 		ImageYuvFloat();
 
 		constexpr ImageType imageType() const override { return ImageType::YUV; }
+	};
+
+
+	class ImageAyuvFloat : public ImageBase<float> {
+
+	public:
+		ImageAyuvFloat(int h, int w, int stride, float* data);
+		ImageAyuvFloat(int h, int w, int stride);
+		ImageAyuvFloat(int h, int w);
+		ImageAyuvFloat();
+
+		constexpr ImageType imageType() const override { return ImageType::AYUV; }
 	};
 
 
@@ -78,6 +92,28 @@ namespace im {
 	};
 
 
+	class ImageAyuv : public Image8 {
+
+	public:
+		ImageAyuv(int h, int w, int stride);
+		ImageAyuv(int h, int w, size_t stride);
+		ImageAyuv(int h, int w);
+		ImageAyuv();
+
+		static ImageAyuv readPgmFile(const std::string& filename);
+
+		static ImageAyuv readBmpFile(const std::string& filename);
+
+		constexpr ImageType imageType() const override { return ImageType::AYUV; }
+
+		virtual uchar* addr(size_t idx, size_t r, size_t c) override;
+		virtual const uchar* addr(size_t idx, size_t r, size_t c) const override;
+
+		virtual uchar& at(size_t idx, size_t r, size_t c) override;
+		virtual const uchar& at(size_t idx, size_t r, size_t c) const override;
+	};
+
+
 	class ImageNV12 : public Image8 {
 
 	public:
@@ -89,7 +125,9 @@ namespace im {
 	};
 
 
-	class ImageBgr : public Image8 {
+	class Image8bgr : public Image8 {};
+
+	class ImageBgr : public Image8bgr {
 
 	public:
 		ImageBgr(int h, int w);
@@ -103,7 +141,7 @@ namespace im {
 	};
 
 
-	class ImageBGRA : public Image8 {
+	class ImageBGRA : public Image8bgr {
 
 	public:
 		ImageBGRA(int h, int w, int stride, uchar* data);
@@ -115,7 +153,7 @@ namespace im {
 	};
 
 
-	class ImageRGBA : public Image8 {
+	class ImageRGBA : public Image8bgr {
 
 	public:
 		ImageRGBA(int h, int w, int stride, uchar* data);
@@ -125,6 +163,7 @@ namespace im {
 
 		constexpr ImageType imageType() const override { return ImageType::RGBA; }
 	};
+
 
 	template <class T> void ImageBase<T>::saveBmpColor(const std::string& filename) const {
 		ImageBgr bgr(height(), width());

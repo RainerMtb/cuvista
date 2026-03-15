@@ -15,10 +15,11 @@ namespace im {
 		void plot(int x, int y, double a, const LocalColor<T>& localColor) {
 			double alpha = a * localColor.alpha;
 			if (x >= 0 && x < width() && y >= 0 && y < height()) {
-				for (int z = 0; z < planes() && z < localColor.colorData.size(); z++) {
-					T val = at(z, y, x);
-					double pix = val * (1.0 - alpha) + localColor.colorData[z] * alpha;
-					at(z, y, x) = (T) pix;
+				for (int i = 0; i < planes() && i < localColor.colorData.size(); i++) {
+					int z = colorPtr->colorIndex[i];
+					T& val = at(z, y, x);
+					double pix = val * (1.0 - alpha) + localColor.colorData[i] * alpha;
+					val = (T) pix;
 				}
 			}
 		}
@@ -73,6 +74,7 @@ namespace im {
 		virtual constexpr std::span<int> colorIndex()      const { return colorPtr->colorIndex; }
 		virtual constexpr ColorBase colorBase()            const { return colorPtr->colorBase(); }
 
+		virtual ImagePixel<T> pixelAt(size_t r, size_t c)  const { return colorPtr->pixelAt(r, c); }
 
 		virtual void saveBmpPlanes(const std::string& filename) const override { colorPtr->saveBmpPlanes(filename); }
 		virtual void saveBmpColor(const std::string& filename) const override;

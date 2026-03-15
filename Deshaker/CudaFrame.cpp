@@ -24,12 +24,6 @@ CudaFrame::CudaFrame(MainData& data, DeviceInfoBase& deviceInfo, MovieFrame& fra
 	CudaExecutor(data, deviceInfo, frame, pool)
 {}
 
-void CudaFrame::init() {
-	assert(mDeviceInfo.getType() == DeviceType::CUDA && "device type must be CUDA here");
-	const DeviceInfoCuda* device = static_cast<const DeviceInfoCuda*>(&mDeviceInfo);
-	cudaInit(mData, device->cudaIndex, *device->props, mFrame.mBufferFrame);
-}
-
 Matf CudaFrame::getPyramid(int64_t frameIndex) const {
 	Matf out = Matf::allocate(mData.pyramidRowCount, mData.w);
 	cudaGetPyramid(frameIndex, out.data());
@@ -37,7 +31,7 @@ Matf CudaFrame::getPyramid(int64_t frameIndex) const {
 }
 
 Matf CudaFrame::getTransformedOutput() const {
-	Matf warped = Mat<float>::allocate(3ull * mData.h, mData.w);
-	cudaGetTransformedOutput(warped.data());
+	Matf warped = Mat<float>::allocate(mData.h, mData.w * 4ull);
+	cudaGetTransformedOutput(warped.data(), warped.rows(), warped.cols());
 	return warped;
 }

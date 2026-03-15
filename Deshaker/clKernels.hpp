@@ -33,7 +33,7 @@ __kernel void scale_8u32f_1(__read_only image2d_t src, __write_only image2d_t de
 	float f = 1.0f / 255.0f;
 
 	int2 coords = (int2)(c, r);
-	uchar val = read_imageui(src, coords).x;
+	uchar val = read_imageui(src, coords).y;
 	write_imagef(dest, coords, val * f);
 }
 
@@ -43,27 +43,26 @@ __kernel void scale_8u32f_3(__read_only image2d_t src, __write_only image2d_t de
 	int h = get_global_size(1);
 	float f = 1.0f / 255.0f;
 
+	int2 coords = (int2)(c, r);
 	float4 val = (float4)(
-		read_imageui(src, (int2)(c, r)).x,
-		read_imageui(src, (int2)(c, r + h)).x,
-		read_imageui(src, (int2)(c, r + h + h)).x,
-		0
+		read_imageui(src, coords).x * f,
+		read_imageui(src, coords).y * f,
+		read_imageui(src, coords).z * f,
+		read_imageui(src, coords).w * f
 	);
-	write_imagef(dest, (int2)(c, r), val * f);
+	write_imagef(dest, (int2)(c, r), val);
 }
 
 __kernel void scale_32f8u_3(__read_only image2d_t src, __global uchar* dest, int pitch) {
 	int c = get_global_id(0);
 	int r = get_global_id(1);
-	int h = get_global_size(1);
 
 	float4 val = rint(read_imagef(src, (int2)(c, r)) * 255.0f);
-	int idx = r * pitch + c;
-	dest[idx] = (uchar)(val.x);
-	idx += h * pitch;
-	dest[idx] = (uchar)(val.y);
-	idx += h * pitch;
-	dest[idx] = (uchar)(val.z);
+	int idx = r * pitch + c * 4;
+	dest[idx + 0] = (uchar)(val.x);
+	dest[idx + 1] = (uchar)(val.y);
+	dest[idx + 2] = (uchar)(val.z);
+	dest[idx + 3] = (uchar)(val.w);
 }
 
 struct FilterKernel {
@@ -106,9 +105,9 @@ __kernel void filter_32f_3(__read_only image2d_t src, __write_only image2d_t des
 	int y = r - dy * siz / 2;
 	for (int i = 0; i < siz; i++) {
 		float4 val = read_imagef(src, sampler, (int2)(x, y));
-		result.x = fma(val.x, filterKernels[0].k[i], result.x);
-		result.y = fma(val.y, filterKernels[1].k[i], result.y);
-		result.z = fma(val.z, filterKernels[2].k[i], result.z);
+		result.y = fma(val.y, filterKernels[0].k[i], result.y);
+		result.z = fma(val.z, filterKernels[1].k[i], result.z);
+		result.w = fma(val.w, filterKernels[2].k[i], result.w);
 		x += dx;
 		y += dy;
 	}
@@ -186,9 +185,10 @@ __kernel void yuv8u_to_rgba(__read_only image2d_t src, __global uchar* dest, int
 	int w = get_global_size(0);
 	int h = get_global_size(1);
 
-	uchar y = read_imageui(src, (int2)(c, r)).x;
-	uchar u = read_imageui(src, (int2)(c, r + h)).x;
-	uchar v = read_imageui(src, (int2)(c, r + h + h)).x;
+	int2 coords = (int2)(c, r);
+	uchar y = read_imageui(src, coords).s1;
+	uchar u = read_imageui(src, coords).s2;
+	uchar v = read_imageui(src, coords).s3;
 	uchar* ptr = dest + 4 * (r * w + c);
 	yuv_to_rgba_func(y, u, v, ptr + offset.s0, ptr + offset.s1, ptr + offset.s2, ptr + offset.s3);
 }

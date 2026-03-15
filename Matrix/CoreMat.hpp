@@ -24,32 +24,9 @@
 #include <algorithm>
 #include <optional>
 
+#include "BaseData.hpp"
+
 template <class T> class CoreMat {
-
-private:
-
-	template <class R = T> R interpFunc(size_t ix, size_t iy, R dx, R dy) const {
-		T f00 = at(iy, ix);
-		size_t x = dx != 0;
-		size_t y = dy != 0;
-		T f01 = at(iy, ix + x);
-		T f10 = at(iy + y, ix);
-		T f11 = at(iy + y, ix + x);
-		R result = (R) ((1 - dx) * (1 - dy) * f00 + (1 - dx) * dy * f10 + dx * (1 - dy) * f01 + dx * dy * f11);
-		return result;
-	}
-
-	template <class R = T> R interpFunc(R x, R y) const {
-		R flx = std::floor(x), fly = std::floor(y);
-		R dx = x - flx, dy = y - fly;
-		size_t ix = size_t(flx), iy = size_t(fly);
-		return interpFunc(ix, iy, dx, dy);
-	}
-
-	template <class R = T> std::optional<R> interpFunc(R x, R y, size_t x0, size_t y0, size_t w, size_t h) const {
-		if (x < x0 || x > x0 + w - 1 || y < y0 || y > y0 + h - 1) return std::nullopt;
-		return interpFunc(x, y);
-	}
 
 protected:
 	T* array;		//main data array
@@ -89,6 +66,29 @@ protected:
 	//create index into data array
 	virtual size_t index(size_t row, size_t col) const {
 		return row * w + col;
+	}
+
+	template <class R, class X = T> X interpFunc(size_t ix, size_t iy, R dx, R dy) const {
+		X f00 = at(iy, ix);
+		size_t x = dx != 0;
+		size_t y = dy != 0;
+		X f01 = at(iy, ix + x);
+		X f10 = at(iy + y, ix);
+		X f11 = at(iy + y, ix + x);
+		X result = ((1 - dx) * (1 - dy) * f00 + (1 - dx) * dy * f10 + dx * (1 - dy) * f01 + dx * dy * f11);
+		return result;
+	}
+
+	template <class R, class X = T> X interpFunc(R x, R y) const {
+		R flx = std::floor(x), fly = std::floor(y);
+		R dx = x - flx, dy = y - fly;
+		size_t ix = size_t(flx), iy = size_t(fly);
+		return interpFunc<R,X>(ix, iy, dx, dy);
+	}
+
+	template <class R, class X = T> std::optional<X> interpFunc(R x, R y, size_t x0, size_t y0, size_t w, size_t h) const {
+		if (x < x0 || x > x0 + w - 1 || y < y0 || y > y0 + h - 1) return std::nullopt;
+		return interpFunc<R,X>(x, y);
 	}
 
 public:
@@ -214,32 +214,17 @@ public:
 	}
 
 	//interpolate this mat at given point x and y, return optional, return nullopt when outside this mat
-	std::optional<float> interp2(float x, float y) const {
-		return interpFunc(x, y, 0, 0, cols(), rows());
-	}
-
-	//interpolate this mat at given point x and y, return optional, return nullopt when outside this mat
-	std::optional<double> interp2(double x, double y) const {
-		return interpFunc(x, y, 0, 0, cols(), rows());
+	template <class R, class X = T> std::optional<X> interp2(R x, R y) const {
+		return interpFunc<R,X>(x, y, 0, 0, cols(), rows());
 	}
 
 	//interpolate this mat at given point x and y, clamp to boundaries
-	float interp2clamped(float x, float y) const {
-		return interpFunc(std::clamp(x, 0.0f, cols() - 1.0f), std::clamp(y, 0.0f, rows() - 1.0f));
-	}
-
-	//interpolate this mat at given point x and y, clamp to boundaries
-	double interp2clamped(double x, double y) const {
-		return interpFunc(std::clamp(x, 0.0, cols() - 1.0), std::clamp(y, 0.0, rows() - 1.0));
+	template <class R, class X = T> X  interp2clamped(R x, R y) const {
+		return interpFunc<R,X>(std::clamp(x, R(0ull), R(cols() - 1ull)), std::clamp(y, R(0ull), R(rows() - 1ull)));
 	}
 
 	//interpolate this mat at given points through index ix and iy and fractions dx and dy and dx*dy
-	float interp2(size_t ix, size_t iy, float dx, float dy) const {
-		return interpFunc(ix, iy, dx, dy);
-	}
-
-	//interpolate this mat at given points through index ix and iy and fractions dx and dy and dx*dy
-	double interp2(size_t ix, size_t iy, double dx, double dy) const {
-		return interpFunc(ix, iy, dx, dy);
+	template <class R, class X = T> X  interp2(size_t ix, size_t iy, R dx, R dy) const {
+		return interpFunc<R,X>(ix, iy, dx, dy);
 	}
 };

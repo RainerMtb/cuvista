@@ -23,52 +23,6 @@
 #include "MovieWriter.hpp"
 #include "MovieReader.hpp"
 
-//make up frame data in memory for testing
-class TestReader : public MovieReader {
-
-private:
-	int64_t testFrameCount = 20;
-
-public:
-	void open(const std::string& source) override {
-		frameCount = testFrameCount;
-		h = 100;
-		w = 200;
-	}
-
-	bool read(ImageYuv& frame) override {
-		frameIndex++;
-		for (int64_t z = 0; z < 3; z++) {
-			int64_t base = this->frameIndex * 2 + z * 5 + 30;
-			unsigned char* plane = frame.plane(z);
-			for (int64_t r = 0; r < frame.height(); r++) {
-				for (int64_t c = 0; c < frame.width(); c++) {
-					int64_t pix = std::clamp(base + r / 10, 0LL, 255LL);
-					plane[r * frame.stride() + c] = (unsigned char) (pix);
-				}
-			}
-		}
-		frame.index = this->frameIndex;
-		endOfInput = this->frameIndex == testFrameCount;
-		return endOfInput == false;
-	}
-};
-
- //store resulting images in vector
-class TestWriter : public OutputWriter {
-
-public:
-	std::vector<ImageYuv> outputFrames;
-
-	TestWriter(MainData& data, MovieReader& reader) :
-		OutputWriter(data, reader) {}
-
-	void writeOutput(const FrameExecutor& executor) override {
-		outputFrames.push_back(outputFrame);
-		this->frameIndex++;
-	}
-};
-
 namespace Microsoft::VisualStudio::CppUnitTestFramework {
 
 	static std::wstring toWString(const std::string& str) {

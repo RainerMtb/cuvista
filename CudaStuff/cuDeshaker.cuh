@@ -20,14 +20,13 @@
 
 #include "CoreData.hpp"
 #include "FrameExecutor.hpp"
-#include "AffineData.hpp"
 #include "cuUtil.cuh"
 #include "cuDecompose.cuh"
 
 
 struct CudaProbeResult {
-	int runtimeVersion;
-	int driverVersion;
+	int runtimeVersion = 0;
+	int driverVersion = 0;
 	std::vector<cudaDeviceProp> props;
 };
 
@@ -79,12 +78,18 @@ struct ComputeKernelParam {
 class CudaExecutor : public FrameExecutor {
 
 private:
-	unsigned char* d_yuvData = nullptr;	     //continuous array of all pixel values in yuv format, allocated on device
-	unsigned char** d_yuvRows = nullptr;     //index into rows of pixels, allocated on device
-	unsigned char*** d_yuvPlanes = nullptr;  //index into Y-U-V planes of frames, allocated on device 
+	//host memory
+	ImageAyuv h_input;
+	CudaPointResult* h_results = nullptr;
 
-	unsigned char* d_yuvOut = nullptr;       //image data for encoding on host
-	unsigned char* d_rgba = nullptr;         //image data for progress update
+	//device memory
+	float* d_pyrData = nullptr;
+	float* d_bufferH = nullptr;
+	float* d_bufferV = nullptr;
+
+	unsigned char* d_ayuvData = nullptr;      //continuous array of all pixel values in yuv format, allocated on device
+	unsigned char* d_ayuvOut = nullptr;       //image data for encoding on host
+	unsigned char* d_rgba = nullptr;          //image data for progress update
 
 	struct {
 		float4* data;
@@ -96,15 +101,11 @@ private:
 		float4* background;
 	} out = {};
 
-	float* d_bufferH = nullptr;
-	float* d_bufferV = nullptr;
-
-	float* d_pyrData = nullptr;
-	float** d_pyrRows = nullptr;
+	//luma sum
+	int64_t* d_luma = nullptr;
 
 	//results from compute kernel
 	CudaPointResult* d_results = nullptr;
-	CudaPointResult* h_results = nullptr;
 
 	//init cuda streams
 	std::vector<cudaStream_t> cs;
@@ -140,24 +141,25 @@ private:
 	bool checkKernelParameters(int3 threads, int3 blocks) const;
 	bool checkKernelParameters() const;
 
-	void writeText(const std::string& text, int x0, int y0, int scaleX, int scaleY, float* deviceData);
+	void writeText(const std::string& text, int x0, int y0, float4* deviceData, int devicePitch);
 
 public:
 	CudaExecutor(CoreData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool);
 	~CudaExecutor();
 
-	void cudaInit(CoreData& coreData, int devIdx, const cudaDeviceProp& prop, ImageYuv& yuvFrame);
-	void inputData(int64_t frameIndex, const ImageYuv& inputFrame) override;
-	void createPyramid(int64_t frameIndex, AffineDataFloat trf = {}, bool warp = false) override;
+	void init() override;
+	Image8& inputDestination(int64_t frameIndex) override;
+	void inputData(int64_t frameIndex) override;
+	int64_t createPyramid(int64_t frameIndex, AffineDataFloat trf = {}, bool warp = false) override;
 	void computeStart(int64_t frameIndex, std::span<PointResult> results) override;
 	void computeTerminate(int64_t frameIndex, std::span<PointResult> results) override;
 	void outputData(int64_t frameIndex, AffineDataFloat trf) override;
 	void getOutput(int64_t frameIndex, Image8& image) const override;
 	bool getOutput(int64_t frameIndex, Image8& image, int cudaNv12stride, unsigned char* cudaNv12ptr) const override;
 	void getInput(int64_t frameIndex, Image8& image) const override;
-	void getWarped(int64_t frameIndex, Image8& image) override;
+	void getWarped(int64_t frameIndex, Image8bgr & image) override;
 
-	void cudaGetTransformedOutput(float* data) const;
+	void cudaGetTransformedOutput(float* warpedData, size_t h, size_t w) const;
 	void cudaGetPyramid(int64_t frameIndex, float* data) const;
 };
 

@@ -31,8 +31,8 @@
 //----------------------------------
 
 
-std::future<void> MovieReader::readAsync(ImageYuv& inputFrame) {
-    return std::async(std::launch::async, [&] { read(inputFrame); });
+std::future<void> MovieReader::readAsync(FrameExecutor& executor) {
+    return std::async(std::launch::async, [&] { read(executor); });
 }
 
 std::optional<int64_t> MovieReader::ptsForFrameAsMillis(int64_t frameIndex) {
@@ -70,20 +70,9 @@ std::string MovieReader::videoStreamSummary() const {
 //-------- Placeholder Class -------
 //----------------------------------
 
-bool NullReader::read(ImageYuv& inputFrame) {
-    frameIndex++;
+bool NullReader::read(Image8& inputFrame) {
     inputFrame.setColor(Color::BLACK);
-    endOfInput = false;
-    return false;
-}
-
-
-//----------------------------------
-//-------- Image Reader ------------
-//----------------------------------
-bool ImageReader::readImage(ImageYuv& inputFrame, const ImageYuv& sourceImage) {
     frameIndex++;
-    sourceImage.copyTo(inputFrame);
     endOfInput = false;
     return false;
 }
@@ -264,8 +253,14 @@ FFmpegFormatReader::~FFmpegFormatReader() {
 }
 
 
+bool FFmpegReader::read(FrameExecutor& executor) {
+    Image8& inputFrame = executor.inputDestination(frameIndex + 1);
+    return read(inputFrame);
+}
+
+
 //read one frame from ffmpeg
-bool FFmpegReader::read(ImageYuv& inputFrame) {
+bool FFmpegReader::read(Image8& inputFrame) {
     //util::ConsoleTimer timer("read");
     frameIndex++;
     endOfInput = true;
@@ -396,7 +391,7 @@ bool FFmpegReader::read(ImageYuv& inputFrame) {
     }
 
     if (endOfInput == false) {
-        //convert to YUV444 data
+        //convert to AYUV data
         inputFrame.index = frameIndex;
         int w = av_codec_ctx->width;
         int h = av_codec_ctx->height;
@@ -404,15 +399,15 @@ bool FFmpegReader::read(ImageYuv& inputFrame) {
 
         //set up sws scaler after first frame has been decoded
         if (!sws_scaler_ctx) {
-            sws_scaler_ctx = sws_getContext(w, h, av_codec_ctx->pix_fmt, w, h, AV_PIX_FMT_YUV444P, SWS_BILINEAR, NULL, NULL, NULL);
+            sws_scaler_ctx = sws_getContext(w, h, av_codec_ctx->pix_fmt, w, h, AV_PIX_FMT_AYUV, SWS_BILINEAR, NULL, NULL, NULL);
         }
         if (!sws_scaler_ctx) {
             ffmpeg_log_error(0, "failed to initialize ffmpeg scaler", ErrorSource::READER);
         }
 
         //scale image data
-        uint8_t* frame_buffer[] = { inputFrame.plane(0), inputFrame.plane(1), inputFrame.plane(2), nullptr };
-        int linesizes[] = { inputFrame.stride(), inputFrame.stride(), inputFrame.stride(), 0};
+        uint8_t* frame_buffer[] = { inputFrame.plane(0), nullptr, nullptr, nullptr };
+        int linesizes[] = { inputFrame.stride(), 0, 0, 0};
         sws_scale(sws_scaler_ctx, av_frame->data, av_frame->linesize, 0, av_frame->height, frame_buffer, linesizes);
 
         //store parameters for writer
@@ -430,8 +425,8 @@ bool FFmpegReader::read(ImageYuv& inputFrame) {
         }
 
         //stamp frame index into image
-        //inputFrame.writeText(std::to_string(frameIndex), 20, 20, 3, 3, im::TextAlign::TOP_LEFT, im::ColorYuv::WHITE, im::ColorYuv::GRAY);
-        //inputFrame.saveAsColorBMP(std::format("f:/im{:03d}.bmp", frameIndex));
+        //inputFrame.writeText(std::to_string(frameIndex), 20, 20, 3, 3, im::TextAlign::TOP_LEFT);
+        //inputFrame.saveBmpColor(std::format("f:/im{:03d}.bmp", frameIndex));
     }
 
     return endOfInput == false;

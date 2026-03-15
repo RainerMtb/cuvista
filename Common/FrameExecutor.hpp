@@ -20,7 +20,6 @@
 
 #include <span>
 
-#include "AffineData.hpp"
 #include "DeviceInfoBase.hpp"
 #include "ThreadPoolBase.h"
 #include "ImageClasses.hpp"
@@ -33,7 +32,6 @@ class AffineTransform;
 using namespace im;
 
 class FrameExecutor {
-
 
 public:
 	CoreData& mData;
@@ -50,10 +48,12 @@ public:
 	
 	//initialize frame executor on its device
 	virtual void init() {}
-	//get frame data from reader into frame object
-	virtual void inputData(int64_t frameIndex, const ImageYuv& inputFrame) = 0;
+	//get storage where to decode next input frame
+	virtual Image8& inputDestination(int64_t frameIndex) = 0;
+	//place frame into processing storage
+	virtual void inputData(int64_t frameIndex) = 0;
 	//set up image pyramid
-	virtual void createPyramid(int64_t frameIndex, AffineDataFloat trf = {}, bool warp = false) = 0;
+	virtual int64_t createPyramid(int64_t frameIndex, AffineDataFloat trf = {}, bool warp = false) = 0;
 	//start computation asynchronously for some part of a frame
 	virtual void computeStart(int64_t frameIndex, std::span<PointResult> results) = 0;
 	//start computation asynchronously for second part and get results
@@ -71,7 +71,7 @@ public:
 	//get input image as stored in frame buffers
 	virtual void getInput(int64_t frameIndex, Image8& image) const = 0;
 	//output rgb data warped but not unsharped
-	virtual void getWarped(int64_t frameIndex, Image8& image) = 0;
+	virtual void getWarped(int64_t frameIndex, Image8bgr& image) = 0;
 	//destructor
 	virtual ~FrameExecutor() {}
 

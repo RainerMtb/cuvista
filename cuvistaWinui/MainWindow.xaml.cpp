@@ -212,14 +212,14 @@ namespace winrt::cuvistaWinui::implementation {
             mReader.close();
             errorLogger().clear();
             mReader.open(to_string(inputPath));
-            mInputYUV = ImageYuv(mReader.h, mReader.w);
+            mInput = ImageAyuv(mReader.h, mReader.w);
 
-            mReader.read(mInputYUV); //read first image
+            mReader.read(mInput); //read first image
 
             if (errorLogger().hasNoError()) {
-                mReader.read(mInputYUV); //try to read again for second image
+                mReader.read(mInput); //try to read again for second image
                 mInputBGRA = ImageXamlBGRA::create(imageInput(), mReader.h, mReader.w);
-                mInputYUV.convertTo(mInputBGRA);
+                mInput.convertTo(mInputBGRA);
             }
 
             if (errorLogger().hasError()) {
@@ -491,9 +491,9 @@ namespace winrt::cuvistaWinui::implementation {
 
     fire_and_forget MainWindow::seekAsync(double frac) {
         //debugPrint("seek " + std::to_string(frac));
-        if (mInputReady && mReader.seek(frac) && mReader.read(mInputYUV)) {
+        if (mInputReady && mReader.seek(frac) && mReader.read(mInput)) {
             inputVideoFraction = frac;
-            mInputYUV.convertTo(mInputBGRA);
+            mInput.convertTo(mInputBGRA);
             DispatcherQueue().TryEnqueue([&, frac] {
                 mInputBGRA.invalidate();
                 double w = imageBackground().ActualWidth() * frac;

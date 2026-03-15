@@ -12,7 +12,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="TestCuda.cpp" />
-    <ClCompile Include="TestFiltering.cpp" />
     <ClCompile Include="TestFrames.cpp" />
     <ClCompile Include="TestMatPerformance.cpp" />
     <ClCompile Include="TestMatrix.cpp" />

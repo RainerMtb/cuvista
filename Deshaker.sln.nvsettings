@@ -1,2 +1,2 @@
 [WarpWatch]
-Expressions=x, y, xx, yy
+Expressions=x, ws, luma[x]

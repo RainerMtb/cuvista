@@ -57,7 +57,7 @@ struct StackCrop {
 class MainData : public CoreData {
 
 private:
-	std::map<std::string, Color> colorMap = {
+	std::unordered_map<std::string, Color> colorMap = {
 		{"red",     Color::RED},
 		{"green",   Color::GREEN},
 		{"blue",    Color::BLUE},

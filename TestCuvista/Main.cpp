@@ -20,24 +20,32 @@
 #include "ImageClasses.hpp"
 
 int main() {
-	std::cout << "------- CuvistaTest -------" << std::endl << std::endl;
 
 	//debugLogger = std::make_shared<DebugLoggerTcp>("10.0.0.1", 5555);
+	std::stringstream ss;
+	debugLogger = std::make_shared<DebugLoggerString>(ss);
 
 	std::vector<std::string> argsLines = {
 		"-info",
-		"-i d:/VideoTest/02short.mp4 -o f:/videoOut.mp4 -y",
-		"-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -y -device 0",
-		"-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -y -device 0 -enc nvenc:hevc",
+		"-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -bgmode color -y -zoom -8",
+		"-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -bgmode color -y -zoom -8 -device 0",
+		"-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -bgmode color -y -zoom -8 -device 0 -enc nvenc:hevc",
+		"-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -bgmode color -y -zoom -8 -device 2",
 		"-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -flow -y",
-		"-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -y -device 2",
 		"-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -copyframes -y",
+		"-i d:/VideoTest/02short.mp4 -o f:/videoOut.mp4 -y",
 		"-i d:/Documents/x.orig/beach.1.avi -o null -frames 100 -device 2",
 		"-i d:/Documents/x.orig/beach.1.avi -o f:/videoOut.mp4 -y -frames 100 -device 2"
 	};
 
 	int idx = 0;
 	std::string argsLine = argsLines[idx];
+	std::cout << "------- CuvistaTest -------" << std::endl;
+	std::cout << "------- params: " << argsLine << std::endl << std::endl;
+
 	auto args = util::splitString(argsLine, " ");
 	deshake(args, &std::cout, {});
+
+	std::cout << std::endl << "------- Log -------" << std::endl;
+	std::cout << ss.str() << std::endl;
 }

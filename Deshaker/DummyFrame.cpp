@@ -24,7 +24,11 @@ DummyFrame::DummyFrame(MainData& data, DeviceInfoBase& deviceInfo, MovieFrame& f
 	FrameExecutor(data, deviceInfo, frame, pool)
 {
 	mFrames.resize(data.bufferCount);
-	for (int i = 0; i < mFrames.size(); i++) mFrames[i] = ImageYuv(data.h, data.w, data.w);
+	for (int i = 0; i < mFrames.size(); i++) mFrames[i] = ImageAyuv(data.h, data.w, data.stride);
+}
+
+int64_t DummyFrame::createPyramid(int64_t frameIndex, AffineDataFloat trf, bool warp) {
+	return 0;
 }
 
 Matf DummyFrame::getTransformedOutput() const { 
@@ -35,10 +39,12 @@ Matf DummyFrame::getPyramid(int64_t frameIndex) const {
 	return {}; 
 };
 
-void DummyFrame::inputData(int64_t frameIndex, const ImageYuv& inputFrame) {
+Image8& DummyFrame::inputDestination(int64_t frameIndex) {
 	size_t idx = frameIndex % mFrames.size();
-	inputFrame.copyTo(mFrames[idx], mPool);
-	debugLogger->format("input frame {} {}", frameIndex, idx);
+	return mFrames[idx];
+}
+
+void DummyFrame::inputData(int64_t frameIndex) {
 	//mFrames[idx].writeText(std::to_string(frameIndex), 0, 0, 3, 3, im::TextAlign::TOP_LEFT);
 }
 
@@ -61,7 +67,7 @@ bool DummyFrame::getOutput(int64_t frameIndex, Image8& image, int cudaNv12stride
 	return true;
 }
 
-void DummyFrame::getWarped(int64_t frameIndex, Image8& image) {
+void DummyFrame::getWarped(int64_t frameIndex, Image8bgr & image) {
 	size_t idx = frameIndex % mFrames.size();
 	mFrames[idx].convertTo(image, mPool);
 }

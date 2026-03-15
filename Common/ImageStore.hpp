@@ -31,6 +31,9 @@ namespace im {
 		virtual T* row(size_t r, size_t h, size_t stride) = 0;
 		virtual const T* row(size_t r, size_t h, size_t stride) const = 0;
 
+		virtual T* data() = 0;
+		virtual const T* data() const = 0;
+
 		virtual size_t sizeInBytes() const = 0;
 		virtual std::vector<T> bytes() const = 0;
 		virtual void write(std::ostream& os) const = 0;
@@ -54,6 +57,14 @@ namespace im {
 		virtual const T* row(size_t r, size_t h, size_t stride) const override {
 			assert(r * stride < store.size() && "invalid row");
 			return store.data() + r * stride;
+		}
+
+		virtual T* data() override {
+			return store.data();
+		}
+
+		virtual const T* data() const override {
+			return store.data();
 		}
 
 		virtual size_t sizeInBytes() const override {
@@ -93,6 +104,14 @@ namespace im {
 			return store[idx].data() + rr * stride;
 		}
 
+		virtual T* data() override {
+			return store.front().data();
+		}
+
+		virtual const T* data() const override {
+			return store.front().data();
+		}
+
 		virtual size_t sizeInBytes() const {
 			size_t siz = 0;
 			for (auto& s : store) siz += s.size();
@@ -128,6 +147,14 @@ namespace im {
 		virtual const T* row(size_t r, size_t h, size_t stride) const override {
 			assert(r * stride < store.size() && "invalid row");
 			return store.data() + r * stride;
+		}
+
+		virtual T* data() override {
+			return store.data();
+		}
+
+		virtual const T* data() const override {
+			return store.data();
 		}
 
 		virtual size_t sizeInBytes() const {

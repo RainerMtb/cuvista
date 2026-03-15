@@ -66,8 +66,8 @@ namespace cl {
 		CommandQueue queue;
 		CommandQueue secondQueue;
 
-		//input yuv frames
-		std::vector<Image2D> yuv;
+		//input ayuv frames buffer
+		std::vector<Image2D> ayuv;
 		//pyramid images, one image for all levels
 		Image2DArray pyramid;
 		//buffers for filtering on pyramid creation
@@ -75,8 +75,10 @@ namespace cl {
 
 		//data storage for output
 		std::array<Image2D, 5> out;
-		Buffer yuvOut;
+		Buffer ayuvOut;
 		Buffer rgbaOut;
+
+		cl_float4 backgroundColorAyuv;
 
 		//storage for results struct
 		Buffer results;

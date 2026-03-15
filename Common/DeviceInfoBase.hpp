@@ -18,9 +18,7 @@
 
 #pragma once
 
-#include <map>
 #include <memory>
-
 #include "OutputOption.hpp"
 
 enum class DeviceType {
@@ -34,6 +32,7 @@ enum class DeviceType {
 class MainData;
 class FrameExecutor;
 class MovieFrame;
+struct cudaDeviceProp;
 
 class DeviceInfoBase {
 public:
@@ -48,4 +47,15 @@ public:
 	virtual std::string getName() const = 0;
 	virtual std::string getNameShort() const = 0;
 	virtual std::shared_ptr<FrameExecutor> create(MainData& data, MovieFrame& frame) = 0;
+};
+
+class DeviceInfoCudaBase : public DeviceInfoBase {
+
+public:
+	std::shared_ptr<cudaDeviceProp> props;
+	int cudaIndex = 0;
+
+	DeviceInfoCudaBase(int64_t maxPixel)
+		: DeviceInfoBase(maxPixel)
+	{}
 };

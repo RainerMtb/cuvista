@@ -19,14 +19,12 @@
 #pragma once
 
 #include "cuUtil.cuh"
-#include "AffineData.hpp"
+#include "BaseData.hpp"
 
 namespace cu {
-	cudaError_t scale_8u32f(uchar* src, int srcStep, float* dest, int destStep, int w, int h, cudaStream_t cs = 0);
-	cudaError_t scale_8u32f_3(uchar* src, int srcStep, float4* dest, int destStep, int w, int h, cudaStream_t cs = 0);
-
-	cudaError_t copy_32f_3(float4* src, int srcStep, float4* dest, int destStep, int w, int h, cudaStream_t cs = 0);
-	cudaError_t copy_32f_3(uchar* src, int srcStep, uchar* dest, int destStep, int w, int h, cudaStream_t cs = 0);
+	cudaError_t scale_8u32f(uchar* src, int srcStep, int srcWidth, float* dest, int destStep, int destWidth, int h, int64_t* d_luma, cudaStream_t cs = 0);
+	cudaError_t scale_8u32f_3(uchar* src, int srcStep, int srcWidth, float4* dest, int destStep, int destWidth, int h, cudaStream_t cs = 0);
+	int64_t lumaSum(int64_t* luma, int w, cudaStream_t cs = 0);
 
 	cudaError_t set_32f(float* dest, int destStep, int w, int h, int value, cudaStream_t cs = 0);
 
@@ -35,7 +33,7 @@ namespace cu {
 
 	cudaError_t unsharp_32f_3(float4* base, float4* gauss, float4* dest, int step, int w, int h, cudaStream_t cs = 0);
 
-	cudaError_t outputHost(float4* src, int srcStep, uchar* destYuv, int destStep, int w, int h, cudaStream_t cs = 0);
+	cudaError_t outputHost(float4* src, int srcStep, uchar* destAyuv, int destStep, int w, int h, cudaStream_t cs = 0);
 	cudaError_t outputNvenc(float4* src, int srcStep, uchar* cudaNv12ptr, int cudaPitch, int w, int h, cudaStream_t cs = 0);
 
 	cudaError_t remap_downsize_32f(float* src, int srcStep, float* dest, int destStep, int wsrc, int hsrc, cudaStream_t cs = 0);

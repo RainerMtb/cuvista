@@ -35,6 +35,7 @@ namespace im {
 		virtual void writeHeader(std::ofstream& os) const {}
 	};
 
+
 	class BmpHeader : public ImageHeader {
 
 	protected:
@@ -46,11 +47,13 @@ namespace im {
 		virtual void writeHeader(std::ofstream& os) const override;
 	};
 
+
 	class BmpColorHeader : public BmpHeader {
 
 	public:
 		BmpColorHeader(int w, int h);
 	};
+
 
 	class BmpGrayHeader : public BmpHeader {
 
@@ -62,6 +65,7 @@ namespace im {
 
 		virtual void writeHeader(std::ofstream& os) const override;
 	};
+
 
 	class PgmHeader : public ImageHeader {
 
@@ -75,6 +79,7 @@ namespace im {
 
 		void writeHeader(std::ofstream& os) const override;
 	};
+
 
 	class PpmHeader : public ImageHeader {
 

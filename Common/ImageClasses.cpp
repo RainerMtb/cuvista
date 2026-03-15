@@ -40,6 +40,7 @@ namespace im {
 		for (int r = height() - 1; r >= 0; r--) {
 			os.write(reinterpret_cast<const char*>(addr(0, r, 0)), strideInBytes());
 		}
+		assert(os.good() && "error writing file");
 	}
 
 	ImageBgr ImageBgr::ImageBgr::readBmpFile(const std::string& filename) {
@@ -132,6 +133,29 @@ namespace im {
 
 	//-----------------------------------------------------------------------
 
+	ImageAyuvFloat::ImageAyuvFloat(int h, int w, int stride, float* data) {
+		std::span<float> span(data, h * stride);
+		storePtr = std::make_shared<ImageStoreSharedSingle<float>>(span);
+		typePtr = std::make_shared<ImageTypePacked<float>>(storePtr, h, w, stride, 4);
+		colorPtr = std::make_shared<ImageColorYuv<float>>(typePtr, std::array<int, 4>{ 1, 2, 3, 0 }, 1.0f);
+	}
+
+	ImageAyuvFloat::ImageAyuvFloat(int h, int w, int stride) {
+		storePtr = std::make_shared<ImageStoreLocal<float>>(h * stride * 4);
+		typePtr = std::make_shared<ImageTypePacked<float>>(storePtr, h, w, stride, 4);
+		colorPtr = std::make_shared<ImageColorYuv<float>>(typePtr, std::array<int, 4>{ 1, 2, 3, 0 }, 1.0f);
+	}
+
+	ImageAyuvFloat::ImageAyuvFloat(int h, int w) :
+		ImageAyuvFloat(h, w, w * 4) 
+	{}
+
+	ImageAyuvFloat::ImageAyuvFloat() :
+		ImageAyuvFloat(0, 0)
+	{}
+
+
+	//-----------------------------------------------------------------------
 
 	ImageYuv::ImageYuv(int h, int w, int stride) {
 		storePtr = std::make_shared<ImageStoreLocal<uchar>>(h * stride * 3);
@@ -162,18 +186,13 @@ namespace im {
 			if (maxVal != 255) throw std::runtime_error("max value must be 255");
 			file.get(); //read delimiter
 			yuv = ImageYuv(h, w);
-
-			for (int i = 0; i < 3; i++) {
-				for (size_t r = 0; r < h; r++) {
-					file.read(reinterpret_cast<char*>(yuv.data()), w);
-				}
-			}
+			file.read(reinterpret_cast<char*>(yuv.data()), 1ull * w * h);
 
 		} catch (const std::exception& e) {
-			printf("error reading from file: %s\n", e.what());
+			std::cerr << "error reading from file: " << e.what() << std::endl;
 
 		} catch (...) {
-			printf("error reading from file\n");
+			std::cerr << "error reading from file" << std::endl;
 		}
 		return yuv;
 	}
@@ -213,6 +232,57 @@ namespace im {
 
 	//-----------------------------------------------------------------------
 
+	ImageAyuv::ImageAyuv(int h, int w, int stride) {
+		storePtr = std::make_shared<ImageStoreLocal<uchar>>(h * stride);
+		typePtr = std::make_shared<ImageTypePacked<uchar>>(storePtr, h, w, stride, 4);
+		colorPtr = std::make_shared<ImageColorYuv<uchar>>(typePtr, std::array<int, 4>{ 1, 2, 3, 0 }, 255);
+	}
+
+	ImageAyuv::ImageAyuv(int h, int w, size_t stride) :
+		ImageAyuv(h, w, (int) stride)
+	{}
+
+	ImageAyuv::ImageAyuv(int h, int w) :
+		ImageAyuv(h, w, util::alignValue(w * 4, 64))
+	{}
+
+	ImageAyuv::ImageAyuv() :
+		ImageAyuv(0, 0)
+	{}
+
+	ImageAyuv ImageAyuv::readPgmFile(const std::string& filename) {
+		ImageYuv yuv = ImageYuv::readPgmFile(filename);
+		ImageAyuv ayuv(yuv.height(), yuv.width());
+		yuv.convertTo(ayuv);
+		return ayuv;
+	}
+
+	ImageAyuv ImageAyuv::readBmpFile(const std::string& filename) {
+		ImageBgr bgr = ImageBgr::readBmpFile(filename);
+		ImageAyuv ayuv(bgr.height(), bgr.width());
+		bgr.convertTo(ayuv);
+		return ayuv;
+	}
+
+	uchar* ImageAyuv::addr(size_t idx, size_t r, size_t c) { 
+		return storePtr->data() + r * typePtr->stride + c * typePtr->planes + idx; 
+	}
+
+	const uchar* ImageAyuv::addr(size_t idx, size_t r, size_t c) const {
+		return storePtr->data() + r * typePtr->stride + c * typePtr->planes + idx;
+	}
+
+	uchar& ImageAyuv::at(size_t idx, size_t r, size_t c) { 
+		return *addr(idx, r, c); 
+	}
+
+	const uchar& ImageAyuv::at(size_t idx, size_t r, size_t c) const { 
+		return *addr(idx, r, c); 
+	}
+
+
+	//-----------------------------------------------------------------------
+
 	ImageNV12::ImageNV12(int h, int w, int stride) {
 		storePtr = std::make_shared<ImageStoreLocal<uchar>>(h * stride * 3 / 2);
 		typePtr = std::make_shared<ImageTypeNV12<uchar>>(storePtr, h, w, stride, 3);
@@ -227,7 +297,7 @@ namespace im {
 		ImageNV12(0, 0)
 	{}
 
-		
+
 	//-----------------------------------------------------------------------
 
 	ImageBGRA::ImageBGRA(int h, int w, int stride, uchar* data) {
@@ -244,7 +314,7 @@ namespace im {
 	}
 
 	ImageBGRA::ImageBGRA(int h, int w) :
-		ImageBGRA(h, w, w * 4)
+		ImageBGRA(h, w, util::alignValue(w * 4, 64))
 	{}
 
 	ImageBGRA::ImageBGRA() :
@@ -253,7 +323,6 @@ namespace im {
 
 
 	//-----------------------------------------------------------------------
-
 
 	ImageRGBA::ImageRGBA(int h, int w, int stride, uchar* data) {
 		std::span<uchar> span(data, h * stride);
@@ -269,11 +338,10 @@ namespace im {
 	}
 
 	ImageRGBA::ImageRGBA(int h, int w) :
-		ImageRGBA(h, w, w * 4)
+		ImageRGBA(h, w, util::alignValue(w * 4, 64))
 	{}
 
 	ImageRGBA::ImageRGBA() :
 		ImageRGBA(0, 0)
 	{}
-
 }

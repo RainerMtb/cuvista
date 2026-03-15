@@ -21,7 +21,6 @@
     <ClInclude Include="ImageHeaders.hpp" />
     <ClInclude Include="ThreadPoolBase.h" />
     <ClInclude Include="FrameExecutor.hpp" />
-    <ClInclude Include="AffineData.hpp" />
     <ClInclude Include="OutputOption.hpp" />
     <ClInclude Include="ImageClasses.hpp" />
     <ClInclude Include="ImageInterface.hpp" />
@@ -29,6 +28,7 @@
     <ClInclude Include="ImageType.hpp" />
     <ClInclude Include="ImageColor.hpp" />
     <ClInclude Include="ImageBase.hpp" />
+    <ClInclude Include="BaseData.hpp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="CMakeLists.txt" />

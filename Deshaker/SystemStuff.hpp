@@ -78,6 +78,8 @@ struct DebugLogger {
 	template <class... Args> void format(std::format_string<Args...> fmt, Args&&... args) {
 		log(std::format(fmt, std::forward<Args>(args)...));
 	}
+
+	std::string time() const;
 };
 
 struct DebugLoggerNull : public DebugLogger {
@@ -85,6 +87,14 @@ struct DebugLoggerNull : public DebugLogger {
 };
 
 struct DebugLoggerConsole : public DebugLogger {
+	void log(const std::string& msg) override;
+};
+
+struct DebugLoggerString : public DebugLogger {
+	std::stringstream& ss;
+
+	DebugLoggerString(std::stringstream& ss) : ss { ss } {}
+
 	void log(const std::string& msg) override;
 };
 

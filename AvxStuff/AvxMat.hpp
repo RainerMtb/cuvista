@@ -35,8 +35,8 @@ public:
 	T& at(int row, int col) { return CoreMat<T>::at(row, col); }
 	const T& at(int row, int col) const { return CoreMat<T>::at(row, col); }
 
-	T* addr(int row, int col) { return CoreMat<T>::addr(row, col); }
-	const T* addr(int row, int col) const { return CoreMat<T>::addr(row, col); }
+	T* addr(size_t row, size_t col) { return CoreMat<T>::addr(row, col); }
+	const T* addr(size_t row, size_t col) const { return CoreMat<T>::addr(row, col); }
 
 	T* data() { return CoreMat<T>::data(); }
 	const T* data() const { return CoreMat<T>::data(); }
@@ -53,7 +53,11 @@ public:
 	}
 
 	void saveAsBMP(const std::string& filename) const {
-		im::ImageMatShared<T>(h(), w(), w(), this->array).saveAsBMP(filename, 255);
+		im::ImageY<T>(h(), w(), w(), this->array, 1.0f).saveBmpPlanes(filename);
+	}
+
+	void copyTo(AvxMat<T>& dest) const {
+		std::copy_n(data(), w() * h(), dest.data());
 	}
 
 	Mat<T> matCopy() const { 

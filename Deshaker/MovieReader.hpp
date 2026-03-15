@@ -21,6 +21,7 @@
 #include "AVException.hpp"
 #include "Stats.hpp"
 #include "ImageClasses.hpp"
+#include "FrameExecutor.hpp"
 
 #include <span>
 #include <optional>
@@ -39,8 +40,9 @@ public:
 
 	virtual void open(const std::string& source) = 0;
 	virtual void start() {}
-	virtual bool read(ImageYuv& inputFrame) = 0;
-	virtual std::future<void> readAsync(ImageYuv& inputFrame);
+	virtual bool read(Image8& inputFrame) = 0;
+	virtual bool read(FrameExecutor& executor) { return false; };
+	virtual std::future<void> readAsync(FrameExecutor& executor);
 	virtual void close() {}
 	virtual void rewind() {}
 	virtual bool seek(double fraction) { return true; }
@@ -60,7 +62,7 @@ class NullReader : public MovieReader {
 
 public:
 	void open(const std::string& source) override {};
-	bool read(ImageYuv& inputFrame) override;
+	bool read(Image8& inputFrame) override;
 };
 
 
@@ -68,9 +70,7 @@ class ImageReader : public MovieReader {
 
 public:
 	void open(const std::string& source) override {};
-	bool read(ImageYuv& inputFrame) override { return false; };
-
-	bool readImage(ImageYuv& inputFrame, const ImageYuv& sourceImage);
+	bool read(Image8& inputFrame) override { return false; };
 };
 
 
@@ -102,7 +102,8 @@ public:
 	~FFmpegReader() override;
 
 	void open(const std::string& source) override;
-	bool read(ImageYuv& inputFrame) override;
+	bool read(Image8& inputFrame) override;
+	bool read(FrameExecutor& executor) override;
 	void close() override;
 	void rewind() override;
 	int openAudioDecoder(OutputStreamContext& osc) override;
@@ -128,5 +129,5 @@ public:
 	MemoryFFmpegReader(std::span<unsigned char> movieData);
 	~MemoryFFmpegReader() override;
 
-	void open(const std::string& source) override;
+	void open(const std::string& source = "") override;
 };

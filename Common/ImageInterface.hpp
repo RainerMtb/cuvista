@@ -60,6 +60,7 @@ namespace im {
 		RGBA,
 		BGRA,
 		YUV,
+		Y,
 		AYUV,
 		NV12,
 		NONE,

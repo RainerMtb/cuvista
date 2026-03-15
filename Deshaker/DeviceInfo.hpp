@@ -20,6 +20,7 @@
 
 #include "DeviceInfoBase.hpp"
 #include "FrameExecutor.hpp"
+
 extern "C" { 
 #include "cpuinfo_x86.h" 
 }
@@ -78,7 +79,7 @@ struct cudaDeviceProp;
 class NvEncoder;
 
 //Cuda
-class DeviceInfoCuda : public DeviceInfoBase {
+class DeviceInfoCuda : public DeviceInfoCudaBase {
 
 private:
 	inline static int cudaRuntimeVersion = 0;
@@ -87,9 +88,7 @@ private:
 	inline static uint32_t nvencVersionDriver = 0;
 
 public:
-	std::shared_ptr<cudaDeviceProp> props;
 	std::shared_ptr<NvEncoder> nvenc;
-	int cudaIndex = 0;
 
 	inline static std::string nvidiaDriverVersion = "";
 	inline static std::string warning = "";

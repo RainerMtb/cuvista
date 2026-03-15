@@ -63,7 +63,7 @@ void testVideo1() {
 	std::cout << std::endl << "results " << resultsFile << std::endl;
 }
 
-void testVideo2() {
+void testLuma() {
 	std::cout << "analyze image pair" << std::endl;
 	FrameResult::storeDebugData = true;
 	
@@ -84,7 +84,9 @@ void testVideo2() {
 	executor.init();
 	ImageYuv src = ImageYuv::readBmpFile("D:/VideoTest/beach.86.bmp");
 	std::cout << "rms " << src.lumaRms() << std::endl;
-	executor.inputData(0, src);
+	Image8& input = executor.inputDestination(0);
+	src.copyTo(input);
+	executor.inputData(0);
 	executor.createPyramid(0);
 
 	ImageYuv im = ImageYuv::readBmpFile("D:/VideoTest/beach.87.bmp");
@@ -97,7 +99,9 @@ void testVideo2() {
 		src.writeText(str, 860, 0, 2, 2, im::TextAlign::TOP_CENTER);
 		src.saveBmpColor(std::format("f:/image{}a.bmp", i));
 
-		executor.inputData(1, src);
+		Image8& input = executor.inputDestination(1);
+		src.copyTo(input);
+		executor.inputData(1);
 		executor.createPyramid(1);
 		executor.computeStart(1, frame.mResultPoints);
 		executor.computeTerminate(1, frame.mResultPoints);

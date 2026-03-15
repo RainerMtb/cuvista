@@ -29,7 +29,7 @@ struct Result {
 	Matf output;
 	std::vector<PointResult> results;
 	std::string name;
-	ImageYuv image;
+	ImageAyuv image;
 	ImageRGBA input;
 	std::string error;
 };
@@ -39,7 +39,7 @@ template <class T> Result runPyramid(MainData& data, int deviceIndex) {
 	try {
 		std::vector<unsigned char> bytes = util::base64_decode(movieTestData);
 		MemoryFFmpegReader reader(bytes);
-		reader.open("");
+		reader.open();
 		data.collectDeviceInfo();
 		data.validate(reader);
 		OutputWriter writer(data, reader);
@@ -50,12 +50,12 @@ template <class T> Result runPyramid(MainData& data, int deviceIndex) {
 		executor->init();
 
 		std::cout << "running " << name << std::endl;
-		reader.read(frame.mBufferFrame);
-		executor->inputData(reader.frameIndex, frame.mBufferFrame);
+		reader.read(*executor);
+		executor->inputData(reader.frameIndex);
 		executor->createPyramid(reader.frameIndex);
 
-		reader.read(frame.mBufferFrame);
-		executor->inputData(reader.frameIndex, frame.mBufferFrame);
+		reader.read(*executor);
+		executor->inputData(reader.frameIndex);
 		executor->createPyramid(reader.frameIndex);
 
 		executor->computeStart(reader.frameIndex, frame.mResultPoints);
@@ -160,63 +160,4 @@ void compareFramesPlatforms() {
 	}
 
 	std::cout << errorLogger().getErrorMessage() << std::endl;
-}
-
-// read and transform distinct images
-void createTransformImages() {
-	SimpleYuvWriter yuvFile("f:/pic/video.yuv");
-
-	for (int i = 0; i < 10; i++) {
-		std::string inFile1 = std::format("f:/pic/{:04}.bmp", i);
-		std::string inFile2 = std::format("f:/pic/{:04}.bmp", i + 1);
-		std::string outFile = std::format("f:/pic/out{:02}.bmp", i + 1);
-		std::cout << "writing " << outFile << std::endl;
-
-		//std::cout << "reading images" << std::endl;
-		ImageYuv im1 = ImageYuv::readBmpFile(inFile1);
-		ImageYuv im2 = ImageYuv::readBmpFile(inFile2);
-
-		MainData data;
-		data.collectDeviceInfo();
-		ImageReader reader;
-		reader.h = im1.height();
-		reader.w = im1.width();
-		reader.frameCount = 2;
-		data.validate(reader);
-
-		OutputWriter writer(data, reader);
-		MovieFrameConsecutive frame(data, reader, writer);
-		CpuFrame cpuframe(data, data.deviceInfoCpu, frame, frame.mPool);
-
-		reader.readImage(frame.mBufferFrame, im1);
-		cpuframe.inputData(reader.frameIndex, frame.mBufferFrame);
-		cpuframe.createPyramid(reader.frameIndex);
-
-		reader.readImage(frame.mBufferFrame, im2);
-		cpuframe.inputData(reader.frameIndex, frame.mBufferFrame);
-		cpuframe.createPyramid(reader.frameIndex);
-
-		//std::cout << "computing transform" << std::endl;
-		cpuframe.computeStart(reader.frameIndex, frame.mResultPoints);
-		cpuframe.computeTerminate(reader.frameIndex, frame.mResultPoints);
-		frame.mFrameResult.computeTransform(frame.mResultPoints, i + 1LL);
-		const AffineTransform& trf = frame.getTransform();
-
-		//save pairwise output images
-		im1.writeText("input " + std::to_string(i), 0, 1080);
-		yuvFile.write(im1);
-		cpuframe.outputData(0, trf);
-		ImageYuv imOut = writer.getOutputFrame();
-		imOut.writeText("output " + std::to_string(i + 1), 0, 1080);
-		yuvFile.write(imOut);
-
-		//std::cout << "writing result" << std::endl;
-		ImageBgr out(im2.height(), im2.width());
-		im2.convertTo(out);
-		out.gray();
-		ResultImageWriter::writeImage(trf, frame.mResultPoints, i, out);
-		out.saveBmpColor(outFile);
-
-		std::cout << "done" << std::endl;
-	}
 }

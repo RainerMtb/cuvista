@@ -101,9 +101,7 @@
     <ClCompile Include="DebugLogger.cpp" />
     <ClCompile Include="DummyFrame.cpp" />
     <ClCompile Include="FrameResult.cpp" />
-    <ClCompile Include="ImageYuvFFmpeg.cpp" />
     <ClCompile Include="MainData.cpp" />
-    <ClCompile Include="MatrixInverter.cpp" />
     <ClCompile Include="SelfTest.cpp" />
     <ClCompile Include="StackedWriter.cpp" />
     <ClCompile Include="CpuFrame.cpp" />
@@ -145,10 +143,8 @@
     <ClInclude Include="DummyFrame.hpp" />
     <ClInclude Include="FFmpegUtil.hpp" />
     <ClInclude Include="FrameResult.hpp" />
-    <ClInclude Include="ImageYuvFFmpeg.hpp" />
     <ClInclude Include="DeshakerHelpText.hpp" />
     <ClInclude Include="MainData.hpp" />
-    <ClInclude Include="MatrixInverter.hpp" />
     <ClInclude Include="MovieFrame.hpp" />
     <ClInclude Include="MovieWriter.hpp" />
     <ClInclude Include="NvidiaDriver.hpp" />

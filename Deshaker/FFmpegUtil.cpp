@@ -24,9 +24,9 @@
 
 
 std::string av_make_error(int errnum, const char* msg, const std::string& str) {
-    char av_errbuf[AV_ERROR_MAX_STRING_SIZE];
     std::string info = msg + str;
-    if (info.empty() == false) info += ": ";
+    if (info.size() > 0) info += ": ";
+    char av_errbuf[AV_ERROR_MAX_STRING_SIZE];
     info += av_make_error_string(av_errbuf, AV_ERROR_MAX_STRING_SIZE, errnum);
     return info;
 }

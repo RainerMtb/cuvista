@@ -38,7 +38,7 @@ int ImageYuvFFmpeg::strideInBytes() const {
 }
 
 size_t ImageYuvFFmpeg::sizeInBytes() const {
-    return height() * strideInBytes() * planes();
+    return 1ull * height() * strideInBytes() * planes();
 }
 
 int ImageYuvFFmpeg::height() const {

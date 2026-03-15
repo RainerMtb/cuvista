@@ -19,7 +19,6 @@
 #pragma once
 
 #include "Mat.hpp"
-#include "AffineData.hpp"
 #include <utility>
 #include <array>
 

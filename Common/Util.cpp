@@ -136,9 +136,13 @@ namespace util {
 		return out;
 	}
 
-	void base64_encode(std::span<unsigned char> data, const std::string& filename) {
-		std::string encoded = base64_encode(data);
-		std::ofstream file(filename);
+	void base64_encode(const std::string& inputFile, const std::string& outputFile) {
+		std::ifstream is(inputFile, std::ios::binary);
+		std::vector<char> data((std::istreambuf_iterator<char>(is)), (std::istreambuf_iterator<char>()));
+
+		std::span<unsigned char> span(reinterpret_cast<unsigned char*>(data.data()), data.size());
+		std::string encoded = base64_encode(span);
+		std::ofstream file(outputFile);
 		size_t pos = 0;
 
 		file.put('"');
