@@ -24,20 +24,17 @@
 
 //convert individual vectors in float for Y U V to one vector holding uchar packed RGB
 void avx::yuvToRgbaPacked(V16f y, V16f u, V16f v, unsigned char* dest, V16f fu, V16f fv) {
-	//distribute y, u, v values to 16 places
-	V16f yy = _mm512_permute_ps(y, 0);
-	V16f uu = _mm512_permute_ps(u, 0);
-	V16f vv = _mm512_permute_ps(v, 0);
-	
-	//convert color
 	V16f ps255 = 255.0f;
 	V16f ps0 = 0.0f;
 	V16f rgba;
-	rgba = (yy - 16.0f) * 1.164f + (uu - 128.0f) * fu + (vv - 128.0f) * fv;
+
+	//convert color
+	rgba = (y - 16.0f) * 1.164f + (u - 128.0f) * fu + (v - 128.0f) * fv;
 	rgba = _mm512_mask_max_ps(ps255, 0b0111'0111'0111'0111, rgba, ps0);
 
 	//convert floats to uint8, saturate and store
-	_mm512_mask_cvtusepi32_storeu_epi8(dest, 0xFFFF, _mm512_cvtps_epi32(rgba));
+	__m512i epi32 = _mm512_cvtps_epi32(rgba);
+	_mm512_mask_cvtusepi32_storeu_epi8(dest, 0xFFFF, epi32);
 }
 
 

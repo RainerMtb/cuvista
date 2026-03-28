@@ -46,13 +46,14 @@ public:
 	Matf getTransformedOutput() const override;
 	Matf getPyramid(int64_t frameIndex) const override;
 	void getInput(int64_t frameIndex, Image8& image) const override;
-	void getWarped(int64_t frameIndex, Image8bgr & image) override;
 
 private:
-	std::vector<ImageAyuv> mInput;
+	ImageVuyx mReadBuffer;
+	std::vector<ImageVuyx> mInput;
 	std::vector<AvxMatf> mPyr;
 	AvxMatf mFilterBuffer, mFilterResult;
 	AvxMatf mBackground, mFilterBuffer4, mFilterResult4, mWarped, mOutput;
+	std::vector<int> luma;
 
 	using uchar = unsigned char;
 
@@ -63,35 +64,34 @@ private:
 	};
 
 	std::vector<V16f> mFilterKernels4 = {
-		{ 0.0f, 0.0625f, 0.0f,  0.0f },
-		{ 0.0f, 0.25f,   0.25f, 0.25f},
-		{ 0.0f, 0.375f,  0.5f,  0.5f },
-		{ 0.0f, 0.25f,   0.25f, 0.25f},
-		{ 0.0f, 0.0625f, 0.0f,  0.0f }
+		{ 0.0f,  0.0f , 0.0625f, 0.0f },
+		{ 0.25f, 0.25f, 0.25f,   0.0f },
+		{ 0.5f,  0.5f , 0.375f,  0.0f },
+		{ 0.25f, 0.25f, 0.25f,   0.0f },
+		{ 0.0f,  0.0f , 0.0625f, 0.0f }
 	};
 
 	//factors for conversion yuv to rgb
-	std::vector<float> fu = { 0.0f, -0.392f, 2.017f, 0.0f };
-	std::vector<float> fv = { 1.596f, -0.813f, 0.0f, 0.0f };
+	std::vector<float> mFactorU = { 0.0f, -0.392f, 2.017f, 0.0f };
+	std::vector<float> mFactorV = { 1.596f, -0.813f, 0.0f, 0.0f };
 
-	void writeAyuv(Image8& dest) const;
-	void writeNV12(Image8& dest) const;
+	void yuvToFloat4(const ImageVuyx& vuyx, AvxMatf& dest);
 	void downsample(const float* srcptr, int h, int w, int stride, float* destptr, int destStride);
-
 	void filter1(const AvxMatf& src, int h, int w, AvxMatf& dest, std::span<V16f> ks);
 	void filter4(const AvxMatf& src, int h, int w, AvxMatf& dest);
-	void unsharp4(const AvxMatf& warped, AvxMatf& gauss, AvxMatf& out);
 
 	void warpBack1(const AffineDataFloat& trf, const AvxMatf& input, AvxMatf& dest);
 	void warpBack4(const AffineDataFloat& trf, const AvxMatf& input, AvxMatf& dest);
+	void unsharp4(const AvxMatf& warped, AvxMatf& gauss, AvxMatf& out);
 
 	V16f interpolate(V16f f00, V16f f10, V16f f01, V16f f11, V16f dx, V16f dy);
 	V16f interpolate(V16f f00, V16f f10, V16f f01, V16f f11, V16f dx, V16f dy, V16f dx1, V16f dy1);
 
-	void yuvToFloat(const ImageAyuv& ayuv, AvxMatf& dest);
-	void yuvToRgb(const uchar* y, const uchar* u, const uchar* v, int h, int w, int stride, Image8& dest) const;
-	void yuvToRgb(const float* y, const float* u, const float* v, int h, int w, int stride, Image8& dest) const;
-	void ayuvToRgba(const ImageAyuv& ayuv, Image8& dest) const;
+	void vuyxToRgba(const ImageVuyx& vuyx, Image8& dest) const;
+	void vuyxToRgba(const AvxMatf& vuyx, Image8& dest) const;
+	void writeVuyx(Image8& dest) const;
+	void writeYuv(Image8& dest) const;
+	void writeNV12(Image8& dest) const;
 
 	V8d sd(int c1, int c2, int y0, int x0, const AvxMatf& Y);
 };

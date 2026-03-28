@@ -35,7 +35,7 @@ void FFmpegWriter::open(std::span<std::string> codecNames, AVCodecID codecId, AV
         codec = avcodec_find_encoder(codecId);
     }
     if (!codec) {
-        throw AVException("Could not find encoder");
+        throw AVException("could not find encoder");
     }
     //std::cout << "Using encoder: " << codec->name << " - " << codec->long_name << std::endl;
 
@@ -48,7 +48,7 @@ void FFmpegWriter::open(const AVCodec* codec, AVPixelFormat pixfmt, int h, int w
 
     codec_ctx = avcodec_alloc_context3(codec);
     if (!codec_ctx)
-        throw AVException("Could not allocate encoder context");
+        throw AVException("could not allocate encoder context");
 
     codec_ctx->codec_type = AVMEDIA_TYPE_VIDEO;
     codec_ctx->width = w;
@@ -121,7 +121,7 @@ void FFmpegWriter::open(OutputOption outputOption, AVPixelFormat pixfmt, int h, 
     std::span<std::string> codecNames = codecToNamesMap[codecID];
     open(codecNames, codecID, pixfmt, h, w, stride);
 
-    sws_scaler_ctx = sws_getContext(w, h, AV_PIX_FMT_AYUV, w, h, pixfmt, SWS_BILINEAR, NULL, NULL, NULL);
+    sws_scaler_ctx = sws_getContext(w, h, AV_PIX_FMT_VUYX, w, h, pixfmt, SWS_BILINEAR, NULL, NULL, NULL);
     if (!sws_scaler_ctx) 
         throw AVException("Could not get scaler context");
 
@@ -134,7 +134,7 @@ void FFmpegWriter::open(OutputOption outputOption, AVPixelFormat pixfmt, int h, 
 
 //normal entry point for opening Writer
 void FFmpegWriter::open(OutputOption outputOption) {
-    open(outputOption, AV_PIX_FMT_YUV420P, mData.h, mData.w, mData.stride, mData.fileOut);
+    open(outputOption, AV_PIX_FMT_YUV420P, mData.h, mData.w, mData.stride4, mData.fileOut);
 }
 
 
@@ -169,12 +169,12 @@ int FFmpegWriter::writeFFmpegPacket(AVFrame* av_frame) {
 void FFmpegWriter::write(int bufferIndex) {
     assert(bufferIndex < imageBufferSize && frameIndex == imageBuffer[bufferIndex].index && "invalid frame index");
     auto fcn = [this, bufferIndex] {
-        ImageAyuv& fr = imageBuffer[bufferIndex];
+        ImageVuyx& fr = imageBuffer[bufferIndex];
         //fr.writeText(std::to_string(fr.index), 10, 10, 2, 3, ColorYuv::BLACK, ColorYuv::WHITE);
         //scale and put into av_frame
         uint8_t* src[] = { fr.plane(0), nullptr, nullptr, nullptr };
         int strides[] = { fr.stride(), 0, 0, 0 }; //if less than 4 values are provided, we get a warning "data not aligned"
-        int sliceHeight = sws_scale(sws_scaler_ctx, src, strides, 0, fr.height(), av_frame->data, av_frame->linesize);
+        int sliceHeight = sws_scale(sws_scaler_ctx, src, strides, 0, fr.h(), av_frame->data, av_frame->linesize);
 
         //set pts into frame to later name packet
         av_frame->pts = fr.index;

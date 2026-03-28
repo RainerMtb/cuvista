@@ -35,9 +35,9 @@ namespace im {
 	void ImageBgr::saveBmpColor(const std::string& filename) const {
 		assert(strideInBytes() % 4 == 0 && "invalid stride");
 		std::ofstream os(filename, std::ios::binary);
-		BmpColorHeader(width(), height()).writeHeader(os);
+		BmpColorHeader(w(), h()).writeHeader(os);
 
-		for (int r = height() - 1; r >= 0; r--) {
+		for (int r = h() - 1; r >= 0; r--) {
 			os.write(reinterpret_cast<const char*>(addr(0, r, 0)), strideInBytes());
 		}
 		assert(os.good() && "error writing file");
@@ -90,7 +90,7 @@ namespace im {
 			//when height is negative, rows are stored from top to bottom
 			const char* src = data.data() + dataOffset;
 			if (height < 0) {
-				uchar* dest = image.row(0);
+				uchar* dest = image.typePtr->row(0);
 				for (int r = 0; r < h; r++) {
 					std::copy_n(src, 3ull * w, dest);
 					src += stride;
@@ -98,7 +98,7 @@ namespace im {
 				}
 
 			} else {
-				uchar* dest = image.row(h - 1ull);
+				uchar* dest = image.typePtr->row(h - 1ull);
 				for (int r = 0; r < h; r++) {
 					std::copy_n(src, 3ull * w, dest);
 					src += stride;
@@ -116,42 +116,25 @@ namespace im {
 
 	//-----------------------------------------------------------------------
 
-	ImageYuvFloat::ImageYuvFloat(int h, int w, int stride) {
-		storePtr = std::make_shared<ImageStoreLocal<float>>(h * stride * 3);
-		typePtr = std::make_shared<ImageTypePlanar<float>>(storePtr, h, w, stride, 3);
-		colorPtr = std::make_shared<ImageColorYuv<float>>(typePtr, std::array<int, 4>{ 0, 1, 2 }, 1.0f);
-	}
-
-	ImageYuvFloat::ImageYuvFloat(int h, int w) :
-		ImageYuvFloat(h, w, w) 
-	{}
-
-	ImageYuvFloat::ImageYuvFloat() :
-		ImageYuvFloat(0, 0)
-	{}
-
-
-	//-----------------------------------------------------------------------
-
-	ImageAyuvFloat::ImageAyuvFloat(int h, int w, int stride, float* data) {
+	ImageVuyxFloat::ImageVuyxFloat(int h, int w, int stride, float* data) {
 		std::span<float> span(data, h * stride);
 		storePtr = std::make_shared<ImageStoreSharedSingle<float>>(span);
 		typePtr = std::make_shared<ImageTypePacked<float>>(storePtr, h, w, stride, 4);
-		colorPtr = std::make_shared<ImageColorYuv<float>>(typePtr, std::array<int, 4>{ 1, 2, 3, 0 }, 1.0f);
+		colorPtr = std::make_shared<ImageColorYuv<float>>(typePtr, std::array<int, 4>{ 2, 1, 0, 3 }, 1.0f);
 	}
 
-	ImageAyuvFloat::ImageAyuvFloat(int h, int w, int stride) {
+	ImageVuyxFloat::ImageVuyxFloat(int h, int w, int stride) {
 		storePtr = std::make_shared<ImageStoreLocal<float>>(h * stride * 4);
 		typePtr = std::make_shared<ImageTypePacked<float>>(storePtr, h, w, stride, 4);
-		colorPtr = std::make_shared<ImageColorYuv<float>>(typePtr, std::array<int, 4>{ 1, 2, 3, 0 }, 1.0f);
+		colorPtr = std::make_shared<ImageColorYuv<float>>(typePtr, std::array<int, 4>{ 2, 1, 0, 3 }, 1.0f);
 	}
 
-	ImageAyuvFloat::ImageAyuvFloat(int h, int w) :
-		ImageAyuvFloat(h, w, w * 4) 
+	ImageVuyxFloat::ImageVuyxFloat(int h, int w) :
+		ImageVuyxFloat(h, w, w * 4) 
 	{}
 
-	ImageAyuvFloat::ImageAyuvFloat() :
-		ImageAyuvFloat(0, 0)
+	ImageVuyxFloat::ImageVuyxFloat() :
+		ImageVuyxFloat(0, 0)
 	{}
 
 
@@ -168,7 +151,7 @@ namespace im {
 	{}
 
 	ImageYuv::ImageYuv(int h, int w) :
-		ImageYuv(h, w, w)
+		ImageYuv(h, w, util::alignValue(w, 64))
 	{}
 
 	ImageYuv::ImageYuv() :
@@ -199,29 +182,29 @@ namespace im {
 
 	ImageYuv ImageYuv::readBmpFile(const std::string& filename) {
 		ImageBgr bgr = ImageBgr::readBmpFile(filename);
-		ImageYuv yuv(bgr.height(), bgr.width());
+		ImageYuv yuv(bgr.h(), bgr.w());
 		bgr.convertTo(yuv);
 		return yuv;
 	}
 
 	double ImageYuv::lumaRms() const {
 		int64_t sum = 0;
-		for (int r = 0; r < height(); r++) {
-			const unsigned char* ptr = row(0);
-			for (int c = 0; c < width(); c++) {
+		for (int r = 0; r < h(); r++) {
+			const unsigned char* ptr = typePtr->row(0);
+			for (int c = 0; c < w(); c++) {
 				int64_t val = ptr[c];
 				sum += val * val;
 			}
 		}
-		double s = width() * height();
+		double s = w() * h();
 		return std::sqrt(sum / s);
 	}
 
 	void ImageYuv::adjustGamma(float value) {
 		float g = 1.0f / value;
-		for (int r = 0; r < height(); r++) {
-			unsigned char* ptr = row(0);
-			for (int c = 0; c < width(); c++) {
+		for (int r = 0; r < h(); r++) {
+			unsigned char* ptr = typePtr->row(0);
+			for (int c = 0; c < w(); c++) {
 				unsigned char& p = ptr[c];
 				float x = p / 255.0f;
 				p = (unsigned char) std::rint(std::pow(x, g) * 255.0f);
@@ -232,53 +215,62 @@ namespace im {
 
 	//-----------------------------------------------------------------------
 
-	ImageAyuv::ImageAyuv(int h, int w, int stride) {
+	ImageVuyx::ImageVuyx(int h, int w, int stride) {
 		storePtr = std::make_shared<ImageStoreLocal<uchar>>(h * stride);
 		typePtr = std::make_shared<ImageTypePacked<uchar>>(storePtr, h, w, stride, 4);
-		colorPtr = std::make_shared<ImageColorYuv<uchar>>(typePtr, std::array<int, 4>{ 1, 2, 3, 0 }, 255);
+		colorPtr = std::make_shared<ImageColorYuv<uchar>>(typePtr, std::array<int, 4>{ 2, 1, 0, 3 }, 255);
 	}
 
-	ImageAyuv::ImageAyuv(int h, int w, size_t stride) :
-		ImageAyuv(h, w, (int) stride)
+	ImageVuyx::ImageVuyx(int h, int w, size_t stride) :
+		ImageVuyx(h, w, (int) stride)
 	{}
 
-	ImageAyuv::ImageAyuv(int h, int w) :
-		ImageAyuv(h, w, util::alignValue(w * 4, 64))
+	ImageVuyx::ImageVuyx(int h, int w) :
+		ImageVuyx(h, w, util::alignValue(w * 4, 64))
 	{}
 
-	ImageAyuv::ImageAyuv() :
-		ImageAyuv(0, 0)
+	ImageVuyx::ImageVuyx() :
+		ImageVuyx(0, 0)
 	{}
 
-	ImageAyuv ImageAyuv::readPgmFile(const std::string& filename) {
+	ImageVuyx ImageVuyx::readPgmFile(const std::string& filename) {
 		ImageYuv yuv = ImageYuv::readPgmFile(filename);
-		ImageAyuv ayuv(yuv.height(), yuv.width());
-		yuv.convertTo(ayuv);
-		return ayuv;
+		ImageVuyx vuyx(yuv.h(), yuv.w());
+		yuv.convertTo(vuyx);
+		return vuyx;
 	}
 
-	ImageAyuv ImageAyuv::readBmpFile(const std::string& filename) {
+	ImageVuyx ImageVuyx::readBmpFile(const std::string& filename) {
 		ImageBgr bgr = ImageBgr::readBmpFile(filename);
-		ImageAyuv ayuv(bgr.height(), bgr.width());
-		bgr.convertTo(ayuv);
-		return ayuv;
+		ImageVuyx vuyx(bgr.h(), bgr.w());
+		bgr.convertTo(vuyx);
+		return vuyx;
 	}
 
-	uchar* ImageAyuv::addr(size_t idx, size_t r, size_t c) { 
+	uchar* ImageVuyx::addr(size_t idx, size_t r, size_t c) { 
 		return storePtr->data() + r * typePtr->stride + c * typePtr->planes + idx; 
 	}
 
-	const uchar* ImageAyuv::addr(size_t idx, size_t r, size_t c) const {
+	const uchar* ImageVuyx::addr(size_t idx, size_t r, size_t c) const {
 		return storePtr->data() + r * typePtr->stride + c * typePtr->planes + idx;
 	}
 
-	uchar& ImageAyuv::at(size_t idx, size_t r, size_t c) { 
+	uchar& ImageVuyx::at(size_t idx, size_t r, size_t c) { 
 		return *addr(idx, r, c); 
 	}
 
-	const uchar& ImageAyuv::at(size_t idx, size_t r, size_t c) const { 
+	const uchar& ImageVuyx::at(size_t idx, size_t r, size_t c) const { 
 		return *addr(idx, r, c); 
 	}
+
+	uchar* ImageVuyx::row(size_t r) {
+		return storePtr->data() + r * typePtr->stride;
+	}
+
+	const uchar* ImageVuyx::row(size_t r) const {
+		return storePtr->data() + r * typePtr->stride;
+	}
+
 
 
 	//-----------------------------------------------------------------------
@@ -320,6 +312,25 @@ namespace im {
 	ImageBGRA::ImageBGRA() :
 		ImageBGRA(0, 0)
 	{}
+
+	void ImageBGRA::saveBmpColor(const std::string& filename) const {
+		std::ofstream os(filename, std::ios::binary);
+		BmpColorHeader(w(), h()).writeHeader(os);
+		std::vector<uchar> line(util::alignValue(w() * 3, 4));
+
+		for (int r = h() - 1; r >= 0; r--) {
+			uchar* dest = line.data();
+			const uchar* src = row(r);
+			for (int c = 0; c < w(); c++) {
+				*dest++ = *src++;
+				*dest++ = *src++;
+				*dest++ = *src++;
+				src++;
+			}
+			os.write(reinterpret_cast<char*>(line.data()), line.size());
+		}
+		assert(os.good() && "error writing file");
+	}
 
 
 	//-----------------------------------------------------------------------

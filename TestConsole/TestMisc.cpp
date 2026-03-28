@@ -101,7 +101,7 @@ void readAndWriteOneFrame() {
 		MovieFrame frame(data, reader, writer);
 		CudaFrame ex(data, *data.deviceList[2], frame, frame.mPool);
 
-		ImageAyuv im0 = ImageAyuv::readPgmFile("d:/VideoTest/v00.pgm");
+		ImageVuyx im0 = ImageVuyx::readPgmFile("d:/VideoTest/v00.pgm");
 		Image8& input0 = ex.inputDestination(0);
 		im0.copyTo(input0);
 		input0.index = 0;
@@ -109,7 +109,7 @@ void readAndWriteOneFrame() {
 		ex.inputData(reader.frameIndex);
 		ex.createPyramid(frame.mReader.frameIndex);
 
-		ImageAyuv im1 = ImageAyuv::readPgmFile("D:/VideoTest/v01.pgm");
+		ImageVuyx im1 = ImageVuyx::readPgmFile("D:/VideoTest/v01.pgm");
 		Image8& input1 = ex.inputDestination(1);
 		im1.copyTo(input1);
 		input1.index = 1;

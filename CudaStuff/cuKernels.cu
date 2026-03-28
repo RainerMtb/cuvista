@@ -136,10 +136,10 @@ __global__ void kernel_scale_8u32f_3(cudaTextureObject_t texObj, cuMatf4 dest) {
 	constexpr float f = 1.0f / 255.0f;
 
 	if (x < dest.w && y < dest.h) {
-		uchar yy = tex2D<uchar>(texObj, x * 4 + 1, y);
-		uchar uu = tex2D<uchar>(texObj, x * 4 + 2, y);
-		uchar vv = tex2D<uchar>(texObj, x * 4 + 3, y);
-		dest.at(y, x) = { 1.0f, yy * f, uu * f, vv * f };
+		uchar vv = tex2D<uchar>(texObj, x * 4 + 0, y);
+		uchar uu = tex2D<uchar>(texObj, x * 4 + 1, y);
+		uchar yy = tex2D<uchar>(texObj, x * 4 + 2, y);
+		dest.at(y, x) = { vv * f, uu * f, yy * f, 1.0f };
 	}
 }
 
@@ -165,9 +165,9 @@ __global__ void kernel_filter_3(cudaTextureObject_t texObj, cuMatf4 dest, int ks
 		int iy = y - dy * ks / 2;
 		for (int i = 0; i < ks; i++) {
 			float4 val = tex2D<float4>(texObj, ix, iy);
-			result.y = fmaf(val.y, filterKernels[0].k[i], result.y);
-			result.z = fmaf(val.z, filterKernels[1].k[i], result.z);
-			result.w = fmaf(val.w, filterKernels[2].k[i], result.w);
+			result.x = fmaf(val.x, filterKernels[2].k[i], result.x);
+			result.y = fmaf(val.y, filterKernels[1].k[i], result.y);
+			result.z = fmaf(val.z, filterKernels[0].k[i], result.z);
 			ix += dx;
 			iy += dy;
 		}
@@ -183,10 +183,10 @@ __global__ void kernel_unsharp_3(float4* base, float4* gauss, float4* dest, int 
 		int idx = y * step + x;
 		float4 valBase = base[idx];
 		float4 valGauss = gauss[idx];
-		dest[idx].x = __saturatef(valBase.x);
-		dest[idx].y = __saturatef(valBase.y + (valBase.y - valGauss.y) * d_core.unsharp.y);
-		dest[idx].z = __saturatef(valBase.z + (valBase.z - valGauss.z) * d_core.unsharp.u);
-		dest[idx].w = __saturatef(valBase.w + (valBase.w - valGauss.w) * d_core.unsharp.v);
+		dest[idx].x = __saturatef(valBase.x + (valBase.x - valGauss.x) * d_core.unsharp4.v);
+		dest[idx].y = __saturatef(valBase.y + (valBase.y - valGauss.y) * d_core.unsharp4.u);
+		dest[idx].z = __saturatef(valBase.z + (valBase.z - valGauss.z) * d_core.unsharp4.y);
+		dest[idx].w = __saturatef(valBase.w + (valBase.w - valGauss.w) * d_core.unsharp4.x);
 	}
 }
 
@@ -197,16 +197,31 @@ __global__ void kernel_output_host(float4* src, int srcStep, uchar* dest, int de
 	uint y = blockIdx.y * blockDim.y + threadIdx.y;
 
 	if (x < w && y < h) {
-		float4 ayuv = src[y * srcStep + x];
+		float4 xvuy = src[y * srcStep + x];
 		int idx = y * destStep + x * 4;
-		dest[idx + 0] = (uchar) rintf(ayuv.x * 255.0f);
-		dest[idx + 1] = (uchar) rintf(ayuv.y * 255.0f);
-		dest[idx + 2] = (uchar) rintf(ayuv.z * 255.0f);
-		dest[idx + 3] = (uchar) rintf(ayuv.w * 255.0f);
+		dest[idx + 0] = (uchar) rintf(xvuy.x * 255.0f);
+		dest[idx + 1] = (uchar) rintf(xvuy.y * 255.0f);
+		dest[idx + 2] = (uchar) rintf(xvuy.z * 255.0f);
+		dest[idx + 3] = (uchar) rintf(xvuy.w * 255.0f);
 	}
 }
 
-__global__ void kernel_output_nvenc(float4* src, int srcStep, uchar* dest, int cudaPitch, int w, int h) {
+__global__ void kernel_output_host_yuv(float4* src, int srcStep, uchar* dest, int destStep, int w, int h) {
+	uint x = blockIdx.x * blockDim.x + threadIdx.x;
+	uint y = blockIdx.y * blockDim.y + threadIdx.y;
+
+	if (x < w && y < h) {
+		float4 xvuy = src[y * srcStep + x];
+		uchar* ptr = dest + y * destStep + x;
+		*ptr = (uchar) rintf(xvuy.z * 255.0f);
+		ptr += h * destStep;
+		*ptr = (uchar) rintf(xvuy.y * 255.0f);
+		ptr += h * destStep;
+		*ptr = (uchar) rintf(xvuy.x * 255.0f);
+	}
+}
+
+__global__ void kernel_output_nvenc(float4* src, int srcStep, uchar* dest, int stride, int w, int h) {
 	uint x = blockIdx.x * blockDim.x + threadIdx.x;
 	uint y = blockIdx.y * blockDim.y + threadIdx.y;
 	int idx;
@@ -214,58 +229,61 @@ __global__ void kernel_output_nvenc(float4* src, int srcStep, uchar* dest, int c
 
 	if (x < w / 2 && y < h / 2) {
 		idx = y * 2 * srcStep + x * 2;
-		outIdx = y * 2 * cudaPitch + x * 2;
+		outIdx = y * 2 * stride + x * 2;
 		float4 f00 = src[idx + 0];
 		float4 f01 = src[idx + 1];
 		float4 f10 = src[idx + srcStep + 0];
 		float4 f11 = src[idx + srcStep + 1];
 
-		dest[outIdx + 0] = rintf(f00.y * 255.0f);
-		dest[outIdx + 1] = rintf(f01.y * 255.0f);
-		dest[outIdx + cudaPitch + 0] = rintf(f10.y * 255.0f);
-		dest[outIdx + cudaPitch + 1] = rintf(f11.y * 255.0f);
+		dest[outIdx + 0] = rintf(f00.z * 255.0f);
+		dest[outIdx + 1] = rintf(f01.z * 255.0f);
+		dest[outIdx + stride + 0] = rintf(f10.z * 255.0f);
+		dest[outIdx + stride + 1] = rintf(f11.z * 255.0f);
 
-		outIdx = (y + h) * cudaPitch + x * 2;
-		dest[outIdx + 0] = rintf((f00.z + f01.z + f10.z + f11.z) * 255.0f / 4.0f);
-		dest[outIdx + 1] = rintf((f00.w + f01.w + f10.w + f11.w) * 255.0f / 4.0f);
+		outIdx = (y + h) * stride + x * 2;
+		float u = rintf(f00.y * 255.0f) + rintf(f01.y * 255.0f) + rintf(f10.y * 255.0f) + rintf(f11.y * 255.0f);
+		float v = rintf(f00.x * 255.0f) + rintf(f01.x * 255.0f) + rintf(f10.x * 255.0f) + rintf(f11.x * 255.0f);
+		dest[outIdx + 0] = u / 4;
+		dest[outIdx + 1] = v / 4;
 	}
 }
 
 __global__ void kernel_scale_8u32f(cudaTextureObject_t texObj, cuMatf dest, int64_t* luma) {
 	uint x = blockIdx.x * blockDim.x + threadIdx.x;
 	uint y = blockIdx.y * blockDim.y + threadIdx.y;
+	uint offsetY = 2;
 	constexpr float f = 1.0f / 255.0f;
 
-	int xx = x * 4 + 1;
 	if (x < dest.w && y < dest.h) {
-		uchar val = tex2D<uchar>(texObj, xx, y);
+		uchar val = tex2D<uchar>(texObj, x * 4 + offsetY, y);
 		dest.at(y, x) = val * f;
 	}
 
-	if (y == 0 && x < dest.w) {
+	//first row of blocks
+	uint idx = blockIdx.x * blockDim.x * blockDim.y + threadIdx.y * blockDim.x + threadIdx.x;
+	if (blockIdx.y == 0 && idx < dest.w) {
 		int sum = 0;
 		for (int i = 0; i < dest.h; i++) {
-			int val = tex2D<uchar>(texObj, xx, i);
+			int val = tex2D<uchar>(texObj, idx * 4 + offsetY, i);
 			sum += val * val;
 		}
-		luma[x] = sum;
+		luma[idx] = sum;
 	}
 }
 
 __global__ void kernel_lumaSum(int64_t* luma, int w) {
 	uint x = threadIdx.x;
 	uint ws = blockDim.x;
+	extern __shared__ int64_t shd64[];
 
 	//32 threads
-	int64_t sum = 0;
-	for (int i = x; i < w; i += ws) sum += luma[i];
-	luma[x] = sum;
+	shd64[x] = 0;
+	for (int i = x; i < w; i += ws) shd64[x] += luma[i];
 
 	//first thread
 	if (x == 0) {
-		int64_t s = 0;
-		for (int i = 0; i < ws; i++) s += luma[i];
-		luma[0] = s;
+		for (int i = 1; i < ws; i++) shd64[0] += shd64[i];
+		luma[0] = shd64[0];
 	}
 }
 
@@ -335,9 +353,9 @@ __global__ void kernel_yuv8_to_rgba8(cudaTextureObject_t texObj, uchar* rgba, in
 	uint y = blockIdx.y * blockDim.y + threadIdx.y;
 
 	if (x < w && y < h) {
-		uchar yy = tex2D<uchar>(texObj, x * 4 + 1, y);
-		uchar uu = tex2D<uchar>(texObj, x * 4 + 2, y);
-		uchar vv = tex2D<uchar>(texObj, x * 4 + 3, y);
+		uchar yy = tex2D<uchar>(texObj, x * 4 + 2, y);
+		uchar uu = tex2D<uchar>(texObj, x * 4 + 1, y);
+		uchar vv = tex2D<uchar>(texObj, x * 4 + 0, y);
 		uchar* dest = rgba + y * destStep + x * 4;
 		yuv_to_rgba_func(yy, uu, vv, dest + index.x, dest + index.y, dest + index.z, dest + index.w);
 	}
@@ -350,7 +368,7 @@ __global__ void kernel_yuv128_to_rgba8(cudaTextureObject_t texObj, uchar* rgba, 
 	if (x < w && y < h) {
 		float4 yuv = tex2D<float4>(texObj, x, y);
 		uchar* dest = rgba + y * destStep + x * 4;
-		yuv_to_rgba_func(yuv.x * 255.0f, yuv.y * 255.0f, yuv.z * 255.0f, dest + index.x, dest + index.y, dest + index.z, dest + index.w);
+		yuv_to_rgba_func(yuv.z * 255.0f, yuv.y * 255.0f, yuv.x * 255.0f, dest + index.x, dest + index.y, dest + index.z, dest + index.w);
 	}
 }
 
@@ -395,17 +413,24 @@ cudaError_t cu::unsharp_32f_3(float4* base, float4* gauss, float4* dest, int ste
 	return cudaGetLastError();
 }
 
-cudaError_t cu::outputHost(float4* src, int srcStep, uchar* destAyuv, int destStep, int w, int h, cudaStream_t cs) {
+cudaError_t cu::outputHost(float4* src, int srcStep, uchar* destVuyx, int destStep, int w, int h, cudaStream_t cs) {
 	dim3 threads = configThreads();
 	dim3 blocks = configBlocks(threads, w, h);
-	kernel_output_host << <blocks, threads, 0, cs >> > (src, srcStep, destAyuv, destStep, w, h);
+	kernel_output_host << <blocks, threads, 0, cs >> > (src, srcStep, destVuyx, destStep, w, h);
 	return cudaGetLastError();
 }
 
-cudaError_t cu::outputNvenc(float4* src, int srcStep, uchar* cudaNv12ptr, int cudaPitch, int w, int h, cudaStream_t cs) {
+cudaError_t cu::outputHostYuv(float4* src, int srcStep, uchar* destVuyx, int destStep, int w, int h, cudaStream_t cs) {
+	dim3 threads = configThreads();
+	dim3 blocks = configBlocks(threads, w, h);
+	kernel_output_host_yuv << <blocks, threads, 0, cs >> > (src, srcStep, destVuyx, destStep, w, h);
+	return cudaGetLastError();
+}
+
+cudaError_t cu::outputNvenc(float4* src, int srcStep, uchar* dest, int stride, int w, int h, cudaStream_t cs) {
 	dim3 threads = configThreads();
 	dim3 blocks = configBlocks(threads, w / 2, h / 2);
-	kernel_output_nvenc << <blocks, threads, 0, cs >> > (src, srcStep, cudaNv12ptr, cudaPitch, w, h);
+	kernel_output_nvenc << <blocks, threads, 0, cs >> > (src, srcStep, dest, stride, w, h);
 	return cudaGetLastError();
 }
 
@@ -420,7 +445,7 @@ cudaError_t cu::scale_8u32f(uchar* src, int srcStep, int srcWidth, float* dest, 
 }
 
 int64_t cu::lumaSum(int64_t* d_luma, int w, cudaStream_t cs) {
-	kernel_lumaSum << <1, 32, 0, cs >> > (d_luma, w);
+	kernel_lumaSum << <1, 32, 32*8, cs >> > (d_luma, w);
 	int64_t h_sum;
 	cudaMemcpy(&h_sum, d_luma, sizeof(int64_t), cudaMemcpyDefault);
 	return h_sum;

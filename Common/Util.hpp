@@ -53,6 +53,38 @@ namespace util {
     };
 
 
+    struct DebugLogger {
+        std::chrono::time_point<std::chrono::system_clock> start = std::chrono::system_clock::now();
+        std::mutex mutex;
+
+        virtual void log(const std::string& msg) = 0;
+
+        template <class... Args> void format(std::format_string<Args...> fmt, Args&&... args) {
+            log(std::format(fmt, std::forward<Args>(args)...));
+        }
+
+        std::string time() const;
+    };
+
+    struct DebugLoggerNull : public util::DebugLogger {
+        void log(const std::string& msg) override;
+    };
+
+    struct DebugLoggerConsole : public util::DebugLogger {
+        void log(const std::string& msg) override;
+    };
+
+    struct DebugLoggerString : public util::DebugLogger {
+        std::stringstream& ss;
+
+        DebugLoggerString(std::stringstream& ss) : ss { ss } {}
+
+        void log(const std::string& msg) override;
+    };
+
+    inline std::shared_ptr<DebugLogger> debugLogger = std::make_shared<DebugLoggerNull>();
+
+
     //output sent to this ostream will be suppressed
     class NullOutstream : public std::ostream {
 
@@ -97,17 +129,6 @@ namespace util {
             return addBytes(data.data(), data.size()); 
         }
 
-        template <class T> CRC64& add(const im::IImage<T>& image) {
-            for (int z = 0; z < image.planes(); z++) {
-                for (int r = 0; r < image.height(); r++) {
-                    for (int c = 0; c < image.width(); c++) {
-                        addBytes(reinterpret_cast<const unsigned char*>(image.addr(z, r, c)), sizeof(T));
-                    }
-                }
-            }
-            return *this;
-        }
-        
         uint64_t result() const;
 
         bool operator == (const CRC64& other) const;

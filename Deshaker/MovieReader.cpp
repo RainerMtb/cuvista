@@ -391,7 +391,7 @@ bool FFmpegReader::read(Image8& inputFrame) {
     }
 
     if (endOfInput == false) {
-        //convert to AYUV data
+        //convert to VUYX data
         inputFrame.index = frameIndex;
         int w = av_codec_ctx->width;
         int h = av_codec_ctx->height;
@@ -399,7 +399,7 @@ bool FFmpegReader::read(Image8& inputFrame) {
 
         //set up sws scaler after first frame has been decoded
         if (!sws_scaler_ctx) {
-            sws_scaler_ctx = sws_getContext(w, h, av_codec_ctx->pix_fmt, w, h, AV_PIX_FMT_AYUV, SWS_BILINEAR, NULL, NULL, NULL);
+            sws_scaler_ctx = sws_getContext(w, h, av_codec_ctx->pix_fmt, w, h, AV_PIX_FMT_VUYX, SWS_BILINEAR, NULL, NULL, NULL);
         }
         if (!sws_scaler_ctx) {
             ffmpeg_log_error(0, "failed to initialize ffmpeg scaler", ErrorSource::READER);

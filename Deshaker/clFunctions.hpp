@@ -66,19 +66,20 @@ namespace cl {
 		CommandQueue queue;
 		CommandQueue secondQueue;
 
-		//input ayuv frames buffer
-		std::vector<Image2D> ayuv;
+		//input vuyx frames buffer
+		std::vector<Image2D> vuyx;
 		//pyramid images, one image for all levels
 		Image2DArray pyramid;
 		//buffers for filtering on pyramid creation
 		std::vector<BufferImages> buffer;
+		//buffer for luma sum
+		Buffer luma;
 
 		//data storage for output
 		std::array<Image2D, 5> out;
-		Buffer ayuvOut;
-		Buffer rgbaOut;
+		Buffer output;
 
-		cl_float4 backgroundColorAyuv;
+		cl_float4 bgCol;
 
 		//storage for results struct
 		Buffer results;
@@ -91,6 +92,7 @@ namespace cl {
 			Kernel scale_8u32f_1;
 			Kernel scale_8u32f_3;
 			Kernel scale_32f8u_3;
+			Kernel scale_32f8u_3_yuv;
 			Kernel filter_32f_1;
 			Kernel filter_32f_3;
 			Kernel remap_downsize_32f;
@@ -101,12 +103,14 @@ namespace cl {
 			Kernel yuv32f_to_nv12;
 			Kernel scrap;
 			Kernel compute;
+			Kernel lumaSum;
 		} kernels;
 	};
 
-	void scale_8u32f_1(Image src, Image dest, Data& clData);
+	void scale_8u32f_1(Image src, Image dest, Buffer luma, Data& clData);
 	void scale_8u32f_3(Image src, Image dest, Data& clData);
-	void scale_32f8u_3(Image src, Buffer dest, int pitch, const Data& clData);
+	void scale_32f8u(Kernel kernel, Image src, Buffer dest, int pitch, const Data& clData);
+	int64_t lumaSum(Buffer luma, int w, Data& clData);
 
 	void filter_32f_h1(Image src, Image dest, int filterIndex, Data& clData);
 	void filter_32f_h3(Image src, Image dest, Data& clData);

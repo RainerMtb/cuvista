@@ -78,7 +78,7 @@ private:
     UserInputGui mInputHandler;
 
     MainData mData;
-    ImageAyuv mInputYUV;
+    ImageVuyx mInputYUV;
     ImageBgr mInputBGR;
     QImage mInputImage;
     FFmpegReader mReader;

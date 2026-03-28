@@ -33,8 +33,9 @@ namespace cu {
 
 	cudaError_t unsharp_32f_3(float4* base, float4* gauss, float4* dest, int step, int w, int h, cudaStream_t cs = 0);
 
-	cudaError_t outputHost(float4* src, int srcStep, uchar* destAyuv, int destStep, int w, int h, cudaStream_t cs = 0);
-	cudaError_t outputNvenc(float4* src, int srcStep, uchar* cudaNv12ptr, int cudaPitch, int w, int h, cudaStream_t cs = 0);
+	cudaError_t outputHost(float4* src, int srcStep, uchar* destVuyx, int destStep, int w, int h, cudaStream_t cs = 0);
+	cudaError_t outputHostYuv(float4* src, int srcStep, uchar* destVuyx, int destStep, int w, int h, cudaStream_t cs = 0);
+	cudaError_t outputNvenc(float4* src, int srcStep, uchar* dest, int stride, int w, int h, cudaStream_t cs = 0);
 
 	cudaError_t remap_downsize_32f(float* src, int srcStep, float* dest, int destStep, int wsrc, int hsrc, cudaStream_t cs = 0);
 

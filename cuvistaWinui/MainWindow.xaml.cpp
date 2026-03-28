@@ -212,7 +212,7 @@ namespace winrt::cuvistaWinui::implementation {
             mReader.close();
             errorLogger().clear();
             mReader.open(to_string(inputPath));
-            mInput = ImageAyuv(mReader.h, mReader.w);
+            mInput = ImageVuyx(mReader.h, mReader.w);
 
             mReader.read(mInput); //read first image
 
@@ -347,7 +347,7 @@ namespace winrt::cuvistaWinui::implementation {
         mData.cudaThreads = (unsigned int) sliderCudaThreads().Value();
 
         mData.backgroundColor = Color::rgb(mBackgroundColor.R, mBackgroundColor.G, mBackgroundColor.B);
-        mData.backgroundColor.toYUVfloat(&mData.bgcolorYuv.y, &mData.bgcolorYuv.u, &mData.bgcolorYuv.v);
+        mData.backgroundColor.toYUVfloat(&mData.bgcol4.y, &mData.bgcol4.u, &mData.bgcol4.v);
 
         std::shared_ptr<ProgressDialog> progress;
         std::shared_ptr<MovieFrame> frame;

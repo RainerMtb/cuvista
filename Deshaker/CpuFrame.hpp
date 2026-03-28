@@ -25,13 +25,14 @@
 //---------- CPU FRAME ------------------------------------------------
 //---------------------------------------------------------------------
 
-using Matf4 = Mat<FloatAyuv>;
+using Matf4 = Mat<FloatVuyx>;
 
 class CpuFrame : public FrameExecutor {
 
 public:
 	CpuFrame(MainData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool);
 
+	void init() override;
 	Image8& inputDestination(int64_t frameIndex) override;
 	void inputData(int64_t frameIndex) override;
 	int64_t createPyramid(int64_t frameIndex, AffineDataFloat trf = {}, bool warp = false) override;
@@ -43,17 +44,16 @@ public:
 	Matf getTransformedOutput() const override;
 	Matf getPyramid(int64_t frameIndex) const override;
 	void getInput(int64_t frameIndex, Image8& image) const override;
-	void getWarped(int64_t frameIndex, Image8bgr & image) override;
 
 private:
 	std::vector<float> filterKernelY = { 0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f };
 
-	std::vector<FloatAyuv> filterKernel4 = {
-		{ 1.0f, 0.0625f, 0.0f,  0.0f },
-		{ 1.0f, 0.25f,   0.25f, 0.25f },
-		{ 1.0f, 0.375f,  0.5f,  0.5f },
-		{ 1.0f, 0.25f,   0.25f, 0.25f },
-		{ 1.0f, 0.0625f, 0.0f,  0.0f }
+	std::vector<FloatVuyx> filterKernel4 = {
+		{ 0.0f,  0.0f,  0.0625f, 0.0f },
+		{ 0.25f, 0.25f, 0.25f,   0.0f },
+		{ 0.5f,  0.5f,  0.375f,  0.0f },
+		{ 0.25f, 0.25f, 0.25f,   0.0f },
+		{ 0.0f,  0.0f,  0.0625f, 0.0f }
 	};
 
 	class CpuPyramid {
@@ -62,12 +62,13 @@ private:
 		int64_t frameIndex = -1;
 		std::vector<Matf> mY;
 
-		CpuPyramid(MainData& data);
+		CpuPyramid(CoreData& data);
 		Matf getCompletePyramid(int64_t index, size_t h, size_t w) const;
 	};
 
-	//frame input buffer, number of frames = frameBufferCount
-	std::vector<ImageAyuv> mInput;
+	//frame input buffer
+	ImageVuyx mReadBuffer;
+	std::vector<ImageVuyx> mInput;
 
 	//holds image pyramids
 	std::vector<CpuPyramid> mPyr;
@@ -80,5 +81,5 @@ private:
 	Matf4 mBuffer4, mFilterBuffer4, mFilterResult4;
 
 	//final output
-	ImageAyuvFloat mOutput;
+	ImageVuyxFloat mOutput;
 };

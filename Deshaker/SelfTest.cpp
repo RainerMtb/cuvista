@@ -39,15 +39,16 @@ void runSelfTest(util::MessagePrinter& out, std::vector<DeviceInfoBase*> deviceL
 
 	std::vector<unsigned char> movieData = util::base64_decode(movieTestData);
 
-	uint64_t crcInputFirst =  0xe72e7c43c685dc4c;
-	uint64_t crcInputSecond = 0x8975f438e501390a;
+	uint64_t crcInputFirst =  0xa7a765c5246f3231;
+	uint64_t crcInputSecond = 0x8d81d377e4cd0f0c;
 	uint64_t crcPyramid =     0x430664d35d1bddfa;
 	uint64_t crcLuma =        0x3586033f4901bd51;
 	uint64_t crcResult =      0x9a14e1549f60775f;
-	uint64_t crcTransformed = 0x7904805c67659a0f;
-	uint64_t crcOutput =      0xfc36c9a2927c627a;
+	uint64_t crcTransformed = 0x1a5e3af948a9e9bd;
+	uint64_t crcOutput =      0xb3044d9ca32dffdf;
+	uint64_t crcNv12 =        0x9994f1fb7266314d;
 
-	//for (size_t i = 3; i < 4; i++) {
+	//for (size_t i = 1; i < 2; i++) {
 	for (size_t i = 0; i < deviceList.size(); i++) {
 		errorLogger().clear();
 		out.print(" #");
@@ -92,8 +93,9 @@ void runSelfTest(util::MessagePrinter& out, std::vector<DeviceInfoBase*> deviceL
 			//input
 			ImageRGBA inputFirst(data.h, data.w);
 			executor->getInput(0, inputFirst);
+
 			//input
-			ImageAyuv inputSecond(data.h, data.w);
+			ImageVuyx inputSecond(data.h, data.w);
 			executor->getInput(1, inputSecond);
 			//output
 			AffineTransform trf;
@@ -101,35 +103,37 @@ void runSelfTest(util::MessagePrinter& out, std::vector<DeviceInfoBase*> deviceL
 			executor->outputData(0, trf);
 			writer.writeOutput(*executor);
 
-			//executing checks
+			//-------------- executing checks -----------------------
+			
 			//inputFirst.saveBmpPlanes(std::format("f:/in1_{}.bmp", name));
 			if (uint64_t crc = inputFirst.crc(); crc != crcInputFirst) {
-				debugLogger->format("{} fail input 1 {:x}", name, crc);
-				out.print("FAIL input 1 ");
+				util::debugLogger->format("{} fail input1 {:x}", name, crc);
+				out.print("FAIL input1 ");
 				check = false;
 			}
 			//inputSecond.saveBmpPlanes(std::format("f:/in2_{}.bmp", name));
 			if (uint64_t crc = inputSecond.crc(); crc != crcInputSecond) {
-				debugLogger->format("{} fail input 2 {:x}", name, crc);
-				out.print("FAIL input 2 ");
+				util::debugLogger->format("{} fail input2 {:x}", name, crc);
+				out.print("FAIL input2 ");
 				check = false;
 			}
 
 			Matf pyramid = executor->getPyramid(0);
 			//pyramid.saveAsBMP(std::format("f:/pyr_{}.bmp", name), 1.0f);
 			if (uint64_t crc = pyramid.crc(); crc != crcPyramid) {
-				debugLogger->format("{} fail pyramid {:x}", name, crc);
+				util::debugLogger->format("{} fail pyramid {:x}", name, crc);
 				out.print("FAIL pyramid ");
 				check = false;
 			}
 
 			if (uint64_t crc = util::CRC64().addDirect(luma1).addDirect(luma2).result(); crc != crcLuma) {
-				debugLogger->format("{} fail luma {:x}", name, crc);
+				util::debugLogger->format("{} fail luma {:x}", name, crc);
 				out.print("FAIL luma ");
 				check = false;
 			}
 
 			{
+				//check result data
 				util::CRC64 crc64;
 				for (const PointResult& pr : frame.mResultPoints) {
 					crc64.addDirect(pr.result);
@@ -142,26 +146,38 @@ void runSelfTest(util::MessagePrinter& out, std::vector<DeviceInfoBase*> deviceL
 					crc64.addDirect(pr.v);
 				}
 				if (uint64_t crc = crc64.result(); crc != crcResult) {
-					debugLogger->format("{} fail result {:x}", name, crc);
+					util::debugLogger->format("{} fail result {:x}", name, crc);
 					out.print("FAIL result ");
 					check = false;
 				}
 			}
 
+			//transformed float data
 			Matf transformed = executor->getTransformedOutput();
 			//transformed.saveAsBinary(std::format("f:/trf_{}.mat", name));
-			transformed.saveAsBMP(std::format("f:/trf_{}.bmp", name), 1.0f);
+			//transformed.saveAsBMP(std::format("f:/trf_{}.bmp", name), 1.0f);
 			if (uint64_t crc = transformed.crc(); crc != crcTransformed) {
-				debugLogger->format("{} fail transformed {:x}", name, crc);
+				util::debugLogger->format("{} fail transformed {:x}", name, crc);
 				out.print("FAIL transformed ");
 				check = false;
 			}
 
-			const ImageAyuv& output = writer.getOutputFrame();
-			//output.saveBmpPlanes(std::format("f:/out_{}.bmp", name));
+			//output yuv
+			const ImageVuyx& output = writer.getOutputFrame();
+			//output.saveBmpColor(std::format("f:/out_{}.bmp", name));
 			if (uint64_t crc = output.crc(); crc != crcOutput) {
-				debugLogger->format("{} fail output {:x}", name, crc);
+				util::debugLogger->format("{} fail output {:x}", name, crc);
 				out.print("FAIL output ");
+				check = false;
+			}
+
+			//output nv12
+			ImageNV12 nv12(data.h, data.w, data.stride);
+			executor->getOutput(0, nv12, 0, nullptr);
+			//nv12.saveBmpColor(std::format("f:/nv12_{}.bmp", name));
+			if (uint64_t crc = nv12.crc(); crc != crcNv12) {
+				util::debugLogger->format("{} fail nv12 {:x}", name, crc);
+				out.print("FAIL nv12 ");
 				check = false;
 			}
 

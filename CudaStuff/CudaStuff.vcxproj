@@ -50,7 +50,7 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 13.1.props" />
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 13.2.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -88,9 +88,10 @@
     </Link>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
-      <AdditionalOptions>-fmad=false -std=c++20 -Wno-deprecated-gpu-targets %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>-fmad=false -std=c++20 -arch=all %(AdditionalOptions)</AdditionalOptions>
       <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
-      <CodeGeneration>compute_75,sm_75;compute_80,sm_80;compute_89,sm_89;compute_90,sm_90;compute_100,sm_100;compute_110,sm_110;compute_120,sm_120;compute_121,sm_121</CodeGeneration>
+      <CodeGeneration>
+      </CodeGeneration>
       <Defines>BUILD_CUDA=1</Defines>
       <Include>$(SolutionDir)Common;$(CUDA_PATH)\include</Include>
       <CompileOut>$(SolutionDir)bin\$(Platform)\$(Configuration)\%(Filename)%(Extension).obj</CompileOut>
@@ -118,9 +119,10 @@
     </Link>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
-      <AdditionalOptions>-fmad=false -std=c++20 -Wno-deprecated-gpu-targets %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>-fmad=false -std=c++20 -arch=all %(AdditionalOptions)</AdditionalOptions>
       <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
-      <CodeGeneration>compute_75,sm_75;compute_80,sm_80;compute_89,sm_89;compute_90,sm_90;compute_100,sm_100;compute_110,sm_110;compute_120,sm_120;compute_121,sm_121</CodeGeneration>
+      <CodeGeneration>
+      </CodeGeneration>
       <Defines>BUILD_CUDA=1</Defines>
       <Include>$(SolutionDir)Common;$(CUDA_PATH)\include</Include>
       <CompileOut>$(SolutionDir)bin\$(Platform)\$(Configuration)\%(Filename)%(Extension).obj</CompileOut>
@@ -137,6 +139,6 @@
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 13.1.targets" />
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 13.2.targets" />
   </ImportGroup>
 </Project>

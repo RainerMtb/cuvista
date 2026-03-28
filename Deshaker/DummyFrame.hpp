@@ -23,7 +23,8 @@
 class DummyFrame : public FrameExecutor {
 
 private:
-	std::vector<ImageAyuv> mFrames;
+	ImageVuyx mReadBuffer;
+	std::vector<ImageVuyx> mFrames;
 
 public:
 	DummyFrame(MainData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool);
@@ -39,5 +40,4 @@ public:
 	Mat<float> getTransformedOutput() const override;
 	Mat<float> getPyramid(int64_t frameIndex) const override;
 	void getInput(int64_t frameIndex, Image8& image) const override;
-	void getWarped(int64_t frameIndex, Image8bgr & image) override;
 };

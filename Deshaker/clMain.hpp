@@ -31,7 +31,7 @@ class OpenClFrame : public FrameExecutor {
 
 private:
 	cl::Data clData;
-	ImageAyuv mInputFrame;
+	ImageVuyx mInputFrame;
 
 public:
 	OpenClFrame(CoreData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool);
@@ -48,7 +48,6 @@ public:
 	Matf getTransformedOutput() const override;
 	Matf getPyramid(int64_t frameIndex) const override;
 	void getInput(int64_t frameIndex, Image8& image) const override;
-	void getWarped(int64_t frameIndex, Image8bgr & image) override;
 
 private:
 	void compute(int64_t frameIndex, const CoreData& core, int rowStart, int rowEnd);

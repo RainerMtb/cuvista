@@ -16,29 +16,22 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
-#include "cuUtil.cuh"
+#include "Version.hpp"
+#include <regex>
 
-__device__ int64_t cu::globaltimer() {
-	int64_t time = 0;
-	asm volatile ("mov.u64 %0, %%globaltimer;" : "=l"(time));
-	return time;
-}
+CuvistaVersion CuvistaVersion::parse(const std::string& version) {
+	std::regex pattern("^(\\d+)\\.(\\d+)\\.(\\d+)$");
+	std::smatch matcher;
+	CuvistaVersion out;
 
-__device__ bool cu::firstThread() {
-	return (threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0);
-}
-
-__device__ void cu::memcpy(void* dest, const void* src, size_t count) {
-	char* destptr = reinterpret_cast<char*>(dest);
-	const char* srcptr = reinterpret_cast<const char*>(src);
-	for (size_t i = 0; i < count; i++) {
-		destptr[i] = srcptr[i];
+	if (std::regex_match(version, matcher, pattern)) {
+		out.major = std::stoi(matcher[1]);
+		out.minor = std::stoi(matcher[2]);
+		out.patch = std::stoi(matcher[3]);
 	}
+	return out;
 }
 
-__device__ double cu::clamp(double val, double lo, double hi) {
-	double out = val;
-	if (val < lo) out = lo;
-	if (val > hi) out = hi;
-	return out;
+bool CuvistaVersion::operator < (const CuvistaVersion& other) {
+	return std::tie(major, minor, patch) < std::tie(other.major, other.minor, other.patch);
 }

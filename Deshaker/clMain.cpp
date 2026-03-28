@@ -170,26 +170,25 @@ void OpenClFrame::init() {
 		clData.core = Buffer(clData.context, CL_MEM_READ_ONLY, sizeof(KernelData));
 		clData.queue.enqueueWriteBuffer(clData.core, CL_FALSE, 0, sizeof(KernelData), &data);
 
-		//allocate ayuv data
-		ImageFormat fmtAyuv(CL_RGBA, CL_UNSIGNED_INT8);
+		//allocate vuyx data
+		ImageFormat fmtVuyx(CL_RGBA, CL_UNSIGNED_INT8);
 		for (int idx = 0; idx < mData.bufferCount; idx++) {
-			Image2D ayuv(clData.context, CL_MEM_READ_ONLY, fmtAyuv, mData.w, mData.h);
-			clData.ayuv.push_back(ayuv);
+			Image2D vuyx(clData.context, CL_MEM_READ_ONLY, fmtVuyx, mData.w, mData.h);
+			clData.vuyx.push_back(vuyx);
 		}
 
-		clData.backgroundColorAyuv = { mData.bgcolorAyuv[0], mData.bgcolorAyuv[1], mData.bgcolorAyuv[2], mData.bgcolorAyuv[3] };
+		clData.bgCol = { mData.bgcol4[0], mData.bgcol4[1], mData.bgcol4[2], mData.bgcol4[3] };
 
 		//output images
 		ImageFormat outFmt(CL_RGBA, CL_FLOAT);
 		for (Image2D& im : clData.out) {
 			im = Image2D(clData.context, CL_MEM_READ_WRITE, outFmt, mData.w, mData.h);
-			clData.queue.enqueueFillImage(im, clData.backgroundColorAyuv, Size2(), Size2(mData.w, mData.h));
+			clData.queue.enqueueFillImage(im, clData.bgCol, Size2(), Size2(mData.w, mData.h));
 		}
-		clData.ayuvOut = Buffer(clData.context, CL_MEM_WRITE_ONLY, mData.stride4 * mData.h);
-		clData.rgbaOut = Buffer(clData.context, CL_MEM_WRITE_ONLY, mData.stride4 * mData.h);
+		clData.output = Buffer(clData.context, CL_MEM_WRITE_ONLY, mData.stride4 * mData.h);
 
 		//allocate input image
-		mInputFrame = ImageAyuv(mData.w, mData.h, mData.stride4);
+		mInputFrame = ImageVuyx(mData.w, mData.h, mData.stride4);
 
 		//image format gray single channel float
 		ImageFormat fmt32(CL_DEPTH, CL_FLOAT);
@@ -208,6 +207,9 @@ void OpenClFrame::init() {
 
 		//allocate pyramid array, one image holds all levels, kernel type image2d_array_depth_t
 		clData.pyramid = Image2DArray(clData.context, CL_MEM_READ_WRITE, fmt32, mData.pyramidCount, mData.w, mData.pyramidRowCount, 0, 0);
+
+		//allocate luma sum buffer
+		clData.luma = Buffer(clData.context, CL_MEM_READ_WRITE, mData.w * sizeof(cl_long));
 
 		//point results
 		clData.results = Buffer(clData.context, CL_MEM_WRITE_ONLY, sizeof(cl_PointResult) * mData.resultCount);
@@ -229,6 +231,7 @@ void OpenClFrame::init() {
 		clData.kernels.scale_8u32f_1 = Kernel(program, "scale_8u32f_1");
 		clData.kernels.scale_8u32f_3 = Kernel(program, "scale_8u32f_3");
 		clData.kernels.scale_32f8u_3 = Kernel(program, "scale_32f8u_3");
+		clData.kernels.scale_32f8u_3_yuv = Kernel(program, "scale_32f8u_3_yuv");
 		clData.kernels.filter_32f_1 = Kernel(program, "filter_32f_1");
 		clData.kernels.filter_32f_3 = Kernel(program, "filter_32f_3");
 		clData.kernels.remap_downsize_32f = Kernel(program, "remap_downsize_32f");
@@ -239,6 +242,7 @@ void OpenClFrame::init() {
 		clData.kernels.yuv32f_to_nv12 = Kernel(program, "yuv32f_to_nv12");
 		clData.kernels.scrap = Kernel(program, "scrap");
 		clData.kernels.compute = Kernel(program, "compute");
+		clData.kernels.lumaSum = Kernel(program, "lumaSum");
 
 	} catch (const BuildError& err) {
 		for (auto& data : err.getBuildLog()) {
@@ -257,7 +261,7 @@ void OpenClFrame::init() {
 }
 
 //----------------------------------
-//-------- INPUT AYUV DATA ----------
+//-------- INPUT VUYX DATA ----------
 //----------------------------------
 
 Image8& OpenClFrame::inputDestination(int64_t frameIndex) {
@@ -267,7 +271,7 @@ Image8& OpenClFrame::inputDestination(int64_t frameIndex) {
 void OpenClFrame::inputData(int64_t frameIndex) {
 	int64_t idx = frameIndex % mData.bufferCount;
 	try {
-		clData.queue.enqueueWriteImage(clData.ayuv[idx], CL_TRUE, Size2(), Size2(mData.w, mData.h), mInputFrame.stride(), 0, mInputFrame.data());
+		clData.queue.enqueueWriteImage(clData.vuyx[idx], CL_TRUE, Size2(), Size2(mData.w, mData.h), mInputFrame.stride(), 0, mInputFrame.data());
 	
 	} catch (const Error& err) {
 		errorLogger().logError("OpenCL input error: ", err.what());
@@ -284,6 +288,7 @@ int64_t OpenClFrame::createPyramid(int64_t frameIndex, AffineDataFloat trf, bool
 	int h = mData.h;
 	int64_t frIdx = frameIndex % mData.bufferCount;
 	int64_t pyrIdx = frameIndex % mData.pyramidCount;
+	int64_t luma = 0;
 
 	try {
 		//convert yuv image to first level of Y pyramid
@@ -293,13 +298,13 @@ int64_t OpenClFrame::createPyramid(int64_t frameIndex, AffineDataFloat trf, bool
 		if (warp) {
 			cl_float4 bg = { 0.0f, 0.0f, 0.0f, 0.0f };
 			clData.queue.enqueueFillImage(im, bg, Size2(), Size2(mData.w, mData.h));
-			scale_8u32f_1(clData.ayuv[frIdx], buf, clData);
+			scale_8u32f_1(clData.vuyx[frIdx], buf, clData.luma, clData);
 			cl_float8 cltrf = { trf.m00, trf.m01, trf.m02, trf.m10, trf.m11, trf.m12 };
 			warp_back(buf, im, clData, cltrf);
 
 		} else {
 			//convert uint8_t to float
-			scale_8u32f_1(clData.ayuv[frIdx], im, clData);
+			scale_8u32f_1(clData.vuyx[frIdx], im, clData.luma, clData);
 
 			//filter first level
 			filter_32f_h1(im, buf, 0, clData);
@@ -320,11 +325,14 @@ int64_t OpenClFrame::createPyramid(int64_t frameIndex, AffineDataFloat trf, bool
 			row += hh;
 		}
 
+		//sum up luma values
+		luma = lumaSum(clData.luma, mData.w, clData);
+
 	} catch (const Error& err) {
 		errorLogger().logError("OpenCL pyramid error: ", err.what());
 	}
 
-	return 0;
+	return luma;
 }
 
 //----------------------------------
@@ -407,11 +415,11 @@ void OpenClFrame::outputData(int64_t frameIndex, AffineDataFloat trf) {
 	auto& [outStart, outWarped, outFilterH, outFilterV, outFinal] = clData.out;
 
 	try {
-		//convert input ayuv to float image
-		scale_8u32f_3(clData.ayuv[frIdx], outStart, clData);
+		//convert input vuyx to float image
+		scale_8u32f_3(clData.vuyx[frIdx], outStart, clData);
 		//fill static background when requested
 		if (mData.bgmode == BackgroundMode::COLOR) {
-			clData.queue.enqueueFillImage(outWarped, clData.backgroundColorAyuv, Size2(), Size2(mData.w, mData.h));
+			clData.queue.enqueueFillImage(outWarped, clData.bgCol, Size2(), Size2(mData.w, mData.h));
 		}
 		//warp input on top of background
 		cl_float8 cltrf = { trf.m00, trf.m01, trf.m02, trf.m10, trf.m11, trf.m12 };
@@ -422,7 +430,7 @@ void OpenClFrame::outputData(int64_t frameIndex, AffineDataFloat trf) {
 		filter_32f_v3(outFilterH, outFilterV, clData);
 
 		//unsharp mask
-		cl_float4 factor = { 0.0f, mData.unsharp.y, mData.unsharp.u, mData.unsharp.v };
+		cl_float4 factor = { mData.unsharp4[0], mData.unsharp4[1], mData.unsharp4[2], mData.unsharp4[3] };
 		unsharp(outWarped, outFinal, outFilterV, clData, factor);
 
 	} catch (const Error& err) {
@@ -448,12 +456,12 @@ void OpenClFrame::getInput(int64_t frameIndex, Image8& image) const {
 	int64_t idx = frameIndex % mData.bufferCount;
 
 	try {
-		if (image.imageType() == ImageType::AYUV) {
-			Image im = clData.ayuv[idx];
+		if (image.imageType() == ImageType::VUYX) {
+			Image im = clData.vuyx[idx];
 			readImage(im, image.stride(), image.data(), clData.queue);
 
 		} else if (image.colorBase() == ColorBase::RGB) {
-			yuv_to_rgba(clData.kernels.yuv8u_to_rgba, clData.ayuv[idx], image.data(), clData, image.width(), image.height(), image.stride(), image.colorIndex());
+			yuv_to_rgba(clData.kernels.yuv8u_to_rgba, clData.vuyx[idx], image.data(), clData, image.w(), image.h(), image.stride(), image.colorIndex());
 		}
 
 	} catch (const Error& err) {
@@ -477,17 +485,22 @@ Matf OpenClFrame::getPyramid(int64_t frameIndex) const {
 
 void OpenClFrame::getOutput(int64_t frameIndex, Image8& image) const {
 	try {
-		if (image.imageType() == ImageType::AYUV) {
-			int stride = clData.ayuvOut.getInfo<CL_MEM_SIZE>() / image.height();
+		if (image.imageType() == ImageType::VUYX) {
 			//convert to YUV444 for output
-			scale_32f8u_3(clData.out[4], clData.ayuvOut, stride, clData);
+			scale_32f8u(clData.kernels.scale_32f8u_3, clData.out[4], clData.output, mData.stride4, clData);
 
 			//copy to cpu memory
 			Size2 region(image.stride(), mData.h);
-			clData.queue.enqueueReadBufferRect(clData.ayuvOut, CL_TRUE, Size2(), Size2(), region, stride, 0, 0, 0, image.data());
+			clData.queue.enqueueReadBufferRect(clData.output, CL_TRUE, Size2(), Size2(), region, mData.stride4, 0, image.stride(), 0, image.data());
+
+		} else if (image.imageType() == ImageType::YUV) {
+			//convert to YUV for output
+			scale_32f8u(clData.kernels.scale_32f8u_3_yuv, clData.out[4], clData.output, image.stride(), clData);
+			//copy to cpu memory
+			clData.queue.enqueueReadBuffer(clData.output, CL_TRUE, 0, 3ull * image.stride() * image.h(), image.data());
 
 		} else if (image.colorBase() == ColorBase::RGB) {
-			yuv_to_rgba(clData.kernels.yuv32f_to_rgba, clData.out[4], image.data(), clData, image.width(), image.height(), image.stride(), image.colorIndex());
+			yuv_to_rgba(clData.kernels.yuv32f_to_rgba, clData.out[4], image.data(), clData, image.w(), image.h(), image.stride(), image.colorIndex());
 		}
 
 		//forward image index
@@ -500,7 +513,7 @@ void OpenClFrame::getOutput(int64_t frameIndex, Image8& image) const {
 
 bool OpenClFrame::getOutput(int64_t frameIndex, Image8& image, int cudaNv12stride, unsigned char* cudaNv12ptr) const {
 	try {
-		yuv_to_nv12(clData.kernels.yuv32f_to_nv12, clData.out[4], image.data(), clData, image.width(), image.height(), image.stride());
+		yuv_to_nv12(clData.kernels.yuv32f_to_nv12, clData.out[4], image.data(), clData, image.w(), image.h(), image.stride());
 		image.setIndex(frameIndex);
 
 	} catch (const Error& err) {
@@ -510,27 +523,7 @@ bool OpenClFrame::getOutput(int64_t frameIndex, Image8& image, int cudaNv12strid
 }
 
 Matf OpenClFrame::getTransformedOutput() const {
-	std::vector<cl_float4> imageData(1ull * mData.w * mData.h);
-	readImage(clData.out[1], mData.w * sizeof(cl_float4), imageData.data(), clData.queue);
-
-	auto func = [&] (size_t r, size_t c) {
-		cl_float4 data = imageData[r * mData.w + c / 4];
-		switch (c % 4) {
-		case 0: return data.x;
-		case 1: return data.y;
-		case 2: return data.z;
-		case 3: return data.w;
-		default: return 0.0f;
-		}
-	};
-	return Matf::generate(mData.h, mData.w * 4ull, func);
-}
-
-void OpenClFrame::getWarped(int64_t frameIndex, Image8bgr & image) {
-	try {
-		yuv_to_rgba(clData.kernels.yuv32f_to_rgba, clData.out[1], image.data(), clData, image.width(), image.height(), image.stride(), image.colorIndex());
-
-	} catch (const Error& err) {
-		errorLogger().logError("OpenCL get warped: ", err.what());
-	}
+	Matf warped = Matf::allocate(mData.h, mData.w * 4ull);
+	readImage(clData.out[1], mData.w * 4ull * sizeof(float), warped.data(), clData.queue);
+	return warped;
 }

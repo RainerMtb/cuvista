@@ -26,10 +26,33 @@
 
 namespace util {
 
+	std::string DebugLogger::time() const {
+		std::chrono::time_point<std::chrono::system_clock> end = std::chrono::system_clock::now();
+		long long t = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+		long long s = t / 1'000'000;
+		t = t % 1'000'000;
+		return std::format("T+{:03d}.{:03d}.{:03d} ", s, t / 1000, t % 1000);
+	}
+
+	void DebugLoggerNull::log(const std::string& msg) {}
+
+	void DebugLoggerConsole::log(const std::string& msg) {
+		std::lock_guard<std::mutex> lock(mutex);
+		std::cout << time() << msg << std::endl;
+	}
+
+	void DebugLoggerString::log(const std::string& msg) {
+		std::lock_guard<std::mutex> lock(mutex);
+		ss << time() << msg << std::endl;
+	}
+
+
 	static void printTime(long long int delta, const std::string& str) {
-		if (delta < 1000) std::cout << str << "=" << delta << " us" << std::endl;
-		else if (delta < 1'000'000) std::cout << str << "=" << delta / 1000.0 << " ms" << std::endl;
-		else std::cout << str << "=" << delta / 1e6 << " s" << std::endl;
+		std::stringstream ss;
+		if (delta < 1000) ss << str << "=" << delta << " us";
+		else if (delta < 1'000'000) ss << str << "=" << delta / 1000.0 << " ms";
+		else ss << str << "=" << delta / 1e6 << " s";
+		debugLogger->log(ss.str());
 	}
 
 	void ConsoleTimer::interval(const std::string& str) {
@@ -45,14 +68,14 @@ namespace util {
 		printTime(delta, mName);
 	}
 
-	std::string concatStrings(std::span<std::string_view> strings) {
-		return concatStrings(strings, "", "", "");
-	}
-
 	std::vector<std::string> splitString(std::string_view str, std::string_view delimiter) {
 		std::regex rd(delimiter.cbegin(), delimiter.cend());
 		std::string rs(str.cbegin(), str.cend());
 		return { std::sregex_token_iterator(rs.begin(), rs.end(), rd, -1), std::sregex_token_iterator() };
+	}
+
+	std::string concatStrings(std::span<std::string_view> strings) {
+		return concatStrings(strings, "", "", "");
 	}
 
 	std::string concatStrings(std::span<std::string_view> strings, std::string_view delimiter, std::string_view prefix, std::string_view suffix) {

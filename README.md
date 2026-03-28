@@ -64,7 +64,7 @@ cd build
 ```
 prepare the locations of Cuda, Qt and FFMPEG and provide them to cmake. Also see notes above. Better use forward slashes ```/``` to separate folders. Adapt locations to your system:
 ```
-cmake .. -D CMAKE_PREFIX_PATH=C:/CUDA/version;C:/Qt/6.10.1/msvc2022_64 -D FFMPEG_PATH=C:/ffmpeg --fresh
+cmake .. -D CMAKE_PREFIX_PATH=C:/CUDA/version;C:/Qt/6.10.2/msvc2022_64 -D FFMPEG_PATH=C:/ffmpeg --fresh
 cmake --build . --config Release
 ```
 Upon successfull completion you will get the files
@@ -101,7 +101,7 @@ To get the necessary components on the command line
 ```
 wget https://download.qt.io/official_releases/online_installers/qt-online-installer-linux-x64-online.run
 chmod +x qt-online-installer-linux-x64-online.run
-./qt-online-installer-linux-x64-online.run install qt.qt6.6101.linux_gcc_64 qt.qt6.6101.addons.qtmultimedia
+./qt-online-installer-linux-x64-online.run install qt.qt6.6102.linux_gcc_64 qt.qt6.6102.addons.qtmultimedia
 ```
 This will then require
 ```
@@ -132,7 +132,7 @@ cd build
 ```
 Adapt the location of Cuda and  Qt to your system and execute the build process. Also see notes above.
 ```
-export CMAKE_PREFIX_PATH=~/Qt/6.10.1/gcc_64:/usr/local/cuda
+export CMAKE_PREFIX_PATH=~/Qt/6.10.2/gcc_64:/usr/local/cuda
 cmake .. --fresh
 cmake --build . --parallel
 ```
@@ -155,8 +155,8 @@ When done, run ```cuvista -info``` to see available devices and run a test
 - Windows 11
 - Ubuntu 25.04
 - Visual Studio 2022
-- Nvidia Cuda 13.0.1
-- Nvidia Video Codec SDK 13.0.19
+- Nvidia Cuda 13.2
+- Nvidia Video Codec SDK 13.0.37
 - FFmpeg 8.0
-- Qt 6.10.1
+- Qt 6.10.2
 - Cmake later than 3.28

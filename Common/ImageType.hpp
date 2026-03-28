@@ -25,17 +25,17 @@ namespace im {
 
 	//container for pointers to one pixel
 	template <class T> struct ImagePixel {
-		T* x = nullptr;
-		T* y = nullptr;
-		T* z = nullptr;
-		T* w = nullptr;
+		T* s0 = nullptr;
+		T* s1 = nullptr;
+		T* s2 = nullptr;
+		T* s3 = nullptr;
 		int offset = 0;
 
 		void advance() {
-			x += offset;
-			y += offset;
-			z += offset;
-			if (w != nullptr) w += offset;
+			s0 += offset;
+			s1 += offset;
+			s2 += offset;
+			if (s3 != nullptr) s3 += offset;
 		}
 
 		void writeTo(ColorBase srcColor, ColorBase destColor, ImagePixel<uchar>& dest) const;
@@ -80,19 +80,34 @@ namespace im {
 		virtual T& at(size_t idx, size_t r, size_t c) { return *addr(idx, r, c); }
 		virtual const T& at(size_t idx, size_t r, size_t c) const { return *addr(idx, r, c); }
 
-		virtual void setColorPlane(int idx, T colorValue) = 0;
+		virtual void setColor(int idx, T colorValue) = 0;
 		virtual void setColor(const LocalColor<T>& localColor) = 0;
 
 		virtual void copyRow(size_t r, std::shared_ptr<ImageTypeBase<T>> dest) const = 0;
 
 		ImagePixel<T> pixelAt(size_t r, size_t c, std::array<int, 4> colorIndex) {
 			ImagePixel<T> pix;
-			pix.x = addr(colorIndex[0], r, c);
-			pix.y = addr(colorIndex[1], r, c);
-			pix.z = addr(colorIndex[2], r, c);
-			if (planes == 4) pix.w = addr(colorIndex[3], r, c);
+			pix.s0 = addr(colorIndex[0], r, c);
+			pix.s1 = addr(colorIndex[1], r, c);
+			pix.s2 = addr(colorIndex[2], r, c);
+			if (planes == 4) pix.s3 = addr(colorIndex[3], r, c);
 			pix.offset = pixelOffset();
 			return pix;
+		}
+
+		virtual void crc(util::CRC64& base) const {
+			for (int r = 0; r < rows(); r++) {
+				const T* src = row(r);
+				for (int c = 0; c < cols(); c++) {
+					base.addDirect(src[c]);
+				}
+			}
+		}
+
+		virtual util::CRC64 crc() const {
+			util::CRC64 base;
+			crc(base);
+			return base;
 		}
 	};
 
@@ -129,7 +144,7 @@ namespace im {
 			return this->row(r) + c * this->planes + idx;
 		}
 
-		virtual void setColorPlane(int idx, T colorValue) override {
+		virtual void setColor(int idx, T colorValue) override {
 			for (int r = 0; r < this->h; r++) {
 				T* dest = addr(idx, r, 0);
 				for (int c = 0; c < this->w; c++) {
@@ -141,8 +156,8 @@ namespace im {
 
 		virtual void setColor(const LocalColor<T>& localColor) override {
 			for (int r = 0; r < this->h; r++) {
-				T* dest = addr(0, r, 0);
 				for (int c = 0; c < this->w; c++) {
+					T* dest = addr(0, r, c);
 					for (int z = 0; z < this->planes; z++) {
 						*dest = localColor.colorData[z];
 						dest++;
@@ -189,13 +204,13 @@ namespace im {
 			return this->row(idx * this->h + r) + c;
 		}
 
-		virtual void setColorPlane(int idx, T colorValue) override {
+		virtual void setColor(int idx, T colorValue) override {
 			std::fill_n(this->row(1ull * idx * this->h), this->stride * this->h, colorValue);
 		}
 
 		virtual void setColor(const LocalColor<T>& localColor) override {
 			for (int i = 0; i < this->planes; i++) {
-				setColorPlane(i, localColor.colorData[i]);
+				setColor(i, localColor.colorData[i]);
 			}
 		}
 
@@ -205,12 +220,6 @@ namespace im {
 	};
 
 	template <class T> class ImageTypeNV12 : public ImageTypeBase<T> {
-
-	private:
-		size_t addrOffset(size_t idx, size_t r, size_t c) const {
-			assert((idx == 0 && r < this->h && c < this->w) || (idx > 0 && idx < this->planes && r < this->h / 2 && c < this->w / 2) && "invalid pixel address");
-			return idx == 0 ? r * this->stride + c : (this->h + r) * this->stride + c * 2 + idx - 1;
-		}
 
 	public:
 		ImageTypeNV12(std::shared_ptr<ImageStoreBase<T>> store, int h, int w, int stride, int planes) :
@@ -234,14 +243,16 @@ namespace im {
 		}
 
 		virtual uchar* addr(size_t idx, size_t r, size_t c) override {
-			return this->row(0) + addrOffset(idx, r, c);
+			assert(idx < this->planes && r < this->h && c < this->w && "invalid address");
+			return this->row(0) + r * this->stride + c;
 		}
 
 		virtual const uchar* addr(size_t idx, size_t r, size_t c) const override {
-			return this->row(0) + addrOffset(idx, r, c);
+			assert(idx < this->planes && r < this->h && c < this->w && "invalid address");
+			return this->row(0) + r * this->stride + c;
 		}
 
-		virtual void setColorPlane(int idx, T colorValue) override {
+		virtual void setColor(int idx, T colorValue) override {
 			assert(false && "unsupported operation");
 		}
 

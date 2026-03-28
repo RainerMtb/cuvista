@@ -20,7 +20,7 @@
 #include "MovieFrame.hpp"
 
 void StackedWriter::open(OutputOption outputOption) {
-	FFmpegWriter::open(outputOption, AV_PIX_FMT_YUV420P, mData.h, mWidthTotal, mWidthTotal, mData.fileOut);
+	FFmpegWriter::open(outputOption, AV_PIX_FMT_YUV420P, mData.h, mWidthTotal, util::alignValue(mWidthTotal * 4, 64), mData.fileOut);
 }
 
 void StackedWriter::writeOutput(const FrameExecutor& executor) {
@@ -28,10 +28,8 @@ void StackedWriter::writeOutput(const FrameExecutor& executor) {
 	executor.getInput(frameIndex, mInputFrame);
 
 	int bufferIndex = 0;
-	ImageAyuv& combinedFrame = imageBuffer[bufferIndex];
+	ImageVuyx& combinedFrame = imageBuffer[bufferIndex];
 	combinedFrame.setColor(mData.backgroundColor);
-	unsigned char* out = mOutputFrame.data() + mData.stackCrop.left;
-	unsigned char* dest = combinedFrame.data();
 
 	//scale mInputFrame by min zoom and write to left side of mOutputFrame
 	auto fcn = [&] (size_t threadIdx) {
@@ -50,16 +48,16 @@ void StackedWriter::writeOutput(const FrameExecutor& executor) {
 	executor.mPool.addAndWait(fcn, 0, mData.cpuThreads);
 
 	//combine images
-	auto color = mData.backgroundColor.getYUV();
-	for (int row = 0; row < mData.h * 3; row++) {
+	unsigned char* out = mOutputFrame.data() + mData.stackCrop.left * 4;
+	unsigned char* dest = combinedFrame.data();
+	int byteCount = combinedFrame.w() / 2 * 4;
+	for (int r = 0; r < mData.h; r++) {
 		//output frame on right side
-		std::copy_n(out, combinedFrame.width() / 2, dest + combinedFrame.width() / 2);
-		//middle 1% of width in background color
-		for (int col = combinedFrame.width() * 99 / 200; col < combinedFrame.width() * 101 / 200; col++) dest[col] = color[row / mData.h];
-
+		std::copy_n(out, byteCount, dest + byteCount);
 		out += mOutputFrame.stride();
 		dest += combinedFrame.stride();
 	}
+	combinedFrame.setColor(0, combinedFrame.w() * 99ull / 200, combinedFrame.h(), combinedFrame.w() * 1ull / 100, mData.backgroundColor);
 	
 	combinedFrame.index = frameIndex;
 	FFmpegWriter::write(bufferIndex);

@@ -29,7 +29,7 @@ struct Result {
 	Matf output;
 	std::vector<PointResult> results;
 	std::string name;
-	ImageAyuv image;
+	ImageVuyx image;
 	ImageRGBA input;
 	std::string error;
 };

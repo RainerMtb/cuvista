@@ -56,5 +56,6 @@ Eula::Eula() :
 bool Eula::needToShowEula() {
     QSettings settings("RainerMtb", "cuvista");
     QString settingsVersion = settings.value("version", "").toString();
-    return settingsVersion != QString::fromStdString(CUVISTA_VERSION);
+    CuvistaVersion storedVersion = CuvistaVersion::parse(settingsVersion.toStdString());
+    return storedVersion < cuvistaVersion;
 }

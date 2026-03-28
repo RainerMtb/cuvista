@@ -23,6 +23,7 @@
 #include <memory>
 #include <chrono>
 #include <mutex>
+#include "Util.hpp"
 
 int getSystemConsoleWidth();
 
@@ -68,43 +69,14 @@ public:
 	UserInputEnum checkState() override;
 };
 
+namespace util {
 
-struct DebugLogger {
-	std::chrono::time_point<std::chrono::system_clock> start = std::chrono::system_clock::now();
-	std::mutex mutex;
+	struct DebugLoggerTcp : public util::DebugLogger {
+		int mIsConnected = -1;
 
-	virtual void log(const std::string& msg) = 0;
+		DebugLoggerTcp(const char* ip, int port);
+		~DebugLoggerTcp();
 
-	template <class... Args> void format(std::format_string<Args...> fmt, Args&&... args) {
-		log(std::format(fmt, std::forward<Args>(args)...));
-	}
-
-	std::string time() const;
-};
-
-struct DebugLoggerNull : public DebugLogger {
-	void log(const std::string& msg) override;
-};
-
-struct DebugLoggerConsole : public DebugLogger {
-	void log(const std::string& msg) override;
-};
-
-struct DebugLoggerString : public DebugLogger {
-	std::stringstream& ss;
-
-	DebugLoggerString(std::stringstream& ss) : ss { ss } {}
-
-	void log(const std::string& msg) override;
-};
-
-struct DebugLoggerTcp : public DebugLogger {
-	int mIsConnected = -1;
-
-	DebugLoggerTcp(const char* ip, int port);
-	~DebugLoggerTcp();
-
-	void log(const std::string& msg) override;
-};
-
-inline std::shared_ptr<DebugLogger> debugLogger = std::make_shared<DebugLoggerNull>();
+		void log(const std::string& msg) override;
+	};
+}

@@ -95,7 +95,7 @@ public:
 class OutputWriter : public NullWriter {
 
 protected:
-	ImageAyuv outputFrame; //frame to get from main loop and to send to output
+	ImageVuyx outputFrame; //frame to get from main loop and to send to output
 
 public:
 	OutputWriter(MainData& data, MovieReader& reader, int outputStride) :
@@ -107,7 +107,7 @@ public:
 		OutputWriter(data, reader, data.stride4) 
 	{}
 
-	const ImageAyuv& getOutputFrame();
+	const ImageVuyx& getOutputFrame();
 	void writeOutput(const FrameExecutor& executor) override;
 };
 
@@ -122,10 +122,10 @@ protected:
 	bool doWriteOutput;
 
 public:
-	std::list<ImageAyuv> outputFramesYuv;
+	std::list<ImageVuyx> outputFramesYuv;
 	std::list<ImageRGBA> outputFramesRgba;
 	std::list<ImageBGRA> outputFramesBgra;
-	std::list<ImageAyuv> inputFrames;
+	std::list<ImageVuyx> inputFrames;
 	std::list<std::vector<PointResult>> results;
 
 	RawMemoryStoreWriter(size_t maxFrameCount = 250, bool writeInput = true, bool writeOutput = true) :
@@ -137,16 +137,16 @@ public:
 	void writeOutput(const FrameExecutor& executor) override;
 	void writeInput(const FrameExecutor& executor) override;
 	
-	void writeYuvFiles(const std::string& inputFile, const std::string& outputFile);
+	void writeYuvFiles(const std::string& inputFile, const std::string& outputFile, int maxFrames);
 };
 
 
 //-----------------------------------------------------------------------------------
-class ImageWriter : public OutputWriter {
+class ImageWriter : public NullWriter {
 
 protected:
 	ImageWriter(MainData& data, MovieReader& reader) :
-		OutputWriter(data, reader, data.w) 
+		NullWriter(data, reader) 
 	{}
 
 	std::string makeFilename(const std::string& extension) const;
@@ -160,14 +160,14 @@ public:
 class BmpImageWriter : public ImageWriter {
 
 private:
-	ImageRGBA image;
+	ImageBGRA imageBgra;
 	std::jthread worker;
 
 public:
 	BmpImageWriter(MainData& data, MovieReader& reader) :
 		ImageWriter(data, reader),
 		worker { [] {} },
-		image(data.h, data.w) 
+		imageBgra(data.h, data.w)
 	{}
 
 	void close() override;
@@ -179,13 +179,15 @@ public:
 class JpegImageWriter : public ImageWriter {
 
 private:
+	ImageYuv output;
 	AVCodecContext* ctx = nullptr;
 	AVFrame* av_frame = nullptr;
 	AVPacket* packet = nullptr;
 
 public:
 	JpegImageWriter(MainData& data, MovieReader& reader) :
-		ImageWriter(data, reader) 
+		ImageWriter(data, reader),
+		output(data.h, data.w)
 	{}
 
 	~JpegImageWriter() override;
@@ -195,7 +197,7 @@ public:
 
 
 //-----------------------------------------------------------------------------------
-class RawNv12Writer : public OutputWriter {
+class RawNv12Writer : public NullWriter {
 
 private:
 	std::ofstream file;
@@ -203,7 +205,8 @@ private:
 
 public:
 	RawNv12Writer(MainData& data, MovieReader& reader) :
-		OutputWriter(data, reader, data.w)
+		NullWriter(data, reader),
+		nv12(data.h, data.w, data.stride)
 	{}
 
 	void open(OutputOption outputOption) override;
@@ -212,14 +215,16 @@ public:
 
 
 //-----------------------------------------------------------------------------------
-class RawYuvWriter : public OutputWriter {
+class RawYuvWriter : public NullWriter {
 
 private:
 	std::ofstream file;
+	ImageYuv yuv;
 
 public:
 	RawYuvWriter(MainData& data, MovieReader& reader) :
-		OutputWriter(data, reader, data.w) 
+		NullWriter(data, reader),
+		yuv(data.h, data.w, data.stride)
 	{}
 
 	void open(OutputOption outputOption) override;
@@ -236,11 +241,15 @@ protected:
 
 
 //-----------------------------------------------------------------------------------
-class RawPipeWriter : public OutputWriter, public PipeWriter {
+class RawPipeWriter : public NullWriter, public PipeWriter {
+
+private:
+	ImageYuv output;
 
 public:
 	RawPipeWriter(MainData& data, MovieReader& reader) :
-		OutputWriter(data, reader, data.w) 
+		NullWriter(data, reader),
+		output(data.h, data.w)
 	{}
 
 	void open(OutputOption outputOption) override;
@@ -310,7 +319,7 @@ protected:
 	};
 
 	int imageBufferSize;
-	std::vector<ImageAyuv> imageBuffer;
+	std::vector<ImageVuyx> imageBuffer;
 	AVFrame* av_frame = nullptr;
 
 	AVCodecContext* codec_ctx = nullptr;
@@ -346,7 +355,7 @@ class AsfPipeWriter : public FFmpegWriter, public PipeWriter {
 private:
 	unsigned char* mBuffer = nullptr;
 	AVIOContext* av_avio = nullptr;
-	ImageAyuv outputFrame;
+	ImageVuyx outputFrame;
 
 	static int writeBuffer(void* opaque, const unsigned char* buf, int bufsiz);
 	static int writeBuffer(void* opaque, unsigned char* buf, int bufsiz);
@@ -369,8 +378,8 @@ class StackedWriter : public FFmpegWriter {
 private:
 	int mWidth;
 	int mWidthTotal;
-	ImageAyuv mInputFrame;
-	ImageAyuv mOutputFrame;
+	ImageVuyx mInputFrame;
+	ImageVuyx mOutputFrame;
 
 public:
 	StackedWriter(MainData& data, MovieReader& reader) :
@@ -474,7 +483,7 @@ public:
 class ResultImageWriter : public MovieWriterBase {
 
 private:
-	ImageAyuv yuv;
+	ImageVuyx yuv;
 	ImageBGRA bgra;
 
 public:
@@ -524,5 +533,5 @@ private:
 public:
 	SimpleYuvWriter(const std::string& file);
 
-	void write(ImageAyuv& image);
+	void write(ImageVuyx& image);
 };

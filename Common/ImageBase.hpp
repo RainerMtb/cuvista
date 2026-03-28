@@ -14,7 +14,7 @@ namespace im {
 
 		void plot(int x, int y, double a, const LocalColor<T>& localColor) {
 			double alpha = a * localColor.alpha;
-			if (x >= 0 && x < width() && y >= 0 && y < height()) {
+			if (x >= 0 && x < w() && y >= 0 && y < h()) {
 				for (int i = 0; i < planes() && i < localColor.colorData.size(); i++) {
 					int z = colorPtr->colorIndex[i];
 					T& val = at(z, y, x);
@@ -59,14 +59,18 @@ namespace im {
 		virtual T* data() { return typePtr->plane(0); }
 		virtual const T* data()                            const { return typePtr->plane(0); }
 
-		virtual int height()                      const override { return typePtr->h; }
-		virtual int width()                       const override { return typePtr->w; }
+		virtual int h()                           const override { return typePtr->h; }
+		virtual int rows()                        const override { return typePtr->rows(); }
+		virtual int w()                           const override { return typePtr->w; }
+		virtual int cols()                        const override { return typePtr->cols(); }
 		virtual int planes()                      const override { return typePtr->planes; }
 		virtual int stride()                      const override { return typePtr->stride; }
 		virtual int strideInBytes()               const override { return typePtr->stride * sizeof(T); }
 
 		virtual size_t sizeInBytes()              const override { return storePtr->sizeInBytes(); }
 		virtual std::vector<T> bytes()            const override { return storePtr->bytes(); }
+		virtual uint64_t crc()                    const override { return typePtr->crc().result(); }
+		virtual void crc(util::CRC64& base)       const override { return typePtr->crc(base); }
 		virtual void write(std::ostream& os)               const { return storePtr->write(os); }
 
 		virtual void gray(ThreadPoolBase& pool = defaultPool)    { return colorPtr->gray(pool); }
@@ -81,28 +85,21 @@ namespace im {
 
 		virtual void savePgm(const std::string& filename) const override {
 			std::ofstream os(filename, std::ios::binary);
-			int w = width();
-			int h = height();
-			PgmHeader(w, h).writeHeader(os);
-			std::vector<char> data(w);
+			PgmHeader(w(), h()).writeHeader(os);
+			std::vector<char> data(w());
 			float scale = 255.0f / colorPtr->maxValue;
 
 			for (int z = 0; z < planes(); z++) {
-				for (int r = 0; r < h; r++) {
-					for (int c = 0; c < w; c++) data[c] = (uchar) std::round(at(z, r, c) * scale);
+				for (int r = 0; r < h(); r++) {
+					for (int c = 0; c < w(); c++) data[c] = (uchar) std::round(at(z, r, c) * scale);
 					os.write(data.data(), data.size());
 				}
 			}
 		}
 
-		virtual uint64_t crc() const override {
-			util::CRC64 crc64;
-			return crc64.add(*this).result();
-		}
-
 		//fill color value in one plane
-		virtual void setColorPlane(int plane, T colorValue) {
-			colorPtr->setColorPlane(plane, colorValue);
+		virtual void setColor(int plane, T colorValue) {
+			colorPtr->setColor(plane, colorValue);
 		}
 
 		//fill color
@@ -111,8 +108,13 @@ namespace im {
 		}
 
 		//set color values for one pixel
-		virtual void setPixel(size_t row, size_t col, const Color& color) {
-			colorPtr->setPixel(row, col, color);
+		virtual void setColor(size_t row, size_t col, const Color& color) {
+			colorPtr->setColor(row, col, 1, 1, color);
+		}
+
+		//set color values for area pixel
+		virtual void setColor(size_t row, size_t col, size_t h, size_t w, const Color& color) {
+			colorPtr->setColor(row, col, h, w, color);
 		}
 
 		//write text into image
@@ -127,7 +129,7 @@ namespace im {
 			//fill background area
 			for (int ix = x0; ix < x0 + sx + wt; ix++) {
 				for (int iy = y0; iy < y0 + ht; iy++) {
-					if (iy < height() && ix < width()) {
+					if (iy < h() && ix < w()) {
 						plot(ix, iy, 1.0, bg);
 					}
 				}
@@ -148,7 +150,7 @@ namespace im {
 								for (int scaleX = 0; scaleX < sx; scaleX++) {
 									int xx = ix + scaleX;
 									int yy = iy + scaleY;
-									if (yy < height() && xx < width()) {
+									if (yy < h() && xx < w()) {
 										plot(xx, yy, 1.0, fg);
 									}
 								}
@@ -169,7 +171,7 @@ namespace im {
 
 		//write text into image
 		virtual Size writeText(std::string_view text, int x, int y) {
-			int scale = std::min(width(), height()) / 600 + 1;
+			int scale = std::min(w(), h()) / 600 + 1;
 			return writeText(text, x, y, scale, scale, TextAlign::BOTTOM_LEFT);
 		}
 
@@ -332,7 +334,7 @@ namespace im {
 			for (auto& [idx, a] : alpha) {
 				int iy = idx / stride();
 				int ix = idx % stride();
-				if (ix >= 0 && ix < width() && iy >= 0 && iy < height()) {
+				if (ix >= 0 && ix < w() && iy >= 0 && iy < h()) {
 					plot(ix, iy, a * ds * ds, col);
 				}
 			}
@@ -343,7 +345,7 @@ namespace im {
 		}
 
 		virtual void copyTo(ImageBase<T>& dest, ThreadPoolBase& pool = defaultPool) const {
-			assert(this->imageType() == dest.imageType() && width() <= dest.width() && height() <= dest.height() && "invalid image for copy");
+			assert(this->imageType() == dest.imageType() && w() <= dest.w() && h() <= dest.h() && "invalid image for copy");
 			for (size_t r = 0; r < typePtr->rows(); r++) {
 				typePtr->copyRow(r, dest.typePtr);
 			}
@@ -351,10 +353,10 @@ namespace im {
 		}
 
 		virtual void writeTo(ImageBase<T>& dest, int y0, int x0, T alpha, ThreadPoolBase& pool = defaultPool) const {
-			assert(this->colorBase() == dest.colorBase() && x0 + width() < dest.width() && y0 + height() < dest.height() && "invalid image for copy");
+			assert(this->colorBase() == dest.colorBase() && x0 + w() < dest.w() && y0 + h() < dest.h() && "invalid image for copy");
 			T mv = colorPtr->maxValue;
 			auto fcn = [&] (size_t r) {
-				for (size_t c = 0; c < width(); c++) {
+				for (size_t c = 0; c < w(); c++) {
 					float a = planes() < 4 ? mv : at(colorPtr->colorIndex[3], r, c);
 					float srcAlpha = a * alpha / mv;
 					float destAlpha = mv - srcAlpha;
@@ -366,13 +368,13 @@ namespace im {
 					}
 				}
 			};
-			pool.addAndWait(fcn, 0, height());
+			pool.addAndWait(fcn, 0, h());
 		}
 
 		template <class R> friend class ImageBase;
 
 		template <class R> void convertTo(ImageBase<R>& dest, ThreadPoolBase& pool = defaultPool) const {
-			assert(width() <= dest.width() && height() <= dest.height() && "invalid conversion");
+			assert(w() <= dest.w() && h() <= dest.h() && "invalid conversion");
 			if (this->imageType() == dest.imageType()) {
 				colorPtr->convertValuesTo(dest.colorPtr, pool);
 
@@ -409,21 +411,21 @@ namespace im {
 
 		//sample clamped to image bounds
 		virtual T sample(size_t plane, float x, float y) const {
-			return sample(plane, x, y, 0.0f, width() - 1.0f, 0.0f, height() - 1.0f);
+			return sample(plane, x, y, 0.0f, w() - 1.0f, 0.0f, h() - 1.0f);
 		}
 
 		//sample from image, return defaultValue when outside
 		virtual T sample(size_t plane, float x, float y, T defaultValue) const {
-			return (x < 0.0 || x > width() - 1.0 || y < 0.0 || y > height() - 1.0) ? defaultValue : sample(plane, x, y);
+			return (x < 0.0 || x > w() - 1.0 || y < 0.0 || y > h() - 1.0) ? defaultValue : sample(plane, x, y);
 		}
 
 		//compute sum of squared deltas
 		double compareTo(const ImageBase<T>& other) const {
 			double result = 0.0;
-			if (this->imageType() == other.imageType() && width() == other.width() && height() == other.height()) {
+			if (this->imageType() == other.imageType() && w() == other.w() && h() == other.h()) {
 				for (int z = 0; z < planes(); z++) {
-					for (int r = 0; r < height(); r++) {
-						for (int c = 0; c < width(); c++) {
+					for (int r = 0; r < h(); r++) {
+						for (int c = 0; c < w(); c++) {
 							result += sqr(at(z, r, c) - other.at(z, r, c));
 						}
 					}

@@ -49,9 +49,9 @@ private:
 		nvenc.createEncoder(w, h, 10, 1, 5, crf, NV_ENC_CODEC_HEVC_GUID);
 
 		ImageYuv inputFrame(h, w, nvenc.cudaPitch);
-		inputFrame.setColorPlane(0, y);
-		inputFrame.setColorPlane(1, u);
-		inputFrame.setColorPlane(2, v);
+		inputFrame.setColor(0, y);
+		inputFrame.setColor(1, u);
+		inputFrame.setColor(2, v);
 		//inputFrame.writeText("test", 20, 20, 5, 5, im::TextAlign::TOP_LEFT);
 
 		//set up a frame in nv12 format

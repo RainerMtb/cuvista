@@ -54,7 +54,7 @@ namespace Microsoft::VisualStudio::CppUnitTestFramework {
 	}
 
 	template <> static std::wstring ToString(const ImageYuv& im) {
-		return L"image w=" + std::to_wstring(im.width()) + L" h=" + std::to_wstring(im.height());
+		return L"image w=" + std::to_wstring(im.w()) + L" h=" + std::to_wstring(im.h());
 	}
 
 	template <> static std::wstring ToString(const std::vector<double>& v) {

@@ -27,14 +27,38 @@ const sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDG
 const sampler_t downsampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE | CLK_FILTER_LINEAR;
 
 
-__kernel void scale_8u32f_1(__read_only image2d_t src, __write_only image2d_t dest) {
+__kernel void scale_8u32f_1(__read_only image2d_t src, __write_only image2d_t dest, __global long* luma) {
 	int c = get_global_id(0);
 	int r = get_global_id(1);
 	float f = 1.0f / 255.0f;
 
 	int2 coords = (int2)(c, r);
-	uchar val = read_imageui(src, coords).y;
+	uchar val = read_imageui(src, coords).s2;
 	write_imagef(dest, coords, val * f);
+
+	int h = get_global_size(1);
+	if (r == 0) {
+		int sum = 0;
+		for (int i = 0; i < h; i++) {
+			int y = read_imageui(src, (int2)(c, i)).s2;
+			sum += y * y;
+		}
+		luma[c] = sum;
+	}
+}
+
+__kernel void lumaSum(__global long* luma, int w) {
+	int x = get_local_id(0);
+	int siz = get_local_size(0);
+	for (int i = x + siz; i < w; i += siz) {
+		luma[x] += luma[i];
+	}
+
+	if (x == 0) {
+		for (int i = 1; i < siz; i++) {
+			luma[0] += luma[i];
+		}
+	}
 }
 
 __kernel void scale_8u32f_3(__read_only image2d_t src, __write_only image2d_t dest) {
@@ -45,10 +69,10 @@ __kernel void scale_8u32f_3(__read_only image2d_t src, __write_only image2d_t de
 
 	int2 coords = (int2)(c, r);
 	float4 val = (float4)(
-		read_imageui(src, coords).x * f,
-		read_imageui(src, coords).y * f,
-		read_imageui(src, coords).z * f,
-		read_imageui(src, coords).w * f
+		read_imageui(src, coords).s0 * f,
+		read_imageui(src, coords).s1 * f,
+		read_imageui(src, coords).s2 * f,
+		read_imageui(src, coords).s3 * f
 	);
 	write_imagef(dest, (int2)(c, r), val);
 }
@@ -59,10 +83,24 @@ __kernel void scale_32f8u_3(__read_only image2d_t src, __global uchar* dest, int
 
 	float4 val = rint(read_imagef(src, (int2)(c, r)) * 255.0f);
 	int idx = r * pitch + c * 4;
-	dest[idx + 0] = (uchar)(val.x);
-	dest[idx + 1] = (uchar)(val.y);
-	dest[idx + 2] = (uchar)(val.z);
-	dest[idx + 3] = (uchar)(val.w);
+	dest[idx + 0] = (uchar)(val.s0);
+	dest[idx + 1] = (uchar)(val.s1);
+	dest[idx + 2] = (uchar)(val.s2);
+	dest[idx + 3] = (uchar)(val.s3);
+}
+
+__kernel void scale_32f8u_3_yuv(__read_only image2d_t src, __global uchar* dest, int pitch) {
+	int c = get_global_id(0);
+	int r = get_global_id(1);
+	int h = get_global_size(1);
+
+	float4 val = rint(read_imagef(src, (int2)(c, r)) * 255.0f);
+	uchar* ptr = dest + r * pitch + c;
+	*ptr = (uchar)(val.s2);
+	ptr += h * pitch;
+	*ptr = (uchar)(val.s1);
+	ptr += h * pitch;
+	*ptr = (uchar)(val.s0);
 }
 
 struct FilterKernel {
@@ -105,9 +143,9 @@ __kernel void filter_32f_3(__read_only image2d_t src, __write_only image2d_t des
 	int y = r - dy * siz / 2;
 	for (int i = 0; i < siz; i++) {
 		float4 val = read_imagef(src, sampler, (int2)(x, y));
-		result.y = fma(val.y, filterKernels[0].k[i], result.y);
-		result.z = fma(val.z, filterKernels[1].k[i], result.z);
-		result.w = fma(val.w, filterKernels[2].k[i], result.w);
+		result.s0 = fma(val.s0, filterKernels[2].k[i], result.s0);
+		result.s1 = fma(val.s1, filterKernels[1].k[i], result.s1);
+		result.s2 = fma(val.s2, filterKernels[0].k[i], result.s2);
 		x += dx;
 		y += dy;
 	}
@@ -139,8 +177,10 @@ __kernel void warp_back(__read_only image2d_t src, __write_only image2d_t dest, 
 	int y = get_global_id(1);
 	int w = get_global_size(0);
 	int h = get_global_size(1);
+
 	float xx = fma(x, trf.s0, fma(y, trf.s1, trf.s2));
 	float yy = fma(x, trf.s3, fma(y, trf.s4, trf.s5));
+
 	if (xx >= 0.0f && xx <= w - 1 && yy >= 0.0f && yy <= h - 1) {
 		float flx = floor(xx);
 		float fly = floor(yy);
@@ -186,9 +226,9 @@ __kernel void yuv8u_to_rgba(__read_only image2d_t src, __global uchar* dest, int
 	int h = get_global_size(1);
 
 	int2 coords = (int2)(c, r);
-	uchar y = read_imageui(src, coords).s1;
-	uchar u = read_imageui(src, coords).s2;
-	uchar v = read_imageui(src, coords).s3;
+	uchar y = read_imageui(src, coords).s2;
+	uchar u = read_imageui(src, coords).s1;
+	uchar v = read_imageui(src, coords).s0;
 	uchar* ptr = dest + 4 * (r * w + c);
 	yuv_to_rgba_func(y, u, v, ptr + offset.s0, ptr + offset.s1, ptr + offset.s2, ptr + offset.s3);
 }
@@ -201,7 +241,7 @@ __kernel void yuv32f_to_rgba(__read_only image2d_t src, __global uchar* dest, in
 
 	float4 yuv = read_imagef(src, (int2)(c, r)) * 255.0f;
 	uchar* ptr = dest + 4 * (r * w + c);
-	yuv_to_rgba_func(yuv.s0, yuv.s1, yuv.s2, ptr + offset.s0, ptr + offset.s1, ptr + offset.s2, ptr + offset.s3);
+	yuv_to_rgba_func(yuv.s2, yuv.s1, yuv.s0, ptr + offset.s0, ptr + offset.s1, ptr + offset.s2, ptr + offset.s3);
 }
 
 __kernel void yuv32f_to_nv12(__read_only image2d_t src, __global uchar* dest, int stride, int h) {
@@ -217,15 +257,15 @@ __kernel void yuv32f_to_nv12(__read_only image2d_t src, __global uchar* dest, in
 
 	// Y plane
 	ptr = dest + stride * rr + cc;
-	ptr[0] = (uchar) f00.x;
-	ptr[1] = (uchar) f01.x;
-	ptr[stride + 0] = (uchar) f10.x;
-	ptr[stride + 1] = (uchar) f11.x;
+	ptr[0] = (uchar) f00.s2;
+	ptr[1] = (uchar) f01.s2;
+	ptr[stride + 0] = (uchar) f10.s2;
+	ptr[stride + 1] = (uchar) f11.s2;
 
 	// UV planes
 	ptr = dest + stride * (h + r) + cc;
-	float u = (f00.y + f01.y + f10.y + f11.y) / 4.0f;
-	float v = (f00.z + f01.z + f10.z + f11.z) / 4.0f;
+	float u = (f00.s1 + f01.s1 + f10.s1 + f11.s1) / 4.0f;
+	float v = (f00.s0 + f01.s0 + f10.s0 + f11.s0) / 4.0f;
 	ptr[0] = (uchar) u;
 	ptr[1] = (uchar) v;
 }

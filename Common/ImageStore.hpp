@@ -36,6 +36,7 @@ namespace im {
 
 		virtual size_t sizeInBytes() const = 0;
 		virtual std::vector<T> bytes() const = 0;
+
 		virtual void write(std::ostream& os) const = 0;
 	};
 
@@ -124,6 +125,18 @@ namespace im {
 			return data;
 		}
 
+		virtual util::CRC64 crc() const override {
+			util::CRC64 out;
+			return crc(out);
+		}
+
+		virtual util::CRC64 crc(util::CRC64 base) const override {
+			for (std::span<T> s : store) {
+				for (const T& item : s) base.addDirect(item);
+			}
+			return base;
+		}
+
 		virtual void write(std::ostream& os) const override {
 			for (auto& s : store) os.write(reinterpret_cast<const char*>(s.data()), s.size() * sizeof(T));
 		}
@@ -164,7 +177,7 @@ namespace im {
 		virtual std::vector<T> bytes() const {
 			return std::vector<T>(store.begin(), store.end());
 		}
-
+		
 		virtual void write(std::ostream& os) const override {
 			os.write(reinterpret_cast<const char*>(store.data()), store.size() * sizeof(T));
 		}

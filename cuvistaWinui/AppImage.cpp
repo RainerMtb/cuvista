@@ -45,9 +45,7 @@ using namespace winrt::Windows::Graphics::Imaging;
 using namespace winrt::Windows::Storage::Streams;
 
 winrt::fire_and_forget ImageXamlBGRA::loadImageScaledToFit(winrt::hstring file) {
-    int w = width();
-    int h = height();
-    int s = std::min(w, h);
+    int s = std::min(w(), h());
 
     //load image scaled
     winrt::Windows::Foundation::Uri uri(file);
@@ -69,10 +67,10 @@ winrt::fire_and_forget ImageXamlBGRA::loadImageScaledToFit(winrt::hstring file) 
     std::fill(data(), data() + sizeInBytes(), 0);
 
     //copy pixel data to WriteableBitmap
-    unsigned char* dest = data() + (h - s) * w * 2 + (w - s) * 2;
+    unsigned char* dest = data() + (h() - s) * w() * 2 + (w() - s) * 2;
     for (int i = 0; i < s; i++) {
         std::copy_n(src, 4 * s, dest);
-        dest += 4 * w;
+        dest += 4 * w();
         src += 4 * s;
     }
 

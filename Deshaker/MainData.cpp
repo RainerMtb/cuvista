@@ -473,8 +473,7 @@ void MainData::validate(const MovieReader& reader) {
 		if (col < 0 || col > 255) throw AVException("invalid background color value: " + std::to_string(col));
 	}
 	//set background yuv color vector
-	backgroundColor.toYUVfloat(&bgcolorYuv.y, &bgcolorYuv.u, &bgcolorYuv.v);
-	backgroundColor.toYUVfloat(&bgcolorAyuv.y, &bgcolorAyuv.u, &bgcolorAyuv.v);
+	backgroundColor.toYUVfloat(&bgcol4.y, &bgcol4.u, &bgcol4.v);
 
 	//number of frames to buffer
 	this->radius = (int) std::round(radsec * reader.fps());

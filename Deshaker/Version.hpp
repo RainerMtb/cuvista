@@ -18,9 +18,18 @@
 
 #pragma once
 
-#include <string>
+#include <format>
 
-inline int CUVISTA_VERSION_MAJOR = 1;
-inline int CUVISTA_VERSION_MINOR = 9;
-inline int CUVISTA_VERSION_PATCH = 5;
-inline std::string CUVISTA_VERSION = std::format("{}.{}.{}", CUVISTA_VERSION_MAJOR, CUVISTA_VERSION_MINOR, CUVISTA_VERSION_PATCH);
+struct CuvistaVersion {
+	int major = 1;
+	int minor = 9;
+	int patch = 5;
+
+	static CuvistaVersion parse(const std::string& version);
+
+	bool operator < (const CuvistaVersion& other);
+};
+
+inline CuvistaVersion cuvistaVersion = { 1, 9, 5 };
+
+inline std::string CUVISTA_VERSION = std::format("{}.{}.{}", cuvistaVersion.major, cuvistaVersion.minor, cuvistaVersion.patch);

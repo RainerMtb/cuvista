@@ -21,10 +21,11 @@
 #include "MovieFrame.hpp"
 
 DummyFrame::DummyFrame(MainData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool) :
-	FrameExecutor(data, deviceInfo, frame, pool)
+	FrameExecutor(data, deviceInfo, frame, pool),
+	mReadBuffer(mData.h, mData.w, mData.stride4),
+	mFrames(data.bufferCount)
 {
-	mFrames.resize(data.bufferCount);
-	for (int i = 0; i < mFrames.size(); i++) mFrames[i] = ImageAyuv(data.h, data.w, data.stride);
+	for (int i = 0; i < mFrames.size(); i++) mFrames[i] = ImageVuyx(data.h, data.w, data.stride4);
 }
 
 int64_t DummyFrame::createPyramid(int64_t frameIndex, AffineDataFloat trf, bool warp) {
@@ -40,36 +41,31 @@ Matf DummyFrame::getPyramid(int64_t frameIndex) const {
 };
 
 Image8& DummyFrame::inputDestination(int64_t frameIndex) {
-	size_t idx = frameIndex % mFrames.size();
-	return mFrames[idx];
+	return mReadBuffer;
 }
 
 void DummyFrame::inputData(int64_t frameIndex) {
 	//mFrames[idx].writeText(std::to_string(frameIndex), 0, 0, 3, 3, im::TextAlign::TOP_LEFT);
+	size_t idx = frameIndex % mFrames.size();
+	std::swap(mReadBuffer, mFrames[idx]);
 }
 
 void DummyFrame::outputData(int64_t frameIndex, AffineDataFloat trf) {}
 
 void DummyFrame::getOutput(int64_t frameIndex, Image8& image) const {
 	size_t idx = frameIndex % mFrames.size();
-	if (image.colorBase() == ColorBase::YUV) {
+	if (image.imageType() == ImageType::VUYX) {
 		mFrames[idx].copyTo(image, mPool);
 
-	} else if (image.colorBase() == ColorBase::RGB) {
+	} else {
 		mFrames[idx].convertTo(image, mPool);
 	}
-	debugLogger->format("output frame {} {}", frameIndex, idx);
 }
 
 bool DummyFrame::getOutput(int64_t frameIndex, Image8& image, int cudaNv12stride, unsigned char* cudaNv12ptr) const {
 	size_t idx = frameIndex % mFrames.size();
 	mFrames[idx].convertTo(image, mPool);
 	return true;
-}
-
-void DummyFrame::getWarped(int64_t frameIndex, Image8bgr & image) {
-	size_t idx = frameIndex % mFrames.size();
-	mFrames[idx].convertTo(image, mPool);
 }
 
 void DummyFrame::getInput(int64_t frameIndex, Image8& image) const {

@@ -35,7 +35,7 @@ namespace im {
 
 	public:
 		T maxValue;
-		std::array<int, 4> colorIndex;
+		std::array<int, 4> colorIndex; //for YUVA color
 
 		ImageColorBase(std::shared_ptr<ImageTypeBase<T>> typePtr, std::array<int, 4> colorIndex, T maxValue) :
 			typePtr { typePtr },
@@ -98,23 +98,23 @@ namespace im {
 
 					src = pixelAt(rr, cc);
 					src.writeTo(colorBase(), ColorBase::YUV, p);
-					destY[cc] = *p.x;
-					sumU += *p.y; sumV += *p.z;
+					destY[cc] = *p.s0;
+					sumU += *p.s1; sumV += *p.s2;
 
 					src = pixelAt(rr, cc + 1);
 					src.writeTo(colorBase(), ColorBase::YUV, p);
-					destY[cc + 1] = *p.x;
-					sumU += *p.y; sumV += *p.z;
+					destY[cc + 1] = *p.s0;
+					sumU += *p.s1; sumV += *p.s2;
 
 					src = pixelAt(rr + 1, cc);
 					src.writeTo(colorBase(), ColorBase::YUV, p);
-					destY[cc + dest->typePtr->stride] = *p.x;
-					sumU += *p.y; sumV += *p.z;
+					destY[cc + dest->typePtr->stride] = *p.s0;
+					sumU += *p.s1; sumV += *p.s2;
 
 					src = pixelAt(rr + 1, cc + 1);
 					src.writeTo(colorBase(), ColorBase::YUV, p);
-					destY[cc + dest->typePtr->stride + 1] = *p.x;
-					sumU += *p.y; sumV += *p.z;
+					destY[cc + dest->typePtr->stride + 1] = *p.s0;
+					sumU += *p.s1; sumV += *p.s2;
 
 					destUV[cc] = sumU / 4;
 					destUV[cc + 1] = sumV / 4;
@@ -176,18 +176,22 @@ namespace im {
 			assert(os.good() && "error writing file");
 		}
 
-		void setColorPlane(int plane, T colorValue) {
-			typePtr->setColorPlane(plane, colorValue);
+		void setColor(int plane, T colorValue) {
+			typePtr->setColor(plane, colorValue);
 		}
 
 		void setColor(const Color& color) {
 			typePtr->setColor(getLocalColor(color));
 		}
 
-		void setPixel(size_t row, size_t col, const Color& color) {
+		void setColor(size_t row, size_t col, size_t h, size_t w, const Color& color) {
 			LocalColor<T> local = getLocalColor(color);
-			for (int i = 0; i < typePtr->planes; i++) {
-				this->typePtr->at(i, row, col) = local.colorData[i];
+			for (size_t r = row; r < row + h; r++) {
+				for (size_t c = col; c < col + w; c++) {
+					for (size_t i = 0; i < typePtr->planes; i++) {
+						this->typePtr->at(i, r, c) = local.colorData[i];
+					}
+				}
 			}
 		}
 	};
@@ -221,8 +225,8 @@ namespace im {
 			auto fcn = [&] (size_t r) {
 				ImagePixel<T> pixel = this->pixelAt(r, 0);
 				for (size_t c = 0; c < this->typePtr->w; c++) {
-					T gray = im::rgb_to_y(*pixel.x, *pixel.y, *pixel.z);
-					*pixel.x = *pixel.y = *pixel.z = gray;
+					T gray = im::rgb_to_y(*pixel.s0, *pixel.s1, *pixel.s2);
+					*pixel.s0 = *pixel.s1 = *pixel.s2 = gray;
 					pixel.advance();
 				}
 			};
@@ -254,8 +258,8 @@ namespace im {
 		}
 
 		virtual void gray(ThreadPoolBase& pool = defaultPool) override {
-			this->setColorPlane(1, this->maxValue / 2);
-			this->setColorPlane(2, this->maxValue / 2);
+			this->setColor(1, this->maxValue / 2);
+			this->setColor(2, this->maxValue / 2);
 		}
 	};
 

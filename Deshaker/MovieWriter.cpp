@@ -25,10 +25,10 @@ SimpleYuvWriter::SimpleYuvWriter(const std::string& file) {
 	os = std::ofstream(file, std::ios::binary);
 }
 
-void SimpleYuvWriter::write(ImageAyuv& image) {
+void SimpleYuvWriter::write(ImageVuyx& image) {
 	const unsigned char* src = image.data();
-	for (int i = 0; i < image.height(); i++) {
-		os.write(reinterpret_cast<const char*>(src), image.width() * 4ull);
+	for (int i = 0; i < image.h(); i++) {
+		os.write(reinterpret_cast<const char*>(src), image.w() * 4ull);
 		src += image.stride();
 	}
 }
@@ -97,7 +97,7 @@ void MovieWriterCollection::close() {
 // primitive output writer class
 //-----------------------------------------------------------------------------------
 
-const ImageAyuv& OutputWriter::getOutputFrame() { 
+const ImageVuyx& OutputWriter::getOutputFrame() { 
 	return outputFrame; 
 }
 
@@ -114,7 +114,7 @@ void OutputWriter::writeOutput(const FrameExecutor& executor) {
 void RawMemoryStoreWriter::writeOutput(const FrameExecutor& executor) {
 	if (doWriteOutput) {
 		{
-			ImageAyuv& frameYuv = outputFramesYuv.emplace_back(executor.mData.h, executor.mData.w);
+			ImageVuyx& frameYuv = outputFramesYuv.emplace_back(executor.mData.h, executor.mData.w);
 			executor.getOutput(frameIndex, frameYuv);
 			while (outputFramesYuv.size() > maxFrameCount) outputFramesYuv.pop_front();
 		}
@@ -138,7 +138,7 @@ void RawMemoryStoreWriter::writeInput(const FrameExecutor& executor) {
 	results.push_back(executor.mFrame.mResultPoints);
 	
 	if (doWriteInput) {
-		ImageAyuv image(executor.mData.h, executor.mData.w);
+		ImageVuyx image(executor.mData.h, executor.mData.w);
 		executor.getInput(inputFrameIndex, image);
 		image.index = inputFrameIndex;
 		inputFrames.push_back(image);
@@ -147,23 +147,31 @@ void RawMemoryStoreWriter::writeInput(const FrameExecutor& executor) {
 	}
 }
 
-void RawMemoryStoreWriter::writeYuvFiles(const std::string& inputFile, const std::string& outputFile) {
+void RawMemoryStoreWriter::writeYuvFiles(const std::string& inputFile, const std::string& outputFile, int maxFrames) {
 	std::ofstream osin(inputFile, std::ios::binary);
-	for (ImageAyuv& image : outputFramesYuv) {
-		static ImageNV12 nv12(image.height(), image.width(), image.width());
-		std::string str = std::format(" frame {:04} ", image.index);
-		image.writeText(str, 0, image.height());
+	int idx;
+	
+	idx = 0;
+	for (ImageVuyx& image : inputFrames) {
+		static ImageNV12 nv12(image.h(), image.w(), image.w());
+		std::string str = std::format(" frame {:04} ", idx);
+		image.writeText(str, 0, image.h());
 		image.convertTo(nv12);
 		osin.write(reinterpret_cast<char*>(nv12.addr(0, 0, 0)), nv12.sizeInBytes());
+		idx++;
+		if (idx == maxFrames) break;
 	}
 
 	std::ofstream osout(outputFile, std::ios::binary);
-	for (ImageAyuv& image : inputFrames) {
-		static ImageNV12 nv12(image.height(), image.width(), image.width());
-		std::string str = std::format(" frame {:04} ", image.index);
-		image.writeText(str, 0, image.height());
+	idx = 0;
+	for (ImageVuyx& image : outputFramesYuv) {
+		static ImageNV12 nv12(image.h(), image.w(), image.w());
+		std::string str = std::format(" frame {:04} ", idx);
+		image.writeText(str, 0, image.h());
 		image.convertTo(nv12);
 		osout.write(reinterpret_cast<char*>(nv12.addr(0, 0, 0)), nv12.sizeInBytes());
+		idx++;
+		if (idx == maxFrames) break;
 	}
 }
 
@@ -216,11 +224,11 @@ std::string ImageWriter::makeFilename(const std::string& extension) const {
 
 void BmpImageWriter::writeOutput(const FrameExecutor& executor) {
 	worker.join();
-	executor.getOutput(frameIndex, image);
+	executor.getOutput(frameIndex, imageBgra);
 	std::string fname = makeFilename("bmp");
-	worker = std::jthread([&, fname] { 
-		image.saveBmpColor(fname);
-		this->outputBytesWritten += 3ll * image.width() * image.height();
+	worker = std::jthread([&, fname] {
+		imageBgra.saveBmpColor(fname);
+		this->outputBytesWritten += 3ull * mData.h * mData.w;
 		this->encodedBytesTotal += std::filesystem::file_size(std::filesystem::path(fname));
 	});
 	this->frameIndex++;
@@ -258,18 +266,18 @@ void JpegImageWriter::open(OutputOption outputOption) {
 	av_frame->height = mData.h;
 	av_frame->quality = ctx->global_quality; //quality must be set both to AVContext and AVFrame
 
-	av_frame->linesize[0] = outputFrame.stride();
-	av_frame->linesize[1] = outputFrame.stride();
-	av_frame->linesize[2] = outputFrame.stride();
-	av_frame->data[0] = outputFrame.plane(0);
-	av_frame->data[1] = outputFrame.plane(1);
-	av_frame->data[2] = outputFrame.plane(2);
+	av_frame->linesize[0] = output.stride();
+	av_frame->linesize[1] = output.stride();
+	av_frame->linesize[2] = output.stride();
+	av_frame->data[0] = output.plane(0);
+	av_frame->data[1] = output.plane(1);
+	av_frame->data[2] = output.plane(2);
 
 	packet = av_packet_alloc();
 }
 
 void JpegImageWriter::writeOutput(const FrameExecutor& executor) {
-	executor.getOutput(frameIndex, outputFrame);
+	executor.getOutput(frameIndex, output);
 
 	av_frame->pts = this->frameIndex;
 	int result = avcodec_send_frame(ctx, av_frame);
@@ -307,15 +315,17 @@ JpegImageWriter::~JpegImageWriter() {
 //open file
 void RawNv12Writer::open(OutputOption outputOption) {
 	file = std::ofstream(mData.fileOut, std::ios::binary);
-	nv12 = ImageNV12(mData.h, mData.w, mData.w);
 }
 
 void RawNv12Writer::writeOutput(const FrameExecutor& executor) {
-	executor.getOutput(frameIndex, outputFrame);
-	outputFrame.convertTo(nv12, executor.mPool);
-	file.write(reinterpret_cast<const char*>(nv12.data()), nv12.sizeInBytes());
+	executor.getOutput(frameIndex, nv12, 0, nullptr);
 
-	this->outputBytesWritten += nv12.sizeInBytes();
+	for (int r = 0; r < nv12.rows(); r++) {
+		uchar* ptr = nv12.row(r);
+		file.write(reinterpret_cast<const char*>(ptr), nv12.w());
+	}
+
+	this->outputBytesWritten += nv12.rows() * nv12.cols();
 	this->encodedBytesTotal.store(outputBytesWritten);
 	this->frameIndex++;
 }
@@ -331,10 +341,14 @@ void RawYuvWriter::open(OutputOption outputOption) {
 }
 
 void RawYuvWriter::writeOutput(const FrameExecutor& executor) {
-	executor.getOutput(frameIndex, outputFrame);
-	file.write(reinterpret_cast<const char*>(outputFrame.data()), outputFrame.sizeInBytes());
+	executor.getOutput(frameIndex, yuv);
 
-	this->outputBytesWritten += 3ll * outputFrame.height() * outputFrame.width();
+	for (int r = 0; r < yuv.rows(); r++) {
+		uchar* ptr = yuv.row(r);
+		file.write(reinterpret_cast<const char*>(ptr), yuv.cols());
+	}
+
+	this->outputBytesWritten += yuv.rows() * yuv.cols();
 	this->encodedBytesTotal.store(outputBytesWritten);
 	this->frameIndex++;
 }
@@ -350,10 +364,14 @@ void RawPipeWriter::open(OutputOption outputOption) {
 
 //get data via cuvista ... | ffmpeg -f rawvideo -pix_fmt yuv444p -video_size ww:hh -r xx -i pipe:0 -pix_fmt yuv420p outfile.mp4
 void RawPipeWriter::writeOutput(const FrameExecutor& executor) {
-	executor.getOutput(frameIndex, outputFrame);
+	executor.getOutput(frameIndex, output);
 
-	size_t bytes = fwrite(outputFrame.data(), 1, outputFrame.sizeInBytes(), stdout);
-	if (bytes != outputFrame.sizeInBytes()) {
+	size_t bytes = 0;
+	for (int r = 0; r < output.rows(); r++) {
+		uchar* ptr = output.row(r);
+		bytes += fwrite(ptr, 1, output.cols(), stdout);
+	}
+	if (bytes != output.rows() * output.cols()) {
 		errorLogger().logError("Pipe: error writing data", ErrorSource::WRITER);
 	}
 
@@ -397,10 +415,10 @@ void AsfPipeWriter::open(OutputOption outputOption) {
 	//open ffmpeg
 	AVCodecID id = AV_CODEC_ID_FFVHUFF;
 	FFmpegFormatWriter::openFormat(id, fmt, 1);
-	FFmpegWriter::open({}, id, AV_PIX_FMT_YUV444P, mData.h, mData.w, mData.w * 3);
+	FFmpegWriter::open({}, id, AV_PIX_FMT_YUV444P, mData.h, mData.w, mData.stride);
 
 	//allocate yuv frame based on av_Frame
-	outputFrame = ImageAyuv(mData.h, mData.w, mData.stride);
+	outputFrame = ImageVuyx(mData.h, mData.w, mData.stride);
 }
 
 //for ffmpeg 7
@@ -600,7 +618,7 @@ void OpticalFlowWriter::writeFlow(const MovieFrame& frame) {
 
 		} else {
 			//invalid result is gray pixel
-			imageResults.setPixel(pr.iy0, pr.ix0, color);
+			imageResults.setColor(pr.iy0, pr.ix0, color);
 		}
 	}
 
@@ -664,7 +682,7 @@ void OpticalFlowWriter::writeInput(const FrameExecutor& executor) {
 	//encode rgba image
 	uint8_t* src[] = { imageInterpolated.data(), nullptr, nullptr, nullptr };
 	int strides[] = { imageInterpolated.stride(), 0, 0, 0};
-	int sliceHeight = sws_scale(sws_scaler_ctx, src, strides, 0, imageInterpolated.height(), av_frame->data, av_frame->linesize);
+	int sliceHeight = sws_scale(sws_scaler_ctx, src, strides, 0, imageInterpolated.h(), av_frame->data, av_frame->linesize);
 
 	av_frame->pts = frameIndex;
 	writeAVFrame(av_frame);
@@ -733,8 +751,8 @@ void ResultDetailsWriter::writeInput(const FrameExecutor& executor) {
 
 void ResultImageWriter::writeImage(const AffineTransform& trf, std::span<PointResult> res, int64_t idx, Image8& dest, ThreadPoolBase& pool, bool drawTransformed) {
 
-	int h = dest.height();
-	int w = dest.width();
+	int h = dest.h();
+	int w = dest.w();
 	Color col = Color::web("#F09B59");
 
 	//draw transform indicator lines first

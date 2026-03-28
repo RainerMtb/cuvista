@@ -125,6 +125,7 @@
     <ClCompile Include="SystemKeepAlive.cpp" />
     <ClCompile Include="ThreadPool.cpp" />
     <ClCompile Include="Trajectory.cpp" />
+    <ClCompile Include="Version.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AffineTransform.hpp" />

@@ -136,6 +136,7 @@ void PlayerWriter::open(OutputOption outputOption) {
     //open player window
     mPlayer->open(mPlayAudio);
     mPlayer->show();
+    mPlayer->sigUpdate(mVideoFrame);
 }
 
 //---- on gui thread

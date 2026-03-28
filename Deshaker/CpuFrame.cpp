@@ -22,18 +22,31 @@
 
 //constructor
 CpuFrame::CpuFrame(MainData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool) :
-	FrameExecutor(data, deviceInfo, frame, pool) 
-{
+	FrameExecutor(data, deviceInfo, frame, pool)
+{}
+
+//construct data for one pyramid
+CpuFrame::CpuPyramid::CpuPyramid(CoreData& data) {
+	//allocate matrices for pyramid
+	for (int z = 0; z <= data.zMax; z++) {
+		int hz = data.h >> z;
+		int wz = data.w >> z;
+		mY.push_back(Matf::allocate(hz, wz));
+	}
+}
+
+void CpuFrame::init() {
 	assert(mDeviceInfo.getType() == DeviceType::CPU && "device type must be CPU here");
 
-	//buffer to hold input frames in ayuv format
-	for (int i = 0; i < data.bufferCount; i++) mInput.emplace_back(mData.h, mData.w, mData.stride4);
+	//buffer to hold input frames in vuyx format
+	mReadBuffer = ImageVuyx(mData.h, mData.w, mData.stride4);
+	for (int i = 0; i < mData.bufferCount; i++) mInput.emplace_back(mData.h, mData.w, mData.stride4);
 
 	//init pyramid structures
-	for (int i = 0; i < mData.pyramidCount; i++) mPyr.emplace_back(data);
+	for (int i = 0; i < mData.pyramidCount; i++) mPyr.emplace_back(mData);
 
 	//init storage for previous output frame to background colors
-	mPrevOut = Matf4::values(mData.h, mData.w, { mData.bgcolorAyuv[0], mData.bgcolorAyuv[1], mData.bgcolorAyuv[2], mData.bgcolorAyuv[3]});
+	mPrevOut = Matf4::values(mData.h, mData.w, mData.bgcol4);
 	
 	//buffer for output and pyramid creation
 	mFilterBuffer1 = Matf::allocate(mData.h, mData.w);
@@ -43,27 +56,19 @@ CpuFrame::CpuFrame(MainData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame
 	mFilterBuffer4 = Matf4::allocate(mData.h, mData.w);
 	mFilterResult4 = Matf4::allocate(mData.h, mData.w);
 
-	mOutput = ImageAyuvFloat(mData.h, mData.w, mData.stride4);
-}
-
-//construct data for one pyramid
-CpuFrame::CpuPyramid::CpuPyramid(MainData& data) {
-	//allocate matrices for pyramid
-	for (int z = 0; z <= data.zMax; z++) {
-		int hz = data.h >> z;
-		int wz = data.w >> z;
-		mY.push_back(Matf::allocate(hz, wz));
-	}
+	mOutput = ImageVuyxFloat(mData.h, mData.w, mData.stride4);
 }
 
 //return storage of next input frame
 Image8& CpuFrame::inputDestination(int64_t frameIndex) {
-	size_t idx = frameIndex % mInput.size();
-	return mInput[idx];
+	return mReadBuffer;
 }
 
 //nothing to do here
-void CpuFrame::inputData(int64_t frameIndex) {}
+void CpuFrame::inputData(int64_t frameIndex) {
+	size_t idx = frameIndex % mInput.size();
+	std::swap(mReadBuffer, mInput[idx]);
+}
 
 int64_t CpuFrame::createPyramid(int64_t frameIndex, AffineDataFloat trf, bool warp) {
 	//util::ConsoleTimer ic("cpu pyramid");
@@ -73,7 +78,7 @@ int64_t CpuFrame::createPyramid(int64_t frameIndex, AffineDataFloat trf, bool wa
 
 	//fill topmost level of pyramid
 	size_t yuvIdx = frameIndex % mInput.size();
-	ImageAyuv& ayuv = mInput[yuvIdx];
+	ImageVuyx vuyx = mInput[yuvIdx];
 	Matf& y0 = pyr.mY[0];
 
 	//convert input y values to float
@@ -82,7 +87,7 @@ int64_t CpuFrame::createPyramid(int64_t frameIndex, AffineDataFloat trf, bool wa
 	auto funcConvert = [&] (size_t r) {
 		int sum = 0;
 		for (size_t c = 0; c < mData.w; c++) {
-			int y = ayuv.at(1, r, c);
+			int y = vuyx.at(2, r, c);
 			mFilterBuffer1.at(r, c) = y * f;
 			sum += y * y;
 		}
@@ -275,10 +280,10 @@ void CpuFrame::computeTerminate(int64_t frameIndex, std::span<PointResult> resul
 
 void CpuFrame::outputData(int64_t frameIndex, AffineDataFloat trf) {
 	size_t yuvidx = frameIndex % mInput.size();
-	const ImageAyuv& input = mInput[yuvidx];
+	const ImageVuyx& input = mInput[yuvidx];
 	constexpr float f = 1.0f / 255.0f;
-	auto funcConvert = [&] (size_t r, size_t c) -> FloatAyuv { 
-		return { 1.0f, input.at(1, r, c) * f, input.at(2, r, c) * f, input.at(3, r, c) * f }; 
+	auto funcConvert = [&] (size_t r, size_t c) -> FloatVuyx { 
+		return { input.at(0, r, c) * f, input.at(1, r, c) * f, input.at(2, r, c) * f, input.at(3, r, c) * f };
 	};
 	mFilterBuffer4.setValues(funcConvert, mPool);
 
@@ -289,8 +294,8 @@ void CpuFrame::outputData(int64_t frameIndex, AffineDataFloat trf) {
 			float y0 = float(r);
 			float x = std::fmaf(x0, trf.m00, std::fmaf(y0, trf.m01, trf.m02));
 			float y = std::fmaf(x0, trf.m10, std::fmaf(y0, trf.m11, trf.m12));
-			FloatAyuv bg = (mData.bgmode == BackgroundMode::COLOR ? mData.bgcolorAyuv : mPrevOut.at(r, c));
-			FloatAyuv result = mFilterBuffer4.interp2(x, y).value_or(bg);
+			FloatVuyx bg = (mData.bgmode == BackgroundMode::COLOR ? mData.bgcol4 : mPrevOut.at(r, c));
+			FloatVuyx result = mFilterBuffer4.interp2(x, y).value_or(bg);
 			//if (z == 0 && r == 228 && c == 1082) std::printf("\ncpu %16.12f\n", y);
 			mBuffer4.at(r, c) = result;
 			mPrevOut.at(r, c) = result;
@@ -305,11 +310,11 @@ void CpuFrame::outputData(int64_t frameIndex, AffineDataFloat trf) {
 	//write output
 	auto funcOutput = [&] (size_t r) {
 		for (size_t c = 0; c < mData.w; c++) {
-			FloatAyuv ayuv = mBuffer4.at(r, c) + (mBuffer4.at(r, c) - mFilterResult4.at(r, c)) * mData.unsharpAyuv;
-			mOutput.at(0, r, c) = std::clamp(ayuv.a, 0.0f, 1.0f);
-			mOutput.at(1, r, c) = std::clamp(ayuv.y, 0.0f, 1.0f);
-			mOutput.at(2, r, c) = std::clamp(ayuv.u, 0.0f, 1.0f);
-			mOutput.at(3, r, c) = std::clamp(ayuv.v, 0.0f, 1.0f);
+			FloatVuyx vuyx = mBuffer4.at(r, c) + (mBuffer4.at(r, c) - mFilterResult4.at(r, c)) * mData.unsharp4;
+			mOutput.at(0, r, c) = std::clamp(vuyx.v, 0.0f, 1.0f);
+			mOutput.at(1, r, c) = std::clamp(vuyx.u, 0.0f, 1.0f);
+			mOutput.at(2, r, c) = std::clamp(vuyx.y, 0.0f, 1.0f);
+			mOutput.at(3, r, c) = std::clamp(vuyx.x, 0.0f, 1.0f);
 			//if (z==0 && r==1049 && c==842) std::printf("cpu %.14f %d\n", val * 255, mOutput.at(z, r, c));
 		}
 	};
@@ -329,19 +334,6 @@ bool CpuFrame::getOutput(int64_t frameIndex, Image8& image, int cudaNv12stride, 
 	assert(frameIndex == mOutput.index && "invalid frame index");
 	mOutput.convertTo(image, mPool);
 	return true;
-}
-
-void CpuFrame::getWarped(int64_t frameIndex, Image8bgr& image) {
-	auto func = [&] (size_t r) {
-		ImagePixel<uchar> destPix = image.pixelAt(r, 0);
-		const FloatAyuv* ptr = mBuffer4.addr(r, 0);
-		for (size_t c = 0; c < mData.w; c++) {
-			im::yuv_to_rgb(ptr->y, ptr->u, ptr->v, destPix.x, destPix.y, destPix.z);
-			destPix.advance();
-			ptr++;
-		}
-	};
-	mPool.addAndWait(func, 0, mData.h);
 }
 
 Matf CpuFrame::getTransformedOutput() const {

@@ -31,6 +31,10 @@ struct Size {
 	int h, w;
 };
 
+namespace util {
+	class CRC64;
+}
+
 namespace im {
 
 	using uchar = unsigned char;
@@ -61,7 +65,7 @@ namespace im {
 		BGRA,
 		YUV,
 		Y,
-		AYUV,
+		VUYX,
 		NV12,
 		NONE,
 	};
@@ -99,8 +103,10 @@ namespace im {
 		virtual T& at(size_t idx, size_t r, size_t c) = 0;
 		virtual const T& at(size_t idx, size_t r, size_t c) const = 0;
 
-		virtual int height() const = 0;
-		virtual int width() const = 0;
+		virtual int h() const = 0;
+		virtual int rows() const = 0;
+		virtual int w() const = 0;
+		virtual int cols() const = 0;
 		virtual int stride() const = 0;
 		virtual int strideInBytes() const = 0;
 		virtual int planes() const = 0;
@@ -113,6 +119,7 @@ namespace im {
 		virtual void savePgm(const std::string& filename) const = 0;
 
 		virtual uint64_t crc() const = 0;
+		virtual void crc(util::CRC64& base) const = 0;
 
 		virtual ~IImage() = default;
 	};

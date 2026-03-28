@@ -77,10 +77,8 @@ struct CoreData {
 	double deps = std::numeric_limits<double>::epsilon();
 	double dnan = std::numeric_limits<double>::quiet_NaN();
 
-	Triplet unsharp = { 0.6f, 0.3f, 0.3f };                //ffmpeg unsharp=5:5:0.6:3:3:0.3
-	Quartet unsharpAyuv = { 0.0f, 0.6f, 0.3f, 0.3f };      //ffmpeg unsharp=5:5:0.6:3:3:0.3
-	Triplet bgcolorYuv = {};                               //background fill colors in yuv
-	Quartet bgcolorAyuv = {};                              //background fill colors in ayuv
+	Quartet unsharp4 = { 0.3f, 0.3f, 0.6f, 0.0f };         //ffmpeg unsharp=5:5:0.6:3:3:0.3
+	Quartet bgcol4 = {};                                   //background fill colors in vuyx
 	BackgroundMode bgmode = BackgroundMode::BLEND;         //fill gap with previous frames or not
 													       
 	int radius = -1;                                       //temporal radius, number of frames before and after used for smoothing
@@ -101,7 +99,7 @@ struct CoreData {
 	int cudaOutBufferCount = 6;  //number of images to hold as buffers for output generation
 
 	int stride = 0;          //image stride for single plane images
-	int stride4 = 0;         //image stride for ayuv images
+	int stride4 = 0;         //image stride for vuyx images
 	int strideFloat = 0;     //row lenhth in bytes for float images
 	int strideFloat4 = 0;    //row length in bytes for 4-plane imanges
 };

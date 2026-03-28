@@ -167,7 +167,7 @@ void ProgressGui::update(const ProgressInfo& progress, bool force) {
     if (imageDue && progress.writeIndex > 0) {
         mTimePoint = timePointNow;
         int64_t idx = progress.writeIndex - 1;
-        mExecutor.getWarped(idx, mainWindow.mProgressOutput);
+        mExecutor.getOutput(idx, mainWindow.mProgressOutput);
         winrt::hstring hstr = winrt::to_hstring(mExecutor.mFrame.ptsForFrameAsString(idx));
         mainWindow.DispatcherQueue().TryEnqueue([&, hstr] { 
             mainWindow.textTimeOutput().Text(hstr); 

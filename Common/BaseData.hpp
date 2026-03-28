@@ -37,29 +37,29 @@ struct Triplet {
 
 //used in CoreData because in cuda _constant_ allocated symbols must be initialized, no constructors allowed
 struct Quartet {
-	float a, y, u, v;
+	float v, u, y, x;
 
 	float operator [] (size_t idx) const;
 };
 
-struct FloatAyuv {
-	float a, y, u, v;
+struct FloatVuyx {
+	float v, u, y, x;
 
-	FloatAyuv(float a, float y, float u, float v) : a { a }, y { y }, u { u }, v { v } {}
-	FloatAyuv(float f) : FloatAyuv(f, f, f, f) {}
-	FloatAyuv() : FloatAyuv(0, 0, 0, 0) {}
-	FloatAyuv(const Quartet& other);
+	FloatVuyx(float v, float u, float y, float x) : v { v }, u { u }, y { y }, x { x } {}
+	FloatVuyx(float f) : FloatVuyx(f, f, f, f) {}
+	FloatVuyx() : FloatVuyx(0, 0, 0, 0) {}
+	FloatVuyx(const Quartet& other);
 
 	float operator [] (size_t idx) const;
-	friend FloatAyuv operator + (const FloatAyuv& a, const FloatAyuv& b);
-	friend FloatAyuv operator - (const FloatAyuv& a, const FloatAyuv& b);
-	friend FloatAyuv operator * (const FloatAyuv& a, const FloatAyuv& b);
-	friend FloatAyuv operator * (float f, const FloatAyuv& a);
-	friend FloatAyuv operator / (const FloatAyuv& a, const FloatAyuv& b);
-	friend FloatAyuv operator / (float f, const FloatAyuv& a);
+	friend FloatVuyx operator + (const FloatVuyx& a, const FloatVuyx& b);
+	friend FloatVuyx operator - (const FloatVuyx& a, const FloatVuyx& b);
+	friend FloatVuyx operator * (const FloatVuyx& a, const FloatVuyx& b);
+	friend FloatVuyx operator * (float f, const FloatVuyx& a);
+	friend FloatVuyx operator / (const FloatVuyx& a, const FloatVuyx& b);
+	friend FloatVuyx operator / (float f, const FloatVuyx& a);
 };
 
 namespace std {
 
-	FloatAyuv fma(const FloatAyuv& x, const FloatAyuv& y, const FloatAyuv& z);
+	FloatVuyx fma(const FloatVuyx& x, const FloatVuyx& y, const FloatVuyx& z);
 }

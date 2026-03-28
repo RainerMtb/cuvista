@@ -21,60 +21,60 @@
 #include "CoreData.hpp"
 
 float Quartet::operator [] (size_t idx) const {
-	assert(idx < 4 && "invalid FloatAyuv index");
+	assert(idx < 4 && "invalid index");
 	switch (idx) {
-	case 0: return a;
-	case 1: return y;
-	case 2: return u;
-	case 3: return v;
+	case 0: return v;
+	case 1: return u;
+	case 2: return y;
+	case 3: return x;
 	default: return std::numeric_limits<float>::quiet_NaN();
 	}
 }
 
-FloatAyuv::FloatAyuv(const Quartet& other) {
-	a = other.a;
-	y = other.y;
-	u = other.u;
+FloatVuyx::FloatVuyx(const Quartet& other) {
 	v = other.v;
+	u = other.u;
+	y = other.y;
+	x = other.x;
 }
 
-float FloatAyuv::operator [] (size_t idx) const {
-	assert(idx < 4 && "invalid FloatAyuv index");
+float FloatVuyx::operator [] (size_t idx) const {
+	assert(idx < 4 && "invalid index");
 	switch (idx) {
-	case 0: return a;
-	case 1: return y;
-	case 2: return u;
-	case 3: return v;
+	case 0: return v;
+	case 1: return u;
+	case 2: return y;
+	case 3: return x;
 	default: return std::numeric_limits<float>::quiet_NaN();
 	}
 }
 
-FloatAyuv operator + (const FloatAyuv& a, const FloatAyuv& b) {
-	return { a.a + b.a, a.y + b.y, a.u + b.u, a.v + b.v };
+FloatVuyx operator + (const FloatVuyx& a, const FloatVuyx& b) {
+	return { a.v + b.v, a.u + b.u, a.y + b.y, a.x + b.x};
 }
 
-FloatAyuv operator - (const FloatAyuv& a, const FloatAyuv& b) {
-	return { a.a - b.a, a.y - b.y, a.u - b.u, a.v - b.v };
+FloatVuyx operator - (const FloatVuyx& a, const FloatVuyx& b) {
+	return { a.v - b.v, a.u - b.u, a.y - b.y, a.x - b.x };
 }
 
-FloatAyuv operator * (const FloatAyuv& a, const FloatAyuv& b) {
-	return { a.a * b.a, a.y * b.y, a.u * b.u, a.v * b.v };
+FloatVuyx operator * (const FloatVuyx& a, const FloatVuyx& b) {
+	return { a.v * b.v, a.u * b.u, a.y * b.y, a.x * b.x };
 }
 
-FloatAyuv operator * (float f, const FloatAyuv& a) {
-	return { a.a * f, a.y * f, a.u * f, a.v * f };
+FloatVuyx operator * (float f, const FloatVuyx& a) {
+	return { a.v * f, a.u * f, a.y * f, a.x * f };
 }
 
-FloatAyuv operator / (const FloatAyuv& a, const FloatAyuv& b) {
-	return { a.a / b.a, a.y / b.y, a.u / b.u, a.v / b.v };
+FloatVuyx operator / (const FloatVuyx& a, const FloatVuyx& b) {
+	return { a.v / b.v, a.u / b.u, a.y / b.y, a.x / b.x };
 }
 
-FloatAyuv operator / (float f, const FloatAyuv& a) {
-	return { a.a / f, a.y / f, a.u / f, a.v / f };
+FloatVuyx operator / (float f, const FloatVuyx& a) {
+	return { a.v / f, a.u / f, a.y / f, a.x / f };
 }
 
-FloatAyuv std::fma(const FloatAyuv& x, const FloatAyuv& y, const FloatAyuv& z) {
-	return { std::fma(x.a, y.a, z.a), std::fma(x.y, y.y, z.y), std::fma(x.u, y.u, z.u), std::fma(x.v, y.v, z.v) };
+FloatVuyx std::fma(const FloatVuyx& x, const FloatVuyx& y, const FloatVuyx& z) {
+	return { std::fma(x.v, y.v, z.v), std::fma(x.u, y.u, z.u), std::fma(x.y, y.y, z.y), std::fma(x.x, y.x, z.x) };
 }
 
 float Triplet::operator [] (size_t idx) const {

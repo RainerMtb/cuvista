@@ -79,7 +79,7 @@ class CudaExecutor : public FrameExecutor {
 
 private:
 	//host memory
-	ImageAyuv h_input;
+	ImageVuyx* h_input;
 	CudaPointResult* h_results = nullptr;
 
 	//device memory
@@ -87,9 +87,8 @@ private:
 	float* d_bufferH = nullptr;
 	float* d_bufferV = nullptr;
 
-	unsigned char* d_ayuvData = nullptr;      //continuous array of all pixel values in yuv format, allocated on device
-	unsigned char* d_ayuvOut = nullptr;       //image data for encoding on host
-	unsigned char* d_rgba = nullptr;          //image data for progress update
+	unsigned char* d_vuyxData = nullptr;      //continuous array of all pixel values in yuv format, allocated on device
+	unsigned char* d_output = nullptr;        //image data for output, allocated as vuyx, but reused
 
 	struct {
 		float4* data;
@@ -157,8 +156,8 @@ public:
 	void getOutput(int64_t frameIndex, Image8& image) const override;
 	bool getOutput(int64_t frameIndex, Image8& image, int cudaNv12stride, unsigned char* cudaNv12ptr) const override;
 	void getInput(int64_t frameIndex, Image8& image) const override;
-	void getWarped(int64_t frameIndex, Image8bgr & image) override;
 
+	Mat<float> getTransformedOutput() const = 0;
 	void cudaGetTransformedOutput(float* warpedData, size_t h, size_t w) const;
 	void cudaGetPyramid(int64_t frameIndex, float* data) const;
 };

@@ -23,19 +23,17 @@ int main() {
 
 	//debugLogger = std::make_shared<DebugLoggerTcp>("10.0.0.1", 5555);
 	std::stringstream ss;
-	debugLogger = std::make_shared<DebugLoggerString>(ss);
+	util::debugLogger = std::make_shared<util::DebugLoggerString>(ss);
 
 	std::vector<std::string> argsLines = {
-		"-info",
-		"-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -bgmode color -y -zoom -8",
-		"-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -bgmode color -y -zoom -8 -device 0",
-		"-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -bgmode color -y -zoom -8 -device 0 -enc nvenc:hevc",
-		"-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -bgmode color -y -zoom -8 -device 2",
-		"-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -flow -y",
-		"-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -copyframes -y",
-		"-i d:/VideoTest/02short.mp4 -o f:/videoOut.mp4 -y",
-		"-i d:/Documents/x.orig/beach.1.avi -o null -frames 100 -device 2",
-		"-i d:/Documents/x.orig/beach.1.avi -o f:/videoOut.mp4 -y -frames 100 -device 2"
+		/*0*/ "-info",
+		/*1*/ "-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -bgmode color -y -zoom -8",
+		/*2*/ "-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -bgmode color -y -zoom -8 -device 2",
+		/*3*/ "-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -bgmode color -y -zoom -8 -device 0 -enc nvenc:hevc",
+		/*4*/ "-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -flow -y",
+		/*5*/ "-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -copyframes -y",
+		/*6*/ "-i d:/VideoTest/02.mp4 -o f:/videoOut.mp4 -y -device 1 -frames 100",
+		/*7*/ "-device 1 -i d:/VideoTest/02short.mp4 -o f:/raw02.yuv",
 	};
 
 	int idx = 0;

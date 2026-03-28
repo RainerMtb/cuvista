@@ -1,2 +1,2 @@
 [WarpWatch]
-Expressions=x, ws, luma[x]
+Expressions=x, idx

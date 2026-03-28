@@ -19,8 +19,9 @@
 #include "Util.hpp"
 #include "DeviceInfo.hpp"
 
-#if defined(BUILD_CUDA) && BUILD_CUDA == 0
-#else
+#if defined(BUILD_CUDA) && BUILD_CUDA == 0 //cuda disabled
+
+#else //cuda enabled
 
 #include "NvEncoder.hpp"
 
@@ -170,10 +171,17 @@ void NvEncoder::createEncoder(int w, int h, int fpsNum, int fpsDen, uint32_t gop
 	if (guid == NV_ENC_CODEC_HEVC_GUID) {
 		encoderConfig.encodeCodecConfig.hevcConfig.chromaFormatIDC = 1; //for yuv444 formats = 3
 		encoderConfig.encodeCodecConfig.hevcConfig.useBFramesAsRef = refmode;
+		encoderConfig.encodeCodecConfig.hevcConfig.inputBitDepth = NV_ENC_BIT_DEPTH_8;
 
 	} else if (guid == NV_ENC_CODEC_H264_GUID) {
 		encoderConfig.encodeCodecConfig.h264Config.chromaFormatIDC = 1;
 		encoderConfig.encodeCodecConfig.h264Config.useBFramesAsRef = refmode;
+		encoderConfig.encodeCodecConfig.h264Config.inputBitDepth = NV_ENC_BIT_DEPTH_8;
+
+	} else if (guid == NV_ENC_CODEC_AV1_GUID) {
+		encoderConfig.encodeCodecConfig.av1Config.chromaFormatIDC = 1;
+		encoderConfig.encodeCodecConfig.av1Config.useBFramesAsRef = refmode;
+		encoderConfig.encodeCodecConfig.av1Config.inputBitDepth = NV_ENC_BIT_DEPTH_8;
 	}
 
 	//set init parameters structure
@@ -205,7 +213,7 @@ void NvEncoder::createEncoder(int w, int h, int fpsNum, int fpsDen, uint32_t gop
 	mOutputDelay = mEncoderBufferSize - 1;
 
 	size_t pitch;
-	size_t h_image = h * 3 / 2; //for yuv444 formats h * 3
+	size_t h_image = h * 3ull / 2; //for nv12 format h * 3 / 2, for yuv444 formats h * 3
 	for (size_t i = 0; i < mEncoderBufferSize; i++) {
 		//output buffers
 		NV_ENC_CREATE_BITSTREAM_BUFFER createBitstreamBuffer = { NV_ENC_CREATE_BITSTREAM_BUFFER_VER };

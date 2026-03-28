@@ -910,7 +910,7 @@ public:
 		return generate(rows, cols, [this, rows] (size_t r, size_t c) {
 			size_t idx = c * rows + r;
 			return at(idx % this->rows(), idx / this->rows());
-			});
+		});
 	}
 
 	Mat<T> repeat(size_t copiesVert, size_t copiesHorz) const {
@@ -919,7 +919,7 @@ public:
 
 	//take part of this mat as a copy for a new mat
 	Mat<T> subMat(size_t r0, size_t c0, size_t h, size_t w) const {
-		return generate(h, w, [&] (size_t r, size_t c) {return at(r0 + r, c0 + c); });
+		return generate(h, w, [&] (size_t r, size_t c) { return at(r0 + r, c0 + c); });
 	}
 	
 	//solve A * x = b using this mat for decomposition

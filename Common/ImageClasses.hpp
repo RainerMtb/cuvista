@@ -47,32 +47,23 @@ namespace im {
 	};
 
 
-	class ImageYuvFloat : public ImageBase<float> {
+	class ImageVuyxFloat : public ImageBase<float> {
 
 	public:
-		ImageYuvFloat(int h, int w, int stride);
-		ImageYuvFloat(int h, int w);
-		ImageYuvFloat();
+		ImageVuyxFloat(int h, int w, int stride, float* data);
+		ImageVuyxFloat(int h, int w, int stride);
+		ImageVuyxFloat(int h, int w);
+		ImageVuyxFloat();
 
-		constexpr ImageType imageType() const override { return ImageType::YUV; }
-	};
-
-
-	class ImageAyuvFloat : public ImageBase<float> {
-
-	public:
-		ImageAyuvFloat(int h, int w, int stride, float* data);
-		ImageAyuvFloat(int h, int w, int stride);
-		ImageAyuvFloat(int h, int w);
-		ImageAyuvFloat();
-
-		constexpr ImageType imageType() const override { return ImageType::AYUV; }
+		constexpr ImageType imageType() const override { return ImageType::VUYX; }
 	};
 
 
 	class Image8 : public ImageBase<uchar> {};
 
-	class ImageYuv : public Image8 {
+	class Image8yuv : public Image8 {};
+
+	class ImageYuv : public Image8yuv {
 
 	public:
 		ImageYuv(int h, int w, int stride);
@@ -92,29 +83,32 @@ namespace im {
 	};
 
 
-	class ImageAyuv : public Image8 {
+	class ImageVuyx : public Image8yuv {
 
 	public:
-		ImageAyuv(int h, int w, int stride);
-		ImageAyuv(int h, int w, size_t stride);
-		ImageAyuv(int h, int w);
-		ImageAyuv();
+		ImageVuyx(int h, int w, int stride);
+		ImageVuyx(int h, int w, size_t stride);
+		ImageVuyx(int h, int w);
+		ImageVuyx();
 
-		static ImageAyuv readPgmFile(const std::string& filename);
+		static ImageVuyx readPgmFile(const std::string& filename);
 
-		static ImageAyuv readBmpFile(const std::string& filename);
+		static ImageVuyx readBmpFile(const std::string& filename);
 
-		constexpr ImageType imageType() const override { return ImageType::AYUV; }
+		constexpr ImageType imageType() const override { return ImageType::VUYX; }
 
 		virtual uchar* addr(size_t idx, size_t r, size_t c) override;
 		virtual const uchar* addr(size_t idx, size_t r, size_t c) const override;
 
 		virtual uchar& at(size_t idx, size_t r, size_t c) override;
 		virtual const uchar& at(size_t idx, size_t r, size_t c) const override;
+
+		virtual uchar* row(size_t r) override;
+		virtual const uchar* row(size_t r) const override;
 	};
 
 
-	class ImageNV12 : public Image8 {
+	class ImageNV12 : public Image8yuv {
 
 	public:
 		ImageNV12(int h, int w, int stride);
@@ -150,6 +144,8 @@ namespace im {
 		ImageBGRA();
 
 		constexpr ImageType imageType() const override { return ImageType::BGRA; }
+
+		virtual void saveBmpColor(const std::string& filename) const override;
 	};
 
 
@@ -165,8 +161,9 @@ namespace im {
 	};
 
 
+	//implement template method here
 	template <class T> void ImageBase<T>::saveBmpColor(const std::string& filename) const {
-		ImageBgr bgr(height(), width());
+		ImageBgr bgr(h(), w());
 		this->convertTo(bgr);
 		bgr.saveBmpColor(filename);
 	}

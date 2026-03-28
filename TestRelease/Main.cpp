@@ -71,7 +71,7 @@ static void testMain() {
 	run("-mode 1 -frames 40 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/009.mp4 -noheader -progress 0 -y");
 
 	std::cout << "--- Images ---" << std::endl;
-	run("-frames 10 -i d:/VideoTest/04.ts -o d:/VideoTest/out/images/test%02d.jpg -resim -progress 0 -y");
+	run("-frames 10 -i d:/VideoTest/04.ts -o d:/VideoTest/out/images/test%02d.bmp -resim -progress 0 -y");
 	run("-device 3 -frames 5 -i d:/VideoTest/01.mp4 -o d:/VideoTest/out/images/im%03d.bmp -progress 0 -y");
 	run("-device 2 -frames 5 -i d:/VideoTest/01.mp4 -o d:/VideoTest/out/images/im%03d.jpg -progress 0 -y");
 
@@ -142,6 +142,7 @@ static void testCrc() {
 	for (size_t i = 0; i < commands.size(); i++) {
 		std::shared_ptr<RawMemoryStoreWriter> externalWriter = std::make_shared<RawMemoryStoreWriter>(250, false, true);
 		DeshakerResult result = run(commands[i], externalWriter);
+		//externalWriter->writeYuvFiles("f:/input.nv12", "f:/output.nv12");
 
 		util::CRC64 crc;
 		for (const TrajectoryItem& ti : result.trajectory) {
@@ -161,6 +162,7 @@ static void testCrc() {
 		}
 
 		{
+			//check trajectory
 			uint64_t crcExpected = 0x91ffd5e4d5b59bed;
 			bool match = crcExpected == crc;
 			std::string color = match ? ansiGreen : ansiRed;
@@ -170,20 +172,22 @@ static void testCrc() {
 
 		{
 			//check yuv
-			uint64_t crcExpectedYuv = 0xde5cf1c3ce13ae44;
+			uint64_t crcExpectedYuv = 0xfd3a7d53bbafd324;
 			util::CRC64 crcyuv;
-			for (const ImageAyuv& image : externalWriter->outputFramesYuv) crcyuv.add(image);
+			for (const ImageVuyx& image : externalWriter->outputFramesYuv) image.crc(crcyuv);
 
 			bool match = crcExpectedYuv == crcyuv;
 			std::cout << (match ? ansiGreen : ansiRed) << std::hex << "output yuv expected: " << crcExpectedYuv << ", actual crc: " << crcyuv
 				<< std::boolalpha << ", crc match: " << match << ansiClear << std::endl;
+			
+			if (match == false) externalWriter->writeYuvFiles("f:/input.nv12", "f:/output.nv12", 50);
 		}
 
 		{
 			//check rgba
-			uint64_t crcExpectedRgba = 0x20be0c0b8d84f958;
+			uint64_t crcExpectedRgba = 0x38e0373f1cd0a85a;
 			util::CRC64 crcrgba;
-			for (const ImageRGBA& image : externalWriter->outputFramesRgba) crcrgba.add(image);
+			for (const ImageRGBA& image : externalWriter->outputFramesRgba) image.crc(crcrgba);
 
 			bool match = crcExpectedRgba == crcrgba;
 			std::cout << (match ? ansiGreen : ansiRed) << std::hex << "output rgba expected: " << crcExpectedRgba << ", actual crc: " << crcrgba
@@ -192,9 +196,9 @@ static void testCrc() {
 
 		{
 			//check bgra
-			uint64_t crcExpectedBgra = 0x1cb407ed590ba0a0;
+			uint64_t crcExpectedBgra = 0x495f1810861f63ce;
 			util::CRC64 crcbgra;
-			for (const ImageBGRA& image : externalWriter->outputFramesBgra) crcbgra.add(image);
+			for (const ImageBGRA& image : externalWriter->outputFramesBgra) image.crc(crcbgra);
 
 			bool match = crcExpectedBgra == crcbgra;
 			std::cout << (match ? ansiGreen : ansiRed) << std::hex << "output bgra expected: " << crcExpectedBgra << ", actual crc: " << crcbgra
@@ -215,9 +219,9 @@ static void testCrc() {
 		std::shared_ptr<RawMemoryStoreWriter> externalWriter = std::make_shared<RawMemoryStoreWriter>(250, false, true);
 		DeshakerResult result = run(commandsMode2[i], externalWriter);
 
-		uint64_t crcExpected = 0xe2819e6f94aef6c7;
+		uint64_t crcExpected = 0x4094b1e8576cff7f;
 		util::CRC64 crcOutput;
-		for (const ImageAyuv& image : externalWriter->outputFramesYuv) crcOutput.add(image);
+		for (const ImageVuyx& image : externalWriter->outputFramesYuv) image.crc(crcOutput);
 
 		bool match = crcExpected == crcOutput;
 		std::cout << (match ? ansiGreen : ansiRed) << std::hex << "yuv file crc expected: " << crcExpected << ", actual crc: " << crcOutput
@@ -250,9 +254,10 @@ int main() {
 		}
 	}
 	
-	testSpeed();
 	testCrc();
+	testSpeed();
 	testMain();
+	std::cout << "--- Testing completed ---" << std::endl;
 }
 
 /*

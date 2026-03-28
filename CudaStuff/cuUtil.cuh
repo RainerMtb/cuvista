@@ -43,8 +43,6 @@ namespace cu {
 	//memory copy on device
 	__device__ void memcpy(void* dest, const void* src, size_t count);
 
-	__device__ size_t clampUnsigned(size_t valueToAdd, size_t valueToSubtract, size_t lo, size_t hi);
-
 	__device__ double clamp(double val, double lo, double hi);
 
 	//-----------------------------------
@@ -104,43 +102,6 @@ namespace cu {
 			}
 			__syncthreads();
 		}
-	};
-
-	//------------------------------------------
-	//simple string implementation in device code
-	struct string {
-	private:
-		char* mStr = nullptr;
-
-		__device__ string(size_t length, bool dummy) :
-			mStr { new char[length] }
-		{}
-
-	public:
-
-		//copy constructor
-		__device__ string(const string& other);
-
-		//move constructor
-		__device__ string(string&& other) noexcept;
-
-		//destructor
-		__device__ ~string();
-
-		//create from char array
-		__device__ string(const char* str);
-
-		//create from int value
-		__device__ string(int value);
-
-		//concatenate strings
-		__device__ string operator + (const string& other);
-
-		//get the underlying char array
-		__device__ const char* str() const;
-
-		//length of the string
-		__device__ size_t size() const;
 	};
 
 

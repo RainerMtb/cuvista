@@ -274,7 +274,7 @@ void cuvistaGui::setInputFile(const QString& inputPath) {
         mReader.close();
         errorLogger().clear();
         mReader.open(inputPath.toStdString());
-        mInputYUV = ImageAyuv(mReader.h, mReader.w);
+        mInputYUV = ImageVuyx(mReader.h, mReader.w);
 
         //read first image
         mReader.read(mInputYUV);
@@ -285,7 +285,7 @@ void cuvistaGui::setInputFile(const QString& inputPath) {
 
             //set up converter to BGR for display in UI
             mInputBGR = ImageBgr(mReader.h, mReader.w);
-            mInputImage = QImage(mInputBGR.data(), mInputBGR.width(), mInputBGR.height(), mInputBGR.strideInBytes(), QImage::Format_BGR888);
+            mInputImage = QImage(mInputBGR.data(), mInputBGR.w(), mInputBGR.h(), mInputBGR.strideInBytes(), QImage::Format_BGR888);
             updateInputImage();
         }
 
@@ -424,7 +424,7 @@ void cuvistaGui::stabilize() {
     using uchar = unsigned char;
     uchar rgb[] = { (uchar) mBackgroundColor.red(), (uchar) mBackgroundColor.green(), (uchar) mBackgroundColor.blue() };
     mData.backgroundColor = Color::rgb(rgb[0], rgb[1], rgb[2]);
-    mData.backgroundColor.toYUVfloat(&mData.bgcolorYuv.y, &mData.bgcolorYuv.u, &mData.bgcolorYuv.v);
+    mData.backgroundColor.toYUVfloat(&mData.bgcol4.y, &mData.bgcol4.u, &mData.bgcol4.v);
 
     try {
         //rewind reader to beginning of input

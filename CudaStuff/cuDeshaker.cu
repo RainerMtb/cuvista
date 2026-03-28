@@ -112,7 +112,7 @@ template <class T> void writeDeviceDataToFile(const T* devData, size_t h, size_t
 //write image from device to disk for debugging
 void writeDeviceDataToImage(const uchar* devData, int h, int w, int stride, const std::string& path) {
 	cudaDeviceSynchronize();
-	im::ImageAyuv image(h, w, stride);
+	im::ImageVuyx image(h, w, stride);
 	handleStatus(cudaMemcpy2D(image.data(), image.stride(), devData, stride, w * 4, h, cudaMemcpyDeviceToHost), "error copy");
 	image.saveBmpPlanes(path);
 }
@@ -128,7 +128,7 @@ void writeDeviceDataToImage(const float* devData, int h, int w, int stride, cons
 //write image from device to disk for debugging
 void writeDeviceDataToImage(const float4* devData, int h, int w, int stride, const std::string& path) {
 	cudaDeviceSynchronize();
-	im::ImageAyuvFloat image(h, w);
+	im::ImageVuyxFloat image(h, w);
 	handleStatus(cudaMemcpy2D(image.data(), image.strideInBytes(), devData, stride * 4 * sizeof(float), w * 4 * sizeof(float), h, cudaMemcpyDeviceToHost), "error copy");
 	image.saveBmpPlanes(path);
 }
@@ -156,7 +156,7 @@ bool CudaExecutor::checkKernelParameters() const {
 
 //write string into image given by device pointer
 void CudaExecutor::writeText(const std::string& text, int x0, int y0, float4* deviceData, int devicePitch) {
-	ImageAyuvFloat im(mData.h, mData.w);
+	ImageVuyxFloat im(mData.h, mData.w);
 
 	//copy to host memory
 	cudaMemcpy2D(im.data(), im.strideInBytes(), deviceData, devicePitch, sizeof(float) * mData.w * 4, mData.h, cudaMemcpyDefault);
@@ -261,11 +261,11 @@ void CudaExecutor::init() {
 	cudaFree(d_ptrf4);
 
 	//compute required heap size
-	size_t frameSizeAyuv = mData.stride4 * h;            //bytes for ayuv images
+	size_t frameSize4 = mData.stride4 * h;               //bytes for vuyx images
 	size_t heapRequired = 0;
-	heapRequired += frameSizeAyuv * mData.bufferCount;   //ayuv input storage
-	heapRequired += frameSizeAyuv;                       //ayuv out
-	heapRequired += frameSizeAyuv;                       //rgba out
+	heapRequired += frameSize4 * mData.bufferCount;      //vuyx input storage
+	heapRequired += frameSize4;                          //vuyx out
+	heapRequired += frameSize4;                          //rgba out
 	heapRequired += 2ull * mData.strideFloat * h;        //filter buffers
 	heapRequired += mData.strideFloat * h * mData.pyramidLevels * mData.pyramidCount;     //pyramid of Y frames
 	heapRequired += mData.strideFloat4 * h * mData.cudaOutBufferCount;                    //output buffer in floats
@@ -280,14 +280,14 @@ void CudaExecutor::init() {
 		handleStatus(cudaDeviceSetLimit(cudaLimitMallocHeapSize, heapRequired), "error @init #20");
 	}
 	size_t memtotal, memfree1, memfree2;
-	handleStatus(cudaMemGetInfo(&memfree1, &memtotal), "error @init #30");
+	handleStatus(cudaMemGetInfo(&memfree1, &memtotal), "error @init #21");
 
 	//allocate input frame storage with proper cuda stride
-	h_input = ImageAyuv(mData.h, mData.w, mData.stride4);
+	h_input = new ImageVuyx(mData.h, mData.w, mData.stride4);
 
 	//pin memory of transfer object
-	registeredMemPtr = h_input.data();
-	handleStatus(cudaHostRegister(registeredMemPtr, h_input.sizeInBytes(), cudaHostRegisterDefault), "error @init #22");
+	registeredMemPtr = h_input->data();
+	handleStatus(cudaHostRegister(registeredMemPtr, h_input->sizeInBytes(), cudaHostRegisterDefault), "error @init #22");
 
 	//allocate image pyramids, all the same strided width but increasingly shorter
 	//number of rows through all three pyramids, Y, DX, DY
@@ -302,15 +302,14 @@ void CudaExecutor::init() {
 	allocSafe(&d_results, sizeof(CudaPointResult) * mData.resultCount);
 	h_results = new CudaPointResult[mData.resultCount];
 
-	//allocate output ayuv data
-	allocSafe(&d_ayuvOut, frameSizeAyuv);
-	allocSafe(&d_rgba, frameSizeAyuv);
+	//allocate output vuyx data
+	allocSafe(&d_output, frameSize4);
 
 	//allocate memory for luma sum
 	allocSafe(&d_luma, mData.w * sizeof(int64_t));
 
-	//allocate memory for ayuv input data in char format [0..255]
-	allocSafe(&d_ayuvData, frameSizeAyuv * mData.bufferCount);
+	//allocate memory for vuyx input data in char format [0..255]
+	allocSafe(&d_vuyxData, frameSize4 * mData.bufferCount);
 	frameIndizes.assign(mData.bufferCount, -1);
 
 	//check pyramid indizes
@@ -332,7 +331,7 @@ void CudaExecutor::init() {
 	allocSafe(&d_bufferV, mData.strideFloat * h);
 
 	//initialize background color in output buffer
-	float4 bgval = { mData.bgcolorAyuv[0], mData.bgcolorAyuv[1], mData.bgcolorAyuv[2], mData.bgcolorAyuv[3]};
+	float4 bgval = { mData.bgcol4[0], mData.bgcol4[1], mData.bgcol4[2], mData.bgcol4[3] };
 	std::vector<float4> bg(w * h, bgval);
 	//write to static background
 	size_t siz = w * sizeof(float4);
@@ -370,15 +369,15 @@ void CudaExecutor::init() {
 
 //host image to decode into
 Image8& CudaExecutor::inputDestination(int64_t frameIndex) {
-	return h_input;
+	return *h_input;
 }
 
 //copy yuv input to device
 void CudaExecutor::inputData(int64_t frameIndex) {
 	int64_t idx = frameIndex % mData.bufferCount;
 	frameIndizes[idx] = frameIndex;
-	unsigned char* d_frame = d_ayuvData + idx * mData.stride4 * mData.h;
-	handleStatus(cudaMemcpy(d_frame, h_input.data(), h_input.sizeInBytes(), cudaMemcpyDefault), "error @input #10");
+	unsigned char* d_frame = d_vuyxData + idx * mData.stride4 * mData.h;
+	handleStatus(cudaMemcpy(d_frame, h_input->data(), h_input->sizeInBytes(), cudaMemcpyDefault), "error @input #10");
 	handleStatus(cudaGetLastError(), "error @input #20");
 }
 
@@ -389,13 +388,14 @@ void CudaExecutor::inputData(int64_t frameIndex) {
 
 //create image pyramid
 int64_t CudaExecutor::createPyramid(int64_t frameIndex, AffineDataFloat trf, bool warp) {
+	//util::ConsoleTimer timer("cuda pyramid " + std::to_string(frameIndex));
 	int w = mData.w;
 	int h = mData.h;
 	int strideFloatCount = mData.strideFloat / sizeof(float);
 
 	//get to the start of this yuv image
 	int64_t frIdx = frameIndex % mData.bufferCount;
-	unsigned char* ayuvStart = d_ayuvData + frIdx * mData.stride4 * h;
+	unsigned char* vuyxStart = d_vuyxData + frIdx * mData.stride4 * h;
 
 	//get to the start of this pyramid
 	int64_t pyrIdx = frameIndex % mData.pyramidCount;
@@ -407,11 +407,11 @@ int64_t CudaExecutor::createPyramid(int64_t frameIndex, AffineDataFloat trf, boo
 	//first level of pyramid Y data
 	if (warp) {
 		cu::set_32f(pyrStart, strideFloatCount, w, h, 0);
-		cu::scale_8u32f(ayuvStart, mData.stride4, w * 4, d_bufferH, strideFloatCount, w, h, d_luma);
+		cu::scale_8u32f(vuyxStart, mData.stride4, w * 4, d_bufferH, strideFloatCount, w, h, d_luma);
 		cu::warp_back_32f(d_bufferH, strideFloatCount, pyrStart, strideFloatCount, w, h, trf);
 
 	} else {
-		cu::scale_8u32f(ayuvStart, mData.stride4, w * 4, pyrStart, strideFloatCount, w, h, d_luma);
+		cu::scale_8u32f(vuyxStart, mData.stride4, w * 4, pyrStart, strideFloatCount, w, h, d_luma);
 		cu::filter_32f_h(pyrStart, d_bufferH, strideFloatCount, w, h, 0);
 		cu::filter_32f_v(d_bufferH, pyrStart, strideFloatCount, w, h, 0);
 	}
@@ -516,12 +516,12 @@ void CudaExecutor::outputData(int64_t frameIndex, AffineDataFloat trf) {
 	int64_t idx = frameIndex % mData.bufferCount;
 	assert(frameIndizes[idx] == frameIndex && "invalid frame in buffer");
 
-	//size of all pixel data in bytes in ayuv including padding
-	int frameSizeAyuv = mData.stride4 * h;
+	//size of all pixel data in bytes in vuyx including padding
+	int frameSize4 = mData.stride4 * h;
 	//start of input yuv data
-	unsigned char* ayuvSrc = d_ayuvData + idx * frameSizeAyuv;
+	unsigned char* vuyxSrc = d_vuyxData + idx * frameSize4;
 
-	cu::scale_8u32f_3(ayuvSrc, mData.stride4, w * 4, out.start, strideFloat4N, w, h, cs[1]);
+	cu::scale_8u32f_3(vuyxSrc, mData.stride4, w * 4, out.start, strideFloat4N, w, h, cs[1]);
 	//fill static background when requested
 	if (mData.bgmode == BackgroundMode::COLOR) {
 		handleStatus(cudaMemcpyAsync(out.warped, out.background, 1ull * mData.strideFloat4 * h, cudaMemcpyDefault, cs[1]), "error @output #91");
@@ -540,17 +540,20 @@ void CudaExecutor::outputData(int64_t frameIndex, AffineDataFloat trf) {
 }
 
 void CudaExecutor::getOutput(int64_t frameIndex, Image8& image) const {
-	unsigned char* ptr = nullptr;
-	if (image.imageType() == ImageType::AYUV) {
-		cu::outputHost(out.output, mData.strideFloat4 / sizeof(float4), d_ayuvOut, mData.stride4, mData.w, mData.h, cs[1]);
-		ptr = d_ayuvOut;
+	int srcStep = mData.strideFloat4 / sizeof(float4);
+	if (image.imageType() == ImageType::VUYX) {
+		cu::outputHost(out.output, srcStep, d_output, mData.stride4, mData.w, mData.h, cs[1]);
+		handleStatus(cudaMemcpy2DAsync(image.data(), image.stride(), d_output, mData.stride4, mData.w * 4ull, mData.h, cudaMemcpyDefault, cs[1]), "error @output #92");
+
+	} else if (image.imageType() == ImageType::YUV) {
+		cu::outputHostYuv(out.output,srcStep, d_output, mData.w, mData.w, mData.h, cs[1]);
+		handleStatus(cudaMemcpy2DAsync(image.data(), image.stride(), d_output, mData.w, mData.w, mData.h * 3ull, cudaMemcpyDefault, cs[1]), "error @output #92");
 
 	} else if (image.colorBase() == ColorBase::RGB) {
 		auto idx = image.colorIndex();
-		cu::yuv_to_rgba(out.output, mData.strideFloat4 / sizeof(float4), d_rgba, mData.stride4, mData.w, mData.h, { idx[0], idx[1], idx[2], idx[3] }, cs[1]);
-		ptr = d_rgba;
+		cu::yuv_to_rgba(out.output, srcStep, d_output, mData.stride4, mData.w, mData.h, { idx[0], idx[1], idx[2], idx[3] }, cs[1]);
+		handleStatus(cudaMemcpy2DAsync(image.data(), image.stride(), d_output, mData.stride4, mData.w * 4ull, mData.h, cudaMemcpyDefault, cs[1]), "error @output #92");
 	}
-	handleStatus(cudaMemcpy2DAsync(image.data(), image.stride(), ptr, mData.stride4, mData.w * 4ull, mData.h, cudaMemcpyDefault, cs[1]), "error @output #92");
 
 	image.setIndex(frameIndex);
 	handleStatus(cudaStreamSynchronize(cs[1]), "error @output #93");
@@ -558,29 +561,41 @@ void CudaExecutor::getOutput(int64_t frameIndex, Image8& image) const {
 }
 
 bool CudaExecutor::getOutput(int64_t frameIndex, Image8& image, int cudaNv12stride, unsigned char* cudaNv12ptr) const {
-	cu::outputNvenc(out.output, mData.strideFloat4 / sizeof(float4), cudaNv12ptr, cudaNv12stride, mData.w, mData.h, cs[1]);
+	bool needsCopy;
+	int srcStep = mData.strideFloat4 / sizeof(float4);
+	if (cudaNv12ptr == nullptr) {
+		assert(image.imageType() == ImageType::NV12 && "invalid frame format");
+		cu::outputNvenc(out.output, srcStep, d_output, image.stride(), mData.w, mData.h, cs[1]);
+		handleStatus(cudaMemcpyAsync(image.data(), d_output, image.sizeInBytes(), cudaMemcpyDefault, cs[1]), "error @output #95");
+		needsCopy = true;
+
+	} else {
+		cu::outputNvenc(out.output, srcStep, cudaNv12ptr, cudaNv12stride, mData.w, mData.h, cs[1]);
+		needsCopy = false;
+	}
+
+	image.setIndex(frameIndex);
 	handleStatus(cudaStreamSynchronize(cs[1]), "error @output #95");
 	handleStatus(cudaGetLastError(), "error @output #96");
-	//handleStatus(cudaMemcpy(image.data(), cudaNv12ptr, image.sizeInBytes(), cudaMemcpyDeviceToHost), "error");
-	return false;
+	return needsCopy;
 }
 
 void CudaExecutor::getInput(int64_t frameIndex, Image8& image) const {
 	int fridx = frameIndex % mData.bufferCount;
 	assert(frameIndizes[fridx] == frameIndex && "invalid frame in buffer");
 
-	unsigned char* d_ayuvSrc = d_ayuvData + fridx * mData.h * mData.stride4;
+	unsigned char* d_vuyxSrc = d_vuyxData + fridx * mData.h * mData.stride4;
 	unsigned char* ptr = nullptr;
 	//copy 2D data and convert strides
-	if (image.imageType() == ImageType::AYUV) {
-		ptr = d_ayuvSrc;
+	if (image.imageType() == ImageType::VUYX) {
+		ptr = d_vuyxSrc;
 
 	} else if (image.colorBase() == ColorBase::RGB) {
 		std::span<int> idx = image.colorIndex();
-		cu::yuv_to_rgba(d_ayuvSrc, mData.stride4, d_rgba, mData.stride4, mData.w, mData.h, { idx[0], idx[1], idx[2], idx[3] });
-		ptr = d_rgba;
+		cu::yuv_to_rgba(d_vuyxSrc, mData.stride4, d_output, mData.stride4, mData.w, mData.h, { idx[0], idx[1], idx[2], idx[3] });
+		ptr = d_output;
 	}
-	handleStatus(cudaMemcpy2D(image.data(), image.stride(), ptr, mData.stride4, image.width() * 4ull, image.height(), cudaMemcpyDefault), "error @getInput");
+	handleStatus(cudaMemcpy2D(image.data(), image.stride(), ptr, mData.stride4, image.w() * 4ull, image.h(), cudaMemcpyDefault), "error @getInput");
 }
 
 void CudaExecutor::cudaGetPyramid(int64_t frameIndex, float* data) const {
@@ -588,13 +603,6 @@ void CudaExecutor::cudaGetPyramid(int64_t frameIndex, float* data) const {
 	float* devptr = d_pyrData + pyrIdx * mData.pyramidRowCount * mData.strideFloat / sizeof(float);
 	size_t wbytes = mData.w * sizeof(float);
 	handleStatus(cudaMemcpy2D(data, wbytes, devptr, mData.strideFloat, wbytes, mData.pyramidRowCount, cudaMemcpyDefault), "error @getPyramid");
-}
-
-void CudaExecutor::getWarped(int64_t frameIndex, Image8bgr& image) {
-	std::span<int> idx = image.colorIndex();
-	int strideFloat4N = mData.strideFloat4 / sizeof(float4);
-	cu::yuv_to_rgba(out.warped, strideFloat4N, d_rgba, strideFloat4N, mData.w, mData.h, { idx[0], idx[1], idx[2], idx[3] });
-	handleStatus(cudaMemcpy2D(image.data(), image.stride(), d_rgba, mData.stride4, image.width() * 4ull, image.height(), cudaMemcpyDefault), "error @getWarped");
 }
 
 void CudaExecutor::cudaGetTransformedOutput(float* warpedData, size_t h, size_t w) const {
@@ -648,26 +656,27 @@ void CudaExecutor::getDebugData(const std::string& imageFile, std::function<void
 }
 
 CudaExecutor::~CudaExecutor() {
-	
-	//delete device memory
-	void* d_arr[] = { d_results, d_ayuvData, d_ayuvOut, d_rgba, out.data, d_pyrData, d_bufferH, d_bufferV, debugData.d_data, d_interrupt, d_luma };
+	//unregister memory
+	handleStatus(cudaHostUnregister(registeredMemPtr), "error @shutdown #10 unregister");
 
+	//delete input buffer
+	delete h_input;
+
+	//delete device memory
+	void* d_arr[] = { d_results, d_vuyxData, d_output, out.data, d_pyrData, d_bufferH, d_bufferV, debugData.d_data, d_interrupt, d_luma };
 	for (void* ptr : d_arr) {
-		handleStatus(cudaFree(ptr), "error @shutdown #10 shutting down memory");
+		handleStatus(cudaFree(ptr), "error @shutdown #20 delete memory");
 	}
 
 	//delete streams
 	for (int i = 0; i < cs.size(); i++) {
-		handleStatus(cudaStreamDestroy(cs[i]), "error @shutdown #20 shutting down streams");
+		handleStatus(cudaStreamDestroy(cs[i]), "error @shutdown #30 delete streams");
 	}
 
 	//delete host memory
 	delete[] h_results;
 
-	//unregister memory
-	handleStatus(cudaHostUnregister(registeredMemPtr), "error @shutdown #30 unregister");
-
 	//do not reset device while nvenc is still active
 	//handleStatus(cudaDeviceReset(), "error @shutdown #90", errorList);
-	handleStatus(cudaGetLastError(), "error @shutdown #100");
+	handleStatus(cudaGetLastError(), "error @shutdown #50");
 }

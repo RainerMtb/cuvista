@@ -40,51 +40,51 @@ template <> void ImageColorBase<float>::convertValue(float value, float* dest) c
 //uchar to uchar
 template <> void ImagePixel<uchar>::writeTo(ColorBase srcColor, ColorBase destColor, ImagePixel<uchar>& dest) const {
 	if (srcColor == destColor) {
-		*dest.x = *x;
-		*dest.y = *y;
-		*dest.z = *z;
+		*dest.s0 = *s0;
+		*dest.s1 = *s1;
+		*dest.s2 = *s2;
 
 	} else if (srcColor == ColorBase::RGB && destColor == ColorBase::YUV) {
-		rgb_to_yuv(*x, *y, *z, dest.x, dest.y, dest.z);
+		rgb_to_yuv(*s0, *s1, *s2, dest.s0, dest.s1, dest.s2);
 
 	} else if (srcColor == ColorBase::YUV && destColor == ColorBase::RGB) {
-		yuv_to_rgb(*x, *y, *z, dest.x, dest.y, dest.z);
+		yuv_to_rgb(*s0, *s1, *s2, dest.s0, dest.s1, dest.s2);
 	}
 
-	if (dest.w != nullptr) *dest.w = 255;
+	if (dest.s3 != nullptr) *dest.s3 = 255;
 }
 
 //uchar to float
 template <> void ImagePixel<uchar>::writeTo(ColorBase srcColor, ColorBase destColor, ImagePixel<float>& dest) const {
 	if (srcColor == destColor) {
 		float f = 1.0f / 255.0f;
-		*dest.x = *x * f;
-		*dest.y = *y * f;
-		*dest.z = *z * f;
+		*dest.s0 = *s0 * f;
+		*dest.s1 = *s1 * f;
+		*dest.s2 = *s2 * f;
 
 	} else if (srcColor == ColorBase::RGB && destColor == ColorBase::YUV) {
-		rgb_to_yuv(*x, *y, *z, dest.x, dest.y, dest.z);
+		rgb_to_yuv(*s0, *s1, *s2, dest.s0, dest.s1, dest.s2);
 
 	} else if (srcColor == ColorBase::YUV && destColor == ColorBase::RGB) {
-		yuv_to_rgb(*x, *y, *z, dest.x, dest.y, dest.z);
+		yuv_to_rgb(*s0, *s1, *s2, dest.s0, dest.s1, dest.s2);
 	}
 
-	if (dest.w != nullptr) *dest.w = 1.0f;
+	if (dest.s3 != nullptr) *dest.s3 = 1.0f;
 }
 
 //float to uchar
 template <> void ImagePixel<float>::writeTo(ColorBase srcColor, ColorBase destColor, ImagePixel<uchar>& dest) const {
 	if (srcColor == destColor) {
-		*dest.x = (uchar) std::rint(*x * 255.0f);
-		*dest.y = (uchar) std::rint(*y * 255.0f);
-		*dest.z = (uchar) std::rint(*z * 255.0f);
+		*dest.s0 = (uchar) std::rint(*s0 * 255.0f);
+		*dest.s1 = (uchar) std::rint(*s1 * 255.0f);
+		*dest.s2 = (uchar) std::rint(*s2 * 255.0f);
 
 	} else if (srcColor == ColorBase::RGB && destColor == ColorBase::YUV) {
-		rgb_to_yuv(*x, *y, *z, dest.x, dest.y, dest.z);
+		rgb_to_yuv(*s0, *s1, *s2, dest.s0, dest.s1, dest.s2);
 
 	} else if (srcColor == ColorBase::YUV && destColor == ColorBase::RGB) {
-		yuv_to_rgb(*x, *y, *z, dest.x, dest.y, dest.z);
+		yuv_to_rgb(*s0, *s1, *s2, dest.s0, dest.s1, dest.s2);
 	}
 
-	if (dest.w != nullptr) *dest.w = 255;
+	if (dest.s3 != nullptr) *dest.s3 = 255;
 }

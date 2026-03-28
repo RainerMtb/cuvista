@@ -43,18 +43,29 @@ static void filter_32f_func(cl::Kernel& kernel, cl::Image src, cl::Image dest, i
 
 //-------------------------------------------
 
-void cl::scale_8u32f_1(Image src, Image dest, Data& clData) {
+void cl::scale_8u32f_1(Image src, Image dest, Buffer luma, Data& clData) {
 	assert(src.getImageInfo<CL_IMAGE_WIDTH>() == dest.getImageInfo<CL_IMAGE_WIDTH>() && "image width mismatch");
 	assert(src.getImageInfo<CL_IMAGE_HEIGHT>() == dest.getImageInfo<CL_IMAGE_HEIGHT>() && "image width mismatch");
-	runKernel(clData.kernels.scale_8u32f_1, src, dest, clData.queue);
+	Kernel kernel = clData.kernels.scale_8u32f_1;
+	kernel.setArg(2, luma);
+	runKernel(kernel, src, dest, clData.queue);
+}
+
+int64_t cl::lumaSum(Buffer luma, int w, Data& clData) {
+	Kernel kernel = clData.kernels.lumaSum;
+	kernel.setArg(0, luma);
+	kernel.setArg(1, w);
+	clData.queue.enqueueNDRangeKernel(kernel, NullRange, NDRange(32, 1), NDRange(32, 1));
+	int64_t dest;
+	clData.queue.enqueueReadBuffer(luma, CL_TRUE, 0, sizeof(cl_long), &dest);
+	return dest;
 }
 
 void cl::scale_8u32f_3(Image src, Image dest, Data& clData) {
 	runKernel(clData.kernels.scale_8u32f_3, src, dest, clData.queue);
 }
 
-void cl::scale_32f8u_3(Image src, Buffer dest, int pitch, const Data& clData) {
-	Kernel kernel = clData.kernels.scale_32f8u_3;
+void cl::scale_32f8u(Kernel kernel, Image src, Buffer dest, int pitch, const Data& clData) {
 	kernel.setArg(0, src);
 	kernel.setArg(1, dest);
 	kernel.setArg(2, pitch);
@@ -99,18 +110,18 @@ void cl::unsharp(Image src, Image dest, Image gauss, Data& clData, cl_float4 fac
 void cl::yuv_to_rgba(Kernel kernel, Image src, unsigned char* dest, const Data& clData, int w, int h, int stride, std::span<int> index) {
 	cl_int4 offset4 = { index[0], index[1], index[2], index[3] };
 	kernel.setArg(0, src);
-	kernel.setArg(1, clData.rgbaOut);
+	kernel.setArg(1, clData.output);
 	kernel.setArg(2, offset4);
 	clData.queue.enqueueNDRangeKernel(kernel, NullRange, NDRange(w, h));
 	Size2 region(w * 4, h);
-	clData.queue.enqueueReadBufferRect(clData.rgbaOut, CL_TRUE, Size2(), Size2(), region, w * 4LL, 0, stride, 0, dest);
+	clData.queue.enqueueReadBufferRect(clData.output, CL_TRUE, Size2(), Size2(), region, w * 4LL, 0, stride, 0, dest);
 }
 
 void cl::yuv_to_nv12(Kernel kernel, Image src, unsigned char* dest, const Data& clData, int w, int h, int stride) {
 	kernel.setArg(0, src);
-	kernel.setArg(1, clData.ayuvOut);
+	kernel.setArg(1, clData.output);
 	kernel.setArg(2, stride);
 	kernel.setArg(3, h);
 	clData.queue.enqueueNDRangeKernel(kernel, NullRange, NDRange(w / 2, h / 2));
-	clData.queue.enqueueReadBuffer(clData.ayuvOut, CL_TRUE, 0, 3ull * stride * h / 2, dest);
+	clData.queue.enqueueReadBuffer(clData.output, CL_TRUE, 0, 3ull * stride * h / 2, dest);
 }

@@ -64,14 +64,12 @@ public:
 	virtual void getOutput(int64_t frameIndex, Image8& image) const = 0;
 	//prepare data for encoding on cuda
 	virtual bool getOutput(int64_t frameIndex, Image8& image, int cudaNv12stride, unsigned char* cudaNv12ptr) const = 0;
-	//get transformed image as Mat<float> where YUV color planes are stacked vertically
+	//get transformed image as Mat<float>
 	virtual Mat<float> getTransformedOutput() const = 0;
 	//get image pyramid as single Mat<float> where images are stacked vertically from large to small
 	virtual Mat<float> getPyramid(int64_t frameIndex) const = 0;
 	//get input image as stored in frame buffers
 	virtual void getInput(int64_t frameIndex, Image8& image) const = 0;
-	//output rgb data warped but not unsharped
-	virtual void getWarped(int64_t frameIndex, Image8bgr& image) = 0;
 	//destructor
 	virtual ~FrameExecutor() {}
 
