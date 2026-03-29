@@ -173,7 +173,7 @@ void OpenClFrame::init() {
 		//allocate vuyx data
 		ImageFormat fmtVuyx(CL_RGBA, CL_UNSIGNED_INT8);
 		for (int idx = 0; idx < mData.bufferCount; idx++) {
-			Image2D vuyx(clData.context, CL_MEM_READ_ONLY, fmtVuyx, mData.w, mData.h);
+			Image2D vuyx(clData.context, CL_MEM_READ_WRITE, fmtVuyx, mData.w, mData.h);
 			clData.vuyx.push_back(vuyx);
 		}
 
@@ -188,7 +188,10 @@ void OpenClFrame::init() {
 		clData.output = Buffer(clData.context, CL_MEM_WRITE_ONLY, mData.stride4 * mData.h);
 
 		//allocate input image
-		mInputFrame = ImageVuyx(mData.w, mData.h, mData.stride4);
+		mInputFrame = ImageYuv(mData.h, mData.w, mData.stride);
+
+		ImageFormat inFmt(CL_DEPTH, CL_UNSIGNED_INT8);
+		clData.yuv = Image2D(clData.context, CL_MEM_READ_ONLY, inFmt, mData.stride, mData.h * 3);
 
 		//image format gray single channel float
 		ImageFormat fmt32(CL_DEPTH, CL_FLOAT);
@@ -228,6 +231,7 @@ void OpenClFrame::init() {
 		program.build(compilerFlag.c_str());
 
 		//assign kernels
+		clData.kernels.input = Kernel(program, "input");
 		clData.kernels.scale_8u32f_1 = Kernel(program, "scale_8u32f_1");
 		clData.kernels.scale_8u32f_3 = Kernel(program, "scale_8u32f_3");
 		clData.kernels.scale_32f8u_3 = Kernel(program, "scale_32f8u_3");
@@ -271,7 +275,8 @@ Image8& OpenClFrame::inputDestination(int64_t frameIndex) {
 void OpenClFrame::inputData(int64_t frameIndex) {
 	int64_t idx = frameIndex % mData.bufferCount;
 	try {
-		clData.queue.enqueueWriteImage(clData.vuyx[idx], CL_TRUE, Size2(), Size2(mData.w, mData.h), mInputFrame.stride(), 0, mInputFrame.data());
+		clData.queue.enqueueWriteImage(clData.yuv, CL_TRUE, Size2(), Size2(mData.w, mData.h * 3), mInputFrame.stride(), 0, mInputFrame.data());
+		input(clData.yuv, clData.vuyx[idx], mData.w, mData.h, clData);
 	
 	} catch (const Error& err) {
 		errorLogger().logError("OpenCL input error: ", err.what());

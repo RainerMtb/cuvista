@@ -172,7 +172,7 @@ static void testCrc() {
 
 		{
 			//check yuv
-			uint64_t crcExpectedYuv = 0xfd3a7d53bbafd324;
+			uint64_t crcExpectedYuv = 0xb33ca130f19b258c;
 			util::CRC64 crcyuv;
 			for (const ImageVuyx& image : externalWriter->outputFramesYuv) image.crc(crcyuv);
 
@@ -185,7 +185,7 @@ static void testCrc() {
 
 		{
 			//check rgba
-			uint64_t crcExpectedRgba = 0x38e0373f1cd0a85a;
+			uint64_t crcExpectedRgba = 0x1c0950cfb4317bf8;
 			util::CRC64 crcrgba;
 			for (const ImageRGBA& image : externalWriter->outputFramesRgba) image.crc(crcrgba);
 
@@ -196,7 +196,7 @@ static void testCrc() {
 
 		{
 			//check bgra
-			uint64_t crcExpectedBgra = 0x495f1810861f63ce;
+			uint64_t crcExpectedBgra = 0xc9490a3c5cdb7496;
 			util::CRC64 crcbgra;
 			for (const ImageBGRA& image : externalWriter->outputFramesBgra) image.crc(crcbgra);
 
@@ -219,7 +219,7 @@ static void testCrc() {
 		std::shared_ptr<RawMemoryStoreWriter> externalWriter = std::make_shared<RawMemoryStoreWriter>(250, false, true);
 		DeshakerResult result = run(commandsMode2[i], externalWriter);
 
-		uint64_t crcExpected = 0x4094b1e8576cff7f;
+		uint64_t crcExpected = 0x96af7d0e8fd4b7e7;
 		util::CRC64 crcOutput;
 		for (const ImageVuyx& image : externalWriter->outputFramesYuv) image.crc(crcOutput);
 

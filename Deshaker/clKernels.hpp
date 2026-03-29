@@ -27,6 +27,18 @@ const sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDG
 const sampler_t downsampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE | CLK_FILTER_LINEAR;
 
 
+__kernel void input(__read_only image2d_t src, __write_only image2d_t dest) {
+	int c = get_global_id(0);
+	int r = get_global_id(1);
+	int h = get_global_size(1);
+	
+	uint y = read_imageui(src, (int2)(c, r)).x;
+	uint u = read_imageui(src, (int2)(c, r + h)).x;
+	uint v = read_imageui(src, (int2)(c, r + h * 2)).x;
+	uint4 result = (uint4)(v, u, y, 255);
+	write_imageui(dest, (int2)(c, r), result);
+}
+
 __kernel void scale_8u32f_1(__read_only image2d_t src, __write_only image2d_t dest, __global long* luma) {
 	int c = get_global_id(0);
 	int r = get_global_id(1);
@@ -164,10 +176,6 @@ __kernel void remap_downsize_32f(__read_only image2d_t src, __write_only image2d
 	int c = get_global_id(0);
 	int r = get_global_id(1);
 
-	//sampling produces different result to cpu code
-	//float2 coords = (float2) (c * 2 + 0.5f, r * 2 + 0.5f);
-	//float val = read_imagef(src, downsampler, coords).x;
-	
 	float val = interpolate(src, c * 2, r * 2, 0.5f, 0.5f);
 	write_imagef(dest, (int2)(c, r), val);
 }

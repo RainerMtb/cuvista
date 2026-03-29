@@ -48,8 +48,8 @@ public:
 	void getInput(int64_t frameIndex, Image8& image) const override;
 
 private:
-	ImageVuyx mReadBuffer;
-	std::vector<ImageVuyx> mInput;
+	ImageYuv mReadBuffer;
+	std::vector<ImageYuv> mInput;
 	std::vector<AvxMatf> mPyr;
 	AvxMatf mFilterBuffer, mFilterResult;
 	AvxMatf mBackground, mFilterBuffer4, mFilterResult4, mWarped, mOutput;
@@ -75,7 +75,7 @@ private:
 	std::vector<float> mFactorU = { 0.0f, -0.392f, 2.017f, 0.0f };
 	std::vector<float> mFactorV = { 1.596f, -0.813f, 0.0f, 0.0f };
 
-	void yuvToFloat4(const ImageVuyx& vuyx, AvxMatf& dest);
+	void yuvToFloat4(const ImageYuv& yuv, AvxMatf& dest);
 	void downsample(const float* srcptr, int h, int w, int stride, float* destptr, int destStride);
 	void filter1(const AvxMatf& src, int h, int w, AvxMatf& dest, std::span<V16f> ks);
 	void filter4(const AvxMatf& src, int h, int w, AvxMatf& dest);
@@ -87,7 +87,7 @@ private:
 	V16f interpolate(V16f f00, V16f f10, V16f f01, V16f f11, V16f dx, V16f dy);
 	V16f interpolate(V16f f00, V16f f10, V16f f01, V16f f11, V16f dx, V16f dy, V16f dx1, V16f dy1);
 
-	void vuyxToRgba(const ImageVuyx& vuyx, Image8& dest) const;
+	void yuvToRgba(const ImageYuv& yuv, Image8& dest) const;
 	void vuyxToRgba(const AvxMatf& vuyx, Image8& dest) const;
 	void writeVuyx(Image8& dest) const;
 	void writeYuv(Image8& dest) const;

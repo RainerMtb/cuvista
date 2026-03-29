@@ -43,6 +43,11 @@ static void filter_32f_func(cl::Kernel& kernel, cl::Image src, cl::Image dest, i
 
 //-------------------------------------------
 
+void cl::input(Image src, Image dest, int w, int h, Data& clData) {
+	Kernel kernel = clData.kernels.input;
+	runKernel(kernel, src, dest, clData.queue, w, h);
+}
+
 void cl::scale_8u32f_1(Image src, Image dest, Buffer luma, Data& clData) {
 	assert(src.getImageInfo<CL_IMAGE_WIDTH>() == dest.getImageInfo<CL_IMAGE_WIDTH>() && "image width mismatch");
 	assert(src.getImageInfo<CL_IMAGE_HEIGHT>() == dest.getImageInfo<CL_IMAGE_HEIGHT>() && "image width mismatch");

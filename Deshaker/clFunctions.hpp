@@ -66,6 +66,8 @@ namespace cl {
 		CommandQueue queue;
 		CommandQueue secondQueue;
 
+		//input yuv buffer
+		Image2D yuv;
 		//input vuyx frames buffer
 		std::vector<Image2D> vuyx;
 		//pyramid images, one image for all levels
@@ -79,7 +81,7 @@ namespace cl {
 		std::array<Image2D, 5> out;
 		Buffer output;
 
-		cl_float4 bgCol;
+		cl_float4 bgCol = {};
 
 		//storage for results struct
 		Buffer results;
@@ -89,6 +91,7 @@ namespace cl {
 		Buffer core;
 
 		struct Kernels {
+			Kernel input;
 			Kernel scale_8u32f_1;
 			Kernel scale_8u32f_3;
 			Kernel scale_32f8u_3;
@@ -107,6 +110,7 @@ namespace cl {
 		} kernels;
 	};
 
+	void input(Image src, Image dest, int w, int h, Data& clData);
 	void scale_8u32f_1(Image src, Image dest, Buffer luma, Data& clData);
 	void scale_8u32f_3(Image src, Image dest, Data& clData);
 	void scale_32f8u(Kernel kernel, Image src, Buffer dest, int pitch, const Data& clData);

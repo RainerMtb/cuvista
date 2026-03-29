@@ -23,8 +23,8 @@
 class DummyFrame : public FrameExecutor {
 
 private:
-	ImageVuyx mReadBuffer;
-	std::vector<ImageVuyx> mFrames;
+	ImageYuv mReadBuffer;
+	std::vector<ImageYuv> mFrames;
 
 public:
 	DummyFrame(MainData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool);

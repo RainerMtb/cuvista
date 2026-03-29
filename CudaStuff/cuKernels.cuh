@@ -22,6 +22,8 @@
 #include "BaseData.hpp"
 
 namespace cu {
+	cudaError_t input(uchar* srcYuv, int srcStep, int srcWidth, uchar* destVuyx, int destStep, int destWidth, int h, cudaStream_t cs = 0);
+
 	cudaError_t scale_8u32f(uchar* src, int srcStep, int srcWidth, float* dest, int destStep, int destWidth, int h, int64_t* d_luma, cudaStream_t cs = 0);
 	cudaError_t scale_8u32f_3(uchar* src, int srcStep, int srcWidth, float4* dest, int destStep, int destWidth, int h, cudaStream_t cs = 0);
 	int64_t lumaSum(int64_t* luma, int w, cudaStream_t cs = 0);

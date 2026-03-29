@@ -140,6 +140,65 @@ namespace im {
 
 	//-----------------------------------------------------------------------
 
+	ImageVuyx::ImageVuyx(int h, int w, int stride) {
+		storePtr = std::make_shared<ImageStoreLocal<uchar>>(h * stride);
+		typePtr = std::make_shared<ImageTypePacked<uchar>>(storePtr, h, w, stride, 4);
+		colorPtr = std::make_shared<ImageColorYuv<uchar>>(typePtr, std::array<int, 4>{ 2, 1, 0, 3 }, 255);
+	}
+
+	ImageVuyx::ImageVuyx(int h, int w, size_t stride) :
+		ImageVuyx(h, w, (int) stride)
+	{}
+
+	ImageVuyx::ImageVuyx(int h, int w) :
+		ImageVuyx(h, w, util::alignValue(w * 4, 64))
+	{}
+
+	ImageVuyx::ImageVuyx() :
+		ImageVuyx(0, 0)
+	{}
+
+	ImageVuyx ImageVuyx::readPgmFile(const std::string& filename) {
+		ImageYuv yuv = ImageYuv::readPgmFile(filename);
+		ImageVuyx vuyx(yuv.h(), yuv.w());
+		yuv.convertTo(vuyx);
+		return vuyx;
+	}
+
+	ImageVuyx ImageVuyx::readBmpFile(const std::string& filename) {
+		ImageBgr bgr = ImageBgr::readBmpFile(filename);
+		ImageVuyx vuyx(bgr.h(), bgr.w());
+		bgr.convertTo(vuyx);
+		return vuyx;
+	}
+
+	uchar* ImageVuyx::addr(size_t idx, size_t r, size_t c) { 
+		return storePtr->data() + r * typePtr->stride + c * typePtr->planes + idx; 
+	}
+
+	const uchar* ImageVuyx::addr(size_t idx, size_t r, size_t c) const {
+		return storePtr->data() + r * typePtr->stride + c * typePtr->planes + idx;
+	}
+
+	uchar& ImageVuyx::at(size_t idx, size_t r, size_t c) { 
+		return *addr(idx, r, c); 
+	}
+
+	const uchar& ImageVuyx::at(size_t idx, size_t r, size_t c) const { 
+		return *addr(idx, r, c); 
+	}
+
+	uchar* ImageVuyx::row(size_t r) {
+		return storePtr->data() + r * typePtr->stride;
+	}
+
+	const uchar* ImageVuyx::row(size_t r) const {
+		return storePtr->data() + r * typePtr->stride;
+	}
+
+
+	//-----------------------------------------------------------------------
+
 	ImageYuv::ImageYuv(int h, int w, int stride) {
 		storePtr = std::make_shared<ImageStoreLocal<uchar>>(h * stride * 3);
 		typePtr = std::make_shared<ImageTypePlanar<uchar>>(storePtr, h, w, stride, 3);
@@ -212,65 +271,25 @@ namespace im {
 		}
 	}
 
+	void ImageYuv::convertTo(Image8& dest, ThreadPoolBase& pool) const {
+		if (dest.imageType() == ImageType::VUYX) {
+			int offset = stride() * h();
+			for (int r = 0; r < h(); r++) {
+				uchar* destPtr = dest.row(r);
+				for (int c = 0; c < w(); c++) {
+					const uchar* srcPtr = addr(0, r, c);
+					*destPtr++ = srcPtr[offset * 2];
+					*destPtr++ = srcPtr[offset];
+					*destPtr++ = srcPtr[0];
+					*destPtr++ = 255;
+				}
+			}
+			dest.index = index;
 
-	//-----------------------------------------------------------------------
-
-	ImageVuyx::ImageVuyx(int h, int w, int stride) {
-		storePtr = std::make_shared<ImageStoreLocal<uchar>>(h * stride);
-		typePtr = std::make_shared<ImageTypePacked<uchar>>(storePtr, h, w, stride, 4);
-		colorPtr = std::make_shared<ImageColorYuv<uchar>>(typePtr, std::array<int, 4>{ 2, 1, 0, 3 }, 255);
+		} else {
+			ImageBase<uchar>::convertTo(dest, pool);
+		}
 	}
-
-	ImageVuyx::ImageVuyx(int h, int w, size_t stride) :
-		ImageVuyx(h, w, (int) stride)
-	{}
-
-	ImageVuyx::ImageVuyx(int h, int w) :
-		ImageVuyx(h, w, util::alignValue(w * 4, 64))
-	{}
-
-	ImageVuyx::ImageVuyx() :
-		ImageVuyx(0, 0)
-	{}
-
-	ImageVuyx ImageVuyx::readPgmFile(const std::string& filename) {
-		ImageYuv yuv = ImageYuv::readPgmFile(filename);
-		ImageVuyx vuyx(yuv.h(), yuv.w());
-		yuv.convertTo(vuyx);
-		return vuyx;
-	}
-
-	ImageVuyx ImageVuyx::readBmpFile(const std::string& filename) {
-		ImageBgr bgr = ImageBgr::readBmpFile(filename);
-		ImageVuyx vuyx(bgr.h(), bgr.w());
-		bgr.convertTo(vuyx);
-		return vuyx;
-	}
-
-	uchar* ImageVuyx::addr(size_t idx, size_t r, size_t c) { 
-		return storePtr->data() + r * typePtr->stride + c * typePtr->planes + idx; 
-	}
-
-	const uchar* ImageVuyx::addr(size_t idx, size_t r, size_t c) const {
-		return storePtr->data() + r * typePtr->stride + c * typePtr->planes + idx;
-	}
-
-	uchar& ImageVuyx::at(size_t idx, size_t r, size_t c) { 
-		return *addr(idx, r, c); 
-	}
-
-	const uchar& ImageVuyx::at(size_t idx, size_t r, size_t c) const { 
-		return *addr(idx, r, c); 
-	}
-
-	uchar* ImageVuyx::row(size_t r) {
-		return storePtr->data() + r * typePtr->stride;
-	}
-
-	const uchar* ImageVuyx::row(size_t r) const {
-		return storePtr->data() + r * typePtr->stride;
-	}
-
 
 
 	//-----------------------------------------------------------------------

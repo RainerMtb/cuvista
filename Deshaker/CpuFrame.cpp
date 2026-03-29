@@ -39,8 +39,8 @@ void CpuFrame::init() {
 	assert(mDeviceInfo.getType() == DeviceType::CPU && "device type must be CPU here");
 
 	//buffer to hold input frames in vuyx format
-	mReadBuffer = ImageVuyx(mData.h, mData.w, mData.stride4);
-	for (int i = 0; i < mData.bufferCount; i++) mInput.emplace_back(mData.h, mData.w, mData.stride4);
+	mReadBuffer = ImageYuv(mData.h, mData.w, mData.stride);
+	for (int i = 0; i < mData.bufferCount; i++) mInput.emplace_back(mData.h, mData.w, mData.stride);
 
 	//init pyramid structures
 	for (int i = 0; i < mData.pyramidCount; i++) mPyr.emplace_back(mData);
@@ -78,7 +78,7 @@ int64_t CpuFrame::createPyramid(int64_t frameIndex, AffineDataFloat trf, bool wa
 
 	//fill topmost level of pyramid
 	size_t yuvIdx = frameIndex % mInput.size();
-	ImageVuyx vuyx = mInput[yuvIdx];
+	const ImageYuv& yuv = mInput[yuvIdx];
 	Matf& y0 = pyr.mY[0];
 
 	//convert input y values to float
@@ -86,8 +86,9 @@ int64_t CpuFrame::createPyramid(int64_t frameIndex, AffineDataFloat trf, bool wa
 	constexpr float f = 1.0f / 255.0f;
 	auto funcConvert = [&] (size_t r) {
 		int sum = 0;
+		const uchar* src = yuv.row(r);
 		for (size_t c = 0; c < mData.w; c++) {
-			int y = vuyx.at(2, r, c);
+			int y = src[c];
 			mFilterBuffer1.at(r, c) = y * f;
 			sum += y * y;
 		}
@@ -280,10 +281,10 @@ void CpuFrame::computeTerminate(int64_t frameIndex, std::span<PointResult> resul
 
 void CpuFrame::outputData(int64_t frameIndex, AffineDataFloat trf) {
 	size_t yuvidx = frameIndex % mInput.size();
-	const ImageVuyx& input = mInput[yuvidx];
+	const ImageYuv& input = mInput[yuvidx];
 	constexpr float f = 1.0f / 255.0f;
 	auto funcConvert = [&] (size_t r, size_t c) -> FloatVuyx { 
-		return { input.at(0, r, c) * f, input.at(1, r, c) * f, input.at(2, r, c) * f, input.at(3, r, c) * f };
+		return { input.at(2, r, c) * f, input.at(1, r, c) * f, input.at(0, r, c) * f, 1.0f };
 	};
 	mFilterBuffer4.setValues(funcConvert, mPool);
 
@@ -346,12 +347,7 @@ Matf CpuFrame::getPyramid(int64_t index) const {
 
 void CpuFrame::getInput(int64_t frameIndex, Image8& image) const {
 	size_t idx = frameIndex % mInput.size();
-	if (image.colorBase() == ColorBase::YUV) {
-		mInput[idx].copyTo(image);
-
-	} else if (image.colorBase() == ColorBase::RGB) {
-		mInput[idx].convertTo(image, mPool);
-	}
+	mInput[idx].convertTo(image, mPool);
 }
 
 Matf CpuFrame::CpuPyramid::getCompletePyramid(int64_t index, size_t h, size_t w) const {

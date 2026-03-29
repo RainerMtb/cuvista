@@ -283,7 +283,8 @@ void CudaExecutor::init() {
 	handleStatus(cudaMemGetInfo(&memfree1, &memtotal), "error @init #21");
 
 	//allocate input frame storage with proper cuda stride
-	h_input = new ImageVuyx(mData.h, mData.w, mData.stride4);
+	h_input = new ImageYuv(mData.h, mData.w, mData.stride);
+	allocSafe(&d_input, 3ull * mData.stride * mData.h);
 
 	//pin memory of transfer object
 	registeredMemPtr = h_input->data();
@@ -374,10 +375,13 @@ Image8& CudaExecutor::inputDestination(int64_t frameIndex) {
 
 //copy yuv input to device
 void CudaExecutor::inputData(int64_t frameIndex) {
+	handleStatus(cudaMemcpy(d_input, h_input->data(), h_input->sizeInBytes(), cudaMemcpyDefault), "error @input #10");
+
 	int64_t idx = frameIndex % mData.bufferCount;
 	frameIndizes[idx] = frameIndex;
 	unsigned char* d_frame = d_vuyxData + idx * mData.stride4 * mData.h;
-	handleStatus(cudaMemcpy(d_frame, h_input->data(), h_input->sizeInBytes(), cudaMemcpyDefault), "error @input #10");
+	cu::input(d_input, mData.stride, mData.w, d_frame, mData.stride4, mData.w * 4, mData.h);
+
 	handleStatus(cudaGetLastError(), "error @input #20");
 }
 
@@ -663,7 +667,7 @@ CudaExecutor::~CudaExecutor() {
 	delete h_input;
 
 	//delete device memory
-	void* d_arr[] = { d_results, d_vuyxData, d_output, out.data, d_pyrData, d_bufferH, d_bufferV, debugData.d_data, d_interrupt, d_luma };
+	void* d_arr[] = { d_input, d_results, d_vuyxData, d_output, out.data, d_pyrData, d_bufferH, d_bufferV, debugData.d_data, d_interrupt, d_luma };
 	for (void* ptr : d_arr) {
 		handleStatus(cudaFree(ptr), "error @shutdown #20 delete memory");
 	}

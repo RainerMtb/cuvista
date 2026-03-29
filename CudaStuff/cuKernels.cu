@@ -192,6 +192,22 @@ __global__ void kernel_unsharp_3(float4* base, float4* gauss, float4* dest, int 
 
 //------------ KERNELS FOR SINGLE PLANES
 
+__global__ void kernel_input(cudaTextureObject_t texObj, cuMatc dest, int w, int h) {
+	uint x = blockIdx.x * blockDim.x + threadIdx.x;
+	uint y = blockIdx.y * blockDim.y + threadIdx.y;
+
+	if (x < w && y < h) {
+		uchar Y = tex2D<uchar>(texObj, x, y);
+		uchar U = tex2D<uchar>(texObj, x, y + h);
+		uchar V = tex2D<uchar>(texObj, x, y + h * 2);
+		uchar* destPtr = dest.addr(y, x * 4);
+		*destPtr++ = V;
+		*destPtr++ = U;
+		*destPtr++ = Y;
+		*destPtr++ = 255;
+	}
+}
+
 __global__ void kernel_output_host(float4* src, int srcStep, uchar* dest, int destStep, int w, int h) {
 	uint x = blockIdx.x * blockDim.x + threadIdx.x;
 	uint y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -435,6 +451,14 @@ cudaError_t cu::outputNvenc(float4* src, int srcStep, uchar* dest, int stride, i
 }
 
 //----------- callers float
+
+cudaError_t cu::input(uchar* srcYuv, int srcStep, int srcWidth, uchar* destVuyx, int destStep, int destWidth, int h, cudaStream_t cs) {
+	KernelContext ki = prepareTexture(srcYuv, srcStep, srcWidth, h * 3);
+	cuMatc destMat(destVuyx, h, destWidth, destStep);
+	kernel_input << <ki.blocks, ki.threads, 0, cs >> > (ki.texture, destMat, srcWidth, h);
+	cudaDestroyTextureObject(ki.texture);
+	return cudaGetLastError();
+}
 
 cudaError_t cu::scale_8u32f(uchar* src, int srcStep, int srcWidth, float* dest, int destStep, int destWidth, int h, int64_t* d_luma, cudaStream_t cs) {
 	KernelContext ki = prepareTexture(src, srcStep, srcWidth, h);

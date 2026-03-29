@@ -53,7 +53,7 @@ following options may be provided after -o parameter
                 for further processing, input must then be specified as
                 -f rawvideo -video_size w:h -framerate n -pix_fmt yuv444p 
                 refer to pipe mechanism of your OS for further information
-                piping does not work in Windows PowerShell, use Command Line
+                piping does not work in Windows PowerShell
 -resvid         write video in nv12 format showing transform vectors
 -resim          write bmp images showing transform vectors
                 green: point is consens / red: point is not consens

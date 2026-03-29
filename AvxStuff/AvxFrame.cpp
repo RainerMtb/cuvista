@@ -28,8 +28,8 @@ void AvxFrame::init() {
 	int w = mData.w;
 	int h = mData.h;
 
-	mReadBuffer = ImageVuyx(h, w, mData.stride4);
-	for (int i = 0; i < mData.bufferCount; i++) mInput.emplace_back(h, w, mData.stride4);
+	mReadBuffer = ImageYuv(h, w, mData.stride);
+	for (int i = 0; i < mData.bufferCount; i++) mInput.emplace_back(h, w, mData.stride);
 	for (int i = 0; i < mData.pyramidCount; i++) mPyr.emplace_back(mData.pyramidRowCount, mData.stride, 0.0f);
 
 	mBackground = AvxMatf(h, mData.stride4);
@@ -78,7 +78,7 @@ int64_t AvxFrame::createPyramid(int64_t frameIndex, AffineDataFloat trf, bool wa
 
 	//fill topmost level of pyramid
 	size_t yuvIdx = frameIndex % mInput.size();
-	ImageVuyx& vuyx = mInput[yuvIdx];
+	const ImageYuv& yuv = mInput[yuvIdx];
 	int h = mData.h;
 	int w = mData.w;
 
@@ -86,27 +86,22 @@ int64_t AvxFrame::createPyramid(int64_t frameIndex, AffineDataFloat trf, bool wa
 	V16f f = 1.0f / 255.0f;
 
 	auto func = [&] (size_t r) {
-		const uchar* srcPtr = vuyx.row(r);
+		const uchar* srcPtr = yuv.row(r);
 		float* destPtr = mFilterResult.addr(r, 0);
 		__m512i ysum = _mm512_setzero_si512();
 
-		for (int c = 0; c < vuyx.stride(); c += 64) {
-			__m512i epu8 = _mm512_loadu_epi8(srcPtr);
-			epu8 = _mm512_maskz_compress_epi8(0x4444444444444444, epu8); //extract Y value from vuyx
-			__m512i y = _mm512_cvtepu8_epi32(_mm512_castsi512_si128(epu8));
-
+		for (int c = 0; c < yuv.w(); c += 16) {
+			__m512i y = _mm512_cvtepu8_epi32(_mm_loadu_epi8(srcPtr + c));
 			V16f result = _mm512_cvtepi32_ps(y);
 			result *= f;
-			result.storeu(destPtr);
-			srcPtr += 64;
-			destPtr += 16;
+			result.storeu(destPtr + c);
 
 			y = _mm512_mullo_epi32(y, y);
 			ysum = _mm512_add_epi32(ysum, y);
 		}
 		_mm512_storeu_epi32(luma.data() + r * 16, ysum);
 	};
-	mPool.addAndWait(func, 0, vuyx.h());
+	mPool.addAndWait(func, 0, yuv.h());
 
 	//write first pyramid level
 	if (warp) {
@@ -143,7 +138,7 @@ int64_t AvxFrame::createPyramid(int64_t frameIndex, AffineDataFloat trf, bool wa
 void AvxFrame::outputData(int64_t frameIndex, AffineDataFloat trf) {
 	//util::ConsoleTimer ic("avx output");
 	size_t idx = frameIndex % mInput.size();
-	const ImageVuyx& input = mInput[idx];
+	const ImageYuv& input = mInput[idx];
 	assert(input.index == frameIndex && "wrong frame");
 
 	yuvToFloat4(input, mFilterResult4);
@@ -183,10 +178,10 @@ Matf AvxFrame::getPyramid(int64_t index) const {
 void AvxFrame::getInput(int64_t frameIndex, Image8& image) const {
 	size_t idx = frameIndex % mInput.size();
 	if (image.colorBase() == ColorBase::RGB) {
-		vuyxToRgba(mInput[idx], image);
+		yuvToRgba(mInput[idx], image);
 
 	} else if (image.colorBase() == ColorBase::YUV) {
-		mInput[idx].copyTo(image);
+		mInput[idx].convertTo(image);
 	}
 }
 
@@ -313,22 +308,24 @@ void AvxFrame::downsample(const float* srcptr, int h, int w, int stride, float* 
 	mPool.addAndWait(func, 0, h);
 }
 
-void AvxFrame::yuvToFloat4(const ImageVuyx& vuyx, AvxMatf& dest) {
+void AvxFrame::yuvToFloat4(const ImageYuv& yuv, AvxMatf& dest) {
 	//util::ConsoleTimer ic("avx yuv to float");
-	assert(vuyx.strideInBytes() % 64 == 0 && dest.w() % 64 == 0 && "invalid stride for avx512");
 	V16f f = 1.0f / 255.0f;
+	char val = (char) 255;
 
 	auto func = [&] (size_t r) {
-		const uchar* srcPtr = vuyx.row(r);
+		__m128i v = _mm_set1_epi8(val);
 		float* destPtr = dest.addr(r, 0);
-
-		for (int c = 0; c < vuyx.stride(); c += 16) {
-			V16f vuyxData = srcPtr + c;
+		for (int c = 0; c < yuv.w(); c += 4) {
+			v = _mm_mask_expandloadu_epi8(v, 0x4444, yuv.addr(0, r, c)); //y
+			v = _mm_mask_expandloadu_epi8(v, 0x2222, yuv.addr(1, r, c)); //u
+			v = _mm_mask_expandloadu_epi8(v, 0x1111, yuv.addr(2, r, c)); //v
+			V16f vuyxData = _mm512_cvtepi32_ps(_mm512_cvtepu8_epi32(v));
 			vuyxData *= f;
-			vuyxData.storeu(destPtr + c);
+			vuyxData.storeu(destPtr + c * 4);
 		}
 	};
-	mPool.addAndWait(func, 0, vuyx.h());
+	mPool.addAndWait(func, 0, yuv.h());
 }
 
 V8d AvxFrame::sd(int c1, int c2, int y0, int x0, const AvxMatf& Y) {
@@ -728,8 +725,8 @@ void AvxFrame::warpBack1(const AffineDataFloat& trf, const AvxMatf& input, AvxMa
 
 void AvxFrame::unsharp4(const AvxMatf& warped, AvxMatf& gauss, AvxMatf& out) {
 	//util::ConsoleTimer ic("avx unsharp");
-	V16f unsharp(mData.unsharp4[0], mData.unsharp4[1], mData.unsharp4[2], mData.unsharp4[3]);
 	for (int threadIdx = 0; threadIdx < mData.cpuThreads; threadIdx++) mPool.add([&, threadIdx] {
+		V16f unsharp(mData.unsharp4[0], mData.unsharp4[1], mData.unsharp4[2], mData.unsharp4[3]);
 		V16f zero = 0.0f;
 		V16f one = 1.0f;
 		for (int r = threadIdx; r < mData.h; r += mData.cpuThreads) {
@@ -810,8 +807,8 @@ void AvxFrame::writeNV12(Image8& dest) const {
 	}
 }
 
-//from uchar vuyx to uchar rgba
-void AvxFrame::vuyxToRgba(const ImageVuyx& vuyx, Image8& dest) const {
+//from uchar yuv to uchar rgba
+void AvxFrame::yuvToRgba(const ImageYuv& yuv, Image8& dest) const {
 	assert(dest.colorBase() == ColorBase::RGB && "invalid color format");
 	//order of rgb colors
 	auto vidx = dest.colorIndex();
@@ -819,23 +816,17 @@ void AvxFrame::vuyxToRgba(const ImageVuyx& vuyx, Image8& dest) const {
 	V16f fv = { mFactorV[vidx[0]], mFactorV[vidx[1]], mFactorV[vidx[2]], mFactorV[vidx[3]] };
 
 	for (int threadIdx = 0; threadIdx < mData.cpuThreads; threadIdx++) mPool.add([&, threadIdx] {
-		int destW = dest.w() * 4;
-
-		for (int r = threadIdx; r < vuyx.h(); r += mData.cpuThreads) {
-			const uchar* srcPtr = vuyx.row(r);
+		for (int r = threadIdx; r < yuv.h(); r += mData.cpuThreads) {
 			uchar* destPtr = dest.row(r);
-			for (int c = 0; c < destW - 16; c += 16) {
-				V16f vuyx4 = srcPtr + c;
-				V16f y = _mm512_permute_ps(vuyx4, 0b10101010);
-				V16f u = _mm512_permute_ps(vuyx4, 0b01010101);
-				V16f v = _mm512_permute_ps(vuyx4, 0b00000000);
-				avx::yuvToRgbaPacked(y, u, v, destPtr + c, fu, fv);
+			for (int c = 0; c < yuv.w(); c += 4) {
+				__m512 y = _mm512_cvtepi32_ps(_mm512_cvtepu8_epi32(_mm_maskz_expandloadu_epi8(0x1111, yuv.addr(0, r, c))));
+				y = _mm512_permute_ps(y, 0);
+				__m512 u = _mm512_cvtepi32_ps(_mm512_cvtepu8_epi32(_mm_maskz_expandloadu_epi8(0x1111, yuv.addr(1, r, c))));
+				u = _mm512_permute_ps(u, 0);
+				__m512 v = _mm512_cvtepi32_ps(_mm512_cvtepu8_epi32(_mm_maskz_expandloadu_epi8(0x1111, yuv.addr(2, r, c))));
+				v = _mm512_permute_ps(v, 0);
+				avx::yuvToRgbaPacked(y, u, v, destPtr + c * 4, fu, fv);
 			}
-			V16f vuyx4 = srcPtr + destW - 16;
-			V16f y = _mm512_permute_ps(vuyx4, 0b10101010);
-			V16f u = _mm512_permute_ps(vuyx4, 0b01010101);
-			V16f v = _mm512_permute_ps(vuyx4, 0b00000000);
-			avx::yuvToRgbaPacked(y, u, v, destPtr + destW - 16, fu, fv);
 		}
 	});
 	mPool.wait();
@@ -852,7 +843,6 @@ void AvxFrame::vuyxToRgba(const AvxMatf& vuyx, Image8& dest) const {
 
 	for (int threadIdx = 0; threadIdx < mData.cpuThreads; threadIdx++) mPool.add([&, threadIdx] {
 		int destW = dest.w() * 4;
-
 		for (int r = threadIdx; r < vuyx.h(); r += mData.cpuThreads) {
 			const float* srcPtr = vuyx.addr(r, 0);
 			uchar* destPtr = dest.row(r);

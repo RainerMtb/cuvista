@@ -79,7 +79,7 @@ class CudaExecutor : public FrameExecutor {
 
 private:
 	//host memory
-	ImageVuyx* h_input;
+	ImageYuv* h_input = nullptr;
 	CudaPointResult* h_results = nullptr;
 
 	//device memory
@@ -87,6 +87,7 @@ private:
 	float* d_bufferH = nullptr;
 	float* d_bufferV = nullptr;
 
+	unsigned char* d_input = nullptr;         //yuv input
 	unsigned char* d_vuyxData = nullptr;      //continuous array of all pixel values in yuv format, allocated on device
 	unsigned char* d_output = nullptr;        //image data for output, allocated as vuyx, but reused
 

@@ -391,6 +391,7 @@ namespace im {
 			} else {
 				colorPtr->convertTo(dest.colorPtr, pool);
 			}
+			dest.setIndex(this->index);
 		}
 
 		//sample clamped to area

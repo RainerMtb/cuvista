@@ -251,33 +251,36 @@ void JpegImageWriter::open(OutputOption outputOption) {
 	ctx->time_base = { 1, 1 };
 	ctx->framerate = { 1, 1 };
 	ctx->codec_type = AVMEDIA_TYPE_VIDEO;
-	ctx->pix_fmt = AV_PIX_FMT_YUV444P;
+	ctx->pix_fmt = AV_PIX_FMT_YUVJ444P;
 	ctx->color_range = AVCOL_RANGE_JPEG;
 	ctx->flags |= AV_CODEC_FLAG_QSCALE;
 	ctx->global_quality = FF_QP2LAMBDA * mData.selectedCrf; //values for crf from 31 (worst) to 1 (best)
 	int retval;
 	retval = avcodec_open2(ctx, codec, NULL);
 	if (retval < 0)
-		throw AVException(av_make_error(retval, "cannot open mjpeg codec"));
+		throw AVException(av_make_error(retval, "cannot open jpeg codec"));
+
+	swsCtx = sws_getContext(mData.w, mData.h, AV_PIX_FMT_YUV444P, mData.w, mData.h, AV_PIX_FMT_YUVJ444P, 0, NULL, NULL, NULL);
+	if (!swsCtx) {
+		throw AVException("cannot get scaler context");
+	}
 
 	av_frame = av_frame_alloc();
 	av_frame->format = ctx->pix_fmt;
 	av_frame->width = mData.w;
 	av_frame->height = mData.h;
 	av_frame->quality = ctx->global_quality; //quality must be set both to AVContext and AVFrame
-
-	av_frame->linesize[0] = output.stride();
-	av_frame->linesize[1] = output.stride();
-	av_frame->linesize[2] = output.stride();
-	av_frame->data[0] = output.plane(0);
-	av_frame->data[1] = output.plane(1);
-	av_frame->data[2] = output.plane(2);
+	av_frame_get_buffer(av_frame, 0);
 
 	packet = av_packet_alloc();
 }
 
 void JpegImageWriter::writeOutput(const FrameExecutor& executor) {
 	executor.getOutput(frameIndex, output);
+
+	uint8_t* srcLines[] = { output.plane(0), output.plane(1), output.plane(2), nullptr };
+	int srcLineSizes[] = { output.stride(), output.stride(), output.stride(), 0};
+	sws_scale(swsCtx, srcLines, srcLineSizes, 0, output.h(), av_frame->data, av_frame->linesize);
 
 	av_frame->pts = this->frameIndex;
 	int result = avcodec_send_frame(ctx, av_frame);
@@ -304,6 +307,8 @@ void JpegImageWriter::writeOutput(const FrameExecutor& executor) {
 
 JpegImageWriter::~JpegImageWriter() {
 	av_packet_free(&packet);
+	sws_freeContext(swsCtx);
+	av_frame_free(&av_frame);
 	avcodec_free_context(&ctx);
 }
 
@@ -416,9 +421,6 @@ void AsfPipeWriter::open(OutputOption outputOption) {
 	AVCodecID id = AV_CODEC_ID_FFVHUFF;
 	FFmpegFormatWriter::openFormat(id, fmt, 1);
 	FFmpegWriter::open({}, id, AV_PIX_FMT_YUV444P, mData.h, mData.w, mData.stride);
-
-	//allocate yuv frame based on av_Frame
-	outputFrame = ImageVuyx(mData.h, mData.w, mData.stride);
 }
 
 //for ffmpeg 7
@@ -437,10 +439,14 @@ int AsfPipeWriter::writeBuffer(void* opaque, const unsigned char* buf, int siz) 
 }
 
 void AsfPipeWriter::writeOutput(const FrameExecutor& executor) {
-	executor.getOutput(frameIndex, outputFrame);
+	executor.getOutput(frameIndex, output);
 	
-	av_frame->data[0] = outputFrame.plane(0);
-	av_frame->linesize[0] = outputFrame.stride();
+	av_frame->data[0] = output.plane(0);
+	av_frame->data[1] = output.plane(1);
+	av_frame->data[2] = output.plane(2);
+	av_frame->linesize[0] = output.stride();
+	av_frame->linesize[1] = output.stride();
+	av_frame->linesize[2] = output.stride();
 	av_frame->pts = frameIndex;
 
 	//generate and write packet through ffmpeg writer

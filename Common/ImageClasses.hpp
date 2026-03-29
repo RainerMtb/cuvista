@@ -63,26 +63,6 @@ namespace im {
 
 	class Image8yuv : public Image8 {};
 
-	class ImageYuv : public Image8yuv {
-
-	public:
-		ImageYuv(int h, int w, int stride);
-		ImageYuv(int h, int w, size_t stride);
-		ImageYuv(int h, int w);
-		ImageYuv();
-
-		static ImageYuv readPgmFile(const std::string& filename);
-
-		static ImageYuv readBmpFile(const std::string& filename);
-
-		constexpr ImageType imageType() const override { return ImageType::YUV; }
-
-		double lumaRms() const;
-
-		void adjustGamma(float value);
-	};
-
-
 	class ImageVuyx : public Image8yuv {
 
 	public:
@@ -105,6 +85,28 @@ namespace im {
 
 		virtual uchar* row(size_t r) override;
 		virtual const uchar* row(size_t r) const override;
+	};
+
+
+	class ImageYuv : public Image8yuv {
+
+	public:
+		ImageYuv(int h, int w, int stride);
+		ImageYuv(int h, int w, size_t stride);
+		ImageYuv(int h, int w);
+		ImageYuv();
+
+		static ImageYuv readPgmFile(const std::string& filename);
+
+		static ImageYuv readBmpFile(const std::string& filename);
+
+		constexpr ImageType imageType() const override { return ImageType::YUV; }
+
+		virtual void convertTo(Image8& dest, ThreadPoolBase& pool = defaultPool) const;
+
+		double lumaRms() const;
+
+		void adjustGamma(float value);
 	};
 
 

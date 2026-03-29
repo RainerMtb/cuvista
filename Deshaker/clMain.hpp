@@ -31,7 +31,7 @@ class OpenClFrame : public FrameExecutor {
 
 private:
 	cl::Data clData;
-	ImageVuyx mInputFrame;
+	ImageYuv mInputFrame;
 
 public:
 	OpenClFrame(CoreData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool);

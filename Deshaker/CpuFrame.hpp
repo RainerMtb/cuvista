@@ -67,8 +67,8 @@ private:
 	};
 
 	//frame input buffer
-	ImageVuyx mReadBuffer;
-	std::vector<ImageVuyx> mInput;
+	ImageYuv mReadBuffer;
+	std::vector<ImageYuv> mInput;
 
 	//holds image pyramids
 	std::vector<CpuPyramid> mPyr;

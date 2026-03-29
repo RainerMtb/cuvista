@@ -261,6 +261,7 @@ bool FFmpegReader::read(FrameExecutor& executor) {
 
 //read one frame from ffmpeg
 bool FFmpegReader::read(Image8& inputFrame) {
+    assert(inputFrame.imageType() == ImageType::YUV && "invalid image format");
     //util::ConsoleTimer timer("read");
     frameIndex++;
     endOfInput = true;
@@ -391,23 +392,22 @@ bool FFmpegReader::read(Image8& inputFrame) {
     }
 
     if (endOfInput == false) {
-        //convert to VUYX data
-        inputFrame.index = frameIndex;
         int w = av_codec_ctx->width;
         int h = av_codec_ctx->height;
         //std::cout << w << " " << h << std::endl;
 
         //set up sws scaler after first frame has been decoded
         if (!sws_scaler_ctx) {
-            sws_scaler_ctx = sws_getContext(w, h, av_codec_ctx->pix_fmt, w, h, AV_PIX_FMT_VUYX, SWS_BILINEAR, NULL, NULL, NULL);
+            sws_scaler_ctx = sws_getContext(w, h, av_codec_ctx->pix_fmt, w, h, AV_PIX_FMT_YUV444P, 0, NULL, NULL, NULL);
         }
         if (!sws_scaler_ctx) {
             ffmpeg_log_error(0, "failed to initialize ffmpeg scaler", ErrorSource::READER);
         }
 
-        //scale image data
-        uint8_t* frame_buffer[] = { inputFrame.plane(0), nullptr, nullptr, nullptr };
-        int linesizes[] = { inputFrame.stride(), 0, 0, 0};
+        //scale image data to YUV444
+        //swscaling directly to VUYX gives different results on windows and linux ????
+        uint8_t* frame_buffer[] = { inputFrame.plane(0), inputFrame.plane(1), inputFrame.plane(2), nullptr };
+        int linesizes[] = { inputFrame.stride(), inputFrame.stride(), inputFrame.stride(), 0 };
         sws_scale(sws_scaler_ctx, av_frame->data, av_frame->linesize, 0, av_frame->height, frame_buffer, linesizes);
 
         //store parameters for writer
@@ -426,7 +426,9 @@ bool FFmpegReader::read(Image8& inputFrame) {
 
         //stamp frame index into image
         //inputFrame.writeText(std::to_string(frameIndex), 20, 20, 3, 3, im::TextAlign::TOP_LEFT);
-        //inputFrame.saveBmpColor(std::format("f:/im{:03d}.bmp", frameIndex));
+        //inputFrame.saveBmpPlanes(std::format("/mnt/f/wsl{:03d}.bmp", frameIndex));
+        //inputFrame.saveBmpPlanes(std::format("f:/win{:03d}.bmp", frameIndex));
+        inputFrame.index = frameIndex;
     }
 
     return endOfInput == false;

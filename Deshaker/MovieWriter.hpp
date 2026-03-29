@@ -156,6 +156,7 @@ public:
 	static std::string makeFilenameSamples(const std::string& pattern, const std::string& extension);
 };
 
+
 //-----------------------------------------------------------------------------------
 class BmpImageWriter : public ImageWriter {
 
@@ -183,6 +184,7 @@ private:
 	AVCodecContext* ctx = nullptr;
 	AVFrame* av_frame = nullptr;
 	AVPacket* packet = nullptr;
+	SwsContext* swsCtx = nullptr;
 
 public:
 	JpegImageWriter(MainData& data, MovieReader& reader) :
@@ -229,32 +231,6 @@ public:
 
 	void open(OutputOption outputOption) override;
 	void writeOutput(const FrameExecutor& executor) override;
-};
-
-
-class PipeWriter {
-
-protected:
-	virtual void openPipe();
-	virtual void closePipe();
-};
-
-
-//-----------------------------------------------------------------------------------
-class RawPipeWriter : public NullWriter, public PipeWriter {
-
-private:
-	ImageYuv output;
-
-public:
-	RawPipeWriter(MainData& data, MovieReader& reader) :
-		NullWriter(data, reader),
-		output(data.h, data.w)
-	{}
-
-	void open(OutputOption outputOption) override;
-	void writeOutput(const FrameExecutor& executor) override;
-	void close() override;
 };
 
 
@@ -350,19 +326,47 @@ public:
 
 
 //-----------------------------------------------------------------------------------
+class PipeWriter {
+
+protected:
+	virtual void openPipe();
+	virtual void closePipe();
+};
+
+
+//-----------------------------------------------------------------------------------
+class RawPipeWriter : public NullWriter, public PipeWriter {
+
+private:
+	ImageYuv output;
+
+public:
+	RawPipeWriter(MainData& data, MovieReader& reader) :
+		NullWriter(data, reader),
+		output(data.h, data.w)
+	{}
+
+	void open(OutputOption outputOption) override;
+	void writeOutput(const FrameExecutor& executor) override;
+	void close() override;
+};
+
+
+//-----------------------------------------------------------------------------------
 class AsfPipeWriter : public FFmpegWriter, public PipeWriter {
 
 private:
 	unsigned char* mBuffer = nullptr;
 	AVIOContext* av_avio = nullptr;
-	ImageVuyx outputFrame;
+	ImageYuv output;
 
 	static int writeBuffer(void* opaque, const unsigned char* buf, int bufsiz);
 	static int writeBuffer(void* opaque, unsigned char* buf, int bufsiz);
 
 public:
 	AsfPipeWriter(MainData& data, MovieReader& reader) :
-		FFmpegWriter(data, reader, 0)
+		FFmpegWriter(data, reader, 0),
+		output(data.h, data.w)
 	{}
 
 	void open(OutputOption outputOption) override;

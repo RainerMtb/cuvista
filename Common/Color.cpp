@@ -113,12 +113,17 @@ unsigned char Color::getChannel(size_t index) const {
 
 namespace im {
 
+	/*
+	* YUV = [0.257 0.504 0.098; -0.148 -0.291 0.439; 0.439 -0.368 -0.071]
+	* RGB = [1.1641 -0.0018 1.5958; 1.1641 -0.3914 -0.8135; 1.1641 2.0178 -0.0012]
+	*/
+
 	//input float [0..255]
 	static void yuv_to_rgb_func(float yf, float uf, float vf, unsigned char* r, unsigned char* g, unsigned char* b) {
 		float y = yf - 16.0f;
 		float u = uf - 128.0f;
 		float v = vf - 128.0f;
-		*r = (unsigned char) std::rint(std::clamp(1.164f * y + 1.596f * v,              0.0f, 255.0f));
+		*r = (unsigned char) std::rint(std::clamp(1.164f * y +              1.596f * v, 0.0f, 255.0f));
 		*g = (unsigned char) std::rint(std::clamp(1.164f * y - 0.392f * u - 0.813f * v, 0.0f, 255.0f));
 		*b = (unsigned char) std::rint(std::clamp(1.164f * y + 2.017f * u,              0.0f, 255.0f));
 	}

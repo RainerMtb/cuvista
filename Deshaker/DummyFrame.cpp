@@ -22,10 +22,10 @@
 
 DummyFrame::DummyFrame(MainData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool) :
 	FrameExecutor(data, deviceInfo, frame, pool),
-	mReadBuffer(mData.h, mData.w, mData.stride4),
+	mReadBuffer(data.h, data.w, data.stride),
 	mFrames(data.bufferCount)
 {
-	for (int i = 0; i < mFrames.size(); i++) mFrames[i] = ImageVuyx(data.h, data.w, data.stride4);
+	for (int i = 0; i < mFrames.size(); i++) mFrames[i] = ImageYuv(data.h, data.w, data.stride);
 }
 
 int64_t DummyFrame::createPyramid(int64_t frameIndex, AffineDataFloat trf, bool warp) {
@@ -54,12 +54,7 @@ void DummyFrame::outputData(int64_t frameIndex, AffineDataFloat trf) {}
 
 void DummyFrame::getOutput(int64_t frameIndex, Image8& image) const {
 	size_t idx = frameIndex % mFrames.size();
-	if (image.imageType() == ImageType::VUYX) {
-		mFrames[idx].copyTo(image, mPool);
-
-	} else {
-		mFrames[idx].convertTo(image, mPool);
-	}
+	mFrames[idx].convertTo(image, mPool);
 }
 
 bool DummyFrame::getOutput(int64_t frameIndex, Image8& image, int cudaNv12stride, unsigned char* cudaNv12ptr) const {
@@ -70,10 +65,5 @@ bool DummyFrame::getOutput(int64_t frameIndex, Image8& image, int cudaNv12stride
 
 void DummyFrame::getInput(int64_t frameIndex, Image8& image) const {
 	size_t idx = frameIndex % mFrames.size();
-	if (image.colorBase() == ColorBase::YUV) {
-		mFrames[idx].copyTo(image);
-
-	} else if (image.colorBase() == ColorBase::RGB) {
-		mFrames[idx].convertTo(image, mPool);
-	}
+	mFrames[idx].convertTo(image, mPool);
 }
