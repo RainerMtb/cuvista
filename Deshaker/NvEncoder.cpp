@@ -74,10 +74,6 @@ void NvEncoder::probeEncoding(uint32_t* nvencVersionApi, uint32_t* nvencVersionD
 
 
 void NvEncoder::init() {
-	//create instance
-	handleResult(NvEncodeAPICreateInstance(&encFuncList), "cannot create api instance");
-	handleResult(encFuncList.nvEncOpenEncodeSession == NULL, "cannot create api instance");
-
 	//create context per device
 	CUdevice dev;
 	handleResult(cuCtxGetCurrent(&mCuContext), "cannot get device context");
@@ -86,6 +82,10 @@ void NvEncoder::init() {
 		CUctxCreateParams params = {};
 		handleResult(cuCtxCreate_v4(&mCuContext, &params, 0, dev), "cannot create device context"); //changing api for cuda 13.0
 	}
+
+	//create instance
+	handleResult(NvEncodeAPICreateInstance(&encFuncList), "cannot create api instance");
+	handleResult(encFuncList.nvEncOpenEncodeSession == NULL, "cannot create api instance");
 
 	//open session
 	NV_ENC_OPEN_ENCODE_SESSION_EX_PARAMS encodeSessionExParams = { NV_ENC_OPEN_ENCODE_SESSION_EX_PARAMS_VER };
@@ -107,7 +107,7 @@ void NvEncoder::probeSupportedCodecs(DeviceInfoCuda& deviceInfoCuda) {
 	std::vector<GUID> guids(guidCount);
 	handleResult(encFuncList.nvEncGetEncodeGUIDs(mEncoder, guids.data(), guidCount, &guidSupportCount), "cannot get guids");
 
-	//order best codec first
+	//order codecs
 	if (std::find(guids.cbegin(), guids.cend(), NV_ENC_CODEC_AV1_GUID) != guids.cend())
 		deviceInfoCuda.videoEncodingOptions.push_back(OutputOption::NVENC_AV1);
 	if (std::find(guids.cbegin(), guids.cend(), NV_ENC_CODEC_HEVC_GUID) != guids.cend())
@@ -193,7 +193,7 @@ void NvEncoder::createEncoder(int w, int h, int fpsNum, int fpsDen, uint32_t gop
 	initParams.encodeHeight = h;
 	initParams.frameRateNum = fpsNum;
 	initParams.frameRateDen = fpsDen;
-	initParams.enablePTD = 1; //send input in display order
+	initParams.enablePTD = 1;
 	initParams.tuningInfo = tuning;
 
 	//initialize encoder
@@ -254,8 +254,7 @@ NvPacket NvEncoder::getEncodedPacket(std::vector<NV_ENC_OUTPUT_PTR>& outputBuffe
 	handleResult(encFuncList.nvEncLockBitstream(mEncoder, &pkg.bitstreamData), "cannot lock bitstream");
 
 	uint8_t* pData = (uint8_t*) pkg.bitstreamData.bitstreamBufferPtr;
-	std::vector<uint8_t>& data = pkg.packet;
-	data.insert(data.end(), pData, pData + pkg.bitstreamData.bitstreamSizeInBytes);
+	pkg.packet = { pData, pData + pkg.bitstreamData.bitstreamSizeInBytes };
 	handleResult(encFuncList.nvEncUnlockBitstream(mEncoder, pkg.bitstreamData.outputBitstream), "cannot unlock bitstream");
 
 	return pkg;
@@ -273,7 +272,7 @@ void NvEncoder::getEncodedPackets(std::vector<NV_ENC_OUTPUT_PTR>& outputBuffer, 
 }
 
 
-void NvEncoder::encodeFrame(std::list<NvPacket>& nvPackets) {
+void NvEncoder::encodeFrame(std::list<NvPacket>& nvPackets, int64_t frameIndex) {
 	int32_t i = mFrameToSend % mEncoderBufferSize;
 	cuCtxPushCurrent(mCuContext);
 
@@ -290,6 +289,8 @@ void NvEncoder::encodeFrame(std::list<NvPacket>& nvPackets) {
 	picParams.inputHeight = h;
 	picParams.outputBitstream = bitstreamOutputBuffer[i];
 	picParams.completionEvent = nullptr; //do not use events, do it synchronous
+	picParams.inputTimeStamp = frameIndex;
+	picParams.frameIdx = frameIndex;
 
 	NVENCSTATUS stat;
 	stat = encFuncList.nvEncEncodePicture(mEncoder, &picParams);
@@ -309,14 +310,16 @@ void NvEncoder::encodeFrame(std::list<NvPacket>& nvPackets) {
 
 
 void NvEncoder::endEncode() {
+	cuCtxPushCurrent(mCuContext);
 	NV_ENC_PIC_PARAMS picParams = { NV_ENC_PIC_PARAMS_VER };
 	picParams.encodePicFlags = NV_ENC_PIC_FLAG_EOS;
 	picParams.completionEvent = nullptr;
 	handleResult(encFuncList.nvEncEncodePicture(mEncoder, &picParams), "cannot encode picture");
+	cuCtxPopCurrent(nullptr);
 }
 
 
-bool NvEncoder::hasBufferedFrame() {
+bool NvEncoder::hasBufferedFrame() const {
 	return mFrameGot < mFrameToSend;
 }
 
@@ -361,8 +364,7 @@ void NvEncoder::destroyEncoder() {
 	}
 
 	cuCtxPopCurrent(nullptr);
-	//do not destroy while cuda is still executing, will result in errors in destructor of CudaExecutor
-	//cuCtxDestroy_v2(cuctx);
+	cuCtxDestroy_v2(mCuContext);
 }
 
 #endif

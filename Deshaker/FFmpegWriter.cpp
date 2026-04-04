@@ -58,11 +58,11 @@ void FFmpegWriter::open(const AVCodec* codec, AVPixelFormat pixfmt, int h, int w
     codec_ctx->time_base = { mReader.fpsDen, mReader.fpsNum };
     codec_ctx->gop_size = gopSize;
     codec_ctx->max_b_frames = 4;
-    codec_ctx->thread_count = mData.cpuThreads;
+    codec_ctx->thread_count = std::max(12u, std::thread::hardware_concurrency() / 2); //there is a max setting for x265
     //av_opt_set(codec_ctx->priv_data, "preset", "slow", 0);
     av_opt_set(codec_ctx->priv_data, "profile", "main", 0);
     av_opt_set(codec_ctx->priv_data, "x265-params", "log-level=error", 0);
-    av_opt_set(codec_ctx->priv_data, "svtav1-params", "svt-log-level=1", 0);
+    //av_opt_set(codec_ctx->priv_data, "svtav1-params", "svt-log-level=0", 0);
     av_opt_set(codec_ctx->priv_data, "crf", std::to_string(mData.selectedCrf).c_str(), 0);
 
     if (fmt_ctx->oformat->flags & AVFMT_GLOBALHEADER)
@@ -114,6 +114,27 @@ void FFmpegWriter::open(const AVCodec* codec, AVPixelFormat pixfmt, int h, int w
 
 //set up ffmpeg encoder
 void FFmpegWriter::open(OutputOption outputOption, AVPixelFormat pixfmt, int h, int w, int stride, const std::string& sourceName) {
+    std::map<OutputOption, AVCodecID> optionToCodecIdMap = {
+        { OutputOption::NVENC_H264, AV_CODEC_ID_H264 },
+        { OutputOption::NVENC_HEVC, AV_CODEC_ID_HEVC },
+        { OutputOption::NVENC_AV1, AV_CODEC_ID_AV1 },
+
+        { OutputOption::FFMPEG_H264, AV_CODEC_ID_H264 },
+        { OutputOption::FFMPEG_HEVC, AV_CODEC_ID_HEVC },
+        { OutputOption::FFMPEG_AV1, AV_CODEC_ID_AV1 },
+        { OutputOption::FFMPEG_FFV1, AV_CODEC_ID_FFV1 },
+
+        { OutputOption::VIDEO_STACK, AV_CODEC_ID_H264 },
+        { OutputOption::VIDEO_FLOW, AV_CODEC_ID_H264 },
+    };
+
+    std::map<AVCodecID, std::vector<std::string>> codecToNamesMap = {
+        {AV_CODEC_ID_H264, {"libx264", "h264", "h264_qsv"}},
+        {AV_CODEC_ID_HEVC, {"libx265", "hevc", "hevc_qsv"}},
+        {AV_CODEC_ID_AV1,  {"libsvtav1", "librav1e", "libaom-av1", "av1_qsv"}},
+        {AV_CODEC_ID_FFV1, {"ffv1"}},
+    };
+
     //open container format
     AVCodecID codecID = optionToCodecIdMap[outputOption];
     FFmpegFormatWriter::openFormat(codecID, sourceName, imageBufferSize);
@@ -172,8 +193,8 @@ void FFmpegWriter::write(int bufferIndex) {
         ImageVuyx& fr = imageBuffer[bufferIndex];
         //fr.writeText(std::to_string(fr.index), 10, 10, 2, 3, ColorYuv::BLACK, ColorYuv::WHITE);
         //scale and put into av_frame
-        uint8_t* src[] = { fr.plane(0), nullptr, nullptr, nullptr };
-        int strides[] = { fr.stride(), 0, 0, 0 }; //if less than 4 values are provided, we get a warning "data not aligned"
+        uint8_t* src[] = { fr.plane(0), nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
+        int strides[] = { fr.stride(), 0, 0, 0, 0, 0, 0, 0 };
         int sliceHeight = sws_scale(sws_scaler_ctx, src, strides, 0, fr.h(), av_frame->data, av_frame->linesize);
 
         //set pts into frame to later name packet

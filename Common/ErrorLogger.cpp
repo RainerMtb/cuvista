@@ -17,6 +17,13 @@
  */
 
 #include "ErrorLogger.hpp"
+#include <iostream>
+
+std::ostream& printError(std::ostream& os, const std::string& msg) {
+	//print in red ansi formatting
+	return os << "\x1B[1;31m" << msg << "\x1B[0m" << std::endl;
+}
+
 
 static ErrorLogger errorLoggerInstance;
 
@@ -49,17 +56,40 @@ void ErrorLogger::logError(const std::string& title, const std::string& msg, Err
 
 std::vector<ErrorEntry> ErrorLogger::getErrors() {
 	std::lock_guard<std::mutex> lock(mMutex);
-	return errorList;
+	return std::vector<ErrorEntry>(errorList.cbegin(), errorList.cend());
+}
+
+std::vector<FFmpegLog> ErrorLogger::getLogs() {
+	std::lock_guard<std::mutex> lock(mMutex);
+	return std::vector<FFmpegLog>(ffmpegLog.cbegin(), ffmpegLog.cend());
 }
 
 std::string ErrorLogger::getErrorMessage() {
 	std::lock_guard<std::mutex> lock(mMutex);
-	return errorList.empty() ? "no error" : errorList[0].msg;
+	return errorList.empty() ? "no error" : errorList.front().msg;
 }
 
 void ErrorLogger::logFFmpeg(int logLevel, std::string msg) {
 	ffmpegLog.emplace_back(std::chrono::system_clock::now(), logLevel, msg);
 	while (ffmpegLog.size() > 5000) ffmpegLog.pop_front();
+}
+
+void ErrorLogger::printErrors(std::ostream& os) {
+	if (hasError()) {
+		printError(os, "ERROR STACK:");
+		std::vector<ErrorEntry> errorList = errorLogger().getErrors();
+		for (int i = 0; i < errorList.size(); i++) {
+			printError(os, std::format("[{}] {}", i, errorList[i].msg));
+		}
+		if (ffmpegLog.size() > 0) {
+			printError(os, "LOGS:");
+			auto iter = ffmpegLog.cbegin();
+			for (int i = 0; i < ffmpegLog.size() && i < 50; i++) {
+				printError(os, std::format("[{}] {}", i, iter->msg));
+				iter++;
+			}
+		}
+	}
 }
 
 void ErrorLogger::clear() {

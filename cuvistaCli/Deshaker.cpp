@@ -18,11 +18,6 @@
 
 #include "Deshaker.hpp"
 
-std::ostream& printError(std::ostream& os, const std::string& msg1) {
-	//print in red
-	return os << "\x1B[1;31m" << msg1 << "\x1B[0m" << std::endl;
-}
-
 DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console, std::shared_ptr<MovieWriter> externalWriter) {
 	enableAnsiSupport();
 	std::set_terminate([] {
@@ -125,16 +120,12 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 
 	} catch (const AVException& e) {
 		printError(std::cerr, std::string("error: ") + e.what());
-		if (errorLogger().hasError()) {
-			printError(std::cerr, std::string("error: ") + errorLogger().getErrorMessage());
-		}
+		errorLogger().printErrors(std::cerr);
 		return { 2 };
 
 	} catch (const std::invalid_argument& e) {
 		printError(std::cerr, std::string("invalid value: ") + e.what());
-		if (errorLogger().hasError()) {
-			printError(std::cerr, std::string("error: ") + errorLogger().getErrorMessage());
-		}
+		errorLogger().printErrors(std::cerr);
 		return { 3 };
 
 	} catch (...) {
@@ -164,13 +155,7 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 	// --------------------------------------------------------------
 
 	//final console messages
-	if (errorLogger().hasError()) {
-		printError(std::cerr, "ERROR STACK:");
-		std::vector<ErrorEntry> errorList = errorLogger().getErrors();
-		for (int i = 0; i < errorList.size(); i++) {
-			printError(std::cerr, std::format("[{}] {}", i, errorList[i].msg));
-		}
-	}
+	errorLogger().printErrors(std::cerr);
 
 	//collect state info
 	DeshakerResult result;

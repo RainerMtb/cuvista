@@ -130,7 +130,7 @@ add_subdirectory(cuvistaCli)
 if (BUILD_GUI MATCHES 0)
     message(NOTICE "Gui was deselected, Skipping Gui Build...")
 else()
-    find_package(Qt6 QUIET COMPONENTS Core Gui Widgets Multimedia MultimediaWidgets)
+    find_package(Qt6 QUIET COMPONENTS Core Gui Widgets MultimediaWidgets)
     if (Qt6_FOUND)
         set(BUILD_GUI 1)
         find_package(QT NAMES Qt6) # only this line will populate the version numbers... man Qt is such a $!#*

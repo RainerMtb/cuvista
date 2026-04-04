@@ -45,7 +45,7 @@ struct FFmpegLog {
 
 class ErrorLogger {
 	std::mutex mMutex;
-	std::vector<ErrorEntry> errorList;
+	std::list<ErrorEntry> errorList;
 	std::list<FFmpegLog> ffmpegLog;
 
 public:
@@ -61,9 +61,13 @@ public:
 
 	std::vector<ErrorEntry> getErrors();
 
+	std::vector<FFmpegLog> getLogs();
+
 	std::string getErrorMessage();
 
 	void logFFmpeg(int logLevel, std::string msg);
+
+	void printErrors(std::ostream& os);
 
 	void clear();
 
@@ -71,3 +75,5 @@ public:
 };
 
 ErrorLogger& errorLogger();
+
+std::ostream& printError(std::ostream& os, const std::string& msg);

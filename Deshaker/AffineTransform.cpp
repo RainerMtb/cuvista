@@ -82,6 +82,7 @@ const AffineTransform& AffineSolverSimple::computeSimilar(std::span<PointBase> p
 }
 
 const AffineTransform& AffineSolverFast::computeSimilar(std::span<PointBase> points) {
+	//util::ConsoleTimer timer("computeSimilar");
 	size_t m = points.size() * 2;
 	Matd A = Adata.share(6, m);  //A is transposed when compared to loop version
 

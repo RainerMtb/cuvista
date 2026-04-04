@@ -95,6 +95,7 @@ struct {
 //--------------------------
 
 const AffineTransform& FrameResult::computeTransform(std::span<PointResult> results, int64_t frameIndex) {
+	//util::ConsoleTimer timer("FrameResult");
 	mAffineSolver->reset();
 	mAffineSolver->frameIndex = frameIndex;
 

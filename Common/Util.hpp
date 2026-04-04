@@ -82,7 +82,7 @@ namespace util {
         void log(const std::string& msg) override;
     };
 
-    inline std::shared_ptr<DebugLogger> debugLogger = std::make_shared<DebugLoggerNull>();
+    inline std::shared_ptr<DebugLogger> debugLogger = std::make_shared<DebugLoggerConsole>();
 
 
     //output sent to this ostream will be suppressed

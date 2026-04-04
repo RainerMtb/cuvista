@@ -20,23 +20,22 @@
 #include "ImageClasses.hpp"
 
 int main() {
-
 	//debugLogger = std::make_shared<DebugLoggerTcp>("10.0.0.1", 5555);
 	std::stringstream ss;
 	util::debugLogger = std::make_shared<util::DebugLoggerString>(ss);
 
 	std::vector<std::string> argsLines = {
 		/*0*/ "-info",
-		/*1*/ "-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -bgmode color -y -enc ffmpeg:hevc",
-		/*2*/ "-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -bgmode color -y -zoom -8 -device 2",
-		/*3*/ "-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -bgmode color -y -zoom -8 -device 0 -enc nvenc:hevc",
+		/*1*/ "-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -bgmode color -y -enc ffmpeg:hevc -frames 4 -progress 0",
+		/*2*/ "-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -bgmode color -y -zoom -8 -device 3",
+		/*3*/ "-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -bgmode color -y -zoom -8 -device 3 -enc nvenc:hevc -progress 0",
 		/*4*/ "-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -flow -y",
 		/*5*/ "-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -copyframes -y",
 		/*6*/ "-i d:/VideoTest/02.mp4 -o f:/videoOut.mp4 -y -device 1 -frames 100",
 		/*7*/ "-device 3 -frames 5 -i d:/VideoTest/04.ts -o d:/VideoTest/out/images/im%03d.jpg -progress 0 -y",
 	};
 
-	int idx = 5;
+	int idx = 3;
 	std::string argsLine = argsLines[idx];
 	std::cout << "------- CuvistaTest -------" << std::endl;
 	std::cout << "------- params: " << argsLine << std::endl << std::endl;

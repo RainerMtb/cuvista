@@ -22,6 +22,7 @@
     <ConfigurationType>Application</ConfigurationType>
     <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
+    <EnableASAN>true</EnableASAN>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -33,14 +34,15 @@
     <Import Project="$(QtMsBuild)\qt_defaults.props" />
   </ImportGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'" Label="QtSettings">
-    <QtModules>core;gui;widgets;multimedia;multimediawidgets</QtModules>
+    <QtModules>core;gui;widgets;multimediawidgets</QtModules>
     <QtBuildConfig>debug</QtBuildConfig>
     <QtDeployNoTranslations>true</QtDeployNoTranslations>
     <QtDeployNoSystemD3dCompiler>true</QtDeployNoSystemD3dCompiler>
     <QtDeployCompilerRuntime>skip</QtDeployCompilerRuntime>
+    <QtDeployExcludeModules>ffmpeg</QtDeployExcludeModules>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'" Label="QtSettings">
-    <QtModules>core;gui;widgets;multimedia;multimediawidgets</QtModules>
+    <QtModules>core;gui;widgets;multimediawidgets</QtModules>
     <QtBuildConfig>release</QtBuildConfig>
     <QtDeploy>true</QtDeploy>
     <QtDeployDir>$(SolutionDir)bin\$(Platform)\Deploy</QtDeployDir>
@@ -49,6 +51,7 @@
     <QtDeployNoTranslations>true</QtDeployNoTranslations>
     <QtDeployNoSystemD3dCompiler>true</QtDeployNoSystemD3dCompiler>
     <QtDeployCompilerRuntime>skip</QtDeployCompilerRuntime>
+    <QtDeployExcludeModules>ffmpeg</QtDeployExcludeModules>
   </PropertyGroup>
   <Target Name="QtMsBuildNotFound" BeforeTargets="CustomBuild;ClCompile" Condition="!Exists('$(QtMsBuild)\qt.targets') or !Exists('$(QtMsBuild)\qt.props')">
     <Message Importance="High" Text="QtMsBuild: could not locate qt.targets, qt.props; project may not build correctly." />
@@ -79,7 +82,8 @@
       <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
       <Optimization>Disabled</Optimization>
       <IntrinsicFunctions>false</IntrinsicFunctions>
-      <PreprocessorDefinitions>$(Qt_DEFINES_);_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DISABLE_VECTOR_ANNOTATION;_DISABLE_STRING_ANNOTATION;$(Qt_DEFINES_);_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(SolutionDir)lib\$(Platform);$(SolutionDir)bin\$(Platform)\$(Configuration);$(CUDA_PATH)\lib\$(Platform);$(FFMPEG_PATH)\lib</AdditionalLibraryDirectories>

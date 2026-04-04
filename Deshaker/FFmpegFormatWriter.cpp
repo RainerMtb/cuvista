@@ -20,6 +20,10 @@
 #include "MovieReader.hpp"
 #include <filesystem>
 
+FFmpegFormatWriter::FFmpegFormatWriter(MainData& data, MovieReader& reader) :
+    NullWriter(data, reader)
+{}
+
 //setup output format from codec
 void FFmpegFormatWriter::openFormat(AVCodecID codecId, const std::string& sourceName, int queueSize) {
     av_log_set_callback(ffmpeg_log);
@@ -363,13 +367,19 @@ void FFmpegFormatWriter::writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsI
 
     //STEP 1: looking at input stream
     //set pts and dts with respect to input timebase
+    //std::cout << "ptsIdx=" << ptsIdx << " dtsIdx=" << dtsIdx << std::endl;
     auto compareFunc = [&] (const VideoPacketContext& ctx) { return ctx.readIndex == ptsIdx; }; //sometimes wrong, check for increasing pts values
     VideoPacketContext vpc = {};
     {
         std::unique_lock<std::mutex> lock(mReader.mVideoPacketMutex);
+        //for (const auto& c : mReader.mVideoPacketList) std::cout << c.readIndex << " " << c.pts << " " << c.dts << " " << ptsIdx << std::endl;
         //search for packet info
         auto vpcIter = std::find_if(mReader.mVideoPacketList.cbegin(), mReader.mVideoPacketList.cend(), compareFunc);
         //store
+        if (vpcIter == mReader.mVideoPacketList.cend()) {
+            errorLogger().logError("error finding video packet #" + std::to_string(ptsIdx), ErrorSource::WRITER);
+            return;
+        }
         vpc = *vpcIter;
         //delete from input list
         mReader.mVideoPacketList.erase(vpcIter);

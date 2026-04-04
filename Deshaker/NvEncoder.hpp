@@ -37,7 +37,7 @@ class DeviceInfoCuda;
 
 struct NvPacket {
 	std::vector<uint8_t> packet;
-	NV_ENC_LOCK_BITSTREAM bitstreamData = { NV_ENC_CREATE_BITSTREAM_BUFFER_VER };
+	NV_ENC_LOCK_BITSTREAM bitstreamData = { NV_ENC_LOCK_BITSTREAM_VER };
 };
 
 class NvEncoder {
@@ -76,8 +76,8 @@ public:
 	void destroyEncoder();
 
 	CUdeviceptr getNextInputFramePtr();
-	void encodeFrame(std::list<NvPacket>& nvPackets);
+	void encodeFrame(std::list<NvPacket>& nvPackets, int64_t frameIndex);
 	void endEncode();
-	bool hasBufferedFrame();
+	bool hasBufferedFrame() const;
 	NvPacket getBufferedFrame();
 };

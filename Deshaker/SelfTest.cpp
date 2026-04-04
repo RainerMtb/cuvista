@@ -39,14 +39,14 @@ void runSelfTest(util::MessagePrinter& out, std::vector<DeviceInfoBase*> deviceL
 
 	std::vector<unsigned char> movieData = util::base64_decode(movieTestData);
 
-	uint64_t crcInputFirst =  0x2bf32ea3d882dce0;
-	uint64_t crcInputSecond = 0xfd1547af06114037;
+	uint64_t crcInputFirst =  0x1279296bb47cc173;
+	uint64_t crcInputSecond = 0x275bb80253d98669;
 	uint64_t crcPyramid =     0x430664d35d1bddfa;
 	uint64_t crcLuma =        0x3586033f4901bd51;
 	uint64_t crcResult =      0x9a14e1549f60775f;
-	uint64_t crcTransformed = 0x1ab110a9e388b23c;
-	uint64_t crcOutput =      0x93abc29a172ba683;
-	uint64_t crcNv12 =        0x15ab051f2d2045cb;
+	uint64_t crcTransformed = 0xcb30290a9e5ebb5c;
+	uint64_t crcOutput =      0x4fff19b725af8b64;
+	uint64_t crcNv12 =        0x6b6a368677841e71;
 
 	//util::debugLogger = std::make_shared<util::DebugLoggerTcp>("10.0.0.1", 5555);
 	for (size_t i = 0; i < deviceList.size(); i++) {

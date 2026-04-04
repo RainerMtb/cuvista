@@ -78,7 +78,7 @@ int64_t AvxFrame::createPyramid(int64_t frameIndex, AffineDataFloat trf, bool wa
 
 	//fill topmost level of pyramid
 	size_t yuvIdx = frameIndex % mInput.size();
-	const ImageYuv& yuv = mInput[yuvIdx];
+	ImageYuv& yuv = mInput[yuvIdx];
 	int h = mData.h;
 	int w = mData.w;
 
@@ -86,11 +86,12 @@ int64_t AvxFrame::createPyramid(int64_t frameIndex, AffineDataFloat trf, bool wa
 	V16f f = 1.0f / 255.0f;
 
 	auto func = [&] (size_t r) {
-		const uchar* srcPtr = yuv.row(r);
+		uchar* srcPtr = yuv.row(r);
+		std::fill_n(srcPtr + w, mData.stride - w, 0); //decoder puts random bytes into padding area
 		float* destPtr = mFilterResult.addr(r, 0);
 		__m512i ysum = _mm512_setzero_si512();
 
-		for (int c = 0; c < yuv.w(); c += 16) {
+		for (int c = 0; c < w; c += 16) {
 			__m512i y = _mm512_cvtepu8_epi32(_mm_loadu_epi8(srcPtr + c));
 			V16f result = _mm512_cvtepi32_ps(y);
 			result *= f;
@@ -101,7 +102,7 @@ int64_t AvxFrame::createPyramid(int64_t frameIndex, AffineDataFloat trf, bool wa
 		}
 		_mm512_storeu_epi32(luma.data() + r * 16, ysum);
 	};
-	mPool.addAndWait(func, 0, yuv.h());
+	mPool.addAndWait(func, 0, h);
 
 	//write first pyramid level
 	if (warp) {

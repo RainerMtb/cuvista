@@ -278,8 +278,8 @@ void JpegImageWriter::open(OutputOption outputOption) {
 void JpegImageWriter::writeOutput(const FrameExecutor& executor) {
 	executor.getOutput(frameIndex, output);
 
-	uint8_t* srcLines[] = { output.plane(0), output.plane(1), output.plane(2), nullptr };
-	int srcLineSizes[] = { output.stride(), output.stride(), output.stride(), 0};
+	uint8_t* srcLines[] = { output.plane(0), output.plane(1), output.plane(2), nullptr, nullptr, nullptr, nullptr, nullptr };
+	int srcLineSizes[] = { output.stride(), output.stride(), output.stride(), 0, 0, 0, 0, 0};
 	sws_scale(swsCtx, srcLines, srcLineSizes, 0, output.h(), av_frame->data, av_frame->linesize);
 
 	av_frame->pts = this->frameIndex;
@@ -686,8 +686,8 @@ void OpticalFlowWriter::writeInput(const FrameExecutor& executor) {
 	imageInterpolated.writeText(std::to_string(frameIndex), tx, ty, legendScale, legendScale, im::TextAlign::MIDDLE_CENTER);
 
 	//encode rgba image
-	uint8_t* src[] = { imageInterpolated.data(), nullptr, nullptr, nullptr };
-	int strides[] = { imageInterpolated.stride(), 0, 0, 0};
+	uint8_t* src[] = { imageInterpolated.data(), nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
+	int strides[] = { imageInterpolated.stride(), 0, 0, 0, 0, 0, 0, 0};
 	int sliceHeight = sws_scale(sws_scaler_ctx, src, strides, 0, imageInterpolated.h(), av_frame->data, av_frame->linesize);
 
 	av_frame->pts = frameIndex;

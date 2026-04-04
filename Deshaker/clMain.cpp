@@ -138,7 +138,7 @@ std::vector<DeviceInfoOpenCl> cl::probeRuntime() {
 		}
 
 	} catch (const Error& err) {
-		DeviceInfoOpenCl::warning = std::format("OpenCL init error: {}", err.what());
+		DeviceInfoOpenCl::warning = std::format("OpenCL probe error: {}", err.what());
 
 	} catch (...) {
 		DeviceInfoOpenCl::warning = "unknown error loading Open CL";
@@ -190,11 +190,11 @@ void OpenClFrame::init() {
 		//allocate input image
 		mInputFrame = ImageYuv(mData.h, mData.w, mData.stride);
 
-		ImageFormat inFmt(CL_DEPTH, CL_UNSIGNED_INT8);
+		ImageFormat inFmt(CL_R, CL_UNSIGNED_INT8);
 		clData.yuv = Image2D(clData.context, CL_MEM_READ_ONLY, inFmt, mData.stride, mData.h * 3);
 
 		//image format gray single channel float
-		ImageFormat fmt32(CL_DEPTH, CL_FLOAT);
+		ImageFormat fmt32(CL_R, CL_FLOAT);
 
 		//buffer pyramid for filtering
 		for (int z = 0; z < mData.pyramidLevels; z++) {

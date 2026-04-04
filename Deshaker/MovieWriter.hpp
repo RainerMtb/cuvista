@@ -265,10 +265,7 @@ protected:
 	bool isHeaderWritten = false;
 	bool isFlushing = false;
 
-
-	FFmpegFormatWriter(MainData& data, MovieReader& reader) :
-		NullWriter(data, reader) 
-	{}
+	FFmpegFormatWriter(MainData& data, MovieReader& reader);
 
 	~FFmpegFormatWriter() override;
 	void close() override;
@@ -287,13 +284,6 @@ protected:
 class FFmpegWriter : public FFmpegFormatWriter {
 
 protected:
-	std::map<AVCodecID, std::vector<std::string>> codecToNamesMap = {
-		{AV_CODEC_ID_H264, {"libx264", "h264", "h264_qsv"}},
-		{AV_CODEC_ID_HEVC, {"libx265", "hevc", "hevc_qsv"}},
-		{AV_CODEC_ID_AV1, {"libsvtav1", "librav1e", "libaom-av1", "av1_qsv"}},
-		{AV_CODEC_ID_FFV1, {"ffv1"}},
-	};
-
 	int imageBufferSize;
 	std::vector<ImageVuyx> imageBuffer;
 	AVFrame* av_frame = nullptr;

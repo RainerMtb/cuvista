@@ -53,7 +53,7 @@ public:
 
 class CudaExecutor : public FrameExecutor {
 private:
-	ImageVuyx image;
+	ImageYuv input;
 
 public:
 	CudaExecutor(MainData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool) :
@@ -61,7 +61,7 @@ public:
 	{}
 
 	void init() override {}
-	Image8& inputDestination(int64_t frameIndex) override { return image; }
+	Image8& inputDestination(int64_t frameIndex) override { return input; }
 	void inputData(int64_t frameIndex) override {}
 	int64_t createPyramid(int64_t frameIndex, AffineDataFloat trf = {}, bool warp = false) override { return 0; }
 	void computeStart(int64_t frameIndex, std::span<PointResult> results) override {}

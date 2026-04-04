@@ -398,7 +398,7 @@ bool FFmpegReader::read(Image8& inputFrame) {
 
         //set up sws scaler after first frame has been decoded
         if (!sws_scaler_ctx) {
-            sws_scaler_ctx = sws_getContext(w, h, av_codec_ctx->pix_fmt, w, h, AV_PIX_FMT_YUV444P, 0, NULL, NULL, NULL);
+            sws_scaler_ctx = sws_getContext(w, h, av_codec_ctx->pix_fmt, w, h, AV_PIX_FMT_YUV444P, SWS_BILINEAR, NULL, NULL, NULL);
         }
         if (!sws_scaler_ctx) {
             ffmpeg_log_error(0, "failed to initialize ffmpeg scaler", ErrorSource::READER);
@@ -406,8 +406,8 @@ bool FFmpegReader::read(Image8& inputFrame) {
 
         //scale image data to YUV444
         //swscaling directly to VUYX gives different results on windows and linux ????
-        uint8_t* frame_buffer[] = { inputFrame.plane(0), inputFrame.plane(1), inputFrame.plane(2), nullptr };
-        int linesizes[] = { inputFrame.stride(), inputFrame.stride(), inputFrame.stride(), 0 };
+        uint8_t* frame_buffer[] = { inputFrame.plane(0), inputFrame.plane(1), inputFrame.plane(2), nullptr, nullptr, nullptr, nullptr, nullptr };
+        int linesizes[] = { inputFrame.stride(), inputFrame.stride(), inputFrame.stride(), 0, 0, 0, 0, 0 };
         sws_scale(sws_scaler_ctx, av_frame->data, av_frame->linesize, 0, av_frame->height, frame_buffer, linesizes);
 
         //store parameters for writer

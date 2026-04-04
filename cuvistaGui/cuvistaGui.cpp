@@ -274,7 +274,7 @@ void cuvistaGui::setInputFile(const QString& inputPath) {
         mReader.close();
         errorLogger().clear();
         mReader.open(inputPath.toStdString());
-        mInputYUV = ImageVuyx(mReader.h, mReader.w);
+        mInputYUV = ImageYuv(mReader.h, mReader.w);
 
         //read first image
         mReader.read(mInputYUV);

@@ -21,9 +21,9 @@
 #include <format>
 
 struct CuvistaVersion {
-	int major = 1;
-	int minor = 9;
-	int patch = 5;
+	int major = 0;
+	int minor = 0;
+	int patch = 0;
 
 	static CuvistaVersion parse(const std::string& version);
 

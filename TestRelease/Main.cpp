@@ -120,8 +120,8 @@ static void testMain() {
 	run("-i d:/VideoTest/02short.mp4 -o d:/videoTest/out/nvenc02.mp4 -device 2 -enc nvenc:hevc -noheader -progress 0");
 
 	std::cout << "--- Encoding to Cpu ---" << std::endl;
-	run("-i d:/VideoTest/02short.mp4 -o d:/videoTest/out/enc_av1.mp4 -enc ffmpeg:av1 -progress 0");
-	run("-i d:/VideoTest/02short.mp4 -o d:/videoTest/out/enc_hevc.mp4 -enc ffmpeg:hevc -progress 0");
+	run("-enc ffmpeg:av1 -i d:/VideoTest/02short.mp4 -o d:/videoTest/out/enc_av1.mp4 -progress 0");
+	run("-enc ffmpeg:hevc -i d:/VideoTest/02short.mp4 -o d:/videoTest/out/enc_hevc.mp4 -progress 0");
 	run("-enc ffmpeg:h264 -i d:/VideoTest/02short.mp4 -o d:/videoTest/out/enc_h264.mp4 -progress 0");
 	run("-enc ffmpeg:ffv1 -i d:/VideoTest/02short.mp4 -o d:/videoTest/out/enc_ffv1.mp4 -progress 0");
 }
@@ -163,7 +163,7 @@ static void testCrc() {
 
 		{
 			//check trajectory
-			uint64_t crcExpected = 0x91ffd5e4d5b59bed;
+			uint64_t crcExpected = 0x91ffd5e4d5b59bed; //-----------
 			bool match = crcExpected == crc;
 			std::string color = match ? ansiGreen : ansiRed;
 			std::cout << color << std::hex << "trajectory crc expected: " << crcExpected << ", actual crc: " << crc
@@ -172,7 +172,7 @@ static void testCrc() {
 
 		{
 			//check yuv
-			uint64_t crcExpectedYuv = 0xb33ca130f19b258c;
+			uint64_t crcExpectedYuv = 0xcb80049f460b920f; //-----------
 			util::CRC64 crcyuv;
 			for (const ImageVuyx& image : externalWriter->outputFramesYuv) image.crc(crcyuv);
 
@@ -185,7 +185,7 @@ static void testCrc() {
 
 		{
 			//check rgba
-			uint64_t crcExpectedRgba = 0x1c0950cfb4317bf8;
+			uint64_t crcExpectedRgba = 0x274cb3de1a96d3aa; //-----------
 			util::CRC64 crcrgba;
 			for (const ImageRGBA& image : externalWriter->outputFramesRgba) image.crc(crcrgba);
 
@@ -196,7 +196,7 @@ static void testCrc() {
 
 		{
 			//check bgra
-			uint64_t crcExpectedBgra = 0xc9490a3c5cdb7496;
+			uint64_t crcExpectedBgra = 0x7d953478c6092e07; //-----------
 			util::CRC64 crcbgra;
 			for (const ImageBGRA& image : externalWriter->outputFramesBgra) image.crc(crcbgra);
 
@@ -219,7 +219,7 @@ static void testCrc() {
 		std::shared_ptr<RawMemoryStoreWriter> externalWriter = std::make_shared<RawMemoryStoreWriter>(250, false, true);
 		DeshakerResult result = run(commandsMode2[i], externalWriter);
 
-		uint64_t crcExpected = 0x96af7d0e8fd4b7e7;
+		uint64_t crcExpected = 0xf6d6ab60ee71481f; //-----------
 		util::CRC64 crcOutput;
 		for (const ImageVuyx& image : externalWriter->outputFramesYuv) image.crc(crcOutput);
 
@@ -244,7 +244,7 @@ static void testSpeed() {
 	}
 }
 
-int main() {
+static void deleteFiles() {
 	std::vector<std::string> folders = { "d:/videoTest/out", "d:/videoTest/out/images" };
 	for (const std::string& folder : folders) {
 		std::cout << "--- Delete " << folder << " ---" << std::endl;
@@ -253,7 +253,10 @@ int main() {
 			if (entry.is_regular_file()) std::filesystem::remove(entry);
 		}
 	}
-	
+}
+
+int main() {
+	deleteFiles();
 	testCrc();
 	testSpeed();
 	testMain();

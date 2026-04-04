@@ -22,7 +22,7 @@
 CuvistaVersion CuvistaVersion::parse(const std::string& version) {
 	std::regex pattern("^(\\d+)\\.(\\d+)\\.(\\d+)$");
 	std::smatch matcher;
-	CuvistaVersion out;
+	CuvistaVersion out = {};
 
 	if (std::regex_match(version, matcher, pattern)) {
 		out.major = std::stoi(matcher[1]);

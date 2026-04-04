@@ -212,7 +212,7 @@ namespace winrt::cuvistaWinui::implementation {
             mReader.close();
             errorLogger().clear();
             mReader.open(to_string(inputPath));
-            mInput = ImageVuyx(mReader.h, mReader.w);
+            mInput = ImageYuv(mReader.h, mReader.w);
 
             mReader.read(mInput); //read first image
 

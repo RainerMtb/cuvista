@@ -34,7 +34,7 @@ protected:
 	void open(OutputOption outputOption, const DeviceInfoCuda* dic);
 	void writePacketToFile(const NvPacket& nvpkt, bool terminate);
 	void writePacketsToFile(std::list<NvPacket> nvpkts, bool terminate);
-	void encodePackets();
+	void encodeFrame(int64_t frameIndex);
 
 public:
 	CudaFFmpegWriter(MainData& data, MovieReader& reader);

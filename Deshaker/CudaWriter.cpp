@@ -43,7 +43,8 @@ bool CudaFFmpegWriter::flush() { return false; }
 //cuda encoding contructor
 CudaFFmpegWriter::CudaFFmpegWriter(MainData& data, MovieReader& reader) :
     FFmpegFormatWriter(data, reader),
-    nvPackets { std::make_unique<std::list<NvPacket>>() } {}
+    nvPackets { std::make_unique<std::list<NvPacket>>() } 
+{}
 
 //open cuda encoder
 void CudaFFmpegWriter::open(OutputOption outputOption, const DeviceInfoCuda* dic) {
@@ -53,6 +54,7 @@ void CudaFFmpegWriter::open(OutputOption outputOption, const DeviceInfoCuda* dic
         { OutputOption::NVENC_HEVC, NV_ENC_CODEC_HEVC_GUID },
         { OutputOption::NVENC_AV1, NV_ENC_CODEC_AV1_GUID },
     };
+
     GUID guid = optionToGuidMap[outputOption];
     nvenc = dic->nvenc;
 
@@ -113,7 +115,7 @@ void CudaFFmpegWriter::writePacketToFile(const NvPacket& nvpkt, bool terminate) 
     videoPacket->size = (int) byteData.size();
     videoPacket->stream_index = videoStream->index;
 
-    //static std::ofstream out("f:/test.hevc", std::ios::binary);
+    //static std::ofstream out("c:/X/test.av1", std::ios::binary);
     //out.write(reinterpret_cast<char*>(byteData.data()), byteData.size());
 
     //copy timing from input assuming same timebase for input and output streams
@@ -132,9 +134,9 @@ void CudaFFmpegWriter::writePacketsToFile(std::list<NvPacket> nvpkts, bool termi
 }
 
 
-void CudaFFmpegWriter::encodePackets() {
+void CudaFFmpegWriter::encodeFrame(int64_t frameIndex) {
     try {
-        nvenc->encodeFrame(*nvPackets);
+        nvenc->encodeFrame(*nvPackets, frameIndex);
 
     } catch (const AVException& e) {
         errorLogger().logError("error writing: ", e.what());
@@ -149,7 +151,7 @@ void CudaFFmpegWriter::writeOutput(const FrameExecutor& executor) {
     if (needsCopy) {
         encodeNvData(outputNV12, cudaPtr);
     }
-    encodePackets();
+    encodeFrame(frameIndex);
     encodingQueue.push_back(encoderPool.add([this, pkts = *nvPackets] { writePacketsToFile(pkts, false); }));
     encodingQueue.front().wait();
     encodingQueue.pop_front();

@@ -63,7 +63,7 @@ private:
 
 		//encode into packet
 		std::list<NvPacket> packets;
-		nvenc.encodeFrame(packets);
+		nvenc.encodeFrame(packets, 0);
 		nvenc.endEncode();
 		packets.push_back(nvenc.getBufferedFrame());
 		Assert::IsTrue(packets.size() == 1); //only one packet
@@ -98,9 +98,9 @@ private:
 		//scale to YUV444
 		ImageYuv outputFrame(h, w, nvenc.cudaPitch);
 		SwsContext* scaler = sws_getContext(w, h, ctx->pix_fmt, w, h, AV_PIX_FMT_YUV444P, SWS_BILINEAR, NULL, NULL, NULL);
-		uint8_t* frame_buffer[] = {(uint8_t*) outputFrame.plane(0), (uint8_t*) outputFrame.plane(1), (uint8_t*) outputFrame.plane(2), nullptr};
+		uint8_t* frame_buffer[] = { outputFrame.plane(0), outputFrame.plane(1), outputFrame.plane(2), nullptr, nullptr , nullptr , nullptr , nullptr };
 		int stride = nvenc.cudaPitch;
-		int linesizes[] = { stride, stride, stride, 0 };
+		int linesizes[] = { stride, stride, stride, 0, 0, 0, 0, 0 };
 		sws_scale(scaler, av_frame->data, av_frame->linesize, 0, av_frame->height, frame_buffer, linesizes);
 
 		//inputFrame.saveAsColorBMP("f:/input.bmp");

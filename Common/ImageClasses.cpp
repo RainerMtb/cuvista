@@ -272,8 +272,8 @@ namespace im {
 	}
 
 	void ImageYuv::convertTo(Image8& dest, ThreadPoolBase& pool) const {
+		int offset = stride() * h();
 		if (dest.imageType() == ImageType::VUYX) {
-			int offset = stride() * h();
 			for (int r = 0; r < h(); r++) {
 				uchar* destPtr = dest.row(r);
 				for (int c = 0; c < w(); c++) {
@@ -282,6 +282,27 @@ namespace im {
 					*destPtr++ = srcPtr[offset];
 					*destPtr++ = srcPtr[0];
 					*destPtr++ = 255;
+				}
+			}
+			dest.index = index;
+
+		} else if (dest.imageType() == ImageType::BGRA) {
+			for (int r = 0; r < h(); r++) {
+				uchar* destPtr = dest.row(r);
+				for (int c = 0; c < w(); c++) {
+					const uchar* srcPtr = addr(0, r, c);
+					yuv_to_rgb(srcPtr[0], srcPtr[offset], srcPtr[offset * 2], destPtr + c * 4 + 2, destPtr + c * 4 + 1, destPtr + c * 4);
+					destPtr[c * 4 + 3] = 255;
+				}
+			}
+			dest.index = index;
+
+		} else if (dest.imageType() == ImageType::BGR) {
+			for (int r = 0; r < h(); r++) {
+				uchar* destPtr = dest.row(r);
+				for (int c = 0; c < w(); c++) {
+					const uchar* srcPtr = addr(0, r, c);
+					yuv_to_rgb(srcPtr[0], srcPtr[offset], srcPtr[offset * 2], destPtr + c * 3 + 2, destPtr + c * 3 + 1, destPtr + c * 3);
 				}
 			}
 			dest.index = index;
