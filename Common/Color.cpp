@@ -53,7 +53,7 @@ Color Color::BLACK_SEMI = Color(0, 0, 0, 0.7);
 Color Color::web(const std::string& webColor) {
 	int r = 0, g = 0, b = 0;
 	std::smatch matcher;
-	if (std::regex_match(webColor, matcher, std::regex("#([[:xdigit:]]{2})([[:xdigit:]]{2})([[:xdigit:]]{2})$"))) {
+	if (std::regex_match(webColor, matcher, std::regex("^#([[:xdigit:]]{2})([[:xdigit:]]{2})([[:xdigit:]]{2})$"))) {
 		r = std::stoi(matcher[1].str(), nullptr, 16);
 		g = std::stoi(matcher[2].str(), nullptr, 16);
 		b = std::stoi(matcher[3].str(), nullptr, 16);

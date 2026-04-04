@@ -21,14 +21,13 @@
 
 int main() {
 	//debugLogger = std::make_shared<DebugLoggerTcp>("10.0.0.1", 5555);
-	std::stringstream ss;
-	util::debugLogger = std::make_shared<util::DebugLoggerString>(ss);
+	util::debugLogger = std::make_shared<util::DebugLoggerString>();
 
 	std::vector<std::string> argsLines = {
 		/*0*/ "-info",
 		/*1*/ "-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -bgmode color -y -enc ffmpeg:hevc -frames 4 -progress 0",
 		/*2*/ "-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -bgmode color -y -zoom -8 -device 3",
-		/*3*/ "-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -bgmode color -y -zoom -8 -device 3 -enc nvenc:hevc -progress 0",
+		/*3*/ "-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -bgmode color -y -zoom -8",
 		/*4*/ "-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -flow -y",
 		/*5*/ "-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -copyframes -y",
 		/*6*/ "-i d:/VideoTest/02.mp4 -o f:/videoOut.mp4 -y -device 1 -frames 100",
@@ -41,8 +40,8 @@ int main() {
 	std::cout << "------- params: " << argsLine << std::endl << std::endl;
 
 	auto args = util::splitString(argsLine, " ");
-	deshake(args, &std::cout, {});
+	DeshakerResult result = deshake(args, &std::cout, {});
 
 	std::cout << std::endl << "------- Log -------" << std::endl;
-	std::cout << ss.str() << std::endl;
+	std::cout << result.log << std::endl;
 }

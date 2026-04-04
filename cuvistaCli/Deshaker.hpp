@@ -28,17 +28,18 @@
 struct DeshakerResult {
 	int statusCode = 0;
 
-	int64_t frameCount;
-	int64_t framesRead;
-	int64_t framesWritten;
-	int64_t framesEncoded;
-	int64_t bytesWritten;
-	int64_t bytesEncoded;
+	int64_t frameCount = 0;
+	int64_t framesRead = 0;
+	int64_t framesWritten = 0;
+	int64_t framesEncoded = 0;
+	int64_t bytesWritten = 0;
+	int64_t bytesEncoded = 0;
 
-	double secs;
+	double secs = 0.0;
 	std::string executorName;
 	std::string executorNameShort;
 	std::vector<TrajectoryItem> trajectory;
+	std::string log;
 };
 
 std::ostream& printError(std::ostream& os, const std::string& msg1);

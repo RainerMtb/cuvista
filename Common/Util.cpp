@@ -34,19 +34,6 @@ namespace util {
 		return std::format("T+{:03d}.{:03d}.{:03d} ", s, t / 1000, t % 1000);
 	}
 
-	void DebugLoggerNull::log(const std::string& msg) {}
-
-	void DebugLoggerConsole::log(const std::string& msg) {
-		std::lock_guard<std::mutex> lock(mutex);
-		std::cout << time() << msg << std::endl;
-	}
-
-	void DebugLoggerString::log(const std::string& msg) {
-		std::lock_guard<std::mutex> lock(mutex);
-		ss << time() << msg << std::endl;
-	}
-
-
 	static void printTime(long long int delta, const std::string& str) {
 		std::stringstream ss;
 		if (delta < 1000) ss << str << "=" << delta << " us";
@@ -280,4 +267,8 @@ namespace util {
 	double tand(double angleDegrees) {
 		return std::tan(angleDegrees * PI / 180.0);
 	}
+}
+
+util::DebugLogger& debugLogger() {
+	return *util::debugLogger;
 }

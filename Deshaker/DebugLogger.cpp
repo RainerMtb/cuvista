@@ -16,10 +16,51 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
-#include "SystemStuff.hpp"
 #include <iostream>
+#include "SystemStuff.hpp"
+#include "AVException.hpp"
 
 using namespace util;
+
+void DebugLoggerConsole::log(const std::string& msg) {
+	std::lock_guard<std::mutex> lock(mutex);
+	std::cout << time() << msg << std::endl;
+}
+
+std::string DebugLoggerConsole::str() { return ""; }
+
+void DebugLoggerString::log(const std::string& msg) {
+	std::lock_guard<std::mutex> lock(mutex);
+	ss << time() << msg << std::endl;
+}
+
+std::string DebugLoggerString::str() { return ss.str(); }
+
+
+DebugLoggerFile::DebugLoggerFile(const std::string& filename) :
+	filename { filename },
+	os { std::ofstream(filename) }
+{}
+
+void DebugLoggerFile::log(const std::string& msg) {
+	os << msg << std::endl;
+}
+
+std::string DebugLoggerFile::str() {
+	int siz = os.tellp();
+	return std::format("file {} {} bytes", filename, siz); 
+}
+
+std::shared_ptr<DebugLogger> DebugLogger::create(const std::string& logger) {
+	if (logger.starts_with("file://")) {
+		return std::make_shared<DebugLoggerFile>(logger.substr(7));
+
+	} else {
+		throw AVException("invalid log parameter '" + logger + "'");
+	}
+}
+
+//---------------- system specific ---------------------------
 
 #if defined(_WIN64)
 #include <WinSock2.h> //include before windows.h
@@ -48,6 +89,10 @@ void DebugLoggerTcp::log(const std::string& msg) {
 		send(sock, msg.c_str(), msg.size(), 0);
 		send(sock, "\n", 1, 0);
 	}
+}
+
+std::string DebugLoggerTcp::str() {
+	return "tcp";
 }
 
 DebugLoggerTcp::~DebugLoggerTcp() {
@@ -85,6 +130,10 @@ void DebugLoggerTcp::log(const std::string& msg) {
 	}
 }
 
+std::string DebugLoggerTcp::str() {
+	return "tcp";
+}
+
 DebugLoggerTcp::~DebugLoggerTcp() {
 	log("shutdown");
 	close(sock);
@@ -95,5 +144,6 @@ DebugLoggerTcp::~DebugLoggerTcp() {
 DebugTcpWriter::DebugTcpWriter(int port) {}
 DebugTcpWriter::~DebugTcpWriter() {}
 void DebugTcpWriter::log(const std::string& msg) {}
+std::string DebugLoggerTcp::str() { return "tcp"; }
 
 #endif

@@ -168,6 +168,7 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 	result.trajectory = frame->mTrajectory.getTrajectory();
 	result.executorName = executor->mDeviceInfo.getName();
 	result.executorNameShort = executor->mDeviceInfo.getNameShort();
+	result.log = debugLogger().str();
 
 	//destruct writer before frame
 	writer.reset();

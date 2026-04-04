@@ -53,11 +53,15 @@ namespace util {
     };
 
 
+    //logging misc messages
     struct DebugLogger {
         std::chrono::time_point<std::chrono::system_clock> start = std::chrono::system_clock::now();
         std::mutex mutex;
 
+        static std::shared_ptr<DebugLogger> create(const std::string& logger);
+
         virtual void log(const std::string& msg) = 0;
+        virtual std::string str() = 0;
 
         template <class... Args> void format(std::format_string<Args...> fmt, Args&&... args) {
             log(std::format(fmt, std::forward<Args>(args)...));
@@ -67,22 +71,11 @@ namespace util {
     };
 
     struct DebugLoggerNull : public util::DebugLogger {
-        void log(const std::string& msg) override;
+        void log(const std::string& msg) override {}
+        std::string str() override { return ""; }
     };
 
-    struct DebugLoggerConsole : public util::DebugLogger {
-        void log(const std::string& msg) override;
-    };
-
-    struct DebugLoggerString : public util::DebugLogger {
-        std::stringstream& ss;
-
-        DebugLoggerString(std::stringstream& ss) : ss { ss } {}
-
-        void log(const std::string& msg) override;
-    };
-
-    inline std::shared_ptr<DebugLogger> debugLogger = std::make_shared<DebugLoggerConsole>();
+    inline std::shared_ptr<DebugLogger> debugLogger = std::make_shared<DebugLoggerNull>();
 
 
     //output sent to this ostream will be suppressed
@@ -222,3 +215,5 @@ namespace util {
         return result;
     }
 }
+
+util::DebugLogger& debugLogger();

@@ -23,6 +23,7 @@
 #include <memory>
 #include <chrono>
 #include <mutex>
+#include <fstream>
 #include "Util.hpp"
 
 int getSystemConsoleWidth();
@@ -71,6 +72,18 @@ public:
 
 namespace util {
 
+	struct DebugLoggerConsole : public util::DebugLogger {
+		void log(const std::string& msg) override;
+		std::string str() override;
+	};
+
+	struct DebugLoggerString : public util::DebugLogger {
+		std::stringstream ss;
+
+		void log(const std::string& msg) override;
+		std::string str() override;
+	};
+
 	struct DebugLoggerTcp : public util::DebugLogger {
 		int mIsConnected = -1;
 
@@ -78,5 +91,16 @@ namespace util {
 		~DebugLoggerTcp();
 
 		void log(const std::string& msg) override;
+		std::string str() override;
+	};
+
+	struct DebugLoggerFile : public util::DebugLogger {
+		std::string filename;
+		std::ofstream os;
+
+		DebugLoggerFile(const std::string& filename);
+
+		void log(const std::string& msg) override;
+		std::string str() override;
 	};
 }

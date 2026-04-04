@@ -153,8 +153,8 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 
 		} else if (args.nextArg("zoom", next)) {
 			//zoom to apply after transformation
-			std::regex pattern1("([-]*\\d+)");
-			std::regex pattern2("(\\d+):(\\d+)");
+			std::regex pattern1("^([-]*\\d+)$");
+			std::regex pattern2("^(\\d+):(\\d+)$");
 			std::smatch matcher;
 			//check for dynamic zoom
 			if (std::regex_match(next, matcher, pattern2)) {
@@ -186,14 +186,14 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 			auto it = colorMap.find(next); //some color literals
 			if (it == colorMap.end()) {
 				std::smatch matcher;
-				if (std::regex_match(next, matcher, std::regex("(\\d{1,3}):(\\d{1,3}):(\\d{1,3})$"))) {
+				if (std::regex_match(next, matcher, std::regex("^(\\d{1,3}):(\\d{1,3}):(\\d{1,3})$"))) {
 					//decimal numbers seperated by colon
 					int r = std::stoi(matcher[1].str());
 					int g = std::stoi(matcher[2].str());
 					int b = std::stoi(matcher[3].str());
 					backgroundColor = Color::rgb(r, g, b);
 
-				} else if (std::regex_match(next, matcher, std::regex("#([[:xdigit:]]{2})([[:xdigit:]]{2})([[:xdigit:]]{2})$"))) {
+				} else if (std::regex_match(next, matcher, std::regex("^#([[:xdigit:]]{2})([[:xdigit:]]{2})([[:xdigit:]]{2})$"))) {
 					//webcolor
 					int r = std::stoi(matcher[1].str(), nullptr, 16);
 					int g = std::stoi(matcher[2].str(), nullptr, 16);
@@ -287,7 +287,7 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 		} else if (args.nextArg("roicrop", next)) {
 			//define region of interest for computing
 			std::smatch matcher;
-			if (std::regex_match(next, matcher, std::regex("(\\d+):(\\d+)$")))
+			if (std::regex_match(next, matcher, std::regex("^(\\d+):(\\d+)$")))
 				roiCrop = { std::stoi(matcher[1].str()), std::stoi(matcher[2].str()) };
 			else
 				throw AVException("invalid roicrop definition: " + next);
@@ -307,21 +307,24 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 			deviceRequested = true;
 			deviceSelected = 0;
 
-		 } else if (args.nextArg("rng", next)) {
-		 	if (std::stoi(next) == 1) sampler = std::make_shared<UrbgSampler<PointContext, PseudoRandomSource>>();
-		 	else if (std::stoi(next) == 2) sampler = std::make_shared<UrbgSampler<PointContext, std::random_device>>();
-		 	else if (std::stoi(next) == 3) sampler = std::make_shared<UrbgSampler<PointContext, std::default_random_engine>>();
-		 	else throw AVException("invalid random generator selection: " + next);
+		} else if (args.nextArg("rng", next)) {
+			if (std::stoi(next) == 1) sampler = std::make_shared<UrbgSampler<PointContext, PseudoRandomSource>>();
+			else if (std::stoi(next) == 2) sampler = std::make_shared<UrbgSampler<PointContext, std::random_device>>();
+			else if (std::stoi(next) == 3) sampler = std::make_shared<UrbgSampler<PointContext, std::default_random_engine>>();
+			else throw AVException("invalid random generator selection: " + next);
 
 		} else if (args.nextArg("stack", next)) {
 			std::smatch matcher;
-			if (std::regex_match(next, matcher, std::regex("(\\d+):(\\d+)$"))) {
+			if (std::regex_match(next, matcher, std::regex("^(\\d+):(\\d+)$"))) {
 				stackCrop = { std::stoi(matcher[1].str()), std::stoi(matcher[2].str()) };
 				outputOption = OutputOption::VIDEO_STACK;
 
 			} else {
 				throw AVException("invalid parameter for stacking: " + next);
 			}
+
+		} else if (args.nextArg("log", next)) {
+			util::debugLogger = util::DebugLogger::create(next);
 
 		} else {
 			throw AVException("invalid parameter '" + args.str() + "'");

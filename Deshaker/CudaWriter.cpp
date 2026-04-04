@@ -31,7 +31,7 @@ CudaFFmpegWriter::~CudaFFmpegWriter() {}
 
 void CudaFFmpegWriter::writePacketToFile(const NvPacket& nvpkt, bool terminate) {}
 void CudaFFmpegWriter::writePacketsToFile(std::list<NvPacket> nvpkts, bool terminate) {}
-void CudaFFmpegWriter::encodePackets() {}
+void CudaFFmpegWriter::encodeFrame(int64_t frameIndex) {}
 
 void CudaFFmpegWriter::open(OutputOption outputOption) {}
 void CudaFFmpegWriter::open(OutputOption outputOption, const DeviceInfoCuda* dic) {}
