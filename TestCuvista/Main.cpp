@@ -19,19 +19,29 @@
 #include "Deshaker.hpp"
 #include "ImageClasses.hpp"
 
-int main() {
-	//debugLogger = std::make_shared<DebugLoggerTcp>("10.0.0.1", 5555);
+static void f1() {
+	std::shared_ptr<RawMemoryStoreWriter> externalWriter = std::make_shared<RawMemoryStoreWriter>(250, true, true);
+	util::debugLogger = std::make_shared<util::DebugLoggerTcp>("10.0.0.1", 5555);
+	std::string argsLine = "-device 3 -i D:/VideoTest/12.mp4 -o null -frames 200";
+
+	auto args = util::splitString(argsLine, " ");
+	DeshakerResult result = deshake(args, &std::cout, externalWriter);
+	std::cout << std::endl << "------- Log -------" << std::endl;
+	std::cout << result.log << std::endl;
+}
+
+static void f2() {
 	util::debugLogger = std::make_shared<util::DebugLoggerString>();
+	//util::debugLogger = std::make_shared<util::DebugLoggerTcp>("10.0.0.1", 5555);
 
 	std::vector<std::string> argsLines = {
 		/*0*/ "-info",
 		/*1*/ "-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -bgmode color -y -enc ffmpeg:hevc -frames 4 -progress 0",
-		/*2*/ "-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -bgmode color -y -zoom -8 -device 3",
+		/*2*/ "-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -bgmode color -y -zoom -8 -device 2 -enc nvenc:h264",
 		/*3*/ "-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -bgmode color -y -zoom -8",
-		/*4*/ "-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -flow -y",
-		/*5*/ "-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -copyframes -y",
-		/*6*/ "-i d:/VideoTest/02.mp4 -o f:/videoOut.mp4 -y -device 1 -frames 100",
-		/*7*/ "-device 3 -frames 5 -i d:/VideoTest/04.ts -o d:/VideoTest/out/images/im%03d.jpg -progress 0 -y",
+		/*4*/ "-i d:/VideoTest/06b.mkv -o f:/videoOut.mp4 -bgmode color -y -zoom -8 -device 2",
+		/*5*/ "-device 3 -frames 5 -i d:/VideoTest/04.ts -o d:/VideoTest/out/images/im%03d.jpg -progress 0 -y",
+		/*6*/ "-device 3 -i D:/VideoTest/12.mp4 -o f:/videoOut.mp4 -y -frames 200 -stack 200:200",
 	};
 
 	int idx = 3;
@@ -44,4 +54,8 @@ int main() {
 
 	std::cout << std::endl << "------- Log -------" << std::endl;
 	std::cout << result.log << std::endl;
+}
+
+int main() {
+	f2();
 }

@@ -19,6 +19,7 @@
 #pragma once
 
 #include <vector>
+#include <span>
 #include <list>
 #include <map>
 #include <optional>
@@ -44,12 +45,15 @@ class NvEncoder {
 
 private:
 	int mCudaIndex = -1;
+	CUdevice mDevice = -1;
 	CUcontext mCuContext = nullptr;
 	void* mEncoder = nullptr;
 	int32_t mEncoderBufferSize = 0;
 	int32_t mOutputDelay = 0;
 	int32_t mFrameToSend = 0;
 	int32_t mFrameGot = 0;
+	std::vector<uint8_t> mExtradata;
+	uint32_t mExtradataSize = 0;
 	int h = 0;
 	int w = 0;
 
@@ -62,21 +66,20 @@ private:
 	NvPacket getEncodedPacket(std::vector<NV_ENC_OUTPUT_PTR>& outputBuffer);
 
 public:
-	int cudaPitch = 0;
-	std::vector<uint8_t> mExtradata;
-	uint32_t mExtradataSize = 0;
+	int mCudaPitch = 0;
 
-	NvEncoder(int cudaIndex) :
-		mCudaIndex { cudaIndex } {}
+	NvEncoder(int cudaIndex);
 
 	void init();
 	void probeEncoding(uint32_t* nvencVersionApi, uint32_t* nvencVersionDriver);
 	void probeSupportedCodecs(DeviceInfoCuda& deviceInfoCuda);
 	void createEncoder(int w, int h, int fpsNum, int fpsDen, uint32_t gopLen, uint8_t crf, GUID guid);
+	std::span<uint8_t> getExtraData();
 	void destroyEncoder();
 
 	CUdeviceptr getNextInputFramePtr();
 	void encodeFrame(std::list<NvPacket>& nvPackets, int64_t frameIndex);
+	void encodeNvData(const unsigned char* nv12data, int siz, unsigned char* nvencPtr);
 	void endEncode();
 	bool hasBufferedFrame() const;
 	NvPacket getBufferedFrame();

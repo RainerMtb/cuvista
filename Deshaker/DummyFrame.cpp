@@ -32,6 +32,8 @@ int64_t DummyFrame::createPyramid(int64_t frameIndex, AffineDataFloat trf, bool 
 	return 0;
 }
 
+void DummyFrame::adjustPyramid(int64_t frameIndex, double gamma) {}
+
 Matf DummyFrame::getTransformedOutput() const { 
 	return {}; 
 };

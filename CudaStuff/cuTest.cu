@@ -55,6 +55,17 @@ __global__ void kernelTex1(cudaTextureObject_t in, float dx, float* out) {
 	*out = tex1D<float>(in, dx);
 }
 
+__global__ void simpleTestKernel(unsigned char* dptr, int w, int h, size_t stride) {
+	int x = blockIdx.x * blockDim.x + threadIdx.x;
+	int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+	if (x < w) {
+		dptr[y * stride + x] = x;
+	}
+}
+
+__global__ void emptyKernel() {}
+
 
 //---------------------------------
 // host code for kernel callers
@@ -160,4 +171,13 @@ float cutest::textureInterpolation(float f0, float f1, float dx) {
 	cudaMemcpy(&result, d_result, sizeof(float), cudaMemcpyDefault);
 	cudaFree(d_result);
 	return result;
+}
+
+void cutest::simpleTest(dim3 threads, dim3 blocks, unsigned char* dptr, int w, int h, size_t stride, unsigned char* hptr) {
+	simpleTestKernel << <blocks, threads >> > (dptr, w, h, stride);
+	cudaMemcpy(hptr, dptr, stride * h, cudaMemcpyDefault);
+}
+
+void cutest::runEmptyKernel() {
+	emptyKernel<<<1, 1>>>();
 }

@@ -46,13 +46,35 @@ MovieFrame::MovieFrame(MainData& data, MovieReader& reader, MovieWriter& writer)
 	mTrajectory.reserve(reader.frameCount);
 }
 
-std::string MovieFrame::ptsForFrameAsString(int64_t frameIndex) const {
-	return mReader.ptsForFrameAsString(frameIndex).value_or("");
-}
-
 //shutdown
 MovieFrame::~MovieFrame() {
 	mPool.shutdown(); //shutdown threads
+}
+
+MovieFrameCombined::MovieFrameCombined(MainData& data, MovieReader& reader, MovieWriter& writer) :
+	MovieFrame(data, reader, writer)
+{
+	data.bufferCount = 2 * data.radius + 2;
+}
+
+MovieFrameConsecutive::MovieFrameConsecutive(MainData& data, MovieReader& reader, MovieWriter& writer) :
+	MovieFrame(data, reader, writer)
+{
+	data.bufferCount = 2;
+}
+
+LoopResult MovieFrame::runLoop(std::shared_ptr<FrameExecutor> executor) {
+	ProgressDefault progress;
+	UserInputDefault input;
+	return runLoop(progress, input, executor);
+}
+
+LoopResult MovieFrame::runLoop(ProgressBase& progress, UserInput& input, std::shared_ptr<FrameExecutor> executor) {
+	return LoopResult::LOOP_NONE;
+}
+
+std::string MovieFrame::ptsForFrameAsString(int64_t frameIndex) const {
+	return mReader.ptsForFrameAsString(frameIndex).value_or("");
 }
 
 const AffineTransform& MovieFrame::computeTransform(std::span<PointResult> results, int64_t frameIndex) {
@@ -72,12 +94,6 @@ const AffineTransform& MovieFrame::getTransform() const {
 	return mFrameResult.getTransform();
 }
 
-LoopResult MovieFrame::runLoop(std::shared_ptr<FrameExecutor> executor) {
-	ProgressDefault progress;
-	UserInputDefault input;
-	return runLoop(progress, input, executor);
-}
-
 void MovieFrame::progressUpdate(ProgressInfo& progressInfo, ProgressBase& progress, double totalProgress, bool forceUpdate) const {
 	if (mReader.frameCount > 0) progressInfo.totalProgress = std::clamp(totalProgress, 0.0, 100.0);
 	else progressInfo.totalProgress = std::numeric_limits<double>::quiet_NaN();
@@ -88,20 +104,12 @@ void MovieFrame::progressUpdate(ProgressInfo& progressInfo, ProgressBase& progre
 	progress.update(progressInfo, forceUpdate);
 }
 
-LoopResult MovieFrame::runLoop(ProgressBase& progress, UserInput& input, std::shared_ptr<FrameExecutor> executor) {
-	return LoopResult::LOOP_NONE;
-}
-
-MovieFrameCombined::MovieFrameCombined(MainData& data, MovieReader& reader, MovieWriter& writer) :
-	MovieFrame(data, reader, writer)
-{
-	data.bufferCount = 2 * data.radius + 2;
-}
-
-MovieFrameConsecutive::MovieFrameConsecutive(MainData& data, MovieReader& reader, MovieWriter& writer) :
-	MovieFrame(data, reader, writer)
-{
-	data.bufferCount = 2;
+void MovieFrame::checkPyramidGamma(int64_t frameIndex, int64_t lumaSumCurrent, int64_t lumaSumPrevious, std::shared_ptr<FrameExecutor> executor) {
+	int s = mData.w * mData.h;
+	double a = std::sqrt(lumaSumCurrent / s);
+	double b = std::sqrt(lumaSumPrevious / s);
+	double delta = std::log(a / b);
+	if (delta < -0.1 || delta > 0.1) debugLogger().format("frame {}-{} cur {:.4f} prev {:.4f} lumaDelta {:.4f}", frameIndex - 1, frameIndex, a, b, delta);
 }
 
 
@@ -116,6 +124,7 @@ LoopResult MovieFrameCombined::runLoop(ProgressBase& progress, UserInput& input,
 	bool hasFramesToFlush = false;
 	ProgressInfo progressInfo = { mReader.frameCount };
 	LoopResult loopResult = LoopResult::LOOP_SUCCESS;
+	int64_t lumaSumPrevious = -1;
 
 	while (state != StateCombined::DONE) {
 		//handle current state
@@ -133,19 +142,21 @@ LoopResult MovieFrameCombined::runLoop(ProgressBase& progress, UserInput& input,
 
 			} else if (state == StateCombined::READ_SECOND) {
 				executor->inputData(mReader.frameIndex); //input first frame
-				executor->createPyramid(mReader.frameIndex);
+				lumaSumPrevious = executor->createPyramid(mReader.frameIndex);
 				mReader.read(*executor); //read second frame
 
 			} else if (state == StateCombined::FILL_BUFFER) {
 				//process current frame
 				executor->inputData(mReader.frameIndex);
-				executor->createPyramid(mReader.frameIndex);
+				int64_t lumaSum = executor->createPyramid(mReader.frameIndex);
 				//transform for previous frame
 				mFrameResult.computeTransform(mResultPoints, mReader.frameIndex - 1);
 				mTrajectory.addTrajectoryTransform(mFrameResult.getTransform());
 				//begin computing smooth transform
 				if (mReader.frameIndex > mData.radius) mTrajectory.computeSmoothTransform(mData, mReader.frameIndex - mData.radius - 1);
 				mWriter.writeInput(*executor);
+				checkPyramidGamma(mReader.frameIndex, lumaSum, lumaSumPrevious, executor);
+				lumaSumPrevious = lumaSum;
 				//compute flow for current frame
 				executor->computeStart(mReader.frameIndex, mResultPoints);
 				executor->computeTerminate(mReader.frameIndex, mResultPoints);
@@ -160,7 +171,9 @@ LoopResult MovieFrameCombined::runLoop(ProgressBase& progress, UserInput& input,
 				assert(readIndex % mData.bufferCount != mWriter.frameIndex % mData.bufferCount && "accessing the same buffer for read and write");
 				//process current frame
 				executor->inputData(readIndex);
-				executor->createPyramid(readIndex);
+				int64_t lumaSum = executor->createPyramid(readIndex);
+				checkPyramidGamma(mReader.frameIndex, lumaSum, lumaSumPrevious, executor);
+				lumaSumPrevious = lumaSum;
 				executor->computeStart(readIndex, mResultPoints);
 				//read next frame async
 				std::future<void> f = mReader.readAsync(*executor);
@@ -234,7 +247,10 @@ LoopResult MovieFrameCombined::runLoop(ProgressBase& progress, UserInput& input,
 
 		//check user input and set state
 		UserInputEnum e = input.checkState();
-		if (e == UserInputEnum::END) {
+		if (state == StateCombined::CLOSE) {
+			state = StateCombined::DONE;
+
+		} else if (e == UserInputEnum::END) {
 			progress.writeMessage("[e] command received. Stop reading input.");
 			state = StateCombined::LAST_COMPUTE;
 			loopResult = LoopResult::LOOP_CANCELLED;
@@ -250,7 +266,7 @@ LoopResult MovieFrameCombined::runLoop(ProgressBase& progress, UserInput& input,
 			loopResult = LoopResult::LOOP_CANCELLED;
 
 		} else if (errorLogger().hasError()) {
-			state = StateCombined::DONE;
+			state = StateCombined::CLOSE;
 			loopResult = LoopResult::LOOP_ERROR;
 
 		} else if (inputState == InputState::SIGNAL) {
@@ -277,9 +293,6 @@ LoopResult MovieFrameCombined::runLoop(ProgressBase& progress, UserInput& input,
 
 		} else if (state == StateCombined::FLUSH) {
 			state = hasFramesToFlush ? StateCombined::FLUSH : StateCombined::CLOSE;
-
-		} else if (state == StateCombined::CLOSE) {
-			state = StateCombined::DONE;
 		}
 	}
 	progress.terminate();
@@ -302,6 +315,7 @@ LoopResult MovieFrameConsecutive::runLoop(ProgressBase& progress, UserInput& inp
 	ProgressInfo progressInfo = { mReader.frameCount };
 	double progressPerReaderPass = 80.0 / (80.0 * mData.mode + 20.0);
 	LoopResult loopResult = LoopResult::LOOP_SUCCESS;
+	int64_t lumaSumPrevious = -1;
 
 	while (state != StateConsecutive::DONE) {
 		//handle current state
@@ -321,7 +335,7 @@ LoopResult MovieFrameConsecutive::runLoop(ProgressBase& progress, UserInput& inp
 			} else if (state == StateConsecutive::READ_SECOND_FRAME) {
 				//create pyramid for first frame, read second frame
 				executor->inputData(mReader.frameIndex); //input first frame
-				executor->createPyramid(mReader.frameIndex);
+				lumaSumPrevious = executor->createPyramid(mReader.frameIndex);
 				mReader.read(*executor); //read second frame
 				mTrajectory.addTrajectoryTransform({}); //first frame has no transform applied
 				mWriter.writeInput(*executor);
@@ -332,7 +346,9 @@ LoopResult MovieFrameConsecutive::runLoop(ProgressBase& progress, UserInput& inp
 				int64_t idx = mReader.frameIndex;
 				executor->inputData(idx);
 				std::future<void> f = mReader.readAsync(*executor);
-				executor->createPyramid(idx);
+				int64_t lumaSum = executor->createPyramid(idx);
+				checkPyramidGamma(mReader.frameIndex, lumaSum, lumaSumPrevious, executor);
+				lumaSumPrevious = lumaSum;
 				executor->computeStart(idx, mResultPoints);
 				executor->computeTerminate(idx, mResultPoints);
 				mFrameResult.computeTransform(mResultPoints, idx);
@@ -356,7 +372,7 @@ LoopResult MovieFrameConsecutive::runLoop(ProgressBase& progress, UserInput& inp
 
 			} else if (state == StateConsecutive::ITERATION_SECOND_FRAME) {
 				executor->inputData(mReader.frameIndex); //input first frame
-				executor->createPyramid(mReader.frameIndex, mTrajectory.getTransform(mData, 0), true);
+				lumaSumPrevious = executor->createPyramid(mReader.frameIndex, mTrajectory.getTransform(mData, 0), true);
 				mReader.read(*executor); //read second frame
 				mTrajectory.setTrajectoryTransform({});
 
@@ -366,7 +382,9 @@ LoopResult MovieFrameConsecutive::runLoop(ProgressBase& progress, UserInput& inp
 				executor->inputData(idx);
 				std::future<void> f = mReader.readAsync(*executor);
 				const AffineTransform& trf = mTrajectory.getTransform(mData, idx);
-				executor->createPyramid(idx, trf, true);
+				int64_t lumaSum = executor->createPyramid(idx, trf, true);
+				checkPyramidGamma(mReader.frameIndex, lumaSum, lumaSumPrevious, executor);
+				lumaSumPrevious = lumaSum;
 				executor->computeStart(idx, mResultPoints);
 				executor->computeTerminate(idx, mResultPoints);
 				const AffineTransform& newTransform = mFrameResult.computeTransform(mResultPoints, idx);
@@ -433,7 +451,10 @@ LoopResult MovieFrameConsecutive::runLoop(ProgressBase& progress, UserInput& inp
 
 		//check user input and set state
 		UserInputEnum e = input.checkState();
-		if (e == UserInputEnum::END && currentPass == mData.mode) {
+		if (state == StateConsecutive::CLOSE) {
+			state = StateConsecutive::DONE;
+
+		} else if (e == UserInputEnum::END && currentPass == mData.mode) {
 			progress.writeMessage("[e] command received. Stop reading input.");
 			maxFrames = mReader.frameIndex;
 			state = StateConsecutive::WRITE_PREPARE;
@@ -456,7 +477,7 @@ LoopResult MovieFrameConsecutive::runLoop(ProgressBase& progress, UserInput& inp
 			loopResult = LoopResult::LOOP_CANCELLED;
 
 		} else if (errorLogger().hasError()) {
-			state = StateConsecutive::DONE;
+			state = StateConsecutive::CLOSE;
 			loopResult = LoopResult::LOOP_ERROR;
 
 		} else if (inputState == InputState::SIGNAL && currentPass > mData.mode) {
@@ -491,9 +512,6 @@ LoopResult MovieFrameConsecutive::runLoop(ProgressBase& progress, UserInput& inp
 
 		} else if (state == StateConsecutive::FLUSH) {
 			state = hasFramesToFlush ? StateConsecutive::FLUSH : StateConsecutive::CLOSE;
-
-		} else if (state == StateConsecutive::CLOSE) {
-			state = StateConsecutive::DONE;
 		}
 	}
 	progress.terminate();

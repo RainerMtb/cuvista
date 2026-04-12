@@ -48,14 +48,14 @@ private:
 		NvEncoder nvenc(0);
 		nvenc.createEncoder(w, h, 10, 1, 5, crf, NV_ENC_CODEC_HEVC_GUID);
 
-		ImageYuv inputFrame(h, w, nvenc.cudaPitch);
+		ImageYuv inputFrame(h, w, nvenc.mCudaPitch);
 		inputFrame.setColor(0, y);
 		inputFrame.setColor(1, u);
 		inputFrame.setColor(2, v);
 		//inputFrame.writeText("test", 20, 20, 5, 5, im::TextAlign::TOP_LEFT);
 
 		//set up a frame in nv12 format
-		ImageNV12 inputNV12(h, w, nvenc.cudaPitch);
+		ImageNV12 inputNV12(h, w, nvenc.mCudaPitch);
 		inputFrame.convertTo(inputNV12);
 		CUdeviceptr devptr = (CUdeviceptr) nvenc.getNextInputFramePtr();
 		res = cuMemcpyHtoD_v2(devptr, inputNV12.addr(0, 0, 0), inputNV12.sizeInBytes());
@@ -96,10 +96,10 @@ private:
 		Assert::IsTrue(retval == 0);
 
 		//scale to YUV444
-		ImageYuv outputFrame(h, w, nvenc.cudaPitch);
+		ImageYuv outputFrame(h, w, nvenc.mCudaPitch);
 		SwsContext* scaler = sws_getContext(w, h, ctx->pix_fmt, w, h, AV_PIX_FMT_YUV444P, SWS_BILINEAR, NULL, NULL, NULL);
 		uint8_t* frame_buffer[] = { outputFrame.plane(0), outputFrame.plane(1), outputFrame.plane(2), nullptr, nullptr , nullptr , nullptr , nullptr };
-		int stride = nvenc.cudaPitch;
+		int stride = nvenc.mCudaPitch;
 		int linesizes[] = { stride, stride, stride, 0, 0, 0, 0, 0 };
 		sws_scale(scaler, av_frame->data, av_frame->linesize, 0, av_frame->height, frame_buffer, linesizes);
 

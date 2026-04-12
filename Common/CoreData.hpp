@@ -94,7 +94,7 @@ struct CoreData {
 	unsigned int cudaThreads = defaultParam.cudaThreads;   //thread count used for texture reading
 
 	size_t cudaMemTotal = 0;
-	size_t cudaUsedMem = 0;
+	size_t cudaMemUsed = 0;
 	size_t cudaComputeSharedMem = 0;
 	int cudaOutBufferCount = 6;  //number of images to hold as buffers for output generation
 

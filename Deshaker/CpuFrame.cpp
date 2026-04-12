@@ -126,6 +126,10 @@ int64_t CpuFrame::createPyramid(int64_t frameIndex, AffineDataFloat trf, bool wa
 	return lumaSum;
 }
 
+void CpuFrame::adjustPyramid(int64_t frameIndex, double gamma) {
+
+}
+
 void CpuFrame::computeStart(int64_t frameIndex, std::span<PointResult> results) {}
 
 void CpuFrame::computeTerminate(int64_t frameIndex, std::span<PointResult> results) {

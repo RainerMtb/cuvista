@@ -19,6 +19,8 @@
 #include "AvxFrame.hpp"
 #include "AvxUtil.hpp"
 
+using namespace avx;
+
 AvxFrame::AvxFrame(CoreData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool) :
 	FrameExecutor(data, deviceInfo, frame, pool)
 {}
@@ -130,10 +132,14 @@ int64_t AvxFrame::createPyramid(int64_t frameIndex, AffineDataFloat trf, bool wa
 	//sum up luma
 	__m512i lumaSum = _mm512_setzero_si512();
 	for (size_t i = 0; i < luma.size(); i += 8) {
-		__m256i ysum = _mm256_loadu_epi32(luma.data() + i);
-		lumaSum = _mm512_add_epi64(lumaSum, _mm512_cvtepi32_epi64(ysum));
+		__m256i sum = _mm256_loadu_epi32(luma.data() + i);
+		lumaSum = _mm512_add_epi64(lumaSum, _mm512_cvtepi32_epi64(sum));
 	}
 	return _mm512_reduce_add_epi64(lumaSum);
+}
+
+void AvxFrame::adjustPyramid(int64_t frameIndex, double gamma) {
+
 }
 
 void AvxFrame::outputData(int64_t frameIndex, AffineDataFloat trf) {
@@ -800,7 +806,7 @@ void AvxFrame::writeNV12(Image8& dest) const {
 			
 			//combine u and v
 			__m256i uv0 = _mm512_castsi512_si256(_mm512_add_epi32(epi0, epi1));
-			__m256i uv1 = _mm256_permute2f128_si256(uv0, uv0, 0b00010001);
+			__m256i uv1 = _mm256_permute2f128_si256(uv0, uv0, mask8(1, 0, 0, 0, 1, 0, 0, 0));
 			__m256i uv = _mm256_hadd_epi32(uv0, uv1);
 			uv = _mm256_srli_epi32(uv, 2);
 			_mm256_mask_cvtusepi32_storeu_epi8(dest.row(mData.h + r / 2) + c, 0xF, uv);
@@ -833,6 +839,7 @@ void AvxFrame::yuvToRgba(const ImageYuv& yuv, Image8& dest) const {
 	mPool.wait();
 }
 
+
 //from float vuyx to uchar rgba
 void AvxFrame::vuyxToRgba(const AvxMatf& vuyx, Image8& dest) const {
 	assert(dest.colorBase() == ColorBase::RGB && "invalid color format");
@@ -849,15 +856,15 @@ void AvxFrame::vuyxToRgba(const AvxMatf& vuyx, Image8& dest) const {
 			uchar* destPtr = dest.row(r);
 			for (int c = 0; c < destW - 16; c += 16) {
 				V16f vuyx4 = srcPtr + c;
-				V16f y = _mm512_permute_ps(vuyx4, 0b10101010);
-				V16f u = _mm512_permute_ps(vuyx4, 0b01010101);
-				V16f v = _mm512_permute_ps(vuyx4, 0b00000000);
+				V16f y = _mm512_permute_ps(vuyx4, mask8(2, 2, 2, 2));
+				V16f u = _mm512_permute_ps(vuyx4, mask8(1, 1, 1, 1));
+				V16f v = _mm512_permute_ps(vuyx4, mask8(0, 0, 0, 0));
 				avx::yuvToRgbaPacked(y * f, u * f, v * f, destPtr + c, fu, fv);
 			}
 			V16f vuyx4 = srcPtr + destW - 16;
-			V16f y = _mm512_permute_ps(vuyx4, 0b10101010);
-			V16f u = _mm512_permute_ps(vuyx4, 0b01010101);
-			V16f v = _mm512_permute_ps(vuyx4, 0b00000000);
+			V16f y = _mm512_permute_ps(vuyx4, mask8(2, 2, 2, 2));
+			V16f u = _mm512_permute_ps(vuyx4, mask8(1, 1, 1, 1));
+			V16f v = _mm512_permute_ps(vuyx4, mask8(0, 0, 0, 0));
 			avx::yuvToRgbaPacked(y * f, u * f, v * f, destPtr + destW - 16, fu, fv);
 		}
 	});

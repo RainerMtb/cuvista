@@ -50,13 +50,15 @@ public:
 	virtual void init() {}
 	//get storage where to decode next input frame
 	virtual Image8& inputDestination(int64_t frameIndex) = 0;
-	//place frame into processing storage
+	//place input frame into executor storage
 	virtual void inputData(int64_t frameIndex) = 0;
 	//set up image pyramid
 	virtual int64_t createPyramid(int64_t frameIndex, AffineDataFloat trf = {}, bool warp = false) = 0;
-	//start computation asynchronously for some part of a frame
+	//adjust gamma of pyramid
+	virtual void adjustPyramid(int64_t frameIndex, double gamma) = 0;
+	//start computation asynchronously
 	virtual void computeStart(int64_t frameIndex, std::span<PointResult> results) = 0;
-	//start computation asynchronously for second part and get results
+	//complete computation and get results
 	virtual void computeTerminate(int64_t frameIndex, std::span<PointResult> results) = 0;
 	//prepare data for output to writer
 	virtual void outputData(int64_t frameIndex, AffineDataFloat trf) = 0;
@@ -64,9 +66,9 @@ public:
 	virtual void getOutput(int64_t frameIndex, Image8& image) const = 0;
 	//prepare data for encoding on cuda
 	virtual bool getOutput(int64_t frameIndex, Image8& image, int cudaNv12stride, unsigned char* cudaNv12ptr) const = 0;
-	//get transformed image as Mat<float>
+	//get transformed image as Mat<float> for debugging
 	virtual Mat<float> getTransformedOutput() const = 0;
-	//get image pyramid as single Mat<float> where images are stacked vertically from large to small
+	//get image pyramid as Mat<float> for debugging
 	virtual Mat<float> getPyramid(int64_t frameIndex) const = 0;
 	//get input image as stored in frame buffers
 	virtual void getInput(int64_t frameIndex, Image8& image) const = 0;

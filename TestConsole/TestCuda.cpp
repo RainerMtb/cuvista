@@ -128,3 +128,38 @@ void cudaInvParallel() {
 	delete[] output, input;
 	std::cout << "parallel result: " << (isok ? "ok" : "fail") << ", runtime " << time.count() / 1000.0 << " ms" << std::endl;
 }
+
+void cudaDriverApi() {
+	int w = 200;
+	int h = 100;
+
+	cuInit(0);
+	CUctxCreateParams params = {};
+	CUcontext ctx;
+	CUdevice dev;
+	cuDeviceGet(&dev, 0);
+	cuCtxCreate_v4(&ctx, &params, 0, dev);
+	//cuCtxPopCurrent(nullptr);
+	CUdeviceptr cuptr;
+	size_t stride;
+	//cuCtxPushCurrent(ctx);
+	cuMemAllocPitch_v2(&cuptr, &stride, w, h, 16);
+	//cuCtxPopCurrent(nullptr);
+
+	dim3 threads = { 200, 1 };
+	dim3 blocks = { 1, 100 };
+	unsigned char* dptr = (unsigned char*) (cuptr);
+	std::vector<unsigned char> data(stride * h);
+	cutest::simpleTest(threads, blocks, dptr, w, h, stride, data.data());
+
+	for (int x = 0; x < w; x++) {
+		for (int y = 0; y < h; y++) {
+			if (int val = data[stride * y + x]; val != x) std::cout << "error " << x << "," << y << "=" << val << std::endl;
+		}
+	}
+
+	cuCtxPopCurrent(nullptr);
+	cuCtxDestroy(ctx);
+	cudaError_t err = cudaGetLastError();
+	std::cout << cudaGetErrorString(err) << std::endl;
+}

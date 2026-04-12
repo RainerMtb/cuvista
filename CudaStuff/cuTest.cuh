@@ -31,4 +31,7 @@ namespace cutest {
 
 	bool invParallel_6(double* input, double* inv, int count);
 
+	void simpleTest(dim3 threads, dim3 blocks, unsigned char* dptr, int w, int h, size_t stride, unsigned char* hptr);
+
+	void runEmptyKernel();
 }

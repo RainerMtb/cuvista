@@ -548,20 +548,20 @@ void MainData::showIntro(const std::string& deviceName, const MovieReader& reade
 		*console << std::endl;
 	}
 
+	//output to be written
+	if (outputOption.isVideoFile()) *console << "FILE OUT: " << fileOut << std::endl << "  encoding: " << outputOption.fullName() << std::endl;
+	if (trajectoryFile.empty() == false) *console << "TRAJECTORY FILE: " << trajectoryFile << std::endl;
+	if (resultsFile.empty() == false) *console << "CALCULATION DETAIL OUTPUT: " << resultsFile << std::endl;
+	if (outputOption == OutputOption::IMAGE_BMP) *console << "IMAGE SEQUENCE: " << ImageWriter::makeFilenameSamples(fileOut, "bmp") << std::endl;
+	if (outputOption == OutputOption::IMAGE_JPG) *console << "IMAGE SEQUENCE: " << ImageWriter::makeFilenameSamples(fileOut, "jpg") << std::endl;
+	if (outputOption == OutputOption::IMAGE_RESULTS) *console << "RESULTS IMAGES: " << ImageWriter::makeFilenameSamples(fileOut, "bmp") << std::endl;
+
 	//video info
 	*console << "VIDEO w=" << w << ", h=" << h
 		<< ", frames=" << (reader.frameCount < 1 ? "unknown" : std::to_string(reader.frameCount))
 		<< ", fps=" << std::format("{:.3f}", reader.fps()) << " (" << reader.fpsNum << ":" << reader.fpsDen << ")"
 		<< ", radius=" << radius
 		<< std::endl;
-
-	//output to be written
-	if (outputOption.isVideoFile()) *console << "FILE OUT: " << outputOption.fullName() << ", " << fileOut << std::endl;
-	if (trajectoryFile.empty() == false) *console << "TRAJECTORY FILE: " << trajectoryFile << std::endl;
-	if (resultsFile.empty() == false) *console << "CALCULATION DETAIL OUTPUT: " << resultsFile << std::endl;
-	if (outputOption == OutputOption::IMAGE_BMP) *console << "IMAGE SEQUENCE: " << ImageWriter::makeFilenameSamples(fileOut, "bmp") << std::endl;
-	if (outputOption == OutputOption::IMAGE_JPG) *console << "IMAGE SEQUENCE: " << ImageWriter::makeFilenameSamples(fileOut, "jpg") << std::endl;
-	if (outputOption == OutputOption::IMAGE_RESULTS) *console << "RESULTS IMAGES: " << ImageWriter::makeFilenameSamples(fileOut, "bmp") << std::endl;
 
 	//device info
 	*console << "\x1B[1;36m" << "  USING: " << deviceName << "\x1B[0m" << std::endl;

@@ -79,8 +79,8 @@ class CudaExecutor : public FrameExecutor {
 
 private:
 	//host memory
-	ImageYuv* h_input = nullptr;
-	CudaPointResult* h_results = nullptr;
+	ImageYuv h_input;
+	std::vector<CudaPointResult> h_results;
 
 	//device memory
 	float* d_pyrData = nullptr;
@@ -151,6 +151,7 @@ public:
 	Image8& inputDestination(int64_t frameIndex) override;
 	void inputData(int64_t frameIndex) override;
 	int64_t createPyramid(int64_t frameIndex, AffineDataFloat trf = {}, bool warp = false) override;
+	void adjustPyramid(int64_t frameIndex, double gamma) override;
 	void computeStart(int64_t frameIndex, std::span<PointResult> results) override;
 	void computeTerminate(int64_t frameIndex, std::span<PointResult> results) override;
 	void outputData(int64_t frameIndex, AffineDataFloat trf) override;
@@ -168,9 +169,6 @@ void kernelComputeCall(ComputeKernelParam param, ComputeTextures& tex, CudaPoint
 
 //see if cuda is available
 CudaProbeResult cudaProbeRuntime();
-
-//encode given nv12 data
-void encodeNvData(const ImageNV12& image, unsigned char* nvencPtr);
 
 //size parameters for kernels
 dim3 configThreads();

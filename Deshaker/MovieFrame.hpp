@@ -82,6 +82,8 @@ protected:
 
 	void progressUpdate(ProgressInfo& progressInfo, ProgressBase& progress, double totalProgress, bool forceUpdate) const;
 
+	void checkPyramidGamma(int64_t frameIndex, int64_t lumaSumCurrent, int64_t lumaSumPrevious, std::shared_ptr<FrameExecutor> executor);
+
 public:
 	MovieReader& mReader;
 	MovieWriter& mWriter;

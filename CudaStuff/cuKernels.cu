@@ -244,12 +244,12 @@ __global__ void kernel_output_nvenc(float4* src, int srcStep, uchar* dest, int s
 
 	if (x < w / 2 && y < h / 2) {
 		idx = y * 2 * srcStep + x * 2;
-		outIdx = y * 2 * stride + x * 2;
 		float4 f00 = src[idx + 0];
 		float4 f01 = src[idx + 1];
 		float4 f10 = src[idx + srcStep + 0];
 		float4 f11 = src[idx + srcStep + 1];
 
+		outIdx = y * 2 * stride + x * 2;
 		dest[outIdx + 0] = rintf(f00.z * 255.0f);
 		dest[outIdx + 1] = rintf(f01.z * 255.0f);
 		dest[outIdx + stride + 0] = rintf(f10.z * 255.0f);
@@ -258,8 +258,8 @@ __global__ void kernel_output_nvenc(float4* src, int srcStep, uchar* dest, int s
 		outIdx = (y + h) * stride + x * 2;
 		float u = rintf(f00.y * 255.0f) + rintf(f01.y * 255.0f) + rintf(f10.y * 255.0f) + rintf(f11.y * 255.0f);
 		float v = rintf(f00.x * 255.0f) + rintf(f01.x * 255.0f) + rintf(f10.x * 255.0f) + rintf(f11.x * 255.0f);
-		dest[outIdx + 0] = u / 4;
-		dest[outIdx + 1] = v / 4;
+		dest[outIdx + 0] = uchar(u / 4);
+		dest[outIdx + 1] = uchar(v / 4);
 	}
 }
 

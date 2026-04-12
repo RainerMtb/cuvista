@@ -66,14 +66,15 @@ void CudaFFmpegWriter::open(OutputOption outputOption, const DeviceInfoCuda* dic
     nvenc->createEncoder(mReader.w, mReader.h, mReader.fpsNum, mReader.fpsDen, gopSize, mData.selectedCrf, guid);
 
     //setup codec parameters for ffmpeg format output
+    std::span<uint8_t> extraData = nvenc->getExtraData();
     AVCodecParameters* params = videoStream->codecpar;
     params->codec_type = AVMEDIA_TYPE_VIDEO;
     params->codec_id = codecId;
     params->width = mData.w;
     params->height = mData.h;
-    params->extradata_size = nvenc->mExtradataSize;
-    params->extradata = (uint8_t*) av_mallocz(0ull + nvenc->mExtradataSize + AV_INPUT_BUFFER_PADDING_SIZE); //freed via avformat_free_context
-    std::memcpy(params->extradata, nvenc->mExtradata.data(), nvenc->mExtradataSize);
+    params->extradata_size = (int) extraData.size();
+    params->extradata = (uint8_t*) av_mallocz(extraData.size() + AV_INPUT_BUFFER_PADDING_SIZE); //freed via avformat_free_context
+    std::copy(extraData.begin(), extraData.end(), params->extradata);
 
     int result;
     result = avformat_init_output(fmt_ctx, NULL);
@@ -97,12 +98,12 @@ void CudaFFmpegWriter::open(OutputOption outputOption) {
     if (dev->getType() == DeviceType::CUDA) {
         dic = static_cast<const DeviceInfoCuda*>(dev);
         open(outputOption, dic);
-        nv12stride = nvenc->cudaPitch;
+        nv12stride = nvenc->mCudaPitch;
 
     } else {
         dic = &mData.deviceInfoCuda[mData.cudaEncodingDeviceIndex];
         open(outputOption, dic);
-        nv12stride = nvenc->cudaPitch;
+        nv12stride = nvenc->mCudaPitch;
         outputNV12 = ImageNV12(mReader.h, mReader.w, nv12stride);
     }
 }
@@ -149,7 +150,7 @@ void CudaFFmpegWriter::writeOutput(const FrameExecutor& executor) {
     assert(cudaPtr != nullptr && "invalid cuda frame pointer");
     bool needsCopy = executor.getOutput(frameIndex, outputNV12, nv12stride, cudaPtr);
     if (needsCopy) {
-        encodeNvData(outputNV12, cudaPtr);
+        nvenc->encodeNvData(outputNV12.data(), outputNV12.sizeInBytes(), cudaPtr);
     }
     encodeFrame(frameIndex);
     encodingQueue.push_back(encoderPool.add([this, pkts = *nvPackets] { writePacketsToFile(pkts, false); }));

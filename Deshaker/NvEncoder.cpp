@@ -25,6 +25,12 @@
 
 #include "NvEncoder.hpp"
 
+NvEncoder::NvEncoder(int cudaIndex) :
+	mCudaIndex { cudaIndex }
+{
+	cuInit(0);
+}
+
 static std::strong_ordering compareGuid(const GUID& g1, const GUID& g2) {
 	auto t1 = std::tie(g1.Data1, g1.Data2, g1.Data3, g1.Data4[0], g1.Data4[1], g1.Data4[2], g1.Data4[3]);
 	auto t2 = std::tie(g2.Data1, g2.Data2, g2.Data3, g2.Data4[0], g2.Data4[1], g2.Data4[2], g2.Data4[3]);
@@ -50,8 +56,40 @@ static void handleResult(bool isError, std::string&& msg) {
 
 
 static void handleResult(NVENCSTATUS status, std::string&& msg) {
-	if (status != NV_ENC_SUCCESS) 
-		throw AVException("encoder error " + std::to_string(status) + ": " + msg);
+	std::string strStatus;
+	switch (status) {
+		case NV_ENC_SUCCESS: strStatus = "NV_ENC_SUCCESS"; break;
+		case NV_ENC_ERR_NO_ENCODE_DEVICE: strStatus = "NV_ENC_ERR_NO_ENCODE_DEVICE"; break;
+		case NV_ENC_ERR_UNSUPPORTED_DEVICE: strStatus = "NV_ENC_ERR_UNSUPPORTED_DEVICE"; break;
+		case NV_ENC_ERR_INVALID_ENCODERDEVICE: strStatus = "NV_ENC_ERR_INVALID_ENCODERDEVICE"; break;
+		case NV_ENC_ERR_INVALID_DEVICE: strStatus = "NV_ENC_ERR_INVALID_DEVICE"; break;
+		case NV_ENC_ERR_DEVICE_NOT_EXIST: strStatus = "NV_ENC_ERR_DEVICE_NOT_EXIST"; break;
+		case NV_ENC_ERR_INVALID_PTR: strStatus = "NV_ENC_ERR_INVALID_PTR"; break;
+		case NV_ENC_ERR_INVALID_EVENT: strStatus = "NV_ENC_ERR_INVALID_EVENT"; break;
+		case NV_ENC_ERR_INVALID_PARAM: strStatus = "NV_ENC_ERR_INVALID_PARAM"; break;
+		case NV_ENC_ERR_INVALID_CALL: strStatus = "NV_ENC_ERR_INVALID_CALL"; break;
+		case NV_ENC_ERR_OUT_OF_MEMORY: strStatus = "NV_ENC_ERR_OUT_OF_MEMORY"; break;
+		case NV_ENC_ERR_ENCODER_NOT_INITIALIZED: strStatus = "NV_ENC_ERR_ENCODER_NOT_INITIALIZED"; break;
+		case NV_ENC_ERR_UNSUPPORTED_PARAM: strStatus = "NV_ENC_ERR_UNSUPPORTED_PARAM"; break;
+		case NV_ENC_ERR_LOCK_BUSY: strStatus = "NV_ENC_ERR_LOCK_BUSY"; break;
+		case NV_ENC_ERR_NOT_ENOUGH_BUFFER: strStatus = "NV_ENC_ERR_NOT_ENOUGH_BUFFER"; break;
+		case NV_ENC_ERR_INVALID_VERSION: strStatus = "NV_ENC_ERR_INVALID_VERSION"; break;
+		case NV_ENC_ERR_MAP_FAILED: strStatus = "NV_ENC_ERR_MAP_FAILED"; break;
+		case NV_ENC_ERR_NEED_MORE_INPUT: strStatus = "NV_ENC_ERR_NEED_MORE_INPUT"; break;
+		case NV_ENC_ERR_ENCODER_BUSY: strStatus = "NV_ENC_ERR_ENCODER_BUSY"; break;
+		case NV_ENC_ERR_EVENT_NOT_REGISTERD: strStatus = "NV_ENC_ERR_EVENT_NOT_REGISTERD"; break;
+		case NV_ENC_ERR_GENERIC: strStatus = "NV_ENC_ERR_GENERIC"; break;
+		case NV_ENC_ERR_INCOMPATIBLE_CLIENT_KEY: strStatus = "NV_ENC_ERR_INCOMPATIBLE_CLIENT_KEY"; break;
+		case NV_ENC_ERR_UNIMPLEMENTED: strStatus = "NV_ENC_ERR_UNIMPLEMENTED"; break;
+		case NV_ENC_ERR_RESOURCE_REGISTER_FAILED: strStatus = "NV_ENC_ERR_RESOURCE_REGISTER_FAILED"; break;
+		case NV_ENC_ERR_RESOURCE_NOT_REGISTERED: strStatus = "NV_ENC_ERR_RESOURCE_NOT_REGISTERED"; break;
+		case NV_ENC_ERR_RESOURCE_NOT_MAPPED: strStatus = "NV_ENC_ERR_RESOURCE_NOT_MAPPED"; break;
+		case NV_ENC_ERR_NEED_MORE_OUTPUT: strStatus = "NV_ENC_ERR_NEED_MORE_OUTPUT"; break;
+		default: strStatus = "unknown nvenc error"; break;
+	}
+	if (status != NV_ENC_SUCCESS) {
+		throw AVException("encoder error, " + strStatus + ", " + msg);
+	}
 }
 
 
@@ -59,7 +97,7 @@ static void handleResult(CUresult result, std::string&& msg) {
 	if (result != CUDA_SUCCESS) {
 		const char* custr;
 		cuGetErrorString(result, &custr);
-		throw AVException("cuda error: " + std::string(custr));
+		throw AVException("encoder error, " + std::string(custr) + ", " + msg);
 	}
 }
 
@@ -74,13 +112,11 @@ void NvEncoder::probeEncoding(uint32_t* nvencVersionApi, uint32_t* nvencVersionD
 
 
 void NvEncoder::init() {
-	//create context per device
-	CUdevice dev;
 	handleResult(cuCtxGetCurrent(&mCuContext), "cannot get device context");
 	if (mCuContext == NULL) {
-		handleResult(cuDeviceGet(&dev, mCudaIndex), "cannot get device");
-		CUctxCreateParams params = {};
-		handleResult(cuCtxCreate_v4(&mCuContext, &params, 0, dev), "cannot create device context"); //changing api for cuda 13.0
+		handleResult(cuDeviceGet(&mDevice, mCudaIndex), "cannot get device");
+		handleResult(cuDevicePrimaryCtxRetain(&mCuContext, mDevice), "cannot retain device context");
+		//handleResult(cuCtxCreate_v4(&mCuContext, NULL, 0, dev), "cannot create device context"); //changing api for create with cuda 13.0
 	}
 
 	//create instance
@@ -213,15 +249,22 @@ void NvEncoder::createEncoder(int w, int h, int fpsNum, int fpsDen, uint32_t gop
 	mOutputDelay = mEncoderBufferSize - 1;
 
 	size_t pitch;
-	size_t h_image = h * 3ull / 2; //for nv12 format h * 3 / 2, for yuv444 formats h * 3
+	int imageRows = h * 3 / 2; //for nv12 format h * 3 / 2, for yuv444 formats h * 3
+	
+	// ????
+	// memory allocation through driver api requires pushing context
+	// later writing to that memory through runtime api requires retained context
+	// ????
+	cuCtxPushCurrent(mCuContext);
 	for (size_t i = 0; i < mEncoderBufferSize; i++) {
 		//output buffers
 		NV_ENC_CREATE_BITSTREAM_BUFFER createBitstreamBuffer = { NV_ENC_CREATE_BITSTREAM_BUFFER_VER };
 		handleResult(encFuncList.nvEncCreateBitstreamBuffer(mEncoder, &createBitstreamBuffer), "cannot create bitstream buffer");
 		bitstreamOutputBuffer.push_back(createBitstreamBuffer.bitstreamBuffer);
 
+		//allocate pitched memory through driver api
 		CUdeviceptr pDeviceFrame;
-		handleResult(cuMemAllocPitch_v2(&pDeviceFrame, &pitch, w, h_image, 16), "error allocating input buffers");
+		handleResult(cuMemAllocPitch_v2(&pDeviceFrame, &pitch, w, imageRows, 16), "error allocating input buffers");
 		inputFrames.push_back(pDeviceFrame);
 
 		NV_ENC_REGISTER_RESOURCE registerResource = { NV_ENC_REGISTER_RESOURCE_VER };
@@ -236,7 +279,12 @@ void NvEncoder::createEncoder(int w, int h, int fpsNum, int fpsDen, uint32_t gop
 		NV_ENC_REGISTERED_PTR registeredPtr = registerResource.registeredResource;
 		registeredResources.push_back(registeredPtr);
 	}
-	cudaPitch = (int) pitch;
+	cuDevicePrimaryCtxRetain(&mCuContext, mDevice);
+	mCudaPitch = (int) pitch;
+}
+
+std::span<uint8_t> NvEncoder::getExtraData() {
+	return { mExtradata.data(), mExtradataSize };
 }
 
 CUdeviceptr NvEncoder::getNextInputFramePtr() {
@@ -305,7 +353,15 @@ void NvEncoder::encodeFrame(std::list<NvPacket>& nvPackets, int64_t frameIndex) 
 		throw AVException("cannot encode frame, status=" + std::to_string(stat));
 	}
 	handleResult(encFuncList.nvEncUnmapInputResource(mEncoder, mappedInputResource.mappedResource), "cannot unmap input resource");
-	cuCtxPopCurrent(nullptr);
+	cuDevicePrimaryCtxRetain(&mCuContext, mDevice);
+}
+
+
+void NvEncoder::encodeNvData(const unsigned char* nv12data, int siz, unsigned char* nvencPtr) {
+	CUdeviceptr ptr = (CUdeviceptr) nvencPtr;
+	cuCtxPushCurrent(mCuContext);
+	handleResult(cuMemcpyHtoD_v2(ptr, nv12data, siz), "cannot copy nv12 data to device");
+	cuDevicePrimaryCtxRetain(&mCuContext, mDevice);
 }
 
 
@@ -315,7 +371,7 @@ void NvEncoder::endEncode() {
 	picParams.encodePicFlags = NV_ENC_PIC_FLAG_EOS;
 	picParams.completionEvent = nullptr;
 	handleResult(encFuncList.nvEncEncodePicture(mEncoder, &picParams), "cannot encode picture");
-	cuCtxPopCurrent(nullptr);
+	cuDevicePrimaryCtxRetain(&mCuContext, mDevice);
 }
 
 
@@ -332,27 +388,28 @@ NvPacket NvEncoder::getBufferedFrame() {
 
 
 void NvEncoder::destroyEncoder() {
-	cuCtxPushCurrent(mCuContext);
 
 	//clear input buffers
-	for (size_t i = 0; i < registeredResources.size(); i++) {
-		if (registeredResources[i]) {
-			encFuncList.nvEncUnregisterResource(mEncoder, registeredResources[i]);
+	for (void* res : registeredResources) {
+		if (res != nullptr) {
+			encFuncList.nvEncUnmapInputResource(mEncoder, res);
+			encFuncList.nvEncUnregisterResource(mEncoder, res);
 		}
 	}
 	registeredResources.clear();
 
-	for (size_t i = 0; i < inputFrames.size(); i++) {
-		if (inputFrames[i]) {
-			cuMemFree_v2(inputFrames[i]);
+	for (CUdeviceptr ptr : inputFrames) {
+		if (ptr != NULL) {
+			cuMemFree_v2(ptr);
 		}
 	}
 	inputFrames.clear();
 
 	//clear output buffers
-	for (size_t i = 0; i < bitstreamOutputBuffer.size(); i++) {
-		if (bitstreamOutputBuffer[i]) {
-			encFuncList.nvEncDestroyBitstreamBuffer(mEncoder, bitstreamOutputBuffer[i]);
+	for (void* ptr : bitstreamOutputBuffer) {
+		if (ptr != nullptr) {
+			encFuncList.nvEncUnlockBitstream(mEncoder, ptr);
+			encFuncList.nvEncDestroyBitstreamBuffer(mEncoder, ptr);
 		}
 	}
 	bitstreamOutputBuffer.clear();
@@ -363,8 +420,7 @@ void NvEncoder::destroyEncoder() {
 		mEncoder = nullptr;
 	}
 
-	cuCtxPopCurrent(nullptr);
-	cuCtxDestroy_v2(mCuContext);
+	cuDevicePrimaryCtxRelease(mDevice);
 }
 
 #endif

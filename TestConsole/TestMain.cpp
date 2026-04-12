@@ -19,7 +19,7 @@
 #include "TestMain.hpp"
 
 int main() {
-	std::cout << "----------------------------" << std::endl << "TestMain:" << std::endl;
+	//std::cout << "----------------------------" << std::endl << "TestMain:" << std::endl;
 	//qrdec();
 	//draw("f:/drawing.bmp"); 
 	//matPerf();
@@ -49,7 +49,8 @@ int main() {
 
 	//testZoom();
 	//testVideo1();
-	testLuma();
+	//testLuma();
 
 	//util::base64_encode("f:/testData.mp4", "f:/testData.txt");
+	cudaDriverApi();
 }

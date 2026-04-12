@@ -37,4 +37,12 @@ namespace avx {
 	void toConsole(V8d v, int digits = 5);
 
 	void computeSimilar(std::span<PointBase> points, Matd& M, Affine2D& affine);
+
+	static constexpr unsigned char mask8(int a, int b, int c, int d) {
+		return a & 3 | (b & 3) << 2 | (c & 3) << 4 | (d & 3) << 6;
+	}
+
+	static constexpr unsigned char mask8(int m0, int m1, int m2, int m3, int m4, int m5, int m6, int m7) {
+		return m0 & 1 | (m1 & 1) << 1 | (m2 & 1) << 2 | (m3 & 1) << 3 | (m4 & 1) << 4 | (m5 & 1) << 5 | (m6 & 1) << 6 | (m7 & 1) << 7;
+	}
 }
