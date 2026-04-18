@@ -41,7 +41,7 @@ struct CudaFilterKernel {
 	float k[maxSize];
 };
 
-__constant__ CudaFilterKernel filterKernels[4] = {
+__constant__ CudaFilterKernel filterKernels[] = {
 	{ 5, {0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f }},
 	{ 5, {0.0f,    0.25f, 0.5f,   0.25f, 0.0f }},
 	{ 5, {0.0f,    0.25f, 0.5f,   0.25f, 0.0f }},

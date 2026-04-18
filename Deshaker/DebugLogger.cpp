@@ -17,6 +17,7 @@
  */
 
 #include <iostream>
+#include <regex>
 #include "SystemStuff.hpp"
 #include "AVException.hpp"
 
@@ -52,8 +53,13 @@ std::string DebugLoggerFile::str() {
 }
 
 std::shared_ptr<DebugLogger> DebugLogger::create(const std::string& logger) {
+	std::regex patternTcp("^tcp://(.+):(\\d+)$");
+
 	if (logger.starts_with("file://")) {
 		return std::make_shared<DebugLoggerFile>(logger.substr(7));
+
+	} else if (std::smatch matcher; std::regex_match(logger, matcher, patternTcp)) {
+		return std::make_shared<DebugLoggerTcp>(matcher[1].str(), std::stoi(matcher[2]));
 
 	} else {
 		throw AVException("invalid log parameter '" + logger + "'");
@@ -68,7 +74,7 @@ std::shared_ptr<DebugLogger> DebugLogger::create(const std::string& logger) {
 SOCKET sock = INVALID_SOCKET;
 
 //send debug messages over tcp on windows
-DebugLoggerTcp::DebugLoggerTcp(const char* ip, int port) {
+DebugLoggerTcp::DebugLoggerTcp(const std::string& ip, int port) {
 	WSADATA wsaData = {};
 	int retval = WSAStartup(MAKEWORD(2, 2), &wsaData);
 	if (retval < 0) return;
@@ -76,7 +82,7 @@ DebugLoggerTcp::DebugLoggerTcp(const char* ip, int port) {
 	sock = socket(PF_INET, SOCK_STREAM, 0);
 	sockaddr_in servAddr = {};
 	servAddr.sin_family = PF_INET;
-	servAddr.sin_addr.s_addr = inet_addr(ip);
+	servAddr.sin_addr.s_addr = inet_addr(ip.c_str());
 	servAddr.sin_port = htons(port);
 	mIsConnected = connect(sock, (SOCKADDR*) &servAddr, sizeof(servAddr));
 }
@@ -111,11 +117,11 @@ extern "C" {
 
 int sock = -1;
 
-DebugLoggerTcp::DebugLoggerTcp(const char* ip, int port) {
+DebugLoggerTcp::DebugLoggerTcp(const std::string& ip, int port) {
 	sock = socket(AF_INET, SOCK_STREAM, 0);
 	sockaddr_in servAddr = {};
 	servAddr.sin_family = AF_INET;
-	servAddr.sin_addr.s_addr = inet_addr(ip);
+	servAddr.sin_addr.s_addr = inet_addr(ip.c_str());
 	servAddr.sin_port = htons(port);
 	mIsConnected = connect(sock, (sockaddr*) &servAddr, sizeof(servAddr));
 }

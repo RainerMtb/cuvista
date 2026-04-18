@@ -124,7 +124,6 @@ __constant struct FilterKernel filterKernels[] = {
 	{5, {0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f}},
 	{5, {0.0f, 0.25f, 0.5f, 0.25f, 0.0f}},
 	{5, {0.0f, 0.25f, 0.5f, 0.25f, 0.0f}},
-	{3, {-0.5f, 0.0f, 0.5f}},
 };
 
 __kernel void filter_32f_1(__read_only image2d_depth_t src, __write_only image2d_t dest, int filterIndex, int dx, int dy) {

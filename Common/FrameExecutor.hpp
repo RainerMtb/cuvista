@@ -55,7 +55,7 @@ public:
 	//set up image pyramid
 	virtual int64_t createPyramid(int64_t frameIndex, AffineDataFloat trf = {}, bool warp = false) = 0;
 	//adjust gamma of pyramid
-	virtual void adjustPyramid(int64_t frameIndex, double gamma) = 0;
+	virtual void adjustPyramid(int64_t frameIndex, float gamma) = 0;
 	//start computation asynchronously
 	virtual void computeStart(int64_t frameIndex, std::span<PointResult> results) = 0;
 	//complete computation and get results

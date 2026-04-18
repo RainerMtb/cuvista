@@ -32,20 +32,18 @@ void StackedWriter::writeOutput(const FrameExecutor& executor) {
 	combinedFrame.setColor(mData.backgroundColor);
 
 	//scale mInputFrame by min zoom and write to left side of mOutputFrame
-	auto fcn = [&] (size_t threadIdx) {
-		for (size_t r = threadIdx; r < mData.h; r += mData.cpuThreads) {
-			for (size_t c = 0; c < mWidth; c++) {
-				float x = (c - mData.w / 2.0f) / mData.zoomMin + mData.w / 2.0f + mData.stackCrop.left;
-				float y = (r - mData.h / 2.0f) / mData.zoomMin + mData.h / 2.0f;
-				if (x >= 0.0f && x <= mData.w - 1.0f && y >= 0.0f && y <= mData.h - 1.0f) {
-					combinedFrame.at(0, r, c) = mInputFrame.sample(0, x, y);
-					combinedFrame.at(1, r, c) = mInputFrame.sample(1, x, y);
-					combinedFrame.at(2, r, c) = mInputFrame.sample(2, x, y);
-				}
+	auto fcn = [&] (size_t r) {
+		for (size_t c = 0; c < mWidth; c++) {
+			float x = (c - mData.w / 2.0f) / mData.zoomMin + mData.w / 2.0f + mData.stackCrop.left;
+			float y = (r - mData.h / 2.0f) / mData.zoomMin + mData.h / 2.0f;
+			if (x >= 0.0f && x <= mData.w - 1.0f && y >= 0.0f && y <= mData.h - 1.0f) {
+				combinedFrame.at(0, r, c) = mInputFrame.sample(0, x, y);
+				combinedFrame.at(1, r, c) = mInputFrame.sample(1, x, y);
+				combinedFrame.at(2, r, c) = mInputFrame.sample(2, x, y);
 			}
 		}
 	};
-	executor.mPool.addAndWait(fcn, 0, mData.cpuThreads);
+	executor.mPool.addAndWait(fcn, 0, mData.h);
 
 	//combine images
 	unsigned char* out = mOutputFrame.data() + mData.stackCrop.left * 4;

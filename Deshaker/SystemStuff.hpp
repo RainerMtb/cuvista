@@ -87,7 +87,7 @@ namespace util {
 	struct DebugLoggerTcp : public util::DebugLogger {
 		int mIsConnected = -1;
 
-		DebugLoggerTcp(const char* ip, int port);
+		DebugLoggerTcp(const std::string& ip, int port);
 		~DebugLoggerTcp();
 
 		void log(const std::string& msg) override;

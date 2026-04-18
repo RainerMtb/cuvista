@@ -25,9 +25,9 @@
 //---------- CPU FRAME ------------------------------------------------
 //---------------------------------------------------------------------
 
-using Matf4 = Mat<FloatVuyx>;
-
 class CpuFrame : public FrameExecutor {
+
+	using Matf4 = Mat<FloatVuyx>;
 
 public:
 	CpuFrame(MainData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool);
@@ -36,7 +36,7 @@ public:
 	Image8& inputDestination(int64_t frameIndex) override;
 	void inputData(int64_t frameIndex) override;
 	int64_t createPyramid(int64_t frameIndex, AffineDataFloat trf = {}, bool warp = false) override;
-	void adjustPyramid(int64_t frameIndex, double gamma) override;
+	void adjustPyramid(int64_t frameIndex, float gamma) override;
 	void computeStart(int64_t frameIndex, std::span<PointResult> results) override;
 	void computeTerminate(int64_t frameIndex, std::span<PointResult> results) override;
 	void outputData(int64_t frameIndex, AffineDataFloat trf) override;
@@ -83,4 +83,6 @@ private:
 
 	//final output
 	ImageVuyxFloat mOutput;
+
+	void createPyramidLevels(CpuPyramid& pyr);
 };

@@ -394,9 +394,9 @@ namespace im {
 			dest.setIndex(this->index);
 		}
 
-		//sample clamped to area
-		virtual T sample(size_t plane, float x, float y, float x0, float x1, float y0, float y1) const {
-			float cx = std::clamp(x, x0, x1), cy = std::clamp(y, y0, y1);
+		//sample clamped to image bounds
+		virtual T sample(size_t plane, float x, float y) const {
+			float cx = std::clamp(x, 0.0f, w() - 1.0f), cy = std::clamp(y, 0.0f, h() - 1.0f);
 			float flx = std::floor(cx), fly = std::floor(cy);
 			float dx = cx - flx, dy = cy - fly;
 			size_t ix = size_t(flx), iy = size_t(fly);
@@ -408,16 +408,6 @@ namespace im {
 			float f11 = at(plane, iy + yd, ix + xd);
 			float result = ((1 - dx) * (1 - dy) * f00 + (1 - dx) * dy * f10 + dx * (1 - dy) * f01 + dx * dy * f11);
 			return (T) result;
-		}
-
-		//sample clamped to image bounds
-		virtual T sample(size_t plane, float x, float y) const {
-			return sample(plane, x, y, 0.0f, w() - 1.0f, 0.0f, h() - 1.0f);
-		}
-
-		//sample from image, return defaultValue when outside
-		virtual T sample(size_t plane, float x, float y, T defaultValue) const {
-			return (x < 0.0 || x > w() - 1.0 || y < 0.0 || y > h() - 1.0) ? defaultValue : sample(plane, x, y);
 		}
 
 		//compute sum of squared deltas

@@ -340,7 +340,7 @@ int64_t OpenClFrame::createPyramid(int64_t frameIndex, AffineDataFloat trf, bool
 	return luma;
 }
 
-void OpenClFrame::adjustPyramid(int64_t frameIndex, double gamma) {
+void OpenClFrame::adjustPyramid(int64_t frameIndex, float gamma) {
 
 }
 

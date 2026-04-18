@@ -155,12 +155,11 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 			//zoom to apply after transformation
 			std::regex pattern1("^([-]*\\d+)$");
 			std::regex pattern2("^(\\d+):(\\d+)$");
-			std::smatch matcher;
 			//check for dynamic zoom
-			if (std::regex_match(next, matcher, pattern2)) {
+			if (std::smatch matcher; std::regex_match(next, matcher, pattern2)) {
 				zoomMin = 1.0 + std::stoi(matcher[1]) / 100.0;
 				zoomMax = 1.0 + std::stoi(matcher[2]) / 100.0;
-			} else if (std::regex_match(next, matcher, pattern1)) {
+			} else if (std::smatch matcher; std::regex_match(next, matcher, pattern1)) {
 				zoomMin = 1.0 + std::stoi(matcher[1]) / 100.0;
 				zoomMax = 1.0 + std::stoi(matcher[1]) / 100.0;
 			} else throw AVException("invalid zoom: " + next);
@@ -185,15 +184,14 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 			//background color
 			auto it = colorMap.find(next); //some color literals
 			if (it == colorMap.end()) {
-				std::smatch matcher;
-				if (std::regex_match(next, matcher, std::regex("^(\\d{1,3}):(\\d{1,3}):(\\d{1,3})$"))) {
+				if (std::smatch matcher; std::regex_match(next, matcher, std::regex("^(\\d{1,3}):(\\d{1,3}):(\\d{1,3})$"))) {
 					//decimal numbers seperated by colon
 					int r = std::stoi(matcher[1].str());
 					int g = std::stoi(matcher[2].str());
 					int b = std::stoi(matcher[3].str());
 					backgroundColor = Color::rgb(r, g, b);
 
-				} else if (std::regex_match(next, matcher, std::regex("^#([[:xdigit:]]{2})([[:xdigit:]]{2})([[:xdigit:]]{2})$"))) {
+				} else if (std::smatch matcher; std::regex_match(next, matcher, std::regex("^#([[:xdigit:]]{2})([[:xdigit:]]{2})([[:xdigit:]]{2})$"))) {
 					//webcolor
 					int r = std::stoi(matcher[1].str(), nullptr, 16);
 					int g = std::stoi(matcher[2].str(), nullptr, 16);

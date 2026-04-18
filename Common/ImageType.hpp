@@ -155,14 +155,19 @@ namespace im {
 		}
 
 		virtual void setColor(const LocalColor<T>& localColor) override {
-			for (int r = 0; r < this->h; r++) {
-				for (int c = 0; c < this->w; c++) {
-					T* dest = addr(0, r, c);
-					for (int z = 0; z < this->planes; z++) {
-						*dest = localColor.colorData[z];
-						dest++;
-					}
+			//fill first row
+			for (int c = 0; c < this->w; c++) {
+				T* dest = addr(0, 0, c);
+				for (int z = 0; z < this->planes; z++) {
+					*dest = localColor.colorData[z];
+					dest++;
 				}
+			}
+
+			//copy rows
+			int siz = this->w * this->planes;
+			for (int r = 1; r < this->h; r++) {
+				std::copy_n(this->row(0), siz, this->row(r));
 			}
 		}
 

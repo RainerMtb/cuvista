@@ -3,7 +3,7 @@
 # CUVISTA - Gpu accelerated Video Stabilizer
 Check the projects [GitHub Page](https://rainermtb.github.io/cuvista)
 
-A simple, easy to use Application to stabilize shaky video footage preferably using GPU acceleration via Cuda or OpenCL. The software will run on CPU power alone, which will be significantly slower but produces the exact same outcome.
+An easy to use Application to stabilize shaky video footage preferably using Gpu acceleration via Cuda or OpenCL. Cuvista will run without a dedicated Gpu and produce the same output, but will take significantly longer to do so.
 
 I put in great effort to ensure that on all platforms the stabilization results are absolutely equal. By that I mean floating point equal, to the bit.
 

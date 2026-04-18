@@ -49,8 +49,8 @@ int main() {
 
 	//testZoom();
 	//testVideo1();
-	//testLuma();
+	testLuma();
 
 	//util::base64_encode("f:/testData.mp4", "f:/testData.txt");
-	cudaDriverApi();
+	//cudaDriverApi();
 }

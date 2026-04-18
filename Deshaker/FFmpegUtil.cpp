@@ -20,7 +20,6 @@
 #include "Util.hpp"
 #include "ErrorLogger.hpp"
 #include <format>
-#include <numeric>
 
 
 std::string av_make_error(int errnum, const char* msg, const std::string& str) {

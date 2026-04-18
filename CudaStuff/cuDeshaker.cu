@@ -423,7 +423,7 @@ int64_t CudaExecutor::createPyramid(int64_t frameIndex, AffineDataFloat trf, boo
 	return lumaSum;
 }
 
-void CudaExecutor::adjustPyramid(int64_t frameIndex, double gamma) {
+void CudaExecutor::adjustPyramid(int64_t frameIndex, float gamma) {
 
 }
 

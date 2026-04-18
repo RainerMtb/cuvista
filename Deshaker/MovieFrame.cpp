@@ -109,7 +109,13 @@ void MovieFrame::checkPyramidGamma(int64_t frameIndex, int64_t lumaSumCurrent, i
 	double a = std::sqrt(lumaSumCurrent / s);
 	double b = std::sqrt(lumaSumPrevious / s);
 	double delta = std::log(a / b);
-	if (delta < -0.1 || delta > 0.1) debugLogger().format("frame {}-{} cur {:.4f} prev {:.4f} lumaDelta {:.4f}", frameIndex - 1, frameIndex, a, b, delta);
+	int64_t frameToAdjust = frameIndex - 1;
+	if (delta > -0.5 && delta < -0.1 || delta > 0.1 && delta < 0.5) {
+		double x = std::log(b) / std::log(a);
+		executor->adjustPyramid(frameToAdjust, x);
+		debugLogger().format("frame {}-{} cur {:08.4f} prev {:08.4f} x = {:.4f}", frameToAdjust, frameIndex, a, b, x);
+		//Matf::concatHorz(executor->getPyramid(frameToAdjust), executor->getPyramid(frameIndex)).saveAsBMP(std::format("f:/pic/im{}.bmp", frameToAdjust), 1.0f);
+	}
 }
 
 

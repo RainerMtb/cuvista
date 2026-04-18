@@ -138,7 +138,7 @@ int64_t AvxFrame::createPyramid(int64_t frameIndex, AffineDataFloat trf, bool wa
 	return _mm512_reduce_add_epi64(lumaSum);
 }
 
-void AvxFrame::adjustPyramid(int64_t frameIndex, double gamma) {
+void AvxFrame::adjustPyramid(int64_t frameIndex, float gamma) {
 
 }
 
@@ -178,8 +178,9 @@ Matf AvxFrame::getTransformedOutput() const {
 	return mWarped.matShare().subMat(0, 0, mData.h, mData.w * 4ull);
 }
 
-Matf AvxFrame::getPyramid(int64_t index) const {
-	return mPyr[index].matShare().subMat(0, 0, mData.pyramidRowCount, mData.w);
+Matf AvxFrame::getPyramid(int64_t frameIndex) const {
+	size_t pyrIdx = frameIndex % mData.pyramidCount;
+	return mPyr[pyrIdx].matShare().subMat(0, 0, mData.pyramidRowCount, mData.w);
 }
 
 void AvxFrame::getInput(int64_t frameIndex, Image8& image) const {

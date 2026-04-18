@@ -82,14 +82,14 @@ void testLuma() {
 	CudaFrame executor(data, cudaDevices[0], frame, frame.mPool);
 
 	executor.init();
-	ImageYuv src = ImageYuv::readBmpFile("D:/VideoTest/beach.86.bmp");
+	ImageYuv src = ImageYuv::readBmpFile("D:/VideoTest/06a.37.bmp");
 	std::cout << "rms " << src.lumaRms() << std::endl;
 	Image8& input = executor.inputDestination(0);
 	src.copyTo(input);
 	executor.inputData(0);
 	executor.createPyramid(0);
 
-	ImageYuv im = ImageYuv::readBmpFile("D:/VideoTest/beach.87.bmp");
+	ImageYuv im = ImageYuv::readBmpFile("D:/VideoTest/06a.38.bmp");
 	for (int i = 0; i < 5; i++) {
 		src = im;
 		float gamma = 1.0f - 0.05f * i;

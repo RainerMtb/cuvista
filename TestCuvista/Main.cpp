@@ -31,7 +31,7 @@ static void f1() {
 }
 
 static void f2() {
-	util::debugLogger = std::make_shared<util::DebugLoggerString>();
+	//util::debugLogger = std::make_shared<util::DebugLoggerString>();
 	//util::debugLogger = std::make_shared<util::DebugLoggerTcp>("10.0.0.1", 5555);
 
 	std::vector<std::string> argsLines = {
@@ -39,12 +39,13 @@ static void f2() {
 		/*1*/ "-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -bgmode color -y -enc ffmpeg:hevc -frames 4 -progress 0",
 		/*2*/ "-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -bgmode color -y -zoom -8 -device 2 -enc nvenc:h264",
 		/*3*/ "-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -bgmode color -y -zoom -8",
-		/*4*/ "-i d:/VideoTest/06b.mkv -o f:/videoOut.mp4 -bgmode color -y -zoom -8 -device 2",
+		/*4*/ "-i d:/VideoTest/06b.mkv -o f:/videoOut.mp4 -bgmode color -y -zoom -8 -device 0 -log tcp://10.0.0.1:5555",
 		/*5*/ "-device 3 -frames 5 -i d:/VideoTest/04.ts -o d:/VideoTest/out/images/im%03d.jpg -progress 0 -y",
 		/*6*/ "-device 3 -i D:/VideoTest/12.mp4 -o f:/videoOut.mp4 -y -frames 200 -stack 200:200",
+		/*7*/ "-device 3 -i D:/VideoTest/02short.mp4 -o f:/videoOut.mp4 -y -stack 60:60",
 	};
 
-	int idx = 3;
+	int idx = 4;
 	std::string argsLine = argsLines[idx];
 	std::cout << "------- CuvistaTest -------" << std::endl;
 	std::cout << "------- params: " << argsLine << std::endl << std::endl;

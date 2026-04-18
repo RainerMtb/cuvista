@@ -70,8 +70,8 @@ ThreadPool::~ThreadPool() {
 
 std::future<void> ThreadPool::add(std::function<void()> job) const {
 	std::unique_lock<std::mutex> lock(mMutex);
-	mJobs.emplace(std::packaged_task<void()>(job));
-	auto fut = mJobs.back().get_future();
+	auto& task = mJobs.emplace(std::packaged_task<void()>(job));
+	auto fut = task.get_future();
 	mCV.notify_one();
 	return fut;
 }
@@ -82,8 +82,8 @@ void ThreadPool::addAndWait(std::function<void(size_t)> job, size_t iterStart, s
 		//create jobs and queue up
 		std::unique_lock<std::mutex> lock(mMutex);
 		for (size_t i = iterStart; i < iterEnd; i++) {
-			mJobs.emplace(std::packaged_task<void()>(std::bind(job, i)));
-			futures[i] = mJobs.back().get_future();
+			auto& task = mJobs.emplace(std::packaged_task<void()>(std::bind(job, i)));
+			futures[i] = task.get_future();
 		}
 		mCV.notify_all();
 	}
