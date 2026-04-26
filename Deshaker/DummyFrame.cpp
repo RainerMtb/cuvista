@@ -28,9 +28,7 @@ DummyFrame::DummyFrame(MainData& data, DeviceInfoBase& deviceInfo, MovieFrame& f
 	for (int i = 0; i < mFrames.size(); i++) mFrames[i] = ImageYuv(data.h, data.w, data.stride);
 }
 
-int64_t DummyFrame::createPyramid(int64_t frameIndex, AffineDataFloat trf, bool warp) {
-	return 0;
-}
+void DummyFrame::createPyramid(int64_t frameIndex, std::span<int> hist, AffineDataFloat trf, bool warp) {}
 
 void DummyFrame::adjustPyramid(int64_t frameIndex, float gamma) {}
 

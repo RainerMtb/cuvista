@@ -680,10 +680,10 @@ void OpticalFlowWriter::writeInput(const FrameExecutor& executor) {
 	//imageInterpolated.saveAsBMP("f:/im.bmp");
 
 	//stamp color legend onto image
-	legend.writeTo(imageInterpolated, 0ull + mData.h - 10 - legendSize, 10, 192, executor.mPool);
+	legend.copyTo(imageInterpolated, 0ull + mData.h - 10 - legendSize, 10, 192, executor.mPool);
 	int tx = 10 + legendSize / 2;
 	int ty = 0ull + mData.h - 10 - legendSize / 2;
-	imageInterpolated.writeText(std::to_string(frameIndex), tx, ty, legendScale, legendScale, im::TextAlign::MIDDLE_CENTER);
+	imageInterpolated.writeText(std::to_string(frameIndex), tx, ty, im::TextAlign::MIDDLE_CENTER, legendScale, legendScale);
 
 	//encode rgba image
 	uint8_t* src[] = { imageInterpolated.data(), nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
@@ -755,8 +755,7 @@ void ResultDetailsWriter::writeInput(const FrameExecutor& executor) {
 // Result Images
 //-----------------------------------------------------------------------------------
 
-void ResultImageWriter::writeImage(const AffineTransform& trf, std::span<PointResult> res, int64_t idx, Image8& dest, ThreadPoolBase& pool, bool drawTransformed) {
-
+void ResultImageWriter::writeImage(const FrameResultData& resultData, std::span<PointResult> res, int64_t idx, Image8& dest, ThreadPoolBase& pool, bool drawTransformed) {
 	int h = dest.h();
 	int w = dest.w();
 	Color col = Color::web("#F09B59");
@@ -774,7 +773,7 @@ void ResultImageWriter::writeImage(const AffineTransform& trf, std::span<PointRe
 						double y2 = py + pr.v;
 
 						//blue line to computed transformation
-						auto [tx, ty] = trf.transform(pr.x, pr.y);
+						auto [tx, ty] = resultData.transform.transform(pr.x, pr.y);
 						dest.drawLine(px, py, tx + w / 2.0, ty + h / 2.0, col, 0.1);
 					}
 				}
@@ -818,10 +817,17 @@ void ResultImageWriter::writeImage(const AffineTransform& trf, std::span<PointRe
 
 	//write text info
 	double frac = numConsidered == 0 ? 0.0 : 100.0 * numConsens / numConsidered;
+	const AffineTransform& trf = resultData.transform;
 	std::string s2 = std::format("transform dx={:.1f} px, dy={:.1f} px, scale={:.5f}, rot={:.5f} deg", trf.dX(), trf.dY(), trf.scale(), trf.rotDegrees());
 	Size s = dest.writeText(s2, 0, h);
 	std::string s1 = std::format("frame {}, consensus {}/{} ({:.1f}%)", idx, numConsens, numConsidered, frac);
 	dest.writeText(s1, 0, h - s.h);
+
+	//cluster info
+	if (resultData.runDbScan) {
+		std::string str = std::format("clusters: {} {}", resultData.clusterSizes.size(), util::collectionToString(resultData.clusterSizes, 15));
+		dest.writeText(str, 0, 0, TextAlign::TOP_LEFT);
+	}
 }
 
 void ResultImageWriter::writeInput(const FrameExecutor& executor) {
@@ -829,7 +835,7 @@ void ResultImageWriter::writeInput(const FrameExecutor& executor) {
 	executor.getInput(frameIndex, bgra);
 	bgra.gray();
 	std::string fname = ImageWriter::makeFilename(mData.fileOut, frameIndex, "bmp");
-	writeImage(executor.mFrame.getTransform(), executor.mFrame.mResultPoints, frameIndex, bgra, executor.mPool);
+	writeImage(executor.mFrame.getResultData(), executor.mFrame.mResultPoints, frameIndex, bgra, executor.mPool);
 
 	//save image to file
 	bgra.saveBmpColor(fname);
@@ -853,7 +859,7 @@ void ResultVideoWriter::open(OutputOption outputOption) {
 void ResultVideoWriter::writeInput(const FrameExecutor& executor) {
 	executor.getInput(frameIndex, bgra);
 	bgra.gray(executor.mPool);
-	ResultImageWriter::writeImage(executor.mFrame.getTransform(), executor.mFrame.mResultPoints, frameIndex, bgra, executor.mPool, false);
+	ResultImageWriter::writeImage(executor.mFrame.getResultData(), executor.mFrame.mResultPoints, frameIndex, bgra, executor.mPool, false);
 	bgra.convertTo(nv12, executor.mPool);
 	file.write(reinterpret_cast<const char*>(nv12.data()), nv12.sizeInBytes());
 

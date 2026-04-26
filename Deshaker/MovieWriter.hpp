@@ -264,6 +264,7 @@ protected:
 	AVPacket* videoPacket = nullptr;
 	bool isHeaderWritten = false;
 	bool isFlushing = false;
+	int64_t dtsWritten = INT64_MIN;
 
 	FFmpegFormatWriter(MainData& data, MovieReader& reader);
 
@@ -494,8 +495,7 @@ public:
 	void start() override {}
 	void writeInput(const FrameExecutor& executor) override;
 
-	static void writeImage(const AffineTransform& trf, std::span<PointResult> res, int64_t idx, Image8& dest, 
-		ThreadPoolBase& pool = defaultPool, bool drawTransformed = true);
+	static void writeImage(const FrameResultData& resultData, std::span<PointResult> res, int64_t idx, Image8& dest, ThreadPoolBase& pool = defaultPool, bool drawTransformed = true);
 };
 
 

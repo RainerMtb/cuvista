@@ -96,7 +96,8 @@ struct OutputStreamContext {
 	AVPacket* outpkt = nullptr;
 	AVFrame* frameOut = nullptr;
 	int64_t lastPts = 0;
-	int64_t pts = 0;
+	int64_t ptsTranscoded = 0;
+	int64_t ptsWritten = INT64_MIN;
 	SwrContext* resampleCtx = nullptr;
 	AVAudioFifo* fifo = nullptr;
 
@@ -109,7 +110,6 @@ struct OutputStreamContext {
 struct StreamContext {
 	AVStream* inputStream = nullptr;
 	int64_t durationMillis = -1;
-
 	std::vector<std::shared_ptr<OutputStreamContext>> outputStreams;
 
 	StreamInfo inputStreamInfo() const;

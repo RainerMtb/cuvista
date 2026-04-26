@@ -269,11 +269,12 @@ void cuvistaGui::setInputFile(const QString& inputPath) {
     mInputReady = false;
     mFileInput = QFileInfo(inputPath);
     mInputDir = mFileInput.path();
+    ui.inputPosition->setValue(0.0);
 
     try {
         mReader.close();
         errorLogger().clear();
-        mReader.open(inputPath.toStdString());
+        mReader.open(mFileInput.filePath().toStdString());
         mInputYUV = ImageYuv(mReader.h, mReader.w);
 
         //read first image
@@ -282,6 +283,7 @@ void cuvistaGui::setInputFile(const QString& inputPath) {
         if (errorLogger().hasNoError()) {
             //try to read again for second image
             mReader.read(mInputYUV);
+            ui.inputPosition->setValue(2.0 / mReader.frameCount);
 
             //set up converter to BGR for display in UI
             mInputBGR = ImageBgr(mReader.h, mReader.w);

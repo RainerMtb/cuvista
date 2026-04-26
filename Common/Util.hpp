@@ -118,6 +118,16 @@ namespace util {
             return addBytes(reinterpret_cast<const unsigned char*>(&data), sizeof(T)); 
         }
 
+        template <class T> CRC64& addDirect(std::span<T> data) {
+            for (const T& t : data) addBytes(reinterpret_cast<const unsigned char*>(&t), sizeof(T));
+            return *this;
+        }
+
+        template <class T> CRC64& addDirect(std::vector<T>& data) {
+            for (const T& t : data) addBytes(reinterpret_cast<const unsigned char*>(&t), sizeof(T));
+            return *this;
+        }
+
         CRC64& addDirect(std::span<const unsigned char> data) { 
             return addBytes(data.data(), data.size()); 
         }
@@ -159,20 +169,20 @@ namespace util {
     std::vector<unsigned char> base64_decode(const std::string& base64string);
 
     //print content of collection to string
-    template <class T> std::string collectionToString(std::vector<T> items, size_t maxItems) {
+    template <class T> std::string collectionToString(std::vector<T> items, size_t maxItems, std::string delim = ", ") {
         size_t i = 0;
         std::ostringstream ss;
 
         ss << "{ ";
         for (; i + 1 < items.size() && i + 1 < maxItems; i++) {
             ss << items[i];
-            ss << ", ";
+            ss << delim;
         }
         if (items.size() > 0) {
             ss << items[i];
         }
         if (items.size() > i + 1) {
-            ss << ", ...";
+            ss << delim << "...";
         }
         ss << " }";
         return ss.str();

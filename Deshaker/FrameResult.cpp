@@ -122,15 +122,12 @@ const AffineTransform& FrameResult::computeTransform(std::span<PointResult> resu
 
 		// STEP 1 traditional method
 		mBestTransform = computeClassic(numValid, frameIndex);
-
-		if (storeDebugData) {
-			debugData.rundbscan = false;
-			debugData.classic = mConsList;
-		}
+		
+		debugData.pointsClassic = mConsList;
 
 		// STEP 2 dbscan
-		bool runDbScan = mData.runDbScan && mConsList.size() < numValid * params.minDbScanRel && mConsList.size() < params.minDbScanAbs;
-		if (runDbScan) {
+		debugData.runDbScan = mData.runDbScan && mConsList.size() < numValid * params.minDbScanRel && mConsList.size() < params.minDbScanAbs;
+		if (debugData.runDbScan) {
 			mClusterSizes.clear();
 			mBestCluster.clear();
 			computeDbScan(frameIndex);
@@ -166,11 +163,8 @@ const AffineTransform& FrameResult::computeTransform(std::span<PointResult> resu
 				}
 			}
 
-			if (storeDebugData) {
-				debugData.rundbscan = true;
-				debugData.classic = mBestCluster;
-				debugData.clusterSizes = mClusterSizes;
-			}
+			debugData.pointsDbscan = mBestCluster;
+			debugData.clusterSizes = mClusterSizes;
 		}
 
 		for (PointContext& pc : mConsList) pc.ptr->isConsens = true;
@@ -325,6 +319,13 @@ void FrameResult::computeDbScan(int64_t frameIndex) {
 }
 
 //--- for debugging
+const FrameResultData& FrameResult::getResultData() const {
+	debugData.transform = mBestTransform;
+	debugData.clusterSizes = mClusterSizes;
+	return debugData;
+}
+
+//--- for debugging
 bool FrameResult::checkSizes() const {
 	int sum = std::count_if(mPointList.begin(), mPointList.end(), [&] (const PointContext& pc) { return pc.clusterIndex < 0; });
 	for (const ClusterSize& cs : mClusterSizes) sum += cs.siz;
@@ -332,8 +333,8 @@ bool FrameResult::checkSizes() const {
 }
 
 //--- for debugging
-std::ostream& operator << (std::ostream& out, const FrameResult::ClusterSize& cs) {
-	return out << cs.siz << "-" << cs.index;
+std::ostream& operator << (std::ostream& out, const ClusterSize& cs) {
+	return out << cs.siz;
 }
 
 //--- for debugging
@@ -344,7 +345,7 @@ void FrameResult::writeVideo(std::span<PointContext> res, int64_t frameIndex, co
 	bgr.setColor(Color::DARK_GRAY);
 	std::vector<PointResult> resvec(res.begin(), res.end());
 	ResultImageWriter::writeImage({}, resvec, frameIndex, bgr, mPool, false);
-	bgr.writeText(title, mData.w / 2, 0, 2, 2, im::TextAlign::TOP_CENTER);
+	bgr.writeText(title, mData.w / 2, 0, im::TextAlign::TOP_CENTER);
 	bgr.convertTo(im);
 	im.write(file);
 }

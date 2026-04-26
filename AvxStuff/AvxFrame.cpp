@@ -72,7 +72,7 @@ void AvxFrame::inputData(int64_t frameIndex) {
 	std::swap(mReadBuffer, mInput[idx]);
 }
 
-int64_t AvxFrame::createPyramid(int64_t frameIndex, AffineDataFloat trf, bool warp) {
+void AvxFrame::createPyramid(int64_t frameIndex, std::span<int> hist, AffineDataFloat trf, bool warp) {
 	//util::ConsoleTimer timer("avx pyramid " + std::to_string(frameIndex));
 	size_t pyrIdx = frameIndex % mPyr.size();
 	AvxMatf& Y = mPyr[pyrIdx];
@@ -81,30 +81,23 @@ int64_t AvxFrame::createPyramid(int64_t frameIndex, AffineDataFloat trf, bool wa
 	//fill topmost level of pyramid
 	size_t yuvIdx = frameIndex % mInput.size();
 	ImageYuv& yuv = mInput[yuvIdx];
-	int h = mData.h;
-	int w = mData.w;
 
 	//convert Y to float and sum up luma
 	V16f f = 1.0f / 255.0f;
 
 	auto func = [&] (size_t r) {
 		uchar* srcPtr = yuv.row(r);
-		std::fill_n(srcPtr + w, mData.stride - w, 0); //decoder puts random bytes into padding area
+		std::fill(srcPtr + mData.w, srcPtr + mData.stride, 0); //decoder puts random bytes into padding area
 		float* destPtr = mFilterResult.addr(r, 0);
-		__m512i ysum = _mm512_setzero_si512();
 
-		for (int c = 0; c < w; c += 16) {
+		for (int c = 0; c < mData.w; c += 16) {
 			__m512i y = _mm512_cvtepu8_epi32(_mm_loadu_epi8(srcPtr + c));
 			V16f result = _mm512_cvtepi32_ps(y);
 			result *= f;
 			result.storeu(destPtr + c);
-
-			y = _mm512_mullo_epi32(y, y);
-			ysum = _mm512_add_epi32(ysum, y);
 		}
-		_mm512_storeu_epi32(luma.data() + r * 16, ysum);
 	};
-	mPool.addAndWait(func, 0, h);
+	mPool.addAndWait(func, 0, mData.h);
 
 	//write first pyramid level
 	if (warp) {
@@ -114,28 +107,31 @@ int64_t AvxFrame::createPyramid(int64_t frameIndex, AffineDataFloat trf, bool wa
 
 	} else {
 		//filter first level
-		filter1(mFilterResult, h, w, mFilterBuffer, mFilterKernels[0]);
-		filter1(mFilterBuffer, w, h, Y, mFilterKernels[0]);
+		filter1(mFilterResult, mData.h, mData.w, mFilterBuffer, mFilterKernels[0]);
+		filter1(mFilterBuffer, mData.w, mData.h, Y, mFilterKernels[0]);
 	}
 
 	//create pyramid levels below by downsampling level above
 	int r = 0;
+	int hh = mData.h;
+	int ww = mData.w;
 	for (size_t z = 1; z < mData.pyramidLevels; z++) {
 		const float* src = Y.row(r);
-		float* dest = Y.row(r + h);
-		r += h;
-		h /= 2;
-		w /= 2;
-		downsample(src, h, w, Y.w(), dest, Y.w());
+		float* dest = Y.row(r + hh);
+		r += hh;
+		hh /= 2;
+		ww /= 2;
+		downsample(src, hh, ww, Y.w(), dest, Y.w());
 	}
 
-	//sum up luma
-	__m512i lumaSum = _mm512_setzero_si512();
-	for (size_t i = 0; i < luma.size(); i += 8) {
-		__m256i sum = _mm256_loadu_epi32(luma.data() + i);
-		lumaSum = _mm512_add_epi64(lumaSum, _mm512_cvtepi32_epi64(sum));
+	//create histogram
+	std::fill(hist.begin(), hist.end(), 0);
+	for (int r = 0; r < mData.h; r++) {
+		const uchar* src = yuv.row(r);
+		for (int c = 0; c < mData.w; c++) {
+			hist[src[c]]++;
+		}
 	}
-	return _mm512_reduce_add_epi64(lumaSum);
 }
 
 void AvxFrame::adjustPyramid(int64_t frameIndex, float gamma) {

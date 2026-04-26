@@ -35,6 +35,7 @@ public:
 	std::list<VideoPacketContext> mVideoPacketList;
 	std::vector<StreamContext> mInputStreams;
 	bool mStoreSidePackets = true;
+	std::string mSource;
 
 	virtual ~MovieReader() = default;
 

@@ -107,7 +107,8 @@ void readAndWriteOneFrame() {
 		input0.index = 0;
 		reader.frameIndex = 0;
 		ex.inputData(reader.frameIndex);
-		ex.createPyramid(frame.mReader.frameIndex);
+		std::vector<int> hist1(256);
+		ex.createPyramid(frame.mReader.frameIndex, hist1, {}, false);
 
 		ImageVuyx im1 = ImageVuyx::readPgmFile("D:/VideoTest/v01.pgm");
 		Image8& input1 = ex.inputDestination(1);
@@ -115,7 +116,8 @@ void readAndWriteOneFrame() {
 		input1.index = 1;
 		reader.frameIndex = 1;
 		ex.inputData(reader.frameIndex);
-		ex.createPyramid(frame.mReader.frameIndex);
+		std::vector<int> hist2(256);
+		ex.createPyramid(frame.mReader.frameIndex, hist2, {}, false);
 		ex.computeStart(frame.mReader.frameIndex, frame.mResultPoints);
 		ex.computeTerminate(frame.mReader.frameIndex, frame.mResultPoints);
 
@@ -147,12 +149,12 @@ void draw(const std::string& filename) {
 	//draw into bgr image
 	ImageBgr bgr(600, 800);
 	bgr.setColor(Color::GRAY);
-	bgr.writeText("abcdefghijklmnopqrstuvwxyz", 10, 10, 2, 3, TextAlign::TOP_LEFT);
-	bgr.writeText("ABCDEFGHIJKLMNOPQRSTUVWXYZ", 10, 50, 2, 3, TextAlign::TOP_LEFT);
-	bgr.writeText("A quick brown fox      (yellow)", 10, 90, 2, 3, TextAlign::TOP_LEFT, Color::YELLOW, Color::BLACK);
-	bgr.writeText("jumps over a lazy dog   (white)", 10, 120, 2, 3, TextAlign::TOP_LEFT, Color::rgba(255, 255, 255, 0.75), Color::GREEN);
-	bgr.writeText("A quick brown fox      (yellow)", 10, 150, 2, 3, TextAlign::TOP_LEFT, Color::YELLOW, Color::rgba(0, 255, 255, 0.25));
-	bgr.writeText("jumps over a lazy dog (magenta)", 10, 180, 2, 3, TextAlign::TOP_LEFT, Color::rgba(255, 0, 255, 0.5), Color::rgba(0, 255, 255, 0.5));
+	bgr.writeText("abcdefghijklmnopqrstuvwxyz", 10, 10, TextAlign::TOP_LEFT, 2, 3);
+	bgr.writeText("ABCDEFGHIJKLMNOPQRSTUVWXYZ", 10, 50, TextAlign::TOP_LEFT, 2, 3);
+	bgr.writeText("A quick brown fox      (yellow)", 10, 90, TextAlign::TOP_LEFT, 2, 3, Color::YELLOW, Color::BLACK);
+	bgr.writeText("jumps over a lazy dog   (white)", 10, 120, TextAlign::TOP_LEFT, 2, 3, Color::rgba(255, 255, 255, 0.75), Color::GREEN);
+	bgr.writeText("A quick brown fox      (yellow)", 10, 150, TextAlign::TOP_LEFT, 2, 3, Color::YELLOW, Color::rgba(0, 255, 255, 0.25));
+	bgr.writeText("jumps over a lazy dog (magenta)", 10, 180, TextAlign::TOP_LEFT, 2, 3, Color::rgba(255, 0, 255, 0.5), Color::rgba(0, 255, 255, 0.5));
 
 	//charachter map
 	int x0 = 500;
@@ -161,7 +163,7 @@ void draw(const std::string& filename) {
 		for (int k = 0; k < 16; k++) {
 			char ch = i * 16 + k;
 			std::string str({ ch });
-			bgr.writeText(str, x0 + i * 16, y0 + k * 22, 2, 2, TextAlign::TOP_LEFT);
+			bgr.writeText(str, x0 + i * 16, y0 + k * 22, TextAlign::TOP_LEFT, 2, 2);
 		}
 	}
 

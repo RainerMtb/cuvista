@@ -53,7 +53,7 @@ public:
 	//place input frame into executor storage
 	virtual void inputData(int64_t frameIndex) = 0;
 	//set up image pyramid
-	virtual int64_t createPyramid(int64_t frameIndex, AffineDataFloat trf = {}, bool warp = false) = 0;
+	virtual void createPyramid(int64_t frameIndex, std::span<int> hist, AffineDataFloat trf = {}, bool warp = false) = 0;
 	//adjust gamma of pyramid
 	virtual void adjustPyramid(int64_t frameIndex, float gamma) = 0;
 	//start computation asynchronously

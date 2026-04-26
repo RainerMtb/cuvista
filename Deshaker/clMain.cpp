@@ -212,7 +212,7 @@ void OpenClFrame::init() {
 		clData.pyramid = Image2DArray(clData.context, CL_MEM_READ_WRITE, fmt32, mData.pyramidCount, mData.w, mData.pyramidRowCount, 0, 0);
 
 		//allocate luma sum buffer
-		clData.luma = Buffer(clData.context, CL_MEM_READ_WRITE, mData.w * sizeof(cl_long));
+		clData.luma = Buffer(clData.context, CL_MEM_READ_WRITE, mData.w * sizeof(cl_int) * 256);
 
 		//point results
 		clData.results = Buffer(clData.context, CL_MEM_WRITE_ONLY, sizeof(cl_PointResult) * mData.resultCount);
@@ -256,7 +256,7 @@ void OpenClFrame::init() {
 			if (msg.length() > maxLen) {
 				msg = msg.substr(0, maxLen) + "...\n[total " + std::to_string(msg.length()) + " chars]";
 			}
-			errorLogger().logError("OpenCL build error:\n", msg);
+			errorLogger().logError("OpenCL build error:\n", msg.c_str());
 		}
 
 	} catch (const Error& err) {
@@ -287,18 +287,18 @@ void OpenClFrame::inputData(int64_t frameIndex) {
 //-------- CREATE PYRAMID ----------
 //----------------------------------
 
-int64_t OpenClFrame::createPyramid(int64_t frameIndex, AffineDataFloat trf, bool warp) {
+void OpenClFrame::createPyramid(int64_t frameIndex, std::span<int> hist, AffineDataFloat trf, bool warp) {
 	//util::ConsoleTimer ic("ocl pyramid");
 	int w = mData.w;
 	int h = mData.h;
 	int64_t frIdx = frameIndex % mData.bufferCount;
 	int64_t pyrIdx = frameIndex % mData.pyramidCount;
-	int64_t luma = 0;
 
 	try {
 		//convert yuv image to first level of Y pyramid
 		Image& im = clData.buffer[0].result;
 		Image& buf = clData.buffer[0].filterH;
+		clData.queue.enqueueFillBuffer(clData.luma, 0, 0, mData.w * sizeof(cl_int) * 256);
 
 		if (warp) {
 			cl_float4 bg = { 0.0f, 0.0f, 0.0f, 0.0f };
@@ -331,13 +331,12 @@ int64_t OpenClFrame::createPyramid(int64_t frameIndex, AffineDataFloat trf, bool
 		}
 
 		//sum up luma values
-		luma = lumaSum(clData.luma, mData.w, clData);
+		lumaSum(clData.luma, mData.w, clData);
+		clData.queue.enqueueReadBuffer(clData.luma, CL_TRUE, 0, sizeof(cl_int) * 256, hist.data());
 
 	} catch (const Error& err) {
 		errorLogger().logError("OpenCL pyramid error: ", err.what());
 	}
-
-	return luma;
 }
 
 void OpenClFrame::adjustPyramid(int64_t frameIndex, float gamma) {

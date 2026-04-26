@@ -180,6 +180,7 @@ int FFmpegWriter::writeFFmpegPacket(AVFrame* av_frame) {
     } else { 
         //write packet to output
         //packet pts starts at 0 and is incremented, but here packets arrive in dts order
+        //std::printf("stream=%d pts=%zd dts=%zd\n", videoStream->index, videoPacket->pts, videoPacket->dts);
         videoPacket->stream_index = videoStream->index;
         writePacket(videoPacket, videoPacket->pts, videoPacket->dts, av_frame == nullptr);
     }

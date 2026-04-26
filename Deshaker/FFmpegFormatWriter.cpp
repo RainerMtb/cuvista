@@ -236,21 +236,6 @@ AVStream* FFmpegFormatWriter::createNewStream(AVFormatContext* fmt_ctx, AVStream
 //-------- write packets
 //----------------------------------
 
-//write packet to output
-int FFmpegFormatWriter::writePacket(AVPacket* packet) {
-    auto& osc = outputStreams[packet->stream_index];
-    //std::printf("stream %d pts [sec] %.5f\n", packet->stream_index, 1.0 * packet->pts * osc->outputStream->time_base.num / osc->outputStream->time_base.den);
-    
-    int result = av_interleaved_write_frame(fmt_ctx, packet); //write_frame also does unref packet
-    if (result == 0) {
-        osc->packetsWritten++;
-
-    } else {
-        ffmpeg_log_error(result, "error writing packet", ErrorSource::WRITER);
-    }
-    return result;
-}
-
 //transcode pending audio packet and write to output
 void FFmpegFormatWriter::transcodeAudio(AVPacket* pkt, OutputStreamContext& osc, bool terminate) {
     //send packet to decoder
@@ -319,10 +304,10 @@ void FFmpegFormatWriter::transcodeAudio(AVPacket* pkt, OutputStreamContext& osc,
                 ffmpeg_log_error(retval, "cannot read from fifo", ErrorSource::WRITER);
 
             } else if (sampleCount > 0) {
-                osc.frameOut->pts = osc.pts;
-                osc.frameOut->pkt_dts = osc.pts;
+                osc.frameOut->pts = osc.ptsTranscoded;
+                osc.frameOut->pkt_dts = osc.ptsTranscoded;
                 osc.frameOut->duration = 0;
-                osc.pts += sampleCount;
+                osc.ptsTranscoded += sampleCount;
                 av_frame = osc.frameOut;
             }
 
@@ -352,6 +337,21 @@ void FFmpegFormatWriter::transcodeAudio(AVPacket* pkt, OutputStreamContext& osc,
             }
         } //encoder loop
     } //doLoop
+}
+
+//write packet to output
+int FFmpegFormatWriter::writePacket(AVPacket* packet) {
+    auto& osc = outputStreams[packet->stream_index];
+
+    //std::cout << std::format("stream {} pts {:.4f} sec", packet->stream_index, 1.0 * packet->pts * osc->outputStream->time_base.num / osc->outputStream->time_base.den) << std::endl;
+    int result = av_interleaved_write_frame(fmt_ctx, packet); //write_frame also does unref packet
+    if (result == 0) {
+        osc->packetsWritten++;
+
+    } else {
+        ffmpeg_log_error(result, "error writing packet", ErrorSource::WRITER);
+    }
+    return result;
 }
 
 //write packets to output
@@ -394,7 +394,16 @@ void FFmpegFormatWriter::writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsI
     pkt->dts = pts - av_rescale_q(ptsIdx - dtsIdx, r1, r2);
     //copy duration from input
     pkt->duration = vpc.duration;
-    //std::printf("pktpts=%zd pktdts=%zd dur=%zd\n", pkt->pts, pkt->dts, pkt->duration);
+
+    //std::printf("stream=%d ptsIdx=%zd dtsIdx=%zd pts=%zd dts=%zd duration=%zd\n", pkt->stream_index, ptsIdx, dtsIdx, pkt->pts, pkt->dts, pkt->duration);
+    //change timing values for invalid frames
+    if (pkt->dts < dtsWritten) {
+        pkt->dts = dtsWritten + 1;
+    }
+    if (pkt->pts < pkt->dts) {
+        pkt->pts = pkt->dts;
+    }
+    dtsWritten = pkt->dts;
 
     //STEP 2: convert to output timebase
     //rescale packet from input timebase to output timebase
@@ -408,15 +417,21 @@ void FFmpegFormatWriter::writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsI
             SidePacket& sidePacket = *it;
             if (sidePacket.frameIndex <= frameEncoded || terminate) {
                 if (posc->handling == StreamHandling::STREAM_COPY) { //copy packet directly to output stream
-                    //rescale audio packet
-                    AVRational& tbin = posc->inputStream->time_base;
-                    AVRational& tbout = posc->outputStream->time_base;
-                    AVPacket* avpkt = sidePacket.packet;
-                    int64_t ts = avpkt->pts - posc->inputStream->start_time;
-                    avpkt->pts = av_rescale_delta(tbin, ts, tbin, (int) avpkt->duration, &posc->lastPts, tbout);
-                    avpkt->dts = avpkt->pts;
-                    avpkt->duration = 0;
-                    writePacket(avpkt);
+                    //rescale side packet
+                    AVRational& timeBaseInput = posc->inputStream->time_base;
+                    AVRational& timeBaseOutput = posc->outputStream->time_base;
+                    AVPacket* spkt = sidePacket.packet;
+
+                    //skip rogue packets that do not fit the duration interval
+                    if (spkt->pts >= posc->ptsWritten + spkt->duration) {
+                        posc->ptsWritten = spkt->pts;
+                        int64_t ts = spkt->pts - posc->inputStream->start_time;
+                        spkt->pts = av_rescale_delta(timeBaseInput, ts, timeBaseInput, (int) spkt->duration, &posc->lastPts, timeBaseOutput);
+                        spkt->dts = spkt->pts;
+                        spkt->duration = 0;
+                        //std::printf("stream=%d pktpts=%zd pktdts=%zd dur=%zd\n", avpkt->stream_index, avpkt->pts, avpkt->dts, avpkt->duration);
+                        writePacket(spkt);
+                    }
 
                 } else if (posc->handling == StreamHandling::STREAM_TRANSCODE) { //transcode audio
                     transcodeAudio(sidePacket.packet, *posc, false);
@@ -440,8 +455,8 @@ void FFmpegFormatWriter::writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsI
 
     //store stats
     int encodedBytes = pkt->size;
-    //static std::ofstream time("f:/time.txt"); time << frameEncoded << " " << pkt->pts << " " << pkt->dts << std::endl;
 
+    //std::printf("stream=%d pktpts=%zd pktdts=%zd dur=%zd\n", pkt->stream_index, pkt->pts, pkt->dts, pkt->duration);
     //write packet to output, this will unref packet data
     writePacket(pkt);
 

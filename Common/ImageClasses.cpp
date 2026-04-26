@@ -249,7 +249,7 @@ namespace im {
 	double ImageYuv::lumaRms() const {
 		int64_t sum = 0;
 		for (int r = 0; r < h(); r++) {
-			const unsigned char* ptr = typePtr->row(0);
+			const unsigned char* ptr = typePtr->row(r);
 			for (int c = 0; c < w(); c++) {
 				int64_t val = ptr[c];
 				sum += val * val;
@@ -259,10 +259,9 @@ namespace im {
 		return std::sqrt(sum / s);
 	}
 
-	void ImageYuv::adjustGamma(float value) {
-		float g = 1.0f / value;
+	void ImageYuv::adjustGamma(float g) {
 		for (int r = 0; r < h(); r++) {
-			unsigned char* ptr = typePtr->row(0);
+			unsigned char* ptr = typePtr->row(r);
 			for (int c = 0; c < w(); c++) {
 				unsigned char& p = ptr[c];
 				float x = p / 255.0f;

@@ -102,7 +102,7 @@ private:
 	} out = {};
 
 	//luma sum
-	int64_t* d_luma = nullptr;
+	int* d_luma = nullptr;
 
 	//results from compute kernel
 	CudaPointResult* d_results = nullptr;
@@ -150,7 +150,7 @@ public:
 	void init() override;
 	Image8& inputDestination(int64_t frameIndex) override;
 	void inputData(int64_t frameIndex) override;
-	int64_t createPyramid(int64_t frameIndex, AffineDataFloat trf = {}, bool warp = false) override;
+	void createPyramid(int64_t frameIndex, std::span<int> hist, AffineDataFloat trf = {}, bool warp = false) override;
 	void adjustPyramid(int64_t frameIndex, float gamma) override;
 	void computeStart(int64_t frameIndex, std::span<PointResult> results) override;
 	void computeTerminate(int64_t frameIndex, std::span<PointResult> results) override;

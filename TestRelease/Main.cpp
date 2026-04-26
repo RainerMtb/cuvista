@@ -54,6 +54,7 @@ static DeshakerResult run(const std::string& argsLine, std::shared_ptr<MovieWrit
 
 static void testMain() {
 	std::cout << "--- Short Runs ---" << std::endl;
+	run("-info");
 	run("-frames 0 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/000null.mp4 -noheader -progress 0 -y");
 	run("-frames 0 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/001null.mp4 -enc ffmpeg:hevc -noheader -progress 0 -y");
 	run("-frames 1 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/001.mp4 -noheader -progress 0 -y");
@@ -88,7 +89,9 @@ static void testMain() {
 	run("-i d:/VideoTest/06a.mp4 -o d:/videoTest/out/06a.mkv -noheader -progress 0");
 	run("-i d:/VideoTest/06b.mkv -o d:/videoTest/out/06b.mp4 -noheader -progress 0");
 	run("-i d:/VideoTest/07.mp4 -o d:/videoTest/out/07.mp4 -noheader -progress 0");
-	run("-i D:/VideoTest/12.mp4 -o d:/videoTest/out/12.mkv -y -frames 150 -progress 0");
+	run("-i D:/VideoTest/12.mp4 -o d:/videoTest/out/12.mkv -y -frames 500 -progress 0");
+	run("-i D:/VideoTest/15.ts -o d:/videoTest/out/15a.mkv -y -progress 0");
+	run("-i D:/VideoTest/15.ts -o d:/videoTest/out/15b.mkv -y -device 2 -progress 0");
 
 	std::cout << "--- Device Cpu ---" << std::endl;
 	run("-device cpu -i d:/VideoTest/example.mp4 -o d:/videoTest/out/example_cpu.mp4 -noheader -progress 0");

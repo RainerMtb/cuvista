@@ -388,6 +388,11 @@ NvPacket NvEncoder::getBufferedFrame() {
 
 
 void NvEncoder::destroyEncoder() {
+	//destroy encoder before resources, otherwise nvEncDestroyEncoder() will throw exeption ???
+	if (mEncoder != nullptr) {
+		encFuncList.nvEncDestroyEncoder(mEncoder);
+		mEncoder = nullptr;
+	}
 
 	//clear input buffers
 	for (void* res : registeredResources) {
@@ -399,7 +404,7 @@ void NvEncoder::destroyEncoder() {
 	registeredResources.clear();
 
 	for (CUdeviceptr ptr : inputFrames) {
-		if (ptr != NULL) {
+		if (ptr) {
 			cuMemFree_v2(ptr);
 		}
 	}
@@ -413,12 +418,6 @@ void NvEncoder::destroyEncoder() {
 		}
 	}
 	bitstreamOutputBuffer.clear();
-
-	//destroy encoder
-	if (mEncoder != nullptr) {
-		encFuncList.nvEncDestroyEncoder(mEncoder);
-		mEncoder = nullptr;
-	}
 
 	cuDevicePrimaryCtxRelease(mDevice);
 }

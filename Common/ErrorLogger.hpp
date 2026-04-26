@@ -22,7 +22,7 @@
 #include <vector>
 #include <list>
 #include <mutex>
-#include <string>
+#include <format>
 
 enum class ErrorSource {
 	FFMPEG,
@@ -38,7 +38,9 @@ struct ErrorEntry {
 };
 
 struct FFmpegLog {
+	inline static int indexTotal = 0;
 	std::chrono::time_point<std::chrono::system_clock> t;
+	int index;
 	int logLevel;
 	std::string msg;
 };
@@ -57,7 +59,9 @@ public:
 
 	void logError(const char* title, const char* msg, ErrorSource source = ErrorSource::OTHER);
 
-	void logError(const std::string& title, const std::string& msg, ErrorSource source = ErrorSource::OTHER);
+	template <class... Args> void format(ErrorSource source, std::format_string<Args...> fmt, Args&&... args) {
+		logError(std::format(fmt, std::forward<Args>(args)...), source);
+	}
 
 	std::vector<ErrorEntry> getErrors();
 

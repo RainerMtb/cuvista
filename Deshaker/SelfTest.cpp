@@ -42,7 +42,7 @@ void runSelfTest(util::MessagePrinter& out, std::vector<DeviceInfoBase*> deviceL
 	uint64_t crcInputFirst =  0x1279296bb47cc173;
 	uint64_t crcInputSecond = 0x275bb80253d98669;
 	uint64_t crcPyramid =     0x430664d35d1bddfa;
-	uint64_t crcLuma =        0x3586033f4901bd51;
+	uint64_t crcLuma =        0x9eeb1b781e503620;
 	uint64_t crcResult =      0x9a14e1549f60775f;
 	uint64_t crcTransformed = 0xcb30290a9e5ebb5c;
 	uint64_t crcOutput =      0x4fff19b725af8b64;
@@ -81,11 +81,13 @@ void runSelfTest(util::MessagePrinter& out, std::vector<DeviceInfoBase*> deviceL
 			//std::cout << "reading" << std::endl;
 			reader.read(*executor);
 			executor->inputData(reader.frameIndex);
-			int64_t luma1 = executor->createPyramid(reader.frameIndex, {}, false);
+			std::vector<int> luma1(256);
+			executor->createPyramid(reader.frameIndex, luma1, {}, false);
 			//second frame
 			reader.read(*executor);
 			executor->inputData(reader.frameIndex);
-			int64_t luma2 = executor->createPyramid(reader.frameIndex, {}, false);
+			std::vector<int> luma2(256);
+			executor->createPyramid(reader.frameIndex, luma2, {}, false);
 			//compute
 			//std::cout << "computing" << std::endl;
 			executor->computeStart(reader.frameIndex, frame.mResultPoints);

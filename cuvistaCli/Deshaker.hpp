@@ -27,6 +27,7 @@
 
 struct DeshakerResult {
 	int statusCode = 0;
+	std::string log;
 
 	int64_t frameCount = 0;
 	int64_t framesRead = 0;
@@ -39,7 +40,6 @@ struct DeshakerResult {
 	std::string executorName;
 	std::string executorNameShort;
 	std::vector<TrajectoryItem> trajectory;
-	std::string log;
 };
 
 std::ostream& printError(std::ostream& os, const std::string& msg1);

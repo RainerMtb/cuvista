@@ -207,11 +207,12 @@ namespace winrt::cuvistaWinui::implementation {
         comboAudioTrack().Items().Clear();
         comboAudioTrack().Items().Append(box_string("No Audio"));
         mAudioTrackMap.clear();
+        inputPosition().Width(0.0);
 
         try {
             mReader.close();
             errorLogger().clear();
-            mReader.open(to_string(inputPath));
+            mReader.open(to_string(mInputFile));
             mInput = ImageYuv(mReader.h, mReader.w);
 
             mReader.read(mInput); //read first image
@@ -220,6 +221,7 @@ namespace winrt::cuvistaWinui::implementation {
                 mReader.read(mInput); //try to read again for second image
                 mInputBGRA = ImageXamlBGRA::create(imageInput(), mReader.h, mReader.w);
                 mInput.convertTo(mInputBGRA);
+                inputPosition().Width(1.0 / imageBackground().ActualWidth());
             }
 
             if (errorLogger().hasError()) {

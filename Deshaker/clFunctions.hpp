@@ -114,7 +114,7 @@ namespace cl {
 	void scale_8u32f_1(Image src, Image dest, Buffer luma, Data& clData);
 	void scale_8u32f_3(Image src, Image dest, Data& clData);
 	void scale_32f8u(Kernel kernel, Image src, Buffer dest, int pitch, const Data& clData);
-	int64_t lumaSum(Buffer luma, int w, Data& clData);
+	void lumaSum(Buffer luma, int w, Data& clData);
 
 	void filter_32f_h1(Image src, Image dest, int filterIndex, Data& clData);
 	void filter_32f_h3(Image src, Image dest, Data& clData);

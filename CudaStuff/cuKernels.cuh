@@ -24,11 +24,9 @@
 namespace cu {
 	cudaError_t input(uchar* srcYuv, int srcStep, int srcWidth, uchar* destVuyx, int destStep, int destWidth, int h, cudaStream_t cs = 0);
 
-	cudaError_t scale_8u32f(uchar* src, int srcStep, int srcWidth, float* dest, int destStep, int destWidth, int h, int64_t* d_luma, cudaStream_t cs = 0);
+	cudaError_t scale_8u32f(uchar* src, int srcStep, int srcWidth, float* dest, int destStep, int destWidth, int h, int* d_luma, cudaStream_t cs = 0);
 	cudaError_t scale_8u32f_3(uchar* src, int srcStep, int srcWidth, float4* dest, int destStep, int destWidth, int h, cudaStream_t cs = 0);
-	int64_t lumaSum(int64_t* luma, int w, cudaStream_t cs = 0);
-
-	cudaError_t set_32f(float* dest, int destStep, int w, int h, int value, cudaStream_t cs = 0);
+	cudaError_t lumaSum(int* d_luma, int w, int* h_luma, cudaStream_t cs = 0);
 
 	cudaError_t warp_back_32f_3(float4* src, int srcStep, float4* dest, int destStep, int w, int h, AffineDataFloat trf, cudaStream_t cs = 0);
 	cudaError_t warp_back_32f(float* src, int srcStep, float* dest, int destStep, int w, int h, AffineDataFloat trf, cudaStream_t cs = 0);

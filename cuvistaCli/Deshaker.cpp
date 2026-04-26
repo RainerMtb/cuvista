@@ -20,10 +20,13 @@
 
 DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console, std::shared_ptr<MovieWriter> externalWriter) {
 	enableAnsiSupport();
+
 	std::set_terminate([] {
 		printError(std::cerr, "error: std::terminate was called");
 		std::exit(100);
 	});
+
+	errorLogger().clear();
 
 	//main program start
 	MainData data;
@@ -112,25 +115,25 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 		executor->init();
 
 	} catch (const SilentQuitException&) {
-		return { 10 };
+		return { 10, debugLogger().str() };
 
 	} catch (const CancelException& e) {
 		printError(std::cerr, e.what());
-		return { 1 };
+		return { 1, debugLogger().str() };
 
 	} catch (const AVException& e) {
 		printError(std::cerr, std::string("error: ") + e.what());
 		errorLogger().printErrors(std::cerr);
-		return { 2 };
+		return { 2, debugLogger().str() };
 
 	} catch (const std::invalid_argument& e) {
 		printError(std::cerr, std::string("invalid value: ") + e.what());
 		errorLogger().printErrors(std::cerr);
-		return { 3 };
+		return { 3, debugLogger().str() };
 
 	} catch (...) {
 		printError(std::cerr, "unknown error in cuvista");
-		return { 4 };
+		return { 4, debugLogger().str() };
 	}
 
 	//setup progress output
@@ -172,6 +175,7 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 
 	//destruct writer before frame
 	writer.reset();
+	reader->close();
 	reader.reset();
 	executor.reset();
 	frame.reset();

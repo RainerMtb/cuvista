@@ -289,7 +289,7 @@ void CudaExecutor::init() {
 	allocSafe(&d_output, frameSize4);
 
 	//allocate memory for luma sum
-	allocSafe(&d_luma, mData.w * sizeof(int64_t));
+	allocSafe(&d_luma, 256ull * mData.w * sizeof(int));
 
 	//allocate memory for vuyx input data in char format [0..255]
 	allocSafe(&d_vuyxData, frameSize4 * mData.bufferCount);
@@ -375,7 +375,7 @@ void CudaExecutor::inputData(int64_t frameIndex) {
 //----------------------------------
 
 //create image pyramid
-int64_t CudaExecutor::createPyramid(int64_t frameIndex, AffineDataFloat trf, bool warp) {
+void CudaExecutor::createPyramid(int64_t frameIndex, std::span<int> hist, AffineDataFloat trf, bool warp) {
 	//util::ConsoleTimer timer("cuda pyramid " + std::to_string(frameIndex));
 	int w = mData.w;
 	int h = mData.h;
@@ -391,12 +391,15 @@ int64_t CudaExecutor::createPyramid(int64_t frameIndex, AffineDataFloat trf, boo
 	int64_t pyrIdx = frameIndex % mData.pyramidCount;
 	float* pyrStart = d_pyrData + pyrIdx * mData.pyramidRowCount * mData.strideFloat / sizeof(float);
 
+	//start histogram data from 0
+	cudaMemset(d_luma, 0, 256ull * mData.w * sizeof(int));
+
 	//to keep track of things
 	pyramidIndizes[pyrIdx] = frameIndex;
 	
 	//first level of pyramid Y data
 	if (warp) {
-		cu::set_32f(pyrStart, strideFloatCount, w, h, 0);
+		cudaMemset(pyrStart, 0, 1ull * mData.strideFloat * mData.pyramidRowCount);
 		err = cu::scale_8u32f(vuyxStart, mData.stride4, w * 4, d_bufferH, strideFloatCount, w, h, d_luma);
 		cu::warp_back_32f(d_bufferH, strideFloatCount, pyrStart, strideFloatCount, w, h, trf);
 
@@ -417,10 +420,9 @@ int64_t CudaExecutor::createPyramid(int64_t frameIndex, AffineDataFloat trf, boo
 		dest += 1ull * strideFloatCount * h;
 	}
 
-	int64_t lumaSum = cu::lumaSum(d_luma, mData.w);
+	cu::lumaSum(d_luma, mData.w, hist.data());
 	handleStatus(err, "error @pyramid #1");
 	handleStatus(cudaGetLastError(), "error @pyramid #2");
-	return lumaSum;
 }
 
 void CudaExecutor::adjustPyramid(int64_t frameIndex, float gamma) {

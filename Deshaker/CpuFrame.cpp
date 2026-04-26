@@ -81,7 +81,7 @@ void CpuFrame::createPyramidLevels(CpuPyramid& pyr) {
 	}
 }
 
-int64_t CpuFrame::createPyramid(int64_t frameIndex, AffineDataFloat trf, bool warp) {
+void CpuFrame::createPyramid(int64_t frameIndex, std::span<int> hist, AffineDataFloat trf, bool warp) {
 	//util::ConsoleTimer ic("cpu pyramid");
 	size_t pyrIdx = frameIndex % mPyr.size();
 	CpuPyramid& pyr = mPyr[pyrIdx];
@@ -93,18 +93,13 @@ int64_t CpuFrame::createPyramid(int64_t frameIndex, AffineDataFloat trf, bool wa
 	Matf& y0 = pyr.mY[0];
 
 	//convert input y values to float
-	std::atomic_int64_t lumaSum = 0;
 	constexpr float f = 1.0f / 255.0f;
 	auto funcConvert = [&] (size_t r) {
-		int sum = 0;
 		const uchar* src = yuv.row(r);
 		float* dest = mFilterBuffer1.addr(r, 0);
 		for (size_t c = 0; c < mData.w; c++) {
-			int y = src[c];
-			dest[c] = y * f;
-			sum += y * y;
+			dest[c] = src[c] * f;
 		}
-		lumaSum += sum;
 	};
 	mPool.addAndWait(funcConvert, 0, mData.h);
 
@@ -126,25 +121,21 @@ int64_t CpuFrame::createPyramid(int64_t frameIndex, AffineDataFloat trf, bool wa
 	}
 
 	createPyramidLevels(pyr);
-
 	//Matf mat = getPyramid(frameIndex); ImageMatY<float>(mat.rows(), mat.cols(), mat.cols(), mat.data(), 1.0).saveBmpPlanes("f:/test.bmp");
-	return lumaSum;
+
+	std::fill(hist.begin(), hist.end(), 0);
+	for (int r = 0; r < mData.h; r++) {
+		const uchar* src = yuv.row(r);
+		for (int c = 0; c < mData.w; c++) {
+			hist[src[c]]++;
+		}
+	}
 }
 
 void CpuFrame::adjustPyramid(int64_t frameIndex, float gamma) {
-	size_t pyrIdx = (frameIndex) % mPyr.size();
-	CpuPyramid& pyr = mPyr[pyrIdx];
-	Matf& y0 = pyr.mY[0];
-
-	auto func = [&] (size_t r) {
-		float* y = y0.addr(r, 0);
-		for (size_t c = 0; c < mData.w; c++) {
-			y[c] = std::pow(y[c], gamma);
-		}
-	};
-	mPool.addAndWait(func, 0, mData.h);
-
-	createPyramidLevels(pyr);
+	//size_t pyrIdx = (frameIndex) % mPyr.size();
+	//CpuPyramid& pyr = mPyr[pyrIdx];
+	//Matf& y0 = pyr.mY[0];
 }
 
 void CpuFrame::computeStart(int64_t frameIndex, std::span<PointResult> results) {}

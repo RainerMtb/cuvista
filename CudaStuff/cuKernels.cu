@@ -263,7 +263,7 @@ __global__ void kernel_output_nvenc(float4* src, int srcStep, uchar* dest, int s
 	}
 }
 
-__global__ void kernel_scale_8u32f(cudaTextureObject_t texObj, cuMatf dest, int64_t* luma) {
+__global__ void kernel_scale_8u32f(cudaTextureObject_t texObj, cuMatf dest, cuMati lumaMat) {
 	uint x = blockIdx.x * blockDim.x + threadIdx.x;
 	uint y = blockIdx.y * blockDim.y + threadIdx.y;
 	uint offsetY = 2;
@@ -275,30 +275,29 @@ __global__ void kernel_scale_8u32f(cudaTextureObject_t texObj, cuMatf dest, int6
 	}
 
 	//first row of blocks
-	uint idx = blockIdx.x * blockDim.x * blockDim.y + threadIdx.y * blockDim.x + threadIdx.x;
-	if (blockIdx.y == 0 && idx < dest.w) {
-		int sum = 0;
+	if (x < dest.w && y == 0) {
 		for (int i = 0; i < dest.h; i++) {
-			int val = tex2D<uchar>(texObj, idx * 4 + offsetY, i);
-			sum += val * val;
+			int val = tex2D<uchar>(texObj, x * 4 + offsetY, i);
+			lumaMat.at(x, val)++;
 		}
-		luma[idx] = sum;
 	}
 }
 
-__global__ void kernel_lumaSum(int64_t* luma, int w) {
-	uint x = threadIdx.x;
+__global__ void kernel_lumaSum(cuMati lumaMat) {
+	uint x = blockIdx.x;
+	uint y = threadIdx.x;
 	uint ws = blockDim.x;
-	extern __shared__ int64_t shd64[];
 
 	//32 threads
-	shd64[x] = 0;
-	for (int i = x; i < w; i += ws) shd64[x] += luma[i];
+	for (int i = y + ws; i < lumaMat.h; i += ws) {
+		lumaMat.at(y, x) += lumaMat.at(i, x);
+	}
 
 	//first thread
-	if (x == 0) {
-		for (int i = 1; i < ws; i++) shd64[0] += shd64[i];
-		luma[0] = shd64[0];
+	if (y == 0) {
+		for (int i = 1; i < ws; i++) {
+			lumaMat.at(0, x) += lumaMat.at(i, x);
+		}
 	}
 }
 
@@ -459,19 +458,20 @@ cudaError_t cu::input(uchar* srcYuv, int srcStep, int srcWidth, uchar* destVuyx,
 	return cudaGetLastError();
 }
 
-cudaError_t cu::scale_8u32f(uchar* src, int srcStep, int srcWidth, float* dest, int destStep, int destWidth, int h, int64_t* d_luma, cudaStream_t cs) {
+cudaError_t cu::scale_8u32f(uchar* src, int srcStep, int srcWidth, float* dest, int destStep, int destWidth, int h, int* d_luma, cudaStream_t cs) {
 	KernelContext ki = prepareTexture(src, srcStep, srcWidth, h);
 	cuMatf destMat(dest, h, destWidth, destStep);
-	kernel_scale_8u32f << <ki.blocks, ki.threads, 0, cs >> > (ki.texture, destMat, d_luma);
+	cuMati lumaMat(d_luma, destWidth, 256, 256);
+	kernel_scale_8u32f << <ki.blocks, ki.threads, 0, cs >> > (ki.texture, destMat, lumaMat);
 	cudaDestroyTextureObject(ki.texture);
 	return cudaGetLastError();
 }
 
-int64_t cu::lumaSum(int64_t* d_luma, int w, cudaStream_t cs) {
-	kernel_lumaSum << <1, 32, 32*8, cs >> > (d_luma, w);
-	int64_t h_sum;
-	cudaMemcpy(&h_sum, d_luma, sizeof(int64_t), cudaMemcpyDefault);
-	return h_sum;
+cudaError_t cu::lumaSum(int* d_luma, int w, int* h_luma, cudaStream_t cs) {
+	cuMati lumaMat(d_luma, w, 256, 256);
+	kernel_lumaSum << <256, 32, 0, cs >> > (lumaMat);
+	cudaMemcpy(h_luma, d_luma, 256ull * sizeof(int), cudaMemcpyDefault);
+	return cudaGetLastError();
 }
 
 cudaError_t cu::warp_back_32f(float* src, int srcStep, float* dest, int destStep, int w, int h, AffineDataFloat trf, cudaStream_t cs) {
@@ -480,10 +480,6 @@ cudaError_t cu::warp_back_32f(float* src, int srcStep, float* dest, int destStep
 	kernel_warp_back << <ki.blocks, ki.threads, 0, cs >> > (ki.texture, destMat, trf);
 	cudaDestroyTextureObject(ki.texture);
 	return cudaGetLastError();
-}
-
-cudaError_t cu::set_32f(float* dest, int destStep, int w, int h, int value, cudaStream_t cs) {
-	return cudaMemset2DAsync(dest, destStep * sizeof(float), value, w * sizeof(float), h, cs);
 }
 
 cudaError_t cu::filter_32f_h(float* src, float* dest, int srcStep, int w, int h, size_t filterKernelIndex, cudaStream_t cs) {

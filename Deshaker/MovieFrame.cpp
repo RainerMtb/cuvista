@@ -94,6 +94,10 @@ const AffineTransform& MovieFrame::getTransform() const {
 	return mFrameResult.getTransform();
 }
 
+const FrameResultData& MovieFrame::getResultData() const {
+	return mFrameResult.getResultData();
+}
+
 void MovieFrame::progressUpdate(ProgressInfo& progressInfo, ProgressBase& progress, double totalProgress, bool forceUpdate) const {
 	if (mReader.frameCount > 0) progressInfo.totalProgress = std::clamp(totalProgress, 0.0, 100.0);
 	else progressInfo.totalProgress = std::numeric_limits<double>::quiet_NaN();
@@ -104,18 +108,11 @@ void MovieFrame::progressUpdate(ProgressInfo& progressInfo, ProgressBase& progre
 	progress.update(progressInfo, forceUpdate);
 }
 
-void MovieFrame::checkPyramidGamma(int64_t frameIndex, int64_t lumaSumCurrent, int64_t lumaSumPrevious, std::shared_ptr<FrameExecutor> executor) {
+void MovieFrame::checkPyramidGamma(int64_t frameIndex, std::span<int> histogram, std::span<int> histogramOld, FrameExecutor& executor) {
 	int s = mData.w * mData.h;
-	double a = std::sqrt(lumaSumCurrent / s);
-	double b = std::sqrt(lumaSumPrevious / s);
-	double delta = std::log(a / b);
 	int64_t frameToAdjust = frameIndex - 1;
-	if (delta > -0.5 && delta < -0.1 || delta > 0.1 && delta < 0.5) {
-		double x = std::log(b) / std::log(a);
-		executor->adjustPyramid(frameToAdjust, x);
-		debugLogger().format("frame {}-{} cur {:08.4f} prev {:08.4f} x = {:.4f}", frameToAdjust, frameIndex, a, b, x);
-		//Matf::concatHorz(executor->getPyramid(frameToAdjust), executor->getPyramid(frameIndex)).saveAsBMP(std::format("f:/pic/im{}.bmp", frameToAdjust), 1.0f);
-	}
+	//executor.adjustPyramid(frameToAdjust, x);
+	//Matf::concatHorz(executor->getPyramid(frameToAdjust), executor->getPyramid(frameIndex)).saveAsBMP(std::format("f:/pic/im{}.bmp", frameToAdjust), 1.0f);
 }
 
 
@@ -130,7 +127,8 @@ LoopResult MovieFrameCombined::runLoop(ProgressBase& progress, UserInput& input,
 	bool hasFramesToFlush = false;
 	ProgressInfo progressInfo = { mReader.frameCount };
 	LoopResult loopResult = LoopResult::LOOP_SUCCESS;
-	int64_t lumaSumPrevious = -1;
+	std::vector<int> histogramOld(256);
+	std::vector<int> histogram(256);
 
 	while (state != StateCombined::DONE) {
 		//handle current state
@@ -148,21 +146,21 @@ LoopResult MovieFrameCombined::runLoop(ProgressBase& progress, UserInput& input,
 
 			} else if (state == StateCombined::READ_SECOND) {
 				executor->inputData(mReader.frameIndex); //input first frame
-				lumaSumPrevious = executor->createPyramid(mReader.frameIndex);
+				executor->createPyramid(mReader.frameIndex, histogramOld, {}, false);
 				mReader.read(*executor); //read second frame
 
 			} else if (state == StateCombined::FILL_BUFFER) {
 				//process current frame
 				executor->inputData(mReader.frameIndex);
-				int64_t lumaSum = executor->createPyramid(mReader.frameIndex);
+				executor->createPyramid(mReader.frameIndex, histogram, {}, false);
 				//transform for previous frame
 				mFrameResult.computeTransform(mResultPoints, mReader.frameIndex - 1);
 				mTrajectory.addTrajectoryTransform(mFrameResult.getTransform());
 				//begin computing smooth transform
 				if (mReader.frameIndex > mData.radius) mTrajectory.computeSmoothTransform(mData, mReader.frameIndex - mData.radius - 1);
 				mWriter.writeInput(*executor);
-				checkPyramidGamma(mReader.frameIndex, lumaSum, lumaSumPrevious, executor);
-				lumaSumPrevious = lumaSum;
+				checkPyramidGamma(mReader.frameIndex, histogram, histogramOld, *executor);
+				std::swap(histogram, histogramOld);
 				//compute flow for current frame
 				executor->computeStart(mReader.frameIndex, mResultPoints);
 				executor->computeTerminate(mReader.frameIndex, mResultPoints);
@@ -177,9 +175,9 @@ LoopResult MovieFrameCombined::runLoop(ProgressBase& progress, UserInput& input,
 				assert(readIndex % mData.bufferCount != mWriter.frameIndex % mData.bufferCount && "accessing the same buffer for read and write");
 				//process current frame
 				executor->inputData(readIndex);
-				int64_t lumaSum = executor->createPyramid(readIndex);
-				checkPyramidGamma(mReader.frameIndex, lumaSum, lumaSumPrevious, executor);
-				lumaSumPrevious = lumaSum;
+				executor->createPyramid(readIndex, histogram, {}, false);
+				checkPyramidGamma(mReader.frameIndex, histogram, histogramOld, *executor);
+				std::swap(histogram, histogramOld);
 				executor->computeStart(readIndex, mResultPoints);
 				//read next frame async
 				std::future<void> f = mReader.readAsync(*executor);
@@ -321,7 +319,8 @@ LoopResult MovieFrameConsecutive::runLoop(ProgressBase& progress, UserInput& inp
 	ProgressInfo progressInfo = { mReader.frameCount };
 	double progressPerReaderPass = 80.0 / (80.0 * mData.mode + 20.0);
 	LoopResult loopResult = LoopResult::LOOP_SUCCESS;
-	int64_t lumaSumPrevious = -1;
+	std::vector<int> histogramOld(256);
+	std::vector<int> histogram(256);
 
 	while (state != StateConsecutive::DONE) {
 		//handle current state
@@ -341,7 +340,7 @@ LoopResult MovieFrameConsecutive::runLoop(ProgressBase& progress, UserInput& inp
 			} else if (state == StateConsecutive::READ_SECOND_FRAME) {
 				//create pyramid for first frame, read second frame
 				executor->inputData(mReader.frameIndex); //input first frame
-				lumaSumPrevious = executor->createPyramid(mReader.frameIndex);
+				executor->createPyramid(mReader.frameIndex, histogramOld, {}, false);
 				mReader.read(*executor); //read second frame
 				mTrajectory.addTrajectoryTransform({}); //first frame has no transform applied
 				mWriter.writeInput(*executor);
@@ -352,9 +351,9 @@ LoopResult MovieFrameConsecutive::runLoop(ProgressBase& progress, UserInput& inp
 				int64_t idx = mReader.frameIndex;
 				executor->inputData(idx);
 				std::future<void> f = mReader.readAsync(*executor);
-				int64_t lumaSum = executor->createPyramid(idx);
-				checkPyramidGamma(mReader.frameIndex, lumaSum, lumaSumPrevious, executor);
-				lumaSumPrevious = lumaSum;
+				executor->createPyramid(idx, histogram, {}, false);
+				checkPyramidGamma(mReader.frameIndex, histogram, histogramOld, *executor);
+				std::swap(histogram, histogramOld);
 				executor->computeStart(idx, mResultPoints);
 				executor->computeTerminate(idx, mResultPoints);
 				mFrameResult.computeTransform(mResultPoints, idx);
@@ -378,7 +377,7 @@ LoopResult MovieFrameConsecutive::runLoop(ProgressBase& progress, UserInput& inp
 
 			} else if (state == StateConsecutive::ITERATION_SECOND_FRAME) {
 				executor->inputData(mReader.frameIndex); //input first frame
-				lumaSumPrevious = executor->createPyramid(mReader.frameIndex, mTrajectory.getTransform(mData, 0), true);
+				executor->createPyramid(mReader.frameIndex, histogramOld, mTrajectory.getTransform(mData, 0), true);
 				mReader.read(*executor); //read second frame
 				mTrajectory.setTrajectoryTransform({});
 
@@ -388,9 +387,9 @@ LoopResult MovieFrameConsecutive::runLoop(ProgressBase& progress, UserInput& inp
 				executor->inputData(idx);
 				std::future<void> f = mReader.readAsync(*executor);
 				const AffineTransform& trf = mTrajectory.getTransform(mData, idx);
-				int64_t lumaSum = executor->createPyramid(idx, trf, true);
-				checkPyramidGamma(mReader.frameIndex, lumaSum, lumaSumPrevious, executor);
-				lumaSumPrevious = lumaSum;
+				executor->createPyramid(idx, histogram, trf, true);
+				checkPyramidGamma(mReader.frameIndex, histogram, histogramOld, *executor);
+				std::swap(histogram, histogramOld);
 				executor->computeStart(idx, mResultPoints);
 				executor->computeTerminate(idx, mResultPoints);
 				const AffineTransform& newTransform = mFrameResult.computeTransform(mResultPoints, idx);

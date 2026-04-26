@@ -82,8 +82,6 @@ protected:
 
 	void progressUpdate(ProgressInfo& progressInfo, ProgressBase& progress, double totalProgress, bool forceUpdate) const;
 
-	void checkPyramidGamma(int64_t frameIndex, int64_t lumaSumCurrent, int64_t lumaSumPrevious, std::shared_ptr<FrameExecutor> executor);
-
 public:
 	MovieReader& mReader;
 	MovieWriter& mWriter;
@@ -100,13 +98,19 @@ public:
 	virtual ~MovieFrame();
 
 	//compute resulting transform for this frame
-	virtual const AffineTransform& computeTransform(std::span<PointResult> results, int64_t frameIndex);
+	const AffineTransform& computeTransform(std::span<PointResult> results, int64_t frameIndex);
+
+	//
+	void checkPyramidGamma(int64_t frameIndex, std::span<int> histogram, std::span<int> histogramOld, FrameExecutor& executor);
 
 	// read transforms from previous pass
-	virtual std::map<int64_t, TransformValues> readTransforms() final;
+	std::map<int64_t, TransformValues> readTransforms();
 
 	// get the current frame transform
-	virtual const AffineTransform& getTransform() const final;
+	const AffineTransform& getTransform() const;
+
+	// get frame result Data
+	const FrameResultData& getResultData() const;
 
 	// play time for given frame
 	virtual std::string ptsForFrameAsString(int64_t frameIndex) const;

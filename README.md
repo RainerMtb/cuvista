@@ -153,7 +153,7 @@ When done, run ```cuvista -info``` to see available devices and run a test
  
 ## Built and Tested on following Tools and versions
 - Windows 11
-- Ubuntu 25.04
+- Ubuntu 26.04
 - Visual Studio 2022
 - Nvidia Cuda 13.2
 - Nvidia Video Codec SDK 13.0.37

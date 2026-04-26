@@ -84,6 +84,8 @@ bool NullReader::read(Image8& inputFrame) {
 
 
 void FFmpegReader::open(const std::string& source) {
+    mSource = source;
+
     //av_log_set_level(AV_LOG_ERROR);
     av_log_set_callback(ffmpeg_log);
 
@@ -331,6 +333,7 @@ bool FFmpegReader::read(Image8& inputFrame) {
                         std::unique_lock<std::mutex> lock(osc.mMutexSidePackets);
                         //we should store a packet from a secondary stream for processing
                         osc.sidePackets.emplace_back(frameIndex, av_packet);
+                        //std::cout << "stream " << sidx << " pts " << av_packet->pts << " dts " << av_packet->dts << std::endl;
 
                         //limiting packets in memory
                         auto fcn = [] (int sum, const SidePacket& pkt) { return sum + pkt.packet->size; };
@@ -414,6 +417,7 @@ bool FFmpegReader::read(Image8& inputFrame) {
         int64_t timestamp = av_frame->best_effort_timestamp - videoStream->start_time;
         std::unique_lock<std::mutex> lock(mVideoPacketMutex);
         mVideoPacketList.emplace_back(frameIndex, av_frame->pts, av_frame->pkt_dts, av_frame->duration, timestamp);
+        //std::printf("frameIndex=%zd pts=%zd dts=%zd duration=%zd timestamp=%zd\n", frameIndex, av_frame->pts, av_frame->pkt_dts, av_frame->duration, av_frame->best_effort_timestamp);
 
         //in some cases pts values are not in proper sequence, but frames decoded by ffmpeg are indeed in correct order
         //in that case just reorder pts values -- bug in ffmpeg
@@ -441,7 +445,7 @@ bool FFmpegReader::seek(double fraction) {
 
     int response = avformat_seek_file(av_format_ctx, -1, min_ts, target, max_ts, 0); 
     if (response < 0) {
-        ffmpeg_log_error(response, "faild to seek in input", ErrorSource::READER);
+        std::string err = av_make_error(response, "faild to seek in input");
 
     } else {
         avcodec_flush_buffers(av_codec_ctx);
@@ -451,13 +455,18 @@ bool FFmpegReader::seek(double fraction) {
 }
 
 void FFmpegReader::rewind() {
-    seek(0.0);
     frameIndex = -1;
     endOfInput = false;
     startOfInput = true;
     mVideoPacketList.clear();
     for (StreamContext& s : mInputStreams) {
         s.outputStreams.clear();
+    }
+
+    bool isSeekable = seek(0.0);
+    if (isSeekable == false) {
+        close();
+        open(mSource);
     }
 }
 
@@ -470,9 +479,7 @@ void FFmpegReader::close() {
     mInputStreams.clear();
 }
 
-FFmpegReader::~FFmpegReader() {
-    close();
-}
+FFmpegReader::~FFmpegReader() {}
 
 
 //-----------------------------------

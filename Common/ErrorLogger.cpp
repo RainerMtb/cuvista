@@ -50,10 +50,6 @@ void ErrorLogger::logError(const char* title, const char* msg, ErrorSource sourc
 	logError(std::string(title) + std::string(msg));
 }
 
-void ErrorLogger::logError(const std::string& title, const std::string& msg, ErrorSource source) {
-	logError(title + msg);
-}
-
 std::vector<ErrorEntry> ErrorLogger::getErrors() {
 	std::lock_guard<std::mutex> lock(mMutex);
 	return std::vector<ErrorEntry>(errorList.cbegin(), errorList.cend());
@@ -70,7 +66,8 @@ std::string ErrorLogger::getErrorMessage() {
 }
 
 void ErrorLogger::logFFmpeg(int logLevel, std::string msg) {
-	ffmpegLog.emplace_back(std::chrono::system_clock::now(), logLevel, msg);
+	ffmpegLog.emplace_back(std::chrono::system_clock::now(), FFmpegLog::indexTotal, logLevel, msg);
+	FFmpegLog::indexTotal++;
 	while (ffmpegLog.size() > 5000) ffmpegLog.pop_front();
 }
 
@@ -83,8 +80,9 @@ void ErrorLogger::printErrors(std::ostream& os) {
 		}
 		if (ffmpegLog.size() > 0) {
 			printError(os, "LOGS:");
-			auto iter = ffmpegLog.cbegin();
-			for (int i = 0; i < ffmpegLog.size() && i < 50; i++) {
+			std::vector<FFmpegLog> logs;
+			auto iter = ffmpegLog.crbegin();
+			for (int i = 0; i < 50 && iter != ffmpegLog.crend(); i++) {
 				printError(os, std::format("[{}] {}", i, iter->msg));
 				iter++;
 			}

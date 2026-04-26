@@ -129,3 +129,4 @@ using uint = unsigned int;
 using cuMatf = cu::Mat<float>;
 using cuMatf4 = cu::Mat<float4>;
 using cuMatc = cu::Mat<uchar>;
+using cuMati = cu::Mat<int>;

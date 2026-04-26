@@ -56,14 +56,11 @@ void cl::scale_8u32f_1(Image src, Image dest, Buffer luma, Data& clData) {
 	runKernel(kernel, src, dest, clData.queue);
 }
 
-int64_t cl::lumaSum(Buffer luma, int w, Data& clData) {
+void cl::lumaSum(Buffer luma, int w, Data& clData) {
 	Kernel kernel = clData.kernels.lumaSum;
 	kernel.setArg(0, luma);
 	kernel.setArg(1, w);
-	clData.queue.enqueueNDRangeKernel(kernel, NullRange, NDRange(32, 1), NDRange(32, 1));
-	int64_t dest;
-	clData.queue.enqueueReadBuffer(luma, CL_TRUE, 0, sizeof(cl_long), &dest);
-	return dest;
+	clData.queue.enqueueNDRangeKernel(kernel, NullRange, NDRange(256, 1));
 }
 
 void cl::scale_8u32f_3(Image src, Image dest, Data& clData) {

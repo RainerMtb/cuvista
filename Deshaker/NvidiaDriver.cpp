@@ -67,34 +67,30 @@ using fpath = std::filesystem::path;
 
 NvidiaDriverInfo probeNvidiaDriver() {
 	PWSTR folderPath;
-	HMODULE nvml = NULL;
 	HRESULT result;
+	std::vector<fpath> paths;
 	
 	//first folder to search
 	result = SHGetKnownFolderPath(FOLDERID_ProgramFilesX64, 0, NULL, &folderPath);
-	if (result == S_OK) {
-		fpath nvmlPath = fpath(folderPath) / "NVIDIA Corporation" / "NVSMI" / "nvml.dll";
-		nvml = LoadLibraryA(nvmlPath.string().c_str());
-	}
+	if (result == S_OK) paths.push_back(fpath(folderPath) / "NVIDIA Corporation" / "NVSMI" / "nvml.dll");
 	CoTaskMemFree(folderPath);
 
 	//second folder to search
-	if (nvml == NULL) {
-		result = SHGetKnownFolderPath(FOLDERID_System, 0, NULL, &folderPath);
-		if (result == S_OK) {
-			fpath nvmlPath = fpath(folderPath) / "nvml.dll";
-			nvml = LoadLibraryA(nvmlPath.string().c_str());
-		}
-		CoTaskMemFree(folderPath);
-	}
+	result = SHGetKnownFolderPath(FOLDERID_System, 0, NULL, &folderPath);
+	if (result == S_OK) paths.push_back(fpath(folderPath) / "nvml.dll");
+	CoTaskMemFree(folderPath);
 
 	NvidiaDriverInfo info;
-	if (nvml != NULL) {
-		ptr_nvmlInit_v2 nvInit = (ptr_nvmlInit_v2) GetProcAddress(nvml, "nvmlInit_v2");
-		ptr_nvmlSystemGetDriverVersion nvVersion = (ptr_nvmlSystemGetDriverVersion) GetProcAddress(nvml, "nvmlSystemGetDriverVersion");
-		ptr_nvmlShutdown nvShutdown = (ptr_nvmlShutdown) GetProcAddress(nvml, "nvmlShutdown");
-		info = probe(nvInit, nvVersion, nvShutdown);
-		FreeLibrary(nvml);
+	for (fpath path : paths) {
+		HMODULE nvml = LoadLibraryA(path.string().c_str());
+		if (nvml) {
+			ptr_nvmlInit_v2 nvInit = (ptr_nvmlInit_v2) GetProcAddress(nvml, "nvmlInit_v2");
+			ptr_nvmlSystemGetDriverVersion nvVersion = (ptr_nvmlSystemGetDriverVersion) GetProcAddress(nvml, "nvmlSystemGetDriverVersion");
+			ptr_nvmlShutdown nvShutdown = (ptr_nvmlShutdown) GetProcAddress(nvml, "nvmlShutdown");
+			info = probe(nvInit, nvVersion, nvShutdown);
+			FreeLibrary(nvml);
+			break;
+		}
 	}
 
 	return info;
@@ -105,27 +101,27 @@ NvidiaDriverInfo probeNvidiaDriver() {
 #elif defined(__linux__)
 
 #include <dlfcn.h>
+#include <vector>
 
 NvidiaDriverInfo probeNvidiaDriver() {
 	//nvidia-smi --query-gpu=driver_version --format=csv,noheader
 
-	NvidiaDriverInfo info;
-	void* nvml = nullptr;
-	const char* libs[2] = {
+	std::vector<std::string> paths = {
 		"libnvidia-ml.so.1", 
 		"libnvidia-ml.so", 
 	};
+	NvidiaDriverInfo info;
 
-	for (int i = 0; nvml == nullptr && i < 2; i++) {
-		nvml = dlopen(libs[i], RTLD_NOW);
-	}
-
-	if (nvml != nullptr) {
-		ptr_nvmlInit_v2 nvInit = (ptr_nvmlInit_v2) dlsym(nvml, "nvmlInit_v2");
-		ptr_nvmlSystemGetDriverVersion nvVersion = (ptr_nvmlSystemGetDriverVersion) dlsym(nvml, "nvmlSystemGetDriverVersion");
-		ptr_nvmlShutdown nvShutdown = (ptr_nvmlShutdown) dlsym(nvml, "nvmlShutdown");
-		info = probe(nvInit, nvVersion, nvShutdown);
-		dlclose(nvml);
+	for (const std::string& path : paths) {
+		void* nvml = dlopen(path.c_str(), RTLD_NOW);
+		if (nvml) {
+			ptr_nvmlInit_v2 nvInit = (ptr_nvmlInit_v2) dlsym(nvml, "nvmlInit_v2");
+			ptr_nvmlSystemGetDriverVersion nvVersion = (ptr_nvmlSystemGetDriverVersion) dlsym(nvml, "nvmlSystemGetDriverVersion");
+			ptr_nvmlShutdown nvShutdown = (ptr_nvmlShutdown) dlsym(nvml, "nvmlShutdown");
+			info = probe(nvInit, nvVersion, nvShutdown);
+			dlclose(nvml);
+			break;
+		}
 	}
 
 	return info;

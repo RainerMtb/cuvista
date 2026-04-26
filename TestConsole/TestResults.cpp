@@ -65,8 +65,24 @@ void testVideo1() {
 
 void testLuma() {
 	std::cout << "analyze image pair" << std::endl;
-	FrameResult::storeDebugData = true;
-	
+	ImageYuv dest = ImageYuv::readBmpFile("D:/VideoTest/06a.38.bmp");
+	ImageYuv concat(1080, 1920 * 2);
+	dest.copyTo(concat, 0, 1920, 255);
+
+	ImageYuv src = ImageYuv::readBmpFile("D:/VideoTest/06a.37.bmp");
+	for (int i = 0; i < 5; i++) {
+		src.copyTo(dest);
+		float gamma = 1.0f + 0.05f * i;
+		std::cout << gamma << std::endl;
+		dest.adjustGamma(1.0f / gamma);
+		std::string str = std::format("{:.3f}", gamma);
+		dest.writeText(str, 860, 0, im::TextAlign::TOP_CENTER);
+		dest.copyTo(concat, 0, 0, 255);
+		concat.saveBmpColor(std::format("f:/image{}a.bmp", i));
+	}
+
+	/*
+	std::cout << "analyze image pair" << std::endl;
 	MainData data;
 	data.deviceRequested = true;
 	data.mode = 1;
@@ -87,32 +103,41 @@ void testLuma() {
 	Image8& input = executor.inputDestination(0);
 	src.copyTo(input);
 	executor.inputData(0);
-	executor.createPyramid(0);
+	std::vector<int> histOld(256);
+	executor.createPyramid(0, histOld, {}, false);
+
+	ImageYuv concat(1080, 1920 * 2);
+	src.copyTo(concat, 0, 0, 255);
 
 	ImageYuv im = ImageYuv::readBmpFile("D:/VideoTest/06a.38.bmp");
 	for (int i = 0; i < 5; i++) {
-		src = im;
-		float gamma = 1.0f - 0.05f * i;
-		std::string str = std::format("{:.3f}", gamma);
+		im.copyTo(src);
+		float gamma = 1.0f / (1.0f - 0.05f * i);
 		src.adjustGamma(gamma);
+
 		std::cout << "gamma " << gamma << " lumaRms " << src.lumaRms() << std::endl;
-		src.writeText(str, 860, 0, 2, 2, im::TextAlign::TOP_CENTER);
-		src.saveBmpColor(std::format("f:/image{}a.bmp", i));
+		std::string str = std::format("{:.3f}", gamma);
+		src.writeText(str, 860, 0, im::TextAlign::TOP_CENTER);
+		src.copyTo(concat, 0, 1920, 255);
+		concat.saveBmpColor(std::format("f:/image{}a.bmp", i));
 
 		Image8& input = executor.inputDestination(1);
 		src.copyTo(input);
 		executor.inputData(1);
-		executor.createPyramid(1);
+		std::vector<int> hist(256);
+		executor.createPyramid(1, hist, {}, false);
+		frame.checkPyramidGamma(1, hist, histOld, executor);
 		executor.computeStart(1, frame.mResultPoints);
 		executor.computeTerminate(1, frame.mResultPoints);
-		AffineTransform trf = executor.computeTransform(frame.mResultPoints, 1);
+		executor.computeTransform(frame.mResultPoints, 1);
 
 		ImageRGBA dest(1080, 1920);
-		ResultImageWriter::writeImage(trf, frame.mResultPoints, 1, dest, frame.mPool, false);
-		dest.writeText(str, 860, 0, 2, 2, im::TextAlign::TOP_CENTER);
-		dest.saveBmpColor(std::format("f:/image{}b.bmp", i));
+		FrameResultData resultData = executor.mFrame.getResultData();
+		ResultImageWriter::writeImage(resultData, frame.mResultPoints, 1, dest, frame.mPool, false);
+		dest.writeText(str, 860, 20, im::TextAlign::TOP_CENTER);
+		//dest.saveBmpColor(std::format("f:/image{}b.bmp", i));
 
-		FrameResult::DebugData data = FrameResult::debugData;
-		std::cout << "[" << data.clusterSizes.size() << "] " << util::collectionToString(data.clusterSizes, 15) << std::endl;
+		std::cout << "[" << resultData.clusterSizes.size() << "] " << util::collectionToString(resultData.clusterSizes, 15) << std::endl;
 	}
+	*/
 }

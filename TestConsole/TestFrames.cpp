@@ -52,11 +52,13 @@ template <class T> Result runPyramid(MainData& data, int deviceIndex) {
 		std::cout << "running " << name << std::endl;
 		reader.read(*executor);
 		executor->inputData(reader.frameIndex);
-		executor->createPyramid(reader.frameIndex);
+		std::vector<int> hist1(256);
+		executor->createPyramid(reader.frameIndex, hist1, {}, false);
 
 		reader.read(*executor);
 		executor->inputData(reader.frameIndex);
-		executor->createPyramid(reader.frameIndex);
+		std::vector<int> hist2(256);
+		executor->createPyramid(reader.frameIndex, hist2, {}, false);
 
 		executor->computeStart(reader.frameIndex, frame.mResultPoints);
 		executor->computeTerminate(reader.frameIndex, frame.mResultPoints);

@@ -39,7 +39,7 @@ __kernel void input(__read_only image2d_t src, __write_only image2d_t dest) {
 	write_imageui(dest, (int2)(c, r), result);
 }
 
-__kernel void scale_8u32f_1(__read_only image2d_t src, __write_only image2d_t dest, __global long* luma) {
+__kernel void scale_8u32f_1(__read_only image2d_t src, __write_only image2d_t dest, __global int* luma) {
 	int c = get_global_id(0);
 	int r = get_global_id(1);
 	float f = 1.0f / 255.0f;
@@ -50,26 +50,18 @@ __kernel void scale_8u32f_1(__read_only image2d_t src, __write_only image2d_t de
 
 	int h = get_global_size(1);
 	if (r == 0) {
-		int sum = 0;
 		for (int i = 0; i < h; i++) {
-			int y = read_imageui(src, (int2)(c, i)).s2;
-			sum += y * y;
+			int val = read_imageui(src, (int2)(c, i)).s2;
+			luma[c * 256 + val]++;
 		}
-		luma[c] = sum;
 	}
 }
 
-__kernel void lumaSum(__global long* luma, int w) {
-	int x = get_local_id(0);
-	int siz = get_local_size(0);
-	for (int i = x + siz; i < w; i += siz) {
-		luma[x] += luma[i];
-	}
+__kernel void lumaSum(__global int* luma, int w) {
+	int x = get_global_id(0);
 
-	if (x == 0) {
-		for (int i = 1; i < siz; i++) {
-			luma[0] += luma[i];
-		}
+	for (int i = 1; i < w; i++) {
+		luma[x] += luma[i * 256 + x];
 	}
 }
 

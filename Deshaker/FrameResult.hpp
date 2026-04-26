@@ -23,6 +23,21 @@
 #include "MainData.hpp"
 #include "ThreadPoolBase.h"
 
+struct ClusterSize {
+	int index, siz;
+
+	friend std::ostream& operator << (std::ostream& out, const ClusterSize& cs);
+};
+
+//hold result data for analysis
+struct FrameResultData {
+	AffineTransform transform;
+	std::vector<PointContext> pointsClassic;
+	std::vector<PointContext> pointsDbscan;
+	std::vector<ClusterSize> clusterSizes;
+	bool runDbScan;
+};
+
 
 //compute and hold transform for one video frame
 class FrameResult {
@@ -30,21 +45,7 @@ class FrameResult {
 	using SamplerPtr = std::shared_ptr<SamplerBase<PointContext>>;
 
 public:
-	struct ClusterSize {
-		int index, siz;
-
-		friend std::ostream& operator << (std::ostream& out, const ClusterSize& cs);
-	};
-
-	struct DebugData {
-		bool rundbscan;
-		std::vector<PointContext> classic;
-		std::vector<PointContext> dbscan;
-		std::vector<ClusterSize> clusterSizes;
-	};
-
-	inline static DebugData debugData = {};
-	inline static bool storeDebugData = false;
+	inline static FrameResultData debugData = {};
 
 	//construct lists and solver class
 	FrameResult(MainData& data, ThreadPoolBase& threadPool);
@@ -54,6 +55,9 @@ public:
 
 	//get the last computed treansform
 	const AffineTransform& getTransform() const;
+
+	//put together data for analysis
+	const FrameResultData& getResultData() const;
 
 	//reset internal state of this class
 	void reset();

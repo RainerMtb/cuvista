@@ -118,7 +118,7 @@ namespace im {
 		}
 
 		//write text into image
-		virtual Size writeText(std::string_view text, int x, int y, int sx, int sy, TextAlign alignment, const Color& fg, const Color& bg) {
+		virtual Size writeText(std::string_view text, int x, int y, TextAlign alignment, int sx, int sy, const Color& fg, const Color& bg) {
 			//compute alignment
 			int wt = int(text.size()) * 6 * sx;
 			int ht = 10 * sy;
@@ -165,14 +165,19 @@ namespace im {
 		}
 
 		//write text into image
-		virtual Size writeText(std::string_view text, int x, int y, int sx, int sy, TextAlign alignment) {
-			return writeText(text, x, y, sx, sy, alignment, Color::WHITE, Color::BLACK_SEMI);
+		virtual Size writeText(std::string_view text, int x, int y, TextAlign alignment, int sx, int sy) {
+			return writeText(text, x, y, alignment, sx, sy, Color::WHITE, Color::BLACK_SEMI);
+		}
+
+		//write text into image
+		virtual Size writeText(std::string_view text, int x, int y, TextAlign alignment) {
+			int scale = std::min(w(), h()) / 600 + 1;
+			return writeText(text, x, y, alignment, scale, scale, Color::WHITE, Color::BLACK_SEMI);
 		}
 
 		//write text into image
 		virtual Size writeText(std::string_view text, int x, int y) {
-			int scale = std::min(w(), h()) / 600 + 1;
-			return writeText(text, x, y, scale, scale, TextAlign::BOTTOM_LEFT);
+			return writeText(text, x, y, TextAlign::BOTTOM_LEFT);
 		}
 
 		virtual void drawLine(double x0, double y0, double x1, double y1, const Color& color, double alpha = 1.0) {
@@ -352,8 +357,8 @@ namespace im {
 			dest.setIndex(this->index);
 		}
 
-		virtual void writeTo(ImageBase<T>& dest, int y0, int x0, T alpha, ThreadPoolBase& pool = defaultPool) const {
-			assert(this->colorBase() == dest.colorBase() && x0 + w() < dest.w() && y0 + h() < dest.h() && "invalid image for copy");
+		virtual void copyTo(ImageBase<T>& dest, int y0, int x0, T alpha, ThreadPoolBase& pool = defaultPool) const {
+			assert(this->colorBase() == dest.colorBase() && x0 + w() <= dest.w() && y0 + h() <= dest.h() && "invalid image for copy");
 			T mv = colorPtr->maxValue;
 			auto fcn = [&] (size_t r) {
 				for (size_t c = 0; c < w(); c++) {
