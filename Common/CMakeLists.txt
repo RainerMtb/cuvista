@@ -2,6 +2,7 @@
 
 add_library(Common STATIC 
     Color.cpp
+    BaseData.cpp
     CoreData.cpp
     ErrorLogger.cpp
     ImageClasses.cpp

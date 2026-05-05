@@ -85,7 +85,7 @@ protected:
 public:
 	MovieReader& mReader;
 	MovieWriter& mWriter;
-	ThreadPool mPool;
+	mutable ThreadPool mPool;
 	FrameResult mFrameResult;
 	Trajectory mTrajectory;
 	std::vector<PointResult> mResultPoints;

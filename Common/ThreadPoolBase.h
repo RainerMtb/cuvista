@@ -23,20 +23,25 @@
 #include <vector>
 #include <future>
 
+using FuncIndex = std::function<size_t()>;
+using FuncPool = std::function<void(FuncIndex)>;
+
 //base class syncronously executes jobs
 class ThreadPoolBase {
 
 public:
 	virtual ~ThreadPoolBase() = default;
-	virtual void wait() const {}
-	virtual void cancel() {}
+	virtual void wait() {}
 	virtual void shutdown() {}
 
 	//execute one job
-	virtual std::future<void> add(std::function<void()> job) const;
+	virtual std::future<void> add(std::function<void()> job);
 
 	//iterate over job array
-	virtual void addAndWait(std::function<void(size_t)> job, size_t iterStart, size_t iterEnd) const;
+	virtual void addAndWait(std::function<void(size_t)> job, size_t iterStart, size_t iterEnd);
+
+	//iterate over job array
+	virtual void workAndWait(FuncPool sharedJob, size_t iterStart, size_t iterEnd);
 
 	//number of threads
 	virtual size_t size() const;

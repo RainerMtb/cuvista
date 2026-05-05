@@ -17,97 +17,107 @@
  */
 
 #include "ThreadPool.hpp"
-#include <algorithm>
+#include "Util.hpp"
+#include <numeric>
 
 ThreadPool::ThreadPool(size_t numThreads) :
-	mBusyArray(numThreads) 
+	mActive(numThreads)
 {
 	//define function to be executed by each thread
-	std::function<void(size_t)> loopFunction = [&] (size_t idx) {
-		while (true) {
-			//get next pending job
+	for (size_t i = 0; i < numThreads; i++) {
+		auto loopFunc = [&, i] {
 			std::packaged_task<void()> pt;
-			{
-				std::unique_lock<std::mutex> lock(mMutex);
-				mBusyArray[idx] = false;
-				if (isIdle()) mBusy.notify_all();
+			while (true) {
+				std::unique_lock<std::mutex> lock(mMutexWork);
+				mCVwork.wait(lock, [&] { return mHasSharedWork || mJobs.size() || mCancelRequest; });
+				pt = std::packaged_task<void()>([] {});
+				if (mCancelRequest) {
+					return;
 
-				mCV.wait(lock, [&] () { return !mJobs.empty() || mCancelRequest; });
-				if (mCancelRequest) break;
-				pt = std::move(mJobs.front());
-				mJobs.pop();
+				} else if (mJobs.size()) {
+					pt = std::move(mJobs.front());
+					mJobs.pop();
 
-				mBusyArray[idx] = true;
+				} else if (mHasSharedWork) {
+					pt = std::packaged_task<void()>(mSharedJob);
+				}
+				mActive[i] = 1;
+				lock.unlock();
+
+				pt();
+
+				std::unique_lock<std::mutex> lockDone(mMutexWork);
+				mActive[i] = 0;
+				if (activeWorkers() == 0) {
+					mCVdone.notify_all();
+				}
 			}
-
-			//execute the job
-			pt();
-		}
+		};
+		mThreads.emplace_back(loopFunc);
 	};
-
-	//start threads
-	for (size_t thr = 0; thr < numThreads; thr++) {
-		mThreads.emplace_back(loopFunction, thr);
-	}
 }
 
-bool ThreadPool::isIdle() const {
-	return mJobs.empty() && std::none_of(mBusyArray.cbegin(), mBusyArray.cend(), [] (int a) { return a; });
+size_t ThreadPool::size() const {
+	return mThreads.size();
 }
 
-bool ThreadPool::isBusy() const {
-	return !mJobs.empty() || std::any_of(mBusyArray.cbegin(), mBusyArray.cend(), [] (int a) { return a; });
+int ThreadPool::activeWorkers() const {
+	return std::accumulate(mActive.cbegin(), mActive.cend(), 0);
 }
 
-void ThreadPool::wait() const {
-	std::unique_lock<std::mutex> lock(mMutex);
-	if (isBusy()) mBusy.wait(lock);
+void ThreadPool::wait() {
+	std::unique_lock<std::mutex> lock(mMutexWork);
+	mCVdone.wait(lock, [&] { return activeWorkers() == 0; });
 }
 
-ThreadPool::~ThreadPool() {
-	shutdown();
-}
-
-std::future<void> ThreadPool::add(std::function<void()> job) const {
-	std::unique_lock<std::mutex> lock(mMutex);
+std::future<void> ThreadPool::add(std::function<void()> job) {
+	std::unique_lock<std::mutex> lock(mMutexWork);
 	auto& task = mJobs.emplace(std::packaged_task<void()>(job));
 	auto fut = task.get_future();
-	mCV.notify_one();
+	mCVwork.notify_one();
 	return fut;
 }
 
-void ThreadPool::addAndWait(std::function<void(size_t)> job, size_t iterStart, size_t iterEnd) const {
-	std::vector<std::future<void>> futures(iterEnd - iterStart);
-	{
-		//create jobs and queue up
-		std::unique_lock<std::mutex> lock(mMutex);
-		for (size_t i = iterStart; i < iterEnd; i++) {
-			auto& task = mJobs.emplace(std::packaged_task<void()>(std::bind(job, i)));
-			futures[i] = task.get_future();
+void ThreadPool::addAndWait(std::function<void(size_t)> job, size_t iterStart, size_t iterEnd) {
+	auto func = [=] (FuncIndex workIndex) {
+		for (size_t i = workIndex(); i < iterEnd; i = workIndex()) {
+			job(i);
 		}
-		mCV.notify_all();
-	}
-	//wait for jobs to complete
-	//destructor of future only blocks when created through std::async ?!
-	for (auto& f : futures) {
-		f.wait();
-	}
+	};
+	workAndWait(func, iterStart, iterEnd);
 }
 
-void ThreadPool::cancel() {
-	std::unique_lock<std::mutex> lock(mMutex);
-	mCancelRequest = true;
-	mCV.notify_all();
+void ThreadPool::workAndWait(FuncPool sharedJob, size_t iterStart, size_t iterEnd) {
+	std::unique_lock<std::mutex> lock(mMutexWork);
+	size_t idx = iterStart;
+	std::mutex m;
+	auto sharedIndex = [&] {
+		std::unique_lock<std::mutex> lck(m);
+		size_t temp = idx;
+		idx++;
+		mHasSharedWork = idx < iterEnd;
+		return temp;
+	};
+	mSharedJob = std::bind(sharedJob, sharedIndex);
+	mHasSharedWork = true;
+	lock.unlock();
+	mCVwork.notify_all();
+
+	std::unique_lock<std::mutex> lockDone(mMutexWork);
+	mCVdone.wait(lockDone, [&] { return activeWorkers() == 0 && mHasSharedWork == false; });
 }
 
 void ThreadPool::shutdown() {
-	cancel();
+	std::unique_lock<std::mutex> lock(mMutexWork);
+	mCancelRequest = true;
+	lock.unlock();
+	mCVwork.notify_all();
 	for (std::thread& thr : mThreads) {
 		thr.join();
 	}
 	mThreads.clear();
 }
 
-size_t ThreadPool::size() const {
-	return mThreads.size();
+ThreadPool::~ThreadPool() {
+	shutdown();
 }

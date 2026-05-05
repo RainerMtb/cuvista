@@ -17,75 +17,7 @@
  */
 
 #include <cmath>
-#include <cassert>
 #include "CoreData.hpp"
-
-float Quartet::operator [] (size_t idx) const {
-	assert(idx < 4 && "invalid index");
-	switch (idx) {
-	case 0: return v;
-	case 1: return u;
-	case 2: return y;
-	case 3: return x;
-	default: return std::numeric_limits<float>::quiet_NaN();
-	}
-}
-
-FloatVuyx::FloatVuyx(const Quartet& other) {
-	v = other.v;
-	u = other.u;
-	y = other.y;
-	x = other.x;
-}
-
-float FloatVuyx::operator [] (size_t idx) const {
-	assert(idx < 4 && "invalid index");
-	switch (idx) {
-	case 0: return v;
-	case 1: return u;
-	case 2: return y;
-	case 3: return x;
-	default: return std::numeric_limits<float>::quiet_NaN();
-	}
-}
-
-FloatVuyx operator + (const FloatVuyx& a, const FloatVuyx& b) {
-	return { a.v + b.v, a.u + b.u, a.y + b.y, a.x + b.x};
-}
-
-FloatVuyx operator - (const FloatVuyx& a, const FloatVuyx& b) {
-	return { a.v - b.v, a.u - b.u, a.y - b.y, a.x - b.x };
-}
-
-FloatVuyx operator * (const FloatVuyx& a, const FloatVuyx& b) {
-	return { a.v * b.v, a.u * b.u, a.y * b.y, a.x * b.x };
-}
-
-FloatVuyx operator * (float f, const FloatVuyx& a) {
-	return { a.v * f, a.u * f, a.y * f, a.x * f };
-}
-
-FloatVuyx operator / (const FloatVuyx& a, const FloatVuyx& b) {
-	return { a.v / b.v, a.u / b.u, a.y / b.y, a.x / b.x };
-}
-
-FloatVuyx operator / (float f, const FloatVuyx& a) {
-	return { a.v / f, a.u / f, a.y / f, a.x / f };
-}
-
-FloatVuyx std::fma(const FloatVuyx& x, const FloatVuyx& y, const FloatVuyx& z) {
-	return { std::fma(x.v, y.v, z.v), std::fma(x.u, y.u, z.u), std::fma(x.y, y.y, z.y), std::fma(x.x, y.x, z.x) };
-}
-
-float Triplet::operator [] (size_t idx) const {
-	assert(idx < 3 && "invalid Triplet index");
-	switch (idx) {
-	case 0: return y;
-	case 1: return u;
-	case 2: return v;
-	default: return std::numeric_limits<float>::quiet_NaN();
-	}
-}
 
 bool PointResult::isValid() const {
 	return result > PointResultType::RUNNING;

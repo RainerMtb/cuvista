@@ -31,7 +31,7 @@ static void f1() {
 }
 
 static void f2() {
-	util::debugLogger = std::make_shared<util::DebugLoggerString>();
+	//util::debugLogger = std::make_shared<util::DebugLoggerString>();
 	//util::debugLogger = std::make_shared<util::DebugLoggerTcp>("10.0.0.1", 5555);
 
 	std::vector<std::string> argsLines = {
@@ -44,10 +44,10 @@ static void f2() {
 		/*6*/ "-device 3 -i D:/VideoTest/12.mp4 -o f:/videoOut.mp4 -y -frames 200",
 		/*7*/ "-device 3 -i D:/VideoTest/02short.mp4 -o f:/videoOut.mp4 -y -stack 60:60",
 		/*8*/ "-i d:/VideoTest/06b.mkv -o null -bgmode color -y -zoom -8 -device 3",
-		/*9*/ "-i d:/videoTest/15.ts -o d:/videoTest/out/15.mkv -o f:/videoOut.mp4 -y -device 2 -progress 0",
+		/*9*/ "-i d:/videoTest/15.ts -o f:/videoOut.mp4 -y -device 0 -frames 150 -log tcp://10.0.0.1:5555",
 	};
 
-	int idx = 9;
+	int idx = 0;
 	std::string argsLine = argsLines[idx];
 	std::cout << "------- CuvistaTest -------" << std::endl;
 	std::cout << "------- params: " << argsLine << std::endl << std::endl;

@@ -141,12 +141,13 @@ void CpuFrame::adjustPyramid(int64_t frameIndex, float gamma) {
 void CpuFrame::computeStart(int64_t frameIndex, std::span<PointResult> results) {}
 
 void CpuFrame::computeTerminate(int64_t frameIndex, std::span<PointResult> results) {
+	//util::ConsoleTimer ic("cpu compute");
 	size_t idx0 = frameIndex % mPyr.size();
 	size_t idx1 = (frameIndex - 1) % mPyr.size();
 	assert(mPyr[idx0].frameIndex > 0 && mPyr[idx0].frameIndex == mPyr[idx1].frameIndex + 1 && "wrong frames to compute");
 	//Mat<double>::precision(16);
 
-	for (int threadIdx = 0; threadIdx < mData.cpuThreads; threadIdx++) mPool.add([&, threadIdx] {
+	auto func = [&] (FuncIndex workIndex) {
 		int ir = mData.ir;
 		int iw = mData.iw;
 		Matd jm = Matd::allocate(iw, iw);
@@ -158,7 +159,8 @@ void CpuFrame::computeTerminate(int64_t frameIndex, std::span<PointResult> resul
 		Matd g = Matd::allocate(6, 6);
 		Matd I = Matd::eye(6);
 
-		for (int iy0 = threadIdx; iy0 < mData.iyCount; iy0 += mData.cpuThreads) {
+		for (size_t idx = workIndex(); idx < mData.iyCount; idx = workIndex()) {
+			int iy0 = int(idx);
 			for (int ix0 = 0; ix0 < mData.ixCount; ix0++) {
 				//pattern of forward and backwards pattern matching
 				int direction = (ix0 % 2) ^ (iy0 % 2);
@@ -287,11 +289,12 @@ void CpuFrame::computeTerminate(int64_t frameIndex, std::span<PointResult> resul
 				results[idx] = { idx, ix0, iy0, x0, y0, u * fdir, v * fdir, result, zp, direction, length };
 			}
 		}
-	});
-	mPool.wait();
+	};
+	mPool.workAndWait(func, 0, mData.iyCount);
 }
 
 void CpuFrame::outputData(int64_t frameIndex, AffineDataFloat trf) {
+	//util::ConsoleTimer ic("cpu output data");
 	size_t yuvidx = frameIndex % mInput.size();
 	const ImageYuv& input = mInput[yuvidx];
 	constexpr float f = 1.0f / 255.0f;
@@ -338,6 +341,7 @@ void CpuFrame::outputData(int64_t frameIndex, AffineDataFloat trf) {
 }
 
 void CpuFrame::getOutput(int64_t frameIndex, Image8& image) const {
+	//util::ConsoleTimer ic("cpu output");
 	assert(frameIndex == mOutput.index && "invalid frame index");
 	mOutput.convertTo(image, mPool);
 	image.index = frameIndex;

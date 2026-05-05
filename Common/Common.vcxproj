@@ -91,6 +91,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="BaseData.cpp" />
     <ClCompile Include="CoreData.cpp" />
     <ClCompile Include="ErrorLogger.cpp" />
     <ClCompile Include="ImageClasses.cpp" />

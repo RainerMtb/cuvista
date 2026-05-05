@@ -17,23 +17,26 @@
  */
 
 #include <functional>
-#include <mutex>
-#include <vector>
-#include <queue>
-#include <cassert>
 #include "ThreadPoolBase.h"
 
  //execute one job
-std::future<void> ThreadPoolBase::add(std::function<void()> job) const {
+std::future<void> ThreadPoolBase::add(std::function<void()> job) {
 	job();
 	return { std::async([] {}) };
 }
 
 //iterate over job array
-void ThreadPoolBase::addAndWait(std::function<void(size_t)> job, size_t iterStart, size_t iterEnd) const {
+void ThreadPoolBase::addAndWait(std::function<void(size_t)> job, size_t iterStart, size_t iterEnd) {
 	for (size_t i = iterStart; i < iterEnd; i++) {
 		std::bind(job, i)();
 	}
+}
+
+//iterate over job array
+void ThreadPoolBase::workAndWait(FuncPool sharedJob, size_t iterStart, size_t iterEnd) {
+	size_t idx = iterStart;
+	FuncIndex workIndex = [&] { return idx++; };
+	sharedJob(workIndex);
 }
 
 //number of threads

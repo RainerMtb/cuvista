@@ -26,30 +26,32 @@ class ThreadPool : public ThreadPoolBase {
 
 private:
 	std::vector<std::thread> mThreads;
-	std::vector<int> mBusyArray; //do not use vector<bool> here
-	mutable std::queue<std::packaged_task<void()>> mJobs;
-	mutable std::mutex mMutex;
-	mutable std::condition_variable mCV, mBusy;
+	std::queue<std::packaged_task<void()>> mJobs;
+	std::mutex mMutexWork;
+	std::condition_variable mCVwork, mCVdone;
 	bool mCancelRequest = false;
+	std::vector<int> mActive;
 
-	bool isIdle() const;
-	bool isBusy() const;
+	std::function<void()> mSharedJob;
+	bool mHasSharedWork = false;
+
+	int activeWorkers() const;
 
 public:
 	ThreadPool(size_t numThreads = 1);
 	~ThreadPool() override;
 
 	//wait for all pending jobs to execute
-	void wait() const override;
+	void wait() override;
 
 	//add job to queue
-	std::future<void> add(std::function<void()> job) const override;
+	std::future<void> add(std::function<void()> job) override;
 
-	//create jobs and add to queue by iterating from a to b and calling func
-	void addAndWait(std::function<void(size_t)> job, size_t iterStart, size_t iterEnd) const override;
+	//create jobs and add to queue by iterating from min to max and calling func
+	void addAndWait(std::function<void(size_t)> job, size_t iterStart, size_t iterEnd) override;
 
-	//cancel all jobs
-	void cancel() override;
+	//create one shared job and iterate from min to max
+	void workAndWait(FuncPool sharedJob, size_t iterStart, size_t iterEnd) override;
 
 	//shutdown all threads
 	void shutdown() override;

@@ -60,7 +60,7 @@ namespace im {
 		template <class R> friend class ImageColorBase;
 
 		template <class R> void convertValuesTo(std::shared_ptr<ImageColorBase<R>> dest, ThreadPoolBase& pool = defaultPool) const {
-			for (int r = 0; r < typePtr->rows(); r++) {
+			auto fcn = [&] (size_t r) {
 				T* srcPtr = typePtr->row(r);
 				R* destPtr = dest->typePtr->row(r);
 				for (int c = 0; c < typePtr->cols(); c++) {
@@ -68,7 +68,8 @@ namespace im {
 					srcPtr++;
 					destPtr++;
 				}
-			}
+			};
+			pool.addAndWait(fcn, 0, typePtr->h);
 		}
 
 		template <class R> void convertTo(std::shared_ptr<ImageColorBase<R>> dest, ThreadPoolBase& pool = defaultPool) const {

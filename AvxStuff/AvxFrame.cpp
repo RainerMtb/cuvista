@@ -211,10 +211,10 @@ void AvxFrame::filter1(const AvxMatf& src, int h, int w, AvxMatf& dest, std::spa
 	__m512i vidx = _mm512_mullo_epi32(vw, idx);
 	__mmask16 mask = 0x0FFF;
 
-	for (int threadIdx = 0; threadIdx < mData.cpuThreads; threadIdx++) mPool.add([&, threadIdx] {
+	auto func = [&] (FuncIndex workIndex) {
 		V16f x, result;
 
-		for (int r = threadIdx; r < h; r += mData.cpuThreads) {
+		for (size_t r = workIndex(); r < h; r = workIndex()) {
 			const float* row = src.addr(r, 0);
 
 			//write first points adhering to border
@@ -235,8 +235,8 @@ void AvxFrame::filter1(const AvxMatf& src, int h, int w, AvxMatf& dest, std::spa
 			result = rotsum(x, ks);
 			_mm512_mask_i32scatter_ps(dest.addr(w - 12, r), mask, vidx, result, 4);
 		}
-	});
-	mPool.wait();
+	};
+	mPool.workAndWait(func, 0, h);
 }
 
 static V16f rotsum(V16f a, V16f b, std::span<V16f> ks) {
@@ -360,7 +360,7 @@ void AvxFrame::computeTerminate(int64_t frameIndex, std::span<PointResult> resul
 	size_t idx1 = (frameIndex - 1) % mPyr.size();
 	assert(mPyr[idx0].frameIndex > 0 && mPyr[idx0].frameIndex == mPyr[idx1].frameIndex + 1 && "wrong frames to compute");
 
-	for (int threadIdx = 0; threadIdx < mData.cpuThreads; threadIdx++) mPool.add([&, threadIdx] {
+	auto func = [&] (FuncIndex workIndex) {
 		int ir = mData.ir;
 		int iw = mData.iw;
 
@@ -370,7 +370,8 @@ void AvxFrame::computeTerminate(int64_t frameIndex, std::span<PointResult> resul
 		__mmask8 maskIW = (1 << iw) - 1;
 		V8d iota = iotas.dx8;
 
-		for (int iy0 = threadIdx; iy0 < mData.iyCount; iy0 += mData.cpuThreads) {
+		for (size_t idx = workIndex(); idx < mData.iyCount; idx = workIndex()) {
+			int iy0 = int(idx);
 			for (int ix0 = 0; ix0 < mData.ixCount; ix0++) {
 				wp = { 1, 0, 0, 0, 1, 0 };
 				int direction = (ix0 % 2) ^ (iy0 % 2);
@@ -548,8 +549,8 @@ void AvxFrame::computeTerminate(int64_t frameIndex, std::span<PointResult> resul
 				results[idx] = { idx, ix0, iy0, x0, y0, u * fdir, v * fdir, result, zp, direction, length };
 			}
 		}
-	});
-	mPool.wait();
+	};
+	mPool.workAndWait(func, 0, mData.iyCount);
 }
 
 //compute bilinear interpolation
@@ -574,83 +575,81 @@ void AvxFrame::warpBack4(const AffineDataFloat& trf, const AvxMatf& input, AvxMa
 	V16f m11 = trf.m11;
 	V16f m12 = trf.m12;
 
-	for (int threadIdx = 0; threadIdx < mData.cpuThreads; threadIdx++) mPool.add([&, threadIdx] {
-		for (int r = threadIdx; r < mData.h; r += mData.cpuThreads) {
-			V16f ixf = iotas.fx16;
-			V16f iyf = float(r);
-			V16f fstride = float(input.w());
-			V16f ps_zero = 0.0f;
-			__m512i epi_one = _mm512_set1_epi32(1);
-			__m512i epi_four = _mm512_set1_epi32(4);
-			__m512i epi_stride = _mm512_set1_epi32(input.w());
-			std::array<int, 16> idx00, idx01, idx10, idx11;
+	auto func = [&] (size_t r) {
+		V16f ixf = iotas.fx16;
+		V16f iyf = float(r);
+		V16f fstride = float(input.w());
+		V16f ps_zero = 0.0f;
+		__m512i epi_one = _mm512_set1_epi32(1);
+		__m512i epi_four = _mm512_set1_epi32(4);
+		__m512i epi_stride = _mm512_set1_epi32(input.w());
+		std::array<int, 16> idx00, idx01, idx10, idx11;
 
-			for (int c = 0; c < mData.w; c += 16) {
-				//transform
-				V16f x = m02;
-				x = _mm512_fmadd_ps(iyf, m01, x);
-				x = _mm512_fmadd_ps(ixf, m00, x);
-				V16f y = m12;
-				y = _mm512_fmadd_ps(iyf, m11, y);
-				y = _mm512_fmadd_ps(ixf, m10, y);
-				ixf += 16;
+		for (int c = 0; c < mData.w; c += 16) {
+			//transform
+			V16f x = m02;
+			x = _mm512_fmadd_ps(iyf, m01, x);
+			x = _mm512_fmadd_ps(ixf, m00, x);
+			V16f y = m12;
+			y = _mm512_fmadd_ps(iyf, m11, y);
+			y = _mm512_fmadd_ps(ixf, m10, y);
+			ixf += 16;
 
-				//check within image bounds
-				__mmask16 mask = 0xFFFF;
-				V16f check;
-				mask &= _mm512_cmp_ps_mask(x, ps_zero, _CMP_GE_OS); //greater equal
-				mask &= _mm512_cmp_ps_mask(y, ps_zero, _CMP_GE_OS); //greater equal
-				check = mData.w - 1.0f;
-				mask &= _mm512_cmp_ps_mask(x, check, _CMP_LE_OS); //less equal
-				check = mData.h - 1.0f;
-				mask &= _mm512_cmp_ps_mask(y, check, _CMP_LE_OS); //less equal
+			//check within image bounds
+			__mmask16 mask = 0xFFFF;
+			V16f check;
+			mask &= _mm512_cmp_ps_mask(x, ps_zero, _CMP_GE_OS); //greater equal
+			mask &= _mm512_cmp_ps_mask(y, ps_zero, _CMP_GE_OS); //greater equal
+			check = mData.w - 1.0f;
+			mask &= _mm512_cmp_ps_mask(x, check, _CMP_LE_OS); //less equal
+			check = mData.h - 1.0f;
+			mask &= _mm512_cmp_ps_mask(y, check, _CMP_LE_OS); //less equal
 
-				//compute fractions
-				V16f flx = _mm512_floor_ps(x);
-				V16f fly = _mm512_floor_ps(y);
-				V16f dx16 = _mm512_sub_ps(x, flx);
-				V16f dy16 = _mm512_sub_ps(y, fly);
+			//compute fractions
+			V16f flx = _mm512_floor_ps(x);
+			V16f fly = _mm512_floor_ps(y);
+			V16f dx16 = _mm512_sub_ps(x, flx);
+			V16f dy16 = _mm512_sub_ps(y, fly);
 
-				//index to load f00
-				V16f idxf = fly * fstride + flx * 4.0f;
-				__m512i idx0 = _mm512_cvtps_epi32(idxf);
-				_mm512_storeu_epi32(idx00.data(), idx0);
+			//index to load f00
+			V16f idxf = fly * fstride + flx * 4.0f;
+			__m512i idx0 = _mm512_cvtps_epi32(idxf);
+			_mm512_storeu_epi32(idx00.data(), idx0);
 
-				//index to load f01
-				__mmask16 maskdx = _mm512_cmp_ps_mask(dx16, ps_zero, _CMP_NEQ_OS); //not equal
-				__m512i idx1 = _mm512_mask_add_epi32(idx0, maskdx, idx0, epi_four);
-				_mm512_storeu_epi32(idx01.data(), idx1);
+			//index to load f01
+			__mmask16 maskdx = _mm512_cmp_ps_mask(dx16, ps_zero, _CMP_NEQ_OS); //not equal
+			__m512i idx1 = _mm512_mask_add_epi32(idx0, maskdx, idx0, epi_four);
+			_mm512_storeu_epi32(idx01.data(), idx1);
 
-				//index to load f10
-				__mmask16 maskdy = _mm512_cmp_ps_mask(dy16, ps_zero, _CMP_NEQ_OS); //not equal
-				idx1 = _mm512_mask_add_epi32(idx0, maskdy, idx0, epi_stride);
-				_mm512_storeu_epi32(idx10.data(), idx1);
+			//index to load f10
+			__mmask16 maskdy = _mm512_cmp_ps_mask(dy16, ps_zero, _CMP_NEQ_OS); //not equal
+			idx1 = _mm512_mask_add_epi32(idx0, maskdy, idx0, epi_stride);
+			_mm512_storeu_epi32(idx10.data(), idx1);
 
-				//index to load f11
-				idx1 = _mm512_mask_add_epi32(idx1, maskdx, idx1, epi_four);
-				_mm512_storeu_epi32(idx11.data(), idx1);
+			//index to load f11
+			idx1 = _mm512_mask_add_epi32(idx1, maskdx, idx1, epi_four);
+			_mm512_storeu_epi32(idx11.data(), idx1);
 
-				__m512i epi_idx = _mm512_setzero_si512();
-				for (size_t i = 0; i < 16; i++) {
-					if (mask & 1) {
-						V4f f00 = input.data() + idx00[i];
-						V4f f01 = input.data() + idx01[i];
-						V4f f10 = input.data() + idx10[i];
-						V4f f11 = input.data() + idx11[i];
+			__m512i epi_idx = _mm512_setzero_si512();
+			for (size_t i = 0; i < 16; i++) {
+				if (mask & 1) {
+					V4f f00 = input.data() + idx00[i];
+					V4f f01 = input.data() + idx01[i];
+					V4f f10 = input.data() + idx10[i];
+					V4f f11 = input.data() + idx11[i];
 
-						V4f one = 1.0f;
-						V4f dx = _mm512_castps512_ps128(_mm512_permutexvar_ps(epi_idx, dx16));
-						V4f dy = _mm512_castps512_ps128(_mm512_permutexvar_ps(epi_idx, dy16));
-						V4f result = (one - dx) * (one - dy) * f00 + (one - dx) * dy * f10 + dx * (one - dy) * f01 + dx * dy * f11;
-						result.storeu(dest.addr(r, (c + i) * 4));
-					}
-					mask >>= 1;
-					epi_idx = _mm512_add_epi32(epi_idx, epi_one);
+					V4f one = 1.0f;
+					V4f dx = _mm512_castps512_ps128(_mm512_permutexvar_ps(epi_idx, dx16));
+					V4f dy = _mm512_castps512_ps128(_mm512_permutexvar_ps(epi_idx, dy16));
+					V4f result = (one - dx) * (one - dy) * f00 + (one - dx) * dy * f10 + dx * (one - dy) * f01 + dx * dy * f11;
+					result.storeu(dest.addr(r, (c + i) * 4));
 				}
+				mask >>= 1;
+				epi_idx = _mm512_add_epi32(epi_idx, epi_one);
 			}
 		}
-	});
-	mPool.wait();
+	};
+	mPool.addAndWait(func, 0, mData.h);
 }
 
 void AvxFrame::warpBack1(const AffineDataFloat& trf, const AvxMatf& input, AvxMatf& dest) {
@@ -663,77 +662,75 @@ void AvxFrame::warpBack1(const AffineDataFloat& trf, const AvxMatf& input, AvxMa
 	const V16f m11 = trf.m11;
 	const V16f m12 = trf.m12;
 
-	for (int threadIdx = 0; threadIdx < mData.cpuThreads; threadIdx++) mPool.add([&, threadIdx] {
-		for (int r = threadIdx; r < mData.h; r += mData.cpuThreads) {
-			V16f ixf = iotas.fx16;
-			V16f iyf = float(r);
-			V16f ps_zero = _mm512_set1_ps(0.0f);
-			V16f fstride = float(input.w());
-			__m512i epi_one = _mm512_set1_epi32(1);
-			__m512i epi_stride = _mm512_set1_epi32(input.w());
-			__m512i idx;
-			
-			for (int c = 0; c < mData.w; c += 16) {
-				//transform
-				V16f x = m02;
-				x = _mm512_fmadd_ps(iyf, m01, x);
-				x = _mm512_fmadd_ps(ixf, m00, x);
-				V16f y = m12;
-				y = _mm512_fmadd_ps(iyf, m11, y);
-				y = _mm512_fmadd_ps(ixf, m10, y);
-				ixf += 16;
+	auto func = [&] (size_t r) {
+		V16f ixf = iotas.fx16;
+		V16f iyf = float(r);
+		V16f ps_zero = _mm512_set1_ps(0.0f);
+		V16f fstride = float(input.w());
+		__m512i epi_one = _mm512_set1_epi32(1);
+		__m512i epi_stride = _mm512_set1_epi32(input.w());
+		__m512i idx;
 
-				//check within image bounds
-				__mmask16 mask = 0xFFFF;
-				V16f check;
-				check = ps_zero;
-				mask &= _mm512_cmp_ps_mask(x, check, _CMP_GE_OS); //greater equal
-				mask &= _mm512_cmp_ps_mask(y, check, _CMP_GE_OS); //greater equal
-				check = _mm512_set1_ps(float(input.w() - 1));
-				mask &= _mm512_cmp_ps_mask(x, check, _CMP_LE_OS); //less equal
-				check = _mm512_set1_ps(float(input.h() - 1));
-				mask &= _mm512_cmp_ps_mask(y, check, _CMP_LE_OS); //less equal
+		for (int c = 0; c < mData.w; c += 16) {
+			//transform
+			V16f x = m02;
+			x = _mm512_fmadd_ps(iyf, m01, x);
+			x = _mm512_fmadd_ps(ixf, m00, x);
+			V16f y = m12;
+			y = _mm512_fmadd_ps(iyf, m11, y);
+			y = _mm512_fmadd_ps(ixf, m10, y);
+			ixf += 16;
 
-				//compute fractions
-				V16f flx = _mm512_floor_ps(x);
-				V16f fly = _mm512_floor_ps(y);
-				V16f dx = _mm512_sub_ps(x, flx);
-				V16f dy = _mm512_sub_ps(y, fly);
+			//check within image bounds
+			__mmask16 mask = 0xFFFF;
+			V16f check;
+			check = ps_zero;
+			mask &= _mm512_cmp_ps_mask(x, check, _CMP_GE_OS); //greater equal
+			mask &= _mm512_cmp_ps_mask(y, check, _CMP_GE_OS); //greater equal
+			check = _mm512_set1_ps(float(input.w() - 1));
+			mask &= _mm512_cmp_ps_mask(x, check, _CMP_LE_OS); //less equal
+			check = _mm512_set1_ps(float(input.h() - 1));
+			mask &= _mm512_cmp_ps_mask(y, check, _CMP_LE_OS); //less equal
 
-				//index to load f00
-				V16f fidx = fly * fstride + flx;
-				idx = _mm512_cvtps_epi32(fidx);
-				V16f f00 = _mm512_mask_i32gather_ps(ps_zero, mask, idx, input.data(), 4);
+			//compute fractions
+			V16f flx = _mm512_floor_ps(x);
+			V16f fly = _mm512_floor_ps(y);
+			V16f dx = _mm512_sub_ps(x, flx);
+			V16f dy = _mm512_sub_ps(y, fly);
 
-				//index to load f01
-				__mmask16 maskdx = _mm512_cmp_ps_mask(dx, ps_zero, _CMP_NEQ_OS); //not equal
-				__m512i idx2 = _mm512_mask_add_epi32(idx, maskdx, idx, epi_one);
-				V16f f01 = _mm512_mask_i32gather_ps(ps_zero, mask, idx2, input.data(), 4);
+			//index to load f00
+			V16f fidx = fly * fstride + flx;
+			idx = _mm512_cvtps_epi32(fidx);
+			V16f f00 = _mm512_mask_i32gather_ps(ps_zero, mask, idx, input.data(), 4);
 
-				//index to load f10
-				__mmask16 maskdy = _mm512_cmp_ps_mask(dy, ps_zero, _CMP_NEQ_OS); //not equal
-				__m512i idx3 = _mm512_mask_add_epi32(idx, maskdy, idx, epi_stride);
-				V16f f10 = _mm512_mask_i32gather_ps(ps_zero, mask, idx3, input.data(), 4);
+			//index to load f01
+			__mmask16 maskdx = _mm512_cmp_ps_mask(dx, ps_zero, _CMP_NEQ_OS); //not equal
+			__m512i idx2 = _mm512_mask_add_epi32(idx, maskdx, idx, epi_one);
+			V16f f01 = _mm512_mask_i32gather_ps(ps_zero, mask, idx2, input.data(), 4);
 
-				//index to load f11
-				__m512i idx4 = _mm512_mask_add_epi32(idx3, maskdx, idx3, epi_one);
-				V16f f11 = _mm512_mask_i32gather_ps(ps_zero, mask, idx4, input.data(), 4);
+			//index to load f10
+			__mmask16 maskdy = _mm512_cmp_ps_mask(dy, ps_zero, _CMP_NEQ_OS); //not equal
+			__m512i idx3 = _mm512_mask_add_epi32(idx, maskdy, idx, epi_stride);
+			V16f f10 = _mm512_mask_i32gather_ps(ps_zero, mask, idx3, input.data(), 4);
 
-				V16f result = interpolate(f00, f10, f01, f11, dx, dy);
-				result.storeu(dest.addr(r, c), mask);
-			}
+			//index to load f11
+			__m512i idx4 = _mm512_mask_add_epi32(idx3, maskdx, idx3, epi_one);
+			V16f f11 = _mm512_mask_i32gather_ps(ps_zero, mask, idx4, input.data(), 4);
+
+			V16f result = interpolate(f00, f10, f01, f11, dx, dy);
+			result.storeu(dest.addr(r, c), mask);
 		}
-	});
-	mPool.wait();
+	};
+	mPool.addAndWait(func, 0, mData.h);
 }
 
 void AvxFrame::unsharp4(const AvxMatf& warped, AvxMatf& gauss, AvxMatf& out) {
 	//util::ConsoleTimer ic("avx unsharp");
-	for (int threadIdx = 0; threadIdx < mData.cpuThreads; threadIdx++) mPool.add([&, threadIdx] {
+	auto func = [&] (FuncIndex workIndex) {
 		V16f unsharp(mData.unsharp4[0], mData.unsharp4[1], mData.unsharp4[2], mData.unsharp4[3]);
 		V16f zero = 0.0f;
 		V16f one = 1.0f;
-		for (int r = threadIdx; r < mData.h; r += mData.cpuThreads) {
+		for (size_t r = workIndex(); r < mData.h; r = workIndex()) {
 			for (int c = 0; c < mData.w * 4; c += 16) {
 				V16f ps_warped = warped.addr(r, c);
 				V16f ps_gauss = gauss.addr(r, c);
@@ -741,31 +738,29 @@ void AvxFrame::unsharp4(const AvxMatf& warped, AvxMatf& gauss, AvxMatf& out) {
 				ps_unsharped.storeu(out.addr(r, c));
 			}
 		}
-	});
-	mPool.wait();
+	};
+	mPool.workAndWait(func, 0, mData.h);
 }
 
 void AvxFrame::writeVuyx(Image8& dest) const {
 	assert(dest.imageType() == ImageType::VUYX && "invalid image");
-	for (int threadIdx = 0; threadIdx < mData.cpuThreads; threadIdx++) mPool.add([&, threadIdx] {
-		for (int r = threadIdx; r < mData.h; r += mData.cpuThreads) {
-			const float* srcPtr = mOutput.addr(r, 0);
-			uchar* destPtr = dest.row(r);
-			for (int c = 0; c < mData.w * 4; c += 16) {
-				V16f out = srcPtr + c;
-				__m512i chars32 = _mm512_cvt_roundps_epi32(out * 255.0f, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
-				_mm512_mask_cvtusepi32_storeu_epi8(destPtr + c, 0xFFFF, chars32);
-			}
+	auto func = [&] (size_t r) {
+		const float* srcPtr = mOutput.addr(r, 0);
+		uchar* destPtr = dest.row(r);
+		for (int c = 0; c < mData.w * 4; c += 16) {
+			V16f out = srcPtr + c;
+			__m512i chars32 = _mm512_cvt_roundps_epi32(out * 255.0f, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
+			_mm512_mask_cvtusepi32_storeu_epi8(destPtr + c, 0xFFFF, chars32);
 		}
-	});
-	mPool.wait();
+	};
+	mPool.addAndWait(func, 0, mData.h);
 }
 
 void AvxFrame::writeYuv(Image8& dest) const {
 	assert(dest.imageType() == ImageType::YUV && "invalid image");
-	for (int threadIdx = 0; threadIdx < mData.cpuThreads; threadIdx++) mPool.add([&, threadIdx] {
+	auto func = [&] (FuncIndex workIndex) {
 		__m512i idx = _mm512_setr_epi32(2, 6, 10, 14, 1, 5, 9, 13, 0, 4, 8, 12, 0, 0, 0, 0);
-		for (int r = threadIdx; r < mData.h; r += mData.cpuThreads) {
+		for (size_t r = workIndex(); r < mData.h; r = workIndex()) {
 			const float* srcPtr = mOutput.addr(r, 0);
 			for (int c = 0; c < mData.w * 4; c += 16) {
 				V16f out = srcPtr + c;
@@ -781,8 +776,8 @@ void AvxFrame::writeYuv(Image8& dest) const {
 				_mm_mask_storeu_epi8(ptr, 0x0F00, yuv);
 			}
 		}
-	});
-	mPool.wait();
+	};
+	mPool.workAndWait(func, 0, mData.h);
 }
 
 void AvxFrame::writeNV12(Image8& dest) const {
@@ -819,21 +814,19 @@ void AvxFrame::yuvToRgba(const ImageYuv& yuv, Image8& dest) const {
 	V16f fu = { mFactorU[vidx[0]], mFactorU[vidx[1]], mFactorU[vidx[2]], mFactorU[vidx[3]] };
 	V16f fv = { mFactorV[vidx[0]], mFactorV[vidx[1]], mFactorV[vidx[2]], mFactorV[vidx[3]] };
 
-	for (int threadIdx = 0; threadIdx < mData.cpuThreads; threadIdx++) mPool.add([&, threadIdx] {
-		for (int r = threadIdx; r < yuv.h(); r += mData.cpuThreads) {
-			uchar* destPtr = dest.row(r);
-			for (int c = 0; c < yuv.w(); c += 4) {
-				__m512 y = _mm512_cvtepi32_ps(_mm512_cvtepu8_epi32(_mm_maskz_expandloadu_epi8(0x1111, yuv.addr(0, r, c))));
-				y = _mm512_permute_ps(y, 0);
-				__m512 u = _mm512_cvtepi32_ps(_mm512_cvtepu8_epi32(_mm_maskz_expandloadu_epi8(0x1111, yuv.addr(1, r, c))));
-				u = _mm512_permute_ps(u, 0);
-				__m512 v = _mm512_cvtepi32_ps(_mm512_cvtepu8_epi32(_mm_maskz_expandloadu_epi8(0x1111, yuv.addr(2, r, c))));
-				v = _mm512_permute_ps(v, 0);
-				avx::yuvToRgbaPacked(y, u, v, destPtr + c * 4, fu, fv);
-			}
+	auto func = [&] (size_t r) {
+		uchar* destPtr = dest.row(r);
+		for (int c = 0; c < yuv.w(); c += 4) {
+			__m512 y = _mm512_cvtepi32_ps(_mm512_cvtepu8_epi32(_mm_maskz_expandloadu_epi8(0x1111, yuv.addr(0, r, c))));
+			y = _mm512_permute_ps(y, 0);
+			__m512 u = _mm512_cvtepi32_ps(_mm512_cvtepu8_epi32(_mm_maskz_expandloadu_epi8(0x1111, yuv.addr(1, r, c))));
+			u = _mm512_permute_ps(u, 0);
+			__m512 v = _mm512_cvtepi32_ps(_mm512_cvtepu8_epi32(_mm_maskz_expandloadu_epi8(0x1111, yuv.addr(2, r, c))));
+			v = _mm512_permute_ps(v, 0);
+			avx::yuvToRgbaPacked(y, u, v, destPtr + c * 4, fu, fv);
 		}
-	});
-	mPool.wait();
+	};
+	mPool.addAndWait(func, 0, yuv.h());
 }
 
 
@@ -846,24 +839,22 @@ void AvxFrame::vuyxToRgba(const AvxMatf& vuyx, Image8& dest) const {
 	V16f fv = { mFactorV[vidx[0]], mFactorV[vidx[1]], mFactorV[vidx[2]], mFactorV[vidx[3]] };
 	V16f f = 255.0f;
 
-	for (int threadIdx = 0; threadIdx < mData.cpuThreads; threadIdx++) mPool.add([&, threadIdx] {
+	auto func = [&] (size_t r) {
 		int destW = dest.w() * 4;
-		for (int r = threadIdx; r < vuyx.h(); r += mData.cpuThreads) {
-			const float* srcPtr = vuyx.addr(r, 0);
-			uchar* destPtr = dest.row(r);
-			for (int c = 0; c < destW - 16; c += 16) {
-				V16f vuyx4 = srcPtr + c;
-				V16f y = _mm512_permute_ps(vuyx4, mask8(2, 2, 2, 2));
-				V16f u = _mm512_permute_ps(vuyx4, mask8(1, 1, 1, 1));
-				V16f v = _mm512_permute_ps(vuyx4, mask8(0, 0, 0, 0));
-				avx::yuvToRgbaPacked(y * f, u * f, v * f, destPtr + c, fu, fv);
-			}
-			V16f vuyx4 = srcPtr + destW - 16;
+		const float* srcPtr = vuyx.addr(r, 0);
+		uchar* destPtr = dest.row(r);
+		for (int c = 0; c < destW - 16; c += 16) {
+			V16f vuyx4 = srcPtr + c;
 			V16f y = _mm512_permute_ps(vuyx4, mask8(2, 2, 2, 2));
 			V16f u = _mm512_permute_ps(vuyx4, mask8(1, 1, 1, 1));
 			V16f v = _mm512_permute_ps(vuyx4, mask8(0, 0, 0, 0));
-			avx::yuvToRgbaPacked(y * f, u * f, v * f, destPtr + destW - 16, fu, fv);
+			avx::yuvToRgbaPacked(y * f, u * f, v * f, destPtr + c, fu, fv);
 		}
-	});
-	mPool.wait();
+		V16f vuyx4 = srcPtr + destW - 16;
+		V16f y = _mm512_permute_ps(vuyx4, mask8(2, 2, 2, 2));
+		V16f u = _mm512_permute_ps(vuyx4, mask8(1, 1, 1, 1));
+		V16f v = _mm512_permute_ps(vuyx4, mask8(0, 0, 0, 0));
+		avx::yuvToRgbaPacked(y * f, u * f, v * f, destPtr + destW - 16, fu, fv);
+	};
+	mPool.addAndWait(func, 0, vuyx.h());
 }

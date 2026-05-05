@@ -10,6 +10,7 @@
     <ClCompile Include="OutputOption.cpp" />
     <ClCompile Include="ImageClasses.cpp" />
     <ClCompile Include="ImagePixel.cpp" />
+    <ClCompile Include="BaseData.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CoreData.hpp" />

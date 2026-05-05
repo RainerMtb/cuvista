@@ -633,7 +633,7 @@ public:
 	}
 
 	//set values to part of mat from source function
-	Mat<T>& setArea(const std::function<T(size_t, size_t)>& supplier, ThreadPoolBase& pool = defaultPool) {
+	Mat<T>& setArea(std::function<T(size_t, size_t)> supplier, ThreadPoolBase& pool = defaultPool) {
 		return setArea(0, 0, rows(), cols(), supplier, pool);
 	}
 	
