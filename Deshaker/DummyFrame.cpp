@@ -30,7 +30,7 @@ DummyFrame::DummyFrame(MainData& data, DeviceInfoBase& deviceInfo, MovieFrame& f
 
 void DummyFrame::createPyramid(int64_t frameIndex, std::span<int> hist, AffineDataFloat trf, bool warp) {}
 
-void DummyFrame::adjustPyramid(int64_t frameIndex, float gamma) {}
+void DummyFrame::adjustPyramid(int64_t frameIndex, std::span<float> lutGamma) {}
 
 Matf DummyFrame::getTransformedOutput() const { 
 	return {}; 

@@ -133,8 +133,9 @@ const AffineTransform& AffineSolverFast::computeSimilar(std::span<PointBase> poi
 	
 	double rd[] = { n, -n, t / n, t / n };
 
+	std::vector<std::future<void>> futs(4);
 	//first row of matrix A
-	threadPool.add([&] {
+	futs[0] = threadPool.add([&] {
 		double* a = A.data();
 		a[0] = b / n;
 		a[1] = 0.0;
@@ -148,7 +149,7 @@ const AffineTransform& AffineSolverFast::computeSimilar(std::span<PointBase> poi
 		}
 	});
 	//second row
-	threadPool.add([&] {
+	futs[1] = threadPool.add([&] {
 		double* a = A.data() + m;
 		a[0] = 0.0;
 		a[1] = 1.0 + p[0] / n;
@@ -162,7 +163,7 @@ const AffineTransform& AffineSolverFast::computeSimilar(std::span<PointBase> poi
 		}
 	});
 	//third row
-	threadPool.add([&] {
+	futs[2] = threadPool.add([&] {
 		double* a = A.data() + m * 2;
 		a[0] = -s0 / n;
 		a[1] = s1 / n;
@@ -176,7 +177,7 @@ const AffineTransform& AffineSolverFast::computeSimilar(std::span<PointBase> poi
 		}
 	});
 	//fourth row
-	threadPool.add([&] {
+	futs[3] = threadPool.add([&] {
 		double* a = A.data() + m * 3;
 		a[0] = -s1 / n;
 		a[1] = -s0 / n;
@@ -189,7 +190,7 @@ const AffineTransform& AffineSolverFast::computeSimilar(std::span<PointBase> poi
 			idx++;
 		}
 	});
-	threadPool.wait();
+	for (auto& f : futs) f.wait();
 	//A.trans().toConsole();
 
 	//back substitution step 1

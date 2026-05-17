@@ -132,10 +132,24 @@ void CpuFrame::createPyramid(int64_t frameIndex, std::span<int> hist, AffineData
 	}
 }
 
-void CpuFrame::adjustPyramid(int64_t frameIndex, float gamma) {
-	//size_t pyrIdx = (frameIndex) % mPyr.size();
-	//CpuPyramid& pyr = mPyr[pyrIdx];
-	//Matf& y0 = pyr.mY[0];
+void CpuFrame::adjustPyramid(int64_t frameIndex, std::span<float> lutGamma) {
+	size_t pyrIdx = (frameIndex) % mPyr.size();
+	CpuPyramid& pyr = mPyr[pyrIdx];
+	Matf& Y = pyr.mY[0];
+
+	auto func = [&] (size_t r) {
+		float* y = Y.addr(r, 0);
+		for (size_t c = 0; c < mData.w; c++) {
+			float x = y[c] * (mData.lutGammaSize - 1);
+			float flx = std::floor(x);
+			float dx = x - flx;
+			size_t idx = (size_t) flx;
+			y[c] = dx == 0.0 ? lutGamma[idx] : (1.0f - dx) * lutGamma[idx] + dx * lutGamma[idx + 1];
+		}
+	};
+	mPool.addAndWait(func, 0, mData.h);
+
+	createPyramidLevels(pyr);
 }
 
 void CpuFrame::computeStart(int64_t frameIndex, std::span<PointResult> results) {}

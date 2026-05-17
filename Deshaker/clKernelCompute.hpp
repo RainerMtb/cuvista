@@ -73,9 +73,9 @@ __constant double eta0[] = { 0, 0, 1, 0, 0, 1 };
 //-------------------------------
 //------ compute kernel ---------
 //-------------------------------
-__kernel void compute(long frameIndex, __read_only image2d_array_depth_t Y, 
-			__global struct PointResult* results, __constant struct KernelData* d_core, 
-			__local double* shd, int rowStart) {
+__kernel void compute(long frameIndex, __read_only image2d_array_depth_t Y, __global struct PointResult* results, 
+	__constant struct KernelData* d_core, __local double* shd, int rowStart) 
+{
 	const int ix0 = get_group_id(0);
 	const int iy0 = get_group_id(1) + rowStart;
 	const int direction = (ix0 % 2) ^ (iy0 % 2);

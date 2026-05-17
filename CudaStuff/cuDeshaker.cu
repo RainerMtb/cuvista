@@ -23,11 +23,11 @@
 #include "DeviceInfoBase.hpp"
 
 #include <algorithm>
-#include <fstream>
 
 //parameter structure used in device code
 //all values must be initialized to be used as __constant__ variable in device code, no constructor calls
 __constant__ CoreData d_core;
+
 
 //number of threads for reading textures is set via init function
 uint numCudaThreads = 0;
@@ -94,19 +94,6 @@ void ComputeTextures::destroy() const {
 //allocate cuda memory and store pointers
 template <class T> void allocSafe(T* ptr, size_t size) {
 	handleStatus(cudaMalloc(ptr, size), "error @init allocating memory");
-}
-
-//write data from device pointer to file for debugging
-template <class T> void writeDeviceDataToFile(const T* devData, size_t h, size_t wCount, size_t stride, const std::string& path) {
-	cudaDeviceSynchronize();
-	std::vector<T> hostData(h * wCount);
-	cudaMemcpy2D(hostData.data(), sizeof(T) * wCount, devData, sizeof(T) * stride, sizeof(T) * wCount, h, cudaMemcpyDeviceToHost);
-	std::ofstream file(path, std::ios::binary);
-	file.write(reinterpret_cast<char*>(&h), sizeof(size_t));
-	file.write(reinterpret_cast<char*>(&wCount), sizeof(size_t));
-	size_t sizT = sizeof(T);
-	file.write(reinterpret_cast<char*>(&sizT), sizeof(size_t));
-	file.write(reinterpret_cast<char*>(hostData.data()), hostData.size() * sizeof(T));
 }
 
 //write image from device to disk for debugging
@@ -285,11 +272,14 @@ void CudaExecutor::init() {
 	h_results.resize(mData.resultCount);
 
 	//allocate output vuyx data
-	size_t frameSize4 = mData.stride4 * h;               //bytes for vuyx images
+	size_t frameSize4 = mData.stride4 * h;
 	allocSafe(&d_output, frameSize4);
 
-	//allocate memory for luma sum
+	//allocate memory for luma histogram
 	allocSafe(&d_luma, 256ull * mData.w * sizeof(int));
+
+	//allocate memory for lookup table for gamma adjust
+	allocSafe(&d_lutGamma, mData.lutGammaSize * sizeof(float));
 
 	//allocate memory for vuyx input data in char format [0..255]
 	allocSafe(&d_vuyxData, frameSize4 * mData.bufferCount);
@@ -374,13 +364,24 @@ void CudaExecutor::inputData(int64_t frameIndex) {
 //-------- PYRAMID
 //----------------------------------
 
+void CudaExecutor::createPyramidLevels(float* pyrStart, int strideFloatCount, int w, int h) {
+	float* src = pyrStart;
+	float* dest = pyrStart + 1ull * strideFloatCount * h;
+	for (int z = 1; z <= mData.zMax; z++) {
+		cu::remap_downsize_32f(src, strideFloatCount, dest, strideFloatCount, w, h);
+		w /= 2;
+		h /= 2;
+		src = dest;
+		dest += 1ull * strideFloatCount * h;
+	}
+}
+
 //create image pyramid
 void CudaExecutor::createPyramid(int64_t frameIndex, std::span<int> hist, AffineDataFloat trf, bool warp) {
 	//util::ConsoleTimer timer("cuda pyramid " + std::to_string(frameIndex));
 	int w = mData.w;
 	int h = mData.h;
 	int strideFloatCount = mData.strideFloat / sizeof(float);
-	cudaError_t err = cudaSuccess;
 
 	//get to the start of this yuv image
 	int64_t frIdx = frameIndex % mData.bufferCount;
@@ -389,7 +390,7 @@ void CudaExecutor::createPyramid(int64_t frameIndex, std::span<int> hist, Affine
 
 	//get to the start of this pyramid
 	int64_t pyrIdx = frameIndex % mData.pyramidCount;
-	float* pyrStart = d_pyrData + pyrIdx * mData.pyramidRowCount * mData.strideFloat / sizeof(float);
+	float* pyrStart = d_pyrData + pyrIdx * mData.pyramidRowCount * strideFloatCount;
 
 	//start histogram data from 0
 	cudaMemset(d_luma, 0, 256ull * mData.w * sizeof(int));
@@ -400,33 +401,31 @@ void CudaExecutor::createPyramid(int64_t frameIndex, std::span<int> hist, Affine
 	//first level of pyramid Y data
 	if (warp) {
 		cudaMemset(pyrStart, 0, 1ull * mData.strideFloat * mData.pyramidRowCount);
-		err = cu::scale_8u32f(vuyxStart, mData.stride4, w * 4, d_bufferH, strideFloatCount, w, h, d_luma);
+		cu::scale_8u32f(vuyxStart, mData.stride4, w * 4, d_bufferH, strideFloatCount, w, h, d_luma);
 		cu::warp_back_32f(d_bufferH, strideFloatCount, pyrStart, strideFloatCount, w, h, trf);
 
 	} else {
-		err = cu::scale_8u32f(vuyxStart, mData.stride4, w * 4, pyrStart, strideFloatCount, w, h, d_luma);
+		cu::scale_8u32f(vuyxStart, mData.stride4, w * 4, pyrStart, strideFloatCount, w, h, d_luma);
 		cu::filter_32f_h(pyrStart, d_bufferH, strideFloatCount, w, h, 0);
 		cu::filter_32f_v(d_bufferH, pyrStart, strideFloatCount, w, h, 0);
 	}
 
 	//lower levels
-	float* src = pyrStart;
-	float* dest = pyrStart + 1ull * strideFloatCount * h;
-	for (int z = 1; z <= mData.zMax; z++) {
-		cu::remap_downsize_32f(src, strideFloatCount, dest, strideFloatCount, w, h);
-		w /= 2;
-		h /= 2;
-		src = dest;
-		dest += 1ull * strideFloatCount * h;
-	}
+	createPyramidLevels(pyrStart, strideFloatCount, w, h);
 
 	cu::lumaSum(d_luma, mData.w, hist.data());
-	handleStatus(err, "error @pyramid #1");
 	handleStatus(cudaGetLastError(), "error @pyramid #2");
 }
 
-void CudaExecutor::adjustPyramid(int64_t frameIndex, float gamma) {
+void CudaExecutor::adjustPyramid(int64_t frameIndex, std::span<float> lutGamma) {
+	int64_t pyrIdx = frameIndex % mData.pyramidCount;
+	int strideFloatCount = mData.strideFloat / sizeof(float);
+	float* pyrStart = d_pyrData + pyrIdx * mData.pyramidRowCount * strideFloatCount;
 
+	handleStatus(cudaMemcpy(d_lutGamma, lutGamma.data(), lutGamma.size() * sizeof(float), cudaMemcpyDefault), "error @adjust #1");
+	cu::pyramidAdjust(pyrStart, strideFloatCount, mData.w, mData.h, d_lutGamma);
+	createPyramidLevels(pyrStart, strideFloatCount, mData.w, mData.h);
+	handleStatus(cudaGetLastError(), "error @adjust #2");
 }
 
 
@@ -668,7 +667,7 @@ CudaExecutor::~CudaExecutor() {
 	handleStatus(cudaHostUnregister(registeredMemPtr), "error @shutdown #10 unregister");
 
 	//delete device memory
-	void* d_arr[] = { d_input, d_results, d_vuyxData, d_output, out.data, d_pyrData, d_bufferH, d_bufferV, debugData.d_data, d_interrupt, d_luma };
+	void* d_arr[] = { d_input, d_results, d_vuyxData, d_output, out.data, d_pyrData, d_bufferH, d_bufferV, debugData.d_data, d_interrupt, d_luma, d_lutGamma };
 	for (void* ptr : d_arr) {
 		handleStatus(cudaFree(ptr), "error @shutdown #20 delete memory");
 	}

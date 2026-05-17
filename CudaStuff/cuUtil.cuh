@@ -24,6 +24,9 @@
 
 #include <cassert>
 #include <iostream>
+#include <vector>
+#include <string>
+#include <fstream>
 
  //define device functions here to avoid red underlines
 void __syncthreads();
@@ -43,7 +46,21 @@ namespace cu {
 	//memory copy on device
 	__device__ void memcpy(void* dest, const void* src, size_t count);
 
+	//clamp value on device
 	__device__ double clamp(double val, double lo, double hi);
+
+	//write data from device pointer to file for debugging
+	template <class T> void writeDeviceDataToFile(const T* devData, size_t h, size_t wCount, size_t stride, const std::string& path) {
+		cudaDeviceSynchronize();
+		std::vector<T> hostData(h * wCount);
+		cudaMemcpy2D(hostData.data(), sizeof(T) * wCount, devData, sizeof(T) * stride, sizeof(T) * wCount, h, cudaMemcpyDeviceToHost);
+		std::ofstream file(path, std::ios::binary);
+		file.write(reinterpret_cast<char*>(&h), sizeof(size_t));
+		file.write(reinterpret_cast<char*>(&wCount), sizeof(size_t));
+		size_t sizT = sizeof(T);
+		file.write(reinterpret_cast<char*>(&sizT), sizeof(size_t));
+		file.write(reinterpret_cast<char*>(hostData.data()), hostData.size() * sizeof(T));
+	}
 
 	//-----------------------------------
 	//matrix implementation in device code
@@ -67,12 +84,12 @@ namespace cu {
 			return data[row * stride + col];
 		}
 
-		__device__ T* addr(int row, int col) {
+		__host__ __device__ T* addr(int row, int col) {
 			assert(row >= 0 && col >= 0 && row < h && col < w);
 			return data + row * stride + col;
 		}
 
-		__device__ const T* addr(int row, int col) const {
+		__host__ __device__ const T* addr(int row, int col) const {
 			assert(row >= 0 && col >= 0 && row < h && col < w);
 			return data + row * stride + col;
 		}
@@ -101,6 +118,16 @@ namespace cu {
 				printf("]\n");
 			}
 			__syncthreads();
+		}
+
+		__host__ void toConsole(int row, int col) const {
+			T data;
+			cudaMemcpy(&data, addr(row, col), sizeof(T), cudaMemcpyDefault);
+			std::printf("[%d, %d]=%.14f\n", row, col, double(data));
+		}
+
+		__host__ void saveAsBinary(const std::string& filename) const {
+			writeDeviceDataToFile(data, h, w, stride, filename);
 		}
 	};
 

@@ -62,6 +62,7 @@ static NvidiaDriverInfo probe(ptr_nvmlInit_v2 nvInit, ptr_nvmlSystemGetDriverVer
 
 #include <ShlObj.h>
 #include <filesystem>
+#include <vector>
 
 using fpath = std::filesystem::path;
 

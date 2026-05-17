@@ -33,7 +33,7 @@
   <Applications>
     <Application Id="App"
       Executable="$targetnametoken$.exe"
-      EntryPoint="$targetentrypoint$" uap18:RuntimeBehavior="windowsApp">
+      EntryPoint="$targetentrypoint$" uap18:RuntimeBehavior="packagedClassicApp">
       <uap:VisualElements
         DisplayName="cuvista"
         Description="Cuvista - Cuda Video Stabililzer, Microsoft Store Version"
@@ -43,7 +43,7 @@
         <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png"  Square71x71Logo="Assets\SmallTile.png" Square310x310Logo="Assets\LargeTile.png">
         </uap:DefaultTile >
         <uap:SplashScreen Image="Assets\SplashScreen.png"  BackgroundColor="transparent"/>
-        <uap:LockScreen BadgeLogo="Assets\BadgeLogo.png" Notification="badgeAndTileText"/>
+        <uap:LockScreen BadgeLogo="Assets\BadgeLogo.png"  Notification="badgeAndTileText"/>
       </uap:VisualElements>
     </Application>
   </Applications>

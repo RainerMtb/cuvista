@@ -70,6 +70,13 @@ std::string MovieReader::videoStreamSummary() const {
 //-------- Placeholder Class -------
 //----------------------------------
 
+
+NullReader::NullReader() {
+    w = 120;
+    h = 120;
+    frameCount = 1;
+}
+
 bool NullReader::read(Image8& inputFrame) {
     inputFrame.setColor(Color::BLACK);
     frameIndex++;

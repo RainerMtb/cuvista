@@ -29,7 +29,8 @@ MovieFrame::MovieFrame(MainData& data, MovieReader& reader, MovieWriter& writer)
 	mWriter { writer },
 	mPool(data.cpuThreads),
 	mFrameResult(data, mPool),
-	mResultPoints(data.resultCount)
+	mResultPoints(data.resultCount),
+	mLutGamma(data.lutGammaSize)
 {
 	//set PointResult indizes
 	int idx = 0;
@@ -113,6 +114,14 @@ void MovieFrame::checkPyramidGamma(int64_t frameIndex, std::span<int> histogram,
 	int64_t frameToAdjust = frameIndex - 1;
 	//executor.adjustPyramid(frameToAdjust, x);
 	//Matf::concatHorz(executor->getPyramid(frameToAdjust), executor->getPyramid(frameIndex)).saveAsBMP(std::format("f:/pic/im{}.bmp", frameToAdjust), 1.0f);
+}
+
+void MovieFrame::adjustPyramid(int64_t frameToAdjust, double gamma, FrameExecutor& executor) {
+	for (size_t i = 0; i < mLutGamma.size(); i++) {
+		double x = 1.0 * i / (mLutGamma.size() - 1);
+		mLutGamma[i] = (float) std::pow(x, gamma);
+	}
+	executor.adjustPyramid(frameToAdjust, mLutGamma);
 }
 
 

@@ -65,11 +65,6 @@ int ThreadPool::activeWorkers() const {
 	return std::accumulate(mActive.cbegin(), mActive.cend(), 0);
 }
 
-void ThreadPool::wait() {
-	std::unique_lock<std::mutex> lock(mMutexWork);
-	mCVdone.wait(lock, [&] { return activeWorkers() == 0; });
-}
-
 std::future<void> ThreadPool::add(std::function<void()> job) {
 	std::unique_lock<std::mutex> lock(mMutexWork);
 	auto& task = mJobs.emplace(std::packaged_task<void()>(job));

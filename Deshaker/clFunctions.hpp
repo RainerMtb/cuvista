@@ -76,6 +76,8 @@ namespace cl {
 		std::vector<BufferImages> buffer;
 		//buffer for luma sum
 		Buffer luma;
+		//buffer for gamma lookup
+		Buffer lutGamma;
 
 		//data storage for output
 		std::array<Image2D, 5> out;
@@ -106,7 +108,8 @@ namespace cl {
 			Kernel yuv32f_to_nv12;
 			Kernel scrap;
 			Kernel compute;
-			Kernel lumaSum;
+			Kernel lumaHist;
+			Kernel pyramidAdjust;
 		} kernels;
 	};
 
@@ -114,14 +117,15 @@ namespace cl {
 	void scale_8u32f_1(Image src, Image dest, Buffer luma, Data& clData);
 	void scale_8u32f_3(Image src, Image dest, Data& clData);
 	void scale_32f8u(Kernel kernel, Image src, Buffer dest, int pitch, const Data& clData);
-	void lumaSum(Buffer luma, int w, Data& clData);
+	void lumaHist(Buffer luma, int w, Data& clData);
 
 	void filter_32f_h1(Image src, Image dest, int filterIndex, Data& clData);
 	void filter_32f_h3(Image src, Image dest, Data& clData);
 	void filter_32f_v1(Image src, Image dest, int filterIndex, Data& clData);
 	void filter_32f_v3(Image src, Image dest, Data& clData);
 
-	void remap_downsize_32f(Image src, Image dest, Data& clData);
+	void pyramidAdjust(Image2DArray pyramid, int pyrIdx, Buffer gamma, int gammaSize, int w, int h, Data& clData);
+	void remap_downsize_32f(Image2DArray pyramid, int pyrIdx, int rowSrc, int rowDest, int w, int h, Data& clData);
 	void warp_back(Image src, Image dest, Data& clData, cl_float8& trf);
 	void unsharp(Image src, Image dest, Image gauss, Data& clData, cl_float4 factor);
 

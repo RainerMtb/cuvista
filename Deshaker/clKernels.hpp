@@ -57,12 +57,24 @@ __kernel void scale_8u32f_1(__read_only image2d_t src, __write_only image2d_t de
 	}
 }
 
-__kernel void lumaSum(__global int* luma, int w) {
+__kernel void lumaHist(__global int* luma, int w) {
 	int x = get_global_id(0);
 
 	for (int i = 1; i < w; i++) {
 		luma[x] += luma[i * 256 + x];
 	}
+}
+
+__kernel void pyramidAdjust(__read_write image2d_array_t pyramid, int pyrIdx, __global float* gamma, int gammaSize) {
+	int c = get_global_id(0);
+	int r = get_global_id(1);
+
+	float x = read_imagef(pyramid, (int4)(c, r, pyrIdx, 0)).x * (gammaSize - 1);
+	float flx = floor(x);
+	float dx = x - flx;
+	size_t idx = (size_t) flx;
+	float result = dx == 0.0 ? gamma[idx] : (1.0f - dx) * gamma[idx] + dx * gamma[idx + 1];
+	write_imagef(pyramid, (int4)(c, r, pyrIdx, 0), result);
 }
 
 __kernel void scale_8u32f_3(__read_only image2d_t src, __write_only image2d_t dest) {
@@ -118,7 +130,7 @@ __constant struct FilterKernel filterKernels[] = {
 	{5, {0.0f, 0.25f, 0.5f, 0.25f, 0.0f}},
 };
 
-__kernel void filter_32f_1(__read_only image2d_depth_t src, __write_only image2d_t dest, int filterIndex, int dx, int dy) {
+__kernel void filter_32f_1(__read_only image2d_t src, __write_only image2d_t dest, int filterIndex, int dx, int dy) {
 	int c = get_global_id(0);
 	int r = get_global_id(1);
 
@@ -128,7 +140,7 @@ __kernel void filter_32f_1(__read_only image2d_depth_t src, __write_only image2d
 	int x = c - dx * siz / 2;
 	int y = r - dy * siz / 2;
 	for (int i = 0; i < siz; i++) {
-		float val = read_imagef(src, sampler, (int2)(x, y));
+		float val = read_imagef(src, sampler, (int2)(x, y)).x;
 		result = fma(val, k[i], result);
 		x += dx;
 		y += dy;
@@ -155,20 +167,21 @@ __kernel void filter_32f_3(__read_only image2d_t src, __write_only image2d_t des
 	write_imagef(dest, (int2)(c, r), result);
 }
 
-float interpolate(__read_only image2d_t src, int c, int r, float dx, float dy) {
-	float f00 = read_imagef(src, (int2)(c,     r)).x;
-	float f01 = read_imagef(src, (int2)(c + 1, r)).x;
-	float f10 = read_imagef(src, (int2)(c,     r + 1)).x;
-	float f11 = read_imagef(src, (int2)(c + 1, r + 1)).x;
-	return (1.0f - dx) * (1.0f - dy) * f00 + (1.0f - dx) * dy * f10 + dx * (1.0f - dy) * f01 + dx * dy * f11;
-}
-
-__kernel void remap_downsize_32f(__read_only image2d_t src, __write_only image2d_t dest) {
+__kernel void remap_downsize_32f(__read_write image2d_array_t pyramid, int pyrIdx, int rowSrc, int rowDest) {
 	int c = get_global_id(0);
 	int r = get_global_id(1);
 
-	float val = interpolate(src, c * 2, r * 2, 0.5f, 0.5f);
-	write_imagef(dest, (int2)(c, r), val);
+	int cc = c * 2;
+	int rr = rowSrc + r * 2;
+	float f00 = read_imagef(pyramid, (int4)(cc,     rr,     pyrIdx, 0)).x;
+	float f01 = read_imagef(pyramid, (int4)(cc + 1, rr,     pyrIdx, 0)).x;
+	float f10 = read_imagef(pyramid, (int4)(cc,     rr + 1, pyrIdx, 0)).x;
+	float f11 = read_imagef(pyramid, (int4)(cc + 1, rr + 1, pyrIdx, 0)).x;
+	float dx = 0.5f;
+	float dy = 0.5f;
+	float result = (1.0f - dx) * (1.0f - dy) * f00 + (1.0f - dx) * dy * f10 + dx * (1.0f - dy) * f01 + dx * dy * f11;
+
+	write_imagef(pyramid, (int4)(c, rowDest + r, pyrIdx, 0), result);
 }
 
 __kernel void warp_back(__read_only image2d_t src, __write_only image2d_t dest, float8 trf) {

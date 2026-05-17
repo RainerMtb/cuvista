@@ -47,6 +47,7 @@ void runSelfTest(util::MessagePrinter& out, std::vector<DeviceInfoBase*> deviceL
 	uint64_t crcTransformed = 0xcb30290a9e5ebb5c;
 	uint64_t crcOutput =      0x4fff19b725af8b64;
 	uint64_t crcNv12 =        0x6b6a368677841e71;
+	uint64_t crcPyrGamma =    0x61f30a739119e22d;
 
 	//util::debugLogger = std::make_shared<util::DebugLoggerTcp>("10.0.0.1", 5555);
 	for (size_t i = 0; i < deviceList.size(); i++) {
@@ -183,9 +184,18 @@ void runSelfTest(util::MessagePrinter& out, std::vector<DeviceInfoBase*> deviceL
 				check = false;
 			}
 
+			//gamma changed pyramid
+			frame.adjustPyramid(0, 1.025, *executor);
+			Matf pyrGamma = executor->getPyramid(0);
+			//pyrGamma.saveAsBinary(std::format("f:/gamma_{}.mat", name));
+			if (uint64_t crc = pyrGamma.crc(); crc != crcPyrGamma) {
+				util::debugLogger->format("{} fail gamma {:x}", name, crc);
+				out.print("FAIL gamma ");
+				check = false;
+			}
+
 		} catch (AVException e) {
-			out.print("ERROR: ");
-			out.print(e.what());
+			errorLogger().logError(e.what());
 			check = false;
 		}
 

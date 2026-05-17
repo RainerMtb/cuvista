@@ -91,6 +91,8 @@ private:
 	unsigned char* d_vuyxData = nullptr;      //continuous array of all pixel values in yuv format, allocated on device
 	unsigned char* d_output = nullptr;        //image data for output, allocated as vuyx, but reused
 
+	float* d_lutGamma = nullptr;
+
 	struct {
 		float4* data;
 		float4* start;
@@ -143,6 +145,8 @@ private:
 
 	void writeText(const std::string& text, int x0, int y0, float4* deviceData, int devicePitch);
 
+	void createPyramidLevels(float* pyrStart, int strideFloatCount, int w, int h);
+
 public:
 	CudaExecutor(CoreData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool);
 	~CudaExecutor();
@@ -151,7 +155,7 @@ public:
 	Image8& inputDestination(int64_t frameIndex) override;
 	void inputData(int64_t frameIndex) override;
 	void createPyramid(int64_t frameIndex, std::span<int> hist, AffineDataFloat trf = {}, bool warp = false) override;
-	void adjustPyramid(int64_t frameIndex, float gamma) override;
+	void adjustPyramid(int64_t frameIndex, std::span<float> lutGamma) override;
 	void computeStart(int64_t frameIndex, std::span<PointResult> results) override;
 	void computeTerminate(int64_t frameIndex, std::span<PointResult> results) override;
 	void outputData(int64_t frameIndex, AffineDataFloat trf) override;

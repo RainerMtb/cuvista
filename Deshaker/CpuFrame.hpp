@@ -36,7 +36,7 @@ public:
 	Image8& inputDestination(int64_t frameIndex) override;
 	void inputData(int64_t frameIndex) override;
 	void createPyramid(int64_t frameIndex, std::span<int> hist, AffineDataFloat trf = {}, bool warp = false) override;
-	void adjustPyramid(int64_t frameIndex, float gamma) override;
+	void adjustPyramid(int64_t frameIndex, std::span<float> lutGamma) override;
 	void computeStart(int64_t frameIndex, std::span<PointResult> results) override;
 	void computeTerminate(int64_t frameIndex, std::span<PointResult> results) override;
 	void outputData(int64_t frameIndex, AffineDataFloat trf) override;

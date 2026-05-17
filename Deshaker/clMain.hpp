@@ -40,7 +40,7 @@ public:
 	Image8& inputDestination(int64_t frameIndex) override;
 	void inputData(int64_t frameIndex) override;
 	void createPyramid(int64_t frameIndex, std::span<int> hist, AffineDataFloat trf = {}, bool warp = false) override;
-	void adjustPyramid(int64_t frameIndex, float gamma) override;
+	void adjustPyramid(int64_t frameIndex, std::span<float> lutGamma) override;
 	void computeStart(int64_t frameIndex, std::span<PointResult> results) override;
 	void computeTerminate(int64_t frameIndex, std::span<PointResult> results) override;
 	void outputData(int64_t frameIndex, AffineDataFloat trf) override;
@@ -51,6 +51,7 @@ public:
 	void getInput(int64_t frameIndex, Image8& image) const override;
 
 private:
+	void createPyramidLevels(int pyrIdx, int w, int h);
 	void compute(int64_t frameIndex, const CoreData& core, int rowStart, int rowEnd);
 	void readImage(cl::Image src, size_t destPitch, void* dest, cl::CommandQueue queue) const;
 	void readImage(cl::Image2DArray src, int idx, size_t destPitch, void* dest, cl::CommandQueue queue) const;

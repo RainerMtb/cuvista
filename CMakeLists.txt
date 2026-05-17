@@ -106,6 +106,8 @@ if (CMAKE_SYSTEM_NAME MATCHES Windows)
         avutil
         swresample
         swscale
+        ws2_32
+        Ole32
     )
 endif()
 

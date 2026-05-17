@@ -21,16 +21,22 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v145</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <EnableASAN>false</EnableASAN>
     <EnableFuzzer>false</EnableFuzzer>
+    <PlatformToolset>v145</PlatformToolset>
+    <VCToolsVersion>
+    </VCToolsVersion>
+    <MSVCPreviewEnabled>false</MSVCPreviewEnabled>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v145</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
+    <VCToolsVersion>
+    </VCToolsVersion>
+    <PlatformToolset>v145</PlatformToolset>
+    <MSVCPreviewEnabled>false</MSVCPreviewEnabled>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -63,7 +69,6 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(SolutionDir)AvxStuff;$(SolutionDir)Common;$(SolutionDir)Matrix;$(SolutionDir)CudaStuff;$(SolutionDir)OpenCL-CLHPP\include;$(SolutionDir)OpenCL-Headers;$(SolutionDir)cpu_features\include;$(SolutionDir)include;$(FFMPEG_PATH)\include;$(CUDA_PATH)\include</AdditionalIncludeDirectories>
-      <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
       <IntrinsicFunctions>false</IntrinsicFunctions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PreprocessorDefinitions>_UNICODE;UNICODE;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -81,7 +86,6 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(SolutionDir)AvxStuff;$(SolutionDir)Common;$(SolutionDir)Matrix;$(SolutionDir)CudaStuff;$(SolutionDir)OpenCL-CLHPP\include;$(SolutionDir)OpenCL-Headers;$(SolutionDir)cpu_features\include;$(SolutionDir)include;$(FFMPEG_PATH)\include;$(CUDA_PATH)\include</AdditionalIncludeDirectories>
-      <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
       <IntrinsicFunctions>false</IntrinsicFunctions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PreprocessorDefinitions>_UNICODE;UNICODE;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>

@@ -214,6 +214,9 @@ void OpenClFrame::init() {
 		//allocate luma sum buffer
 		clData.luma = Buffer(clData.context, CL_MEM_READ_WRITE, mData.w * sizeof(cl_int) * 256);
 
+		//allocate gamma lookup
+		clData.lutGamma = Buffer(clData.context, CL_MEM_READ_ONLY, mData.lutGammaSize * sizeof(cl_float));
+
 		//point results
 		clData.results = Buffer(clData.context, CL_MEM_WRITE_ONLY, sizeof(cl_PointResult) * mData.resultCount);
 		clData.cl_results.resize(mData.resultCount);
@@ -246,13 +249,14 @@ void OpenClFrame::init() {
 		clData.kernels.yuv32f_to_nv12 = Kernel(program, "yuv32f_to_nv12");
 		clData.kernels.scrap = Kernel(program, "scrap");
 		clData.kernels.compute = Kernel(program, "compute");
-		clData.kernels.lumaSum = Kernel(program, "lumaSum");
+		clData.kernels.lumaHist = Kernel(program, "lumaHist");
+		clData.kernels.pyramidAdjust = Kernel(program, "pyramidAdjust");
 
 	} catch (const BuildError& err) {
 		for (auto& data : err.getBuildLog()) {
 			Device dev = data.first;
 			std::string msg = data.second;
-			size_t maxLen = 150;
+			size_t maxLen = 500;
 			if (msg.length() > maxLen) {
 				msg = msg.substr(0, maxLen) + "...\n[total " + std::to_string(msg.length()) + " chars]";
 			}
@@ -287,12 +291,23 @@ void OpenClFrame::inputData(int64_t frameIndex) {
 //-------- CREATE PYRAMID ----------
 //----------------------------------
 
+void OpenClFrame::createPyramidLevels(int pyrIdx, int w, int h) {
+	int rowSrc = 0;
+	for (int z = 1; z < mData.pyramidLevels; z++) {
+		int rowDest = rowSrc + h;
+		h /= 2;
+		w /= 2;
+		remap_downsize_32f(clData.pyramid, pyrIdx, rowSrc, rowDest, w, h, clData);
+		rowSrc = rowDest;
+	}
+}
+
 void OpenClFrame::createPyramid(int64_t frameIndex, std::span<int> hist, AffineDataFloat trf, bool warp) {
 	//util::ConsoleTimer ic("ocl pyramid");
 	int w = mData.w;
 	int h = mData.h;
-	int64_t frIdx = frameIndex % mData.bufferCount;
-	int64_t pyrIdx = frameIndex % mData.pyramidCount;
+	int frIdx = frameIndex % mData.bufferCount;
+	int pyrIdx = frameIndex % mData.pyramidCount;
 
 	try {
 		//convert yuv image to first level of Y pyramid
@@ -319,19 +334,10 @@ void OpenClFrame::createPyramid(int64_t frameIndex, std::span<int> hist, AffineD
 		clData.queue.enqueueCopyImage(im, clData.pyramid, Size3(), Size3(0, 0, pyrIdx), Size3(w, h, 1));
 
 		//lower levels of pyramid
-		size_t row = h;
-		for (size_t z = 1; z < mData.pyramidLevels; z++) {
-			Image& src = clData.buffer[z - 1].result;
-			Image& dest = clData.buffer[z].result;
-			remap_downsize_32f(src, dest, clData);
-			int ww = w >> z;
-			int hh = h >> z;
-			clData.queue.enqueueCopyImage(dest, clData.pyramid, Size3(), Size3(0ull, row, pyrIdx), Size3(ww, hh, 1));
-			row += hh;
-		}
+		createPyramidLevels(pyrIdx, w, h);
 
 		//sum up luma values
-		lumaSum(clData.luma, mData.w, clData);
+		lumaHist(clData.luma, mData.w, clData);
 		clData.queue.enqueueReadBuffer(clData.luma, CL_TRUE, 0, sizeof(cl_int) * 256, hist.data());
 
 	} catch (const Error& err) {
@@ -339,8 +345,17 @@ void OpenClFrame::createPyramid(int64_t frameIndex, std::span<int> hist, AffineD
 	}
 }
 
-void OpenClFrame::adjustPyramid(int64_t frameIndex, float gamma) {
+void OpenClFrame::adjustPyramid(int64_t frameIndex, std::span<float> lutGamma) {
+	int pyrIdx = frameIndex % mData.pyramidCount;
 
+	try {
+		clData.queue.enqueueWriteBuffer(clData.lutGamma, CL_TRUE, 0, lutGamma.size_bytes(), lutGamma.data());
+		pyramidAdjust(clData.pyramid, pyrIdx, clData.lutGamma, mData.lutGammaSize, mData.w, mData.h, clData);
+		createPyramidLevels(pyrIdx, mData.w, mData.h);
+
+	} catch (const Error& err) {
+		errorLogger().logError("OpenCL adjust error: ", err.what());
+	}
 }
 
 //----------------------------------

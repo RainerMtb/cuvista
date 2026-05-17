@@ -54,7 +54,6 @@ static DeshakerResult run(const std::string& argsLine, std::shared_ptr<MovieWrit
 
 static void testMain() {
 	std::cout << "--- Short Runs ---" << std::endl;
-	run("-info");
 	run("-frames 0 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/000null.mp4 -noheader -progress 0 -y");
 	run("-frames 0 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/001null.mp4 -enc ffmpeg:hevc -noheader -progress 0 -y");
 	run("-frames 1 -i d:/VideoTest/example.mp4 -o d:/videoTest/out/001.mp4 -noheader -progress 0 -y");
@@ -130,7 +129,7 @@ static void testMain() {
 	run("-enc ffmpeg:ffv1 -i d:/VideoTest/02short.mp4 -o d:/videoTest/out/enc_ffv1.mp4 -noheader -progress 0");
 }
 
-static void testCrc() {
+static void testCrcMode0() {
 	std::string ansiGreen = "\x1b[1;32m";
 	std::string ansiRed = "\x1b[1;31m";
 	std::string ansiClear = "\x1b[0m";
@@ -183,7 +182,7 @@ static void testCrc() {
 			bool match = crcExpectedYuv == crcyuv;
 			std::cout << (match ? ansiGreen : ansiRed) << std::hex << "output yuv expected: " << crcExpectedYuv << ", actual crc: " << crcyuv
 				<< std::boolalpha << ", crc match: " << match << ansiClear << std::endl;
-			
+
 			if (match == false) externalWriter->writeYuvFiles("f:/input.nv12", "f:/output.nv12", 50);
 		}
 
@@ -209,8 +208,13 @@ static void testCrc() {
 				<< std::boolalpha << ", crc match: " << match << ansiClear << std::endl;
 		}
 	}
+}
 
-	//------------------------------------------------------------------------------------
+static void testCrcMode2() {
+	std::string ansiGreen = "\x1b[1;32m";
+	std::string ansiRed = "\x1b[1;31m";
+	std::string ansiClear = "\x1b[0m";
+
 	std::cout << std::endl << "--- Check Mode 2 ---" << std::endl;
 	std::vector<std::string> commandsMode2 = {
 		"-device 0 -i d:/VideoTest/02short.mp4 -o null -quiet -mode 2",
@@ -231,6 +235,10 @@ static void testCrc() {
 		std::cout << (match ? ansiGreen : ansiRed) << std::hex << "yuv file crc expected: " << crcExpected << ", actual crc: " << crcOutput
 			<< std::boolalpha << ", crc match: " << match << ansiClear << std::dec << std::endl;
 	}
+}
+
+static void testInfo() {
+	run("-info");
 }
 
 static void testSpeed() {
@@ -261,7 +269,9 @@ static void deleteFiles() {
 
 int main() {
 	deleteFiles();
-	testCrc();
+	testInfo();
+	testCrcMode0();
+	testCrcMode2();
 	testSpeed();
 	testMain();
 	std::cout << "--- Testing completed ---" << std::endl;

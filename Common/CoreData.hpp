@@ -70,6 +70,8 @@ struct CoreData {
 	int pyramidRowCount = -1;      //number of rows for one pyramid, all the rows of Y data for all levels
 	int pyramidCount = 2;          //number of pyramids to allocate in memory
 	int resultCount = 0;           //number of points to compute in a frame
+	int lutGammaSize = 1 << 16;    //size of lookup table for gamma adjustment
+
 
 	//numeric constants used in compute kernel, will be initialized once
 	double dmin = std::numeric_limits<double>::min();

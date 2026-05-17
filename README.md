@@ -83,7 +83,7 @@ When done, run ```cuvista -info``` to see available devices and run a test
 
 
 ## Building on Linux
-Tested on Ubuntu 25.04
+Tested on Ubuntu 26.04
 
 ### Dependencies
 

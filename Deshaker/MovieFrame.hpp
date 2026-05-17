@@ -79,6 +79,7 @@ protected:
 	};
 
 	const MainData& mData;
+	std::vector<float> mLutGamma;
 
 	void progressUpdate(ProgressInfo& progressInfo, ProgressBase& progress, double totalProgress, bool forceUpdate) const;
 
@@ -100,8 +101,11 @@ public:
 	//compute resulting transform for this frame
 	const AffineTransform& computeTransform(std::span<PointResult> results, int64_t frameIndex);
 
-	//
+	// compare gamma values of two pyramids and decide on gamma adjust
 	void checkPyramidGamma(int64_t frameIndex, std::span<int> histogram, std::span<int> histogramOld, FrameExecutor& executor);
+
+	// adjust gamma for pyramid
+	void adjustPyramid(int64_t frameToAdjust, double gamma, FrameExecutor& executor);
 
 	// read transforms from previous pass
 	std::map<int64_t, TransformValues> readTransforms();

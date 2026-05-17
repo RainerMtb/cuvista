@@ -16,11 +16,9 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
+#include <iostream>
 #include "cuKernels.cuh"
 #include "cuDeshaker.cuh"
-
-#include <chrono>
-#include <iostream>
 
  //declare here to mitigate red underlines
 template<class T> __device__ T tex2D(cudaTextureObject_t tex, float x, float y);
@@ -263,6 +261,24 @@ __global__ void kernel_output_nvenc(float4* src, int srcStep, uchar* dest, int s
 	}
 }
 
+__global__ void kernel_lumaSum(cuMati lumaMat) {
+	uint x = blockIdx.x;
+	uint y = threadIdx.x;
+	uint ws = blockDim.x;
+
+	//32 threads
+	for (int i = y + ws; i < lumaMat.h; i += ws) {
+		lumaMat.at(y, x) += lumaMat.at(i, x);
+	}
+
+	//first thread
+	if (y == 0) {
+		for (int i = 1; i < ws; i++) {
+			lumaMat.at(0, x) += lumaMat.at(i, x);
+		}
+	}
+}
+
 __global__ void kernel_scale_8u32f(cudaTextureObject_t texObj, cuMatf dest, cuMati lumaMat) {
 	uint x = blockIdx.x * blockDim.x + threadIdx.x;
 	uint y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -283,21 +299,16 @@ __global__ void kernel_scale_8u32f(cudaTextureObject_t texObj, cuMatf dest, cuMa
 	}
 }
 
-__global__ void kernel_lumaSum(cuMati lumaMat) {
-	uint x = blockIdx.x;
-	uint y = threadIdx.x;
-	uint ws = blockDim.x;
+__global__ void kernel_pyr_adjust(cuMatf pyrMat, float* gamma) {
+	uint x = blockIdx.x * blockDim.x + threadIdx.x;
+	uint y = blockIdx.y * blockDim.y + threadIdx.y;
 
-	//32 threads
-	for (int i = y + ws; i < lumaMat.h; i += ws) {
-		lumaMat.at(y, x) += lumaMat.at(i, x);
-	}
-
-	//first thread
-	if (y == 0) {
-		for (int i = 1; i < ws; i++) {
-			lumaMat.at(0, x) += lumaMat.at(i, x);
-		}
+	if (x < pyrMat.w && y < pyrMat.h) {
+		float val = pyrMat.at(y, x) * (d_core.lutGammaSize - 1);
+		float fl = floorf(val);
+		float dx = val - fl;
+		size_t idx = (size_t) fl;
+		pyrMat.at(y, x) = dx == 0.0 ? gamma[idx] : (1.0f - dx) * gamma[idx] + dx * gamma[idx + 1];
 	}
 }
 
@@ -459,7 +470,7 @@ cudaError_t cu::input(uchar* srcYuv, int srcStep, int srcWidth, uchar* destVuyx,
 }
 
 cudaError_t cu::scale_8u32f(uchar* src, int srcStep, int srcWidth, float* dest, int destStep, int destWidth, int h, int* d_luma, cudaStream_t cs) {
-	KernelContext ki = prepareTexture(src, srcStep, srcWidth, h);
+	KernelContext ki = prepareTexture(src, srcStep, srcWidth, h, destWidth, h);
 	cuMatf destMat(dest, h, destWidth, destStep);
 	cuMati lumaMat(d_luma, destWidth, 256, 256);
 	kernel_scale_8u32f << <ki.blocks, ki.threads, 0, cs >> > (ki.texture, destMat, lumaMat);
@@ -511,14 +522,22 @@ cudaError_t cu::remap_downsize_32f(float* src, int srcStep, float* dest, int des
 
 cudaError_t cu::yuv_to_rgba(uchar* src, int srcStep, uchar* dest, int destStep, int w, int h, int4 index, cudaStream_t cs) {
 	KernelContext ki = prepareTexture(src, srcStep, w * 4, h, w, h);
-	kernel_yuv8_to_rgba8 << <ki.blocks, ki.threads >> > (ki.texture, dest, destStep, w, h, index);
+	kernel_yuv8_to_rgba8 << <ki.blocks, ki.threads, 0, cs >> > (ki.texture, dest, destStep, w, h, index);
 	cudaDestroyTextureObject(ki.texture);
 	return cudaGetLastError();
 }
 
 cudaError_t cu::yuv_to_rgba(float4* src, int srcStep, uchar* dest, int destStep, int w, int h, int4 index, cudaStream_t cs) {
 	KernelContext ki = prepareTexture(src, srcStep, w, h);
-	kernel_yuv128_to_rgba8 << <ki.blocks, ki.threads >> > (ki.texture, dest, destStep, w, h, index);
+	kernel_yuv128_to_rgba8 << <ki.blocks, ki.threads, 0, cs >> > (ki.texture, dest, destStep, w, h, index);
 	cudaDestroyTextureObject(ki.texture);
+	return cudaGetLastError();
+}
+
+cudaError_t cu::pyramidAdjust(float* pyramid, int step, int w, int h, float* gamma, cudaStream_t cs) {
+	cuMatf pyrMat(pyramid, h, w, step);
+	dim3 threads = configThreads();
+	dim3 blocks = configBlocks(threads, w, h);
+	kernel_pyr_adjust << <blocks, threads, 0, cs >> > (pyrMat, gamma);
 	return cudaGetLastError();
 }

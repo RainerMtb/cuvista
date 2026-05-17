@@ -62,6 +62,8 @@ protected:
 class NullReader : public MovieReader {
 
 public:
+	NullReader();
+
 	void open(const std::string& source) override {};
 	bool read(Image8& inputFrame) override;
 };

@@ -38,7 +38,7 @@ public:
 	Image8& inputDestination(int64_t frameIndex) override;
 	void inputData(int64_t frameIndex) override;
 	void createPyramid(int64_t frameIndex, std::span<int> hist, AffineDataFloat trf = {}, bool warp = false) override;
-	void adjustPyramid(int64_t frameIndex, float gamma) override;
+	void adjustPyramid(int64_t frameIndex, std::span<float> lutGamma) override;
 	void computeStart(int64_t frameIndex, std::span<PointResult> results) override;
 	void computeTerminate(int64_t frameIndex, std::span<PointResult> results) override;
 	void outputData(int64_t frameIndex, AffineDataFloat trf) override;
@@ -78,6 +78,7 @@ private:
 
 	void yuvToFloat4(const ImageYuv& yuv, AvxMatf& dest);
 	void downsample(const float* srcptr, int h, int w, int stride, float* destptr, int destStride);
+	void createPyramidLevels(AvxMatf& pyramid);
 	void filter1(const AvxMatf& src, int h, int w, AvxMatf& dest, std::span<V16f> ks);
 	void filter4(const AvxMatf& src, int h, int w, AvxMatf& dest);
 

@@ -41,9 +41,6 @@ public:
 	ThreadPool(size_t numThreads = 1);
 	~ThreadPool() override;
 
-	//wait for all pending jobs to execute
-	void wait() override;
-
 	//add job to queue
 	std::future<void> add(std::function<void()> job) override;
 

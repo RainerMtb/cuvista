@@ -31,7 +31,6 @@ class ThreadPoolBase {
 
 public:
 	virtual ~ThreadPoolBase() = default;
-	virtual void wait() {}
 	virtual void shutdown() {}
 
 	//execute one job

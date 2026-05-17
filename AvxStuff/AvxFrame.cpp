@@ -18,6 +18,7 @@
 
 #include "AvxFrame.hpp"
 #include "AvxUtil.hpp"
+#include <iostream>
 
 using namespace avx;
 
@@ -72,6 +73,21 @@ void AvxFrame::inputData(int64_t frameIndex) {
 	std::swap(mReadBuffer, mInput[idx]);
 }
 
+void AvxFrame::createPyramidLevels(AvxMatf& pyramid) {
+	int r = 0;
+	int hh = mData.h;
+	int ww = mData.w;
+	int pw = pyramid.w();
+	for (size_t z = 1; z < mData.pyramidLevels; z++) {
+		const float* src = pyramid.row(r);
+		float* dest = pyramid.row(r + hh);
+		r += hh;
+		hh /= 2;
+		ww /= 2;
+		downsample(src, hh, ww, pw, dest, pw);
+	}
+}
+
 void AvxFrame::createPyramid(int64_t frameIndex, std::span<int> hist, AffineDataFloat trf, bool warp) {
 	//util::ConsoleTimer timer("avx pyramid " + std::to_string(frameIndex));
 	size_t pyrIdx = frameIndex % mPyr.size();
@@ -83,9 +99,8 @@ void AvxFrame::createPyramid(int64_t frameIndex, std::span<int> hist, AffineData
 	ImageYuv& yuv = mInput[yuvIdx];
 
 	//convert Y to float and sum up luma
-	V16f f = 1.0f / 255.0f;
-
 	auto func = [&] (size_t r) {
+		V16f f = 1.0f / 255.0f;
 		uchar* srcPtr = yuv.row(r);
 		std::fill(srcPtr + mData.w, srcPtr + mData.stride, 0); //decoder puts random bytes into padding area
 		float* destPtr = mFilterResult.addr(r, 0);
@@ -112,17 +127,7 @@ void AvxFrame::createPyramid(int64_t frameIndex, std::span<int> hist, AffineData
 	}
 
 	//create pyramid levels below by downsampling level above
-	int r = 0;
-	int hh = mData.h;
-	int ww = mData.w;
-	for (size_t z = 1; z < mData.pyramidLevels; z++) {
-		const float* src = Y.row(r);
-		float* dest = Y.row(r + hh);
-		r += hh;
-		hh /= 2;
-		ww /= 2;
-		downsample(src, hh, ww, Y.w(), dest, Y.w());
-	}
+	createPyramidLevels(Y);
 
 	//create histogram
 	std::fill(hist.begin(), hist.end(), 0);
@@ -134,8 +139,37 @@ void AvxFrame::createPyramid(int64_t frameIndex, std::span<int> hist, AffineData
 	}
 }
 
-void AvxFrame::adjustPyramid(int64_t frameIndex, float gamma) {
+void AvxFrame::adjustPyramid(int64_t frameIndex, std::span<float> lutGamma) {
+	//util::ConsoleTimer ic("avx adjust");
+	size_t pyrIdx = frameIndex % mPyr.size();
+	AvxMatf& Y = mPyr[pyrIdx];
 
+	auto func = [&] (size_t r) {
+		V16f siz = float(mData.lutGammaSize - 1);
+		V16f fx;
+		V16f one = 1.0f;
+		V16f zero = 0.0f;
+		__m512i idx;
+		for (size_t c = 0; c < mData.w; c += 16) {
+			fx = Y.addr(r, c);
+			fx *= siz;
+			V16f flx = _mm512_floor_ps(fx);
+			V16f dx = fx - flx;
+			idx = _mm512_cvtps_epi32(flx);
+			V16f f0 = _mm512_i32gather_ps(idx, lutGamma.data(), 4);
+
+			idx = _mm512_add_epi32(idx, _mm512_set1_epi32(1));
+			__mmask16 mask = _mm512_cmpneq_ps_mask(dx, zero);
+			V16f f1 = _mm512_mask_i32gather_ps(zero, mask, idx, lutGamma.data(), 4);
+
+			V16f result = (one - dx) * f0 + dx * f1;
+			result.storeu(Y.addr(r, c));
+		}
+	};
+	mPool.addAndWait(func, 0, mData.h);
+
+	//create pyramid levels below by downsampling level above
+	createPyramidLevels(Y);
 }
 
 void AvxFrame::outputData(int64_t frameIndex, AffineDataFloat trf) {
@@ -206,12 +240,11 @@ static V16f rotsum(V16f x, std::span<V16f> ks) {
 
 void AvxFrame::filter1(const AvxMatf& src, int h, int w, AvxMatf& dest, std::span<V16f> ks) {
 	//util::ConsoleTimer ic("avx filter " + std::to_string(w) + "x" + std::to_string(h));
-	__m512i vw = _mm512_set1_epi32(dest.w());
-	__m512i idx = _mm512_loadu_epi32(iotas.i32x16);
-	__m512i vidx = _mm512_mullo_epi32(vw, idx);
-	__mmask16 mask = 0x0FFF;
-
 	auto func = [&] (FuncIndex workIndex) {
+		__m512i vw = _mm512_set1_epi32(dest.w());
+		__m512i idx = _mm512_loadu_epi32(iotas.i32x16);
+		__m512i vidx = _mm512_mullo_epi32(vw, idx);
+		__mmask16 mask = 0x0FFF;
 		V16f x, result;
 
 		for (size_t r = workIndex(); r < h; r = workIndex()) {
@@ -665,7 +698,7 @@ void AvxFrame::warpBack1(const AffineDataFloat& trf, const AvxMatf& input, AvxMa
 	auto func = [&] (size_t r) {
 		V16f ixf = iotas.fx16;
 		V16f iyf = float(r);
-		V16f ps_zero = _mm512_set1_ps(0.0f);
+		V16f ps_zero = 0.0f;
 		V16f fstride = float(input.w());
 		__m512i epi_one = _mm512_set1_epi32(1);
 		__m512i epi_stride = _mm512_set1_epi32(input.w());
@@ -809,52 +842,54 @@ void AvxFrame::writeNV12(Image8& dest) const {
 //from uchar yuv to uchar rgba
 void AvxFrame::yuvToRgba(const ImageYuv& yuv, Image8& dest) const {
 	assert(dest.colorBase() == ColorBase::RGB && "invalid color format");
-	//order of rgb colors
-	auto vidx = dest.colorIndex();
-	V16f fu = { mFactorU[vidx[0]], mFactorU[vidx[1]], mFactorU[vidx[2]], mFactorU[vidx[3]] };
-	V16f fv = { mFactorV[vidx[0]], mFactorV[vidx[1]], mFactorV[vidx[2]], mFactorV[vidx[3]] };
-
-	auto func = [&] (size_t r) {
-		uchar* destPtr = dest.row(r);
-		for (int c = 0; c < yuv.w(); c += 4) {
-			__m512 y = _mm512_cvtepi32_ps(_mm512_cvtepu8_epi32(_mm_maskz_expandloadu_epi8(0x1111, yuv.addr(0, r, c))));
-			y = _mm512_permute_ps(y, 0);
-			__m512 u = _mm512_cvtepi32_ps(_mm512_cvtepu8_epi32(_mm_maskz_expandloadu_epi8(0x1111, yuv.addr(1, r, c))));
-			u = _mm512_permute_ps(u, 0);
-			__m512 v = _mm512_cvtepi32_ps(_mm512_cvtepu8_epi32(_mm_maskz_expandloadu_epi8(0x1111, yuv.addr(2, r, c))));
-			v = _mm512_permute_ps(v, 0);
-			avx::yuvToRgbaPacked(y, u, v, destPtr + c * 4, fu, fv);
+	auto func = [&] (FuncIndex workIndex) {
+		//order of rgb colors
+		auto vidx = dest.colorIndex();
+		V16f fu = { mFactorU[vidx[0]], mFactorU[vidx[1]], mFactorU[vidx[2]], mFactorU[vidx[3]] };
+		V16f fv = { mFactorV[vidx[0]], mFactorV[vidx[1]], mFactorV[vidx[2]], mFactorV[vidx[3]] };
+		for (size_t r = workIndex(); r < yuv.h(); r = workIndex()) {
+			uchar* destPtr = dest.row(r);
+			for (int c = 0; c < yuv.w(); c += 4) {
+				__m512 y = _mm512_cvtepi32_ps(_mm512_cvtepu8_epi32(_mm_maskz_expandloadu_epi8(0x1111, yuv.addr(0, r, c))));
+				y = _mm512_permute_ps(y, 0);
+				__m512 u = _mm512_cvtepi32_ps(_mm512_cvtepu8_epi32(_mm_maskz_expandloadu_epi8(0x1111, yuv.addr(1, r, c))));
+				u = _mm512_permute_ps(u, 0);
+				__m512 v = _mm512_cvtepi32_ps(_mm512_cvtepu8_epi32(_mm_maskz_expandloadu_epi8(0x1111, yuv.addr(2, r, c))));
+				v = _mm512_permute_ps(v, 0);
+				avx::yuvToRgbaPacked(y, u, v, destPtr + c * 4, fu, fv);
+			}
 		}
 	};
-	mPool.addAndWait(func, 0, yuv.h());
+	mPool.workAndWait(func, 0, yuv.h());
 }
 
 
 //from float vuyx to uchar rgba
 void AvxFrame::vuyxToRgba(const AvxMatf& vuyx, Image8& dest) const {
 	assert(dest.colorBase() == ColorBase::RGB && "invalid color format");
-	//order of rgb colors
-	auto vidx = dest.colorIndex();
-	V16f fu = { mFactorU[vidx[0]], mFactorU[vidx[1]], mFactorU[vidx[2]], mFactorU[vidx[3]] };
-	V16f fv = { mFactorV[vidx[0]], mFactorV[vidx[1]], mFactorV[vidx[2]], mFactorV[vidx[3]] };
-	V16f f = 255.0f;
-
-	auto func = [&] (size_t r) {
-		int destW = dest.w() * 4;
-		const float* srcPtr = vuyx.addr(r, 0);
-		uchar* destPtr = dest.row(r);
-		for (int c = 0; c < destW - 16; c += 16) {
-			V16f vuyx4 = srcPtr + c;
+	auto func = [&] (FuncIndex workIndex) {
+		//order of rgb colors
+		auto vidx = dest.colorIndex();
+		V16f fu = { mFactorU[vidx[0]], mFactorU[vidx[1]], mFactorU[vidx[2]], mFactorU[vidx[3]] };
+		V16f fv = { mFactorV[vidx[0]], mFactorV[vidx[1]], mFactorV[vidx[2]], mFactorV[vidx[3]] };
+		V16f f = 255.0f;
+		for (size_t r = workIndex(); r < vuyx.h(); r = workIndex()) {
+			int destW = dest.w() * 4;
+			const float* srcPtr = vuyx.addr(r, 0);
+			uchar* destPtr = dest.row(r);
+			for (int c = 0; c < destW - 16; c += 16) {
+				V16f vuyx4 = srcPtr + c;
+				V16f y = _mm512_permute_ps(vuyx4, mask8(2, 2, 2, 2));
+				V16f u = _mm512_permute_ps(vuyx4, mask8(1, 1, 1, 1));
+				V16f v = _mm512_permute_ps(vuyx4, mask8(0, 0, 0, 0));
+				avx::yuvToRgbaPacked(y * f, u * f, v * f, destPtr + c, fu, fv);
+			}
+			V16f vuyx4 = srcPtr + destW - 16;
 			V16f y = _mm512_permute_ps(vuyx4, mask8(2, 2, 2, 2));
 			V16f u = _mm512_permute_ps(vuyx4, mask8(1, 1, 1, 1));
 			V16f v = _mm512_permute_ps(vuyx4, mask8(0, 0, 0, 0));
-			avx::yuvToRgbaPacked(y * f, u * f, v * f, destPtr + c, fu, fv);
+			avx::yuvToRgbaPacked(y * f, u * f, v * f, destPtr + destW - 16, fu, fv);
 		}
-		V16f vuyx4 = srcPtr + destW - 16;
-		V16f y = _mm512_permute_ps(vuyx4, mask8(2, 2, 2, 2));
-		V16f u = _mm512_permute_ps(vuyx4, mask8(1, 1, 1, 1));
-		V16f v = _mm512_permute_ps(vuyx4, mask8(0, 0, 0, 0));
-		avx::yuvToRgbaPacked(y * f, u * f, v * f, destPtr + destW - 16, fu, fv);
 	};
-	mPool.addAndWait(func, 0, vuyx.h());
+	mPool.workAndWait(func, 0, vuyx.h());
 }
