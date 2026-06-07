@@ -39,8 +39,7 @@
     <EnableASAN>false</EnableASAN>
     <EnableFuzzer>false</EnableFuzzer>
     <PlatformToolset>v145</PlatformToolset>
-    <VCToolsVersion>
-    </VCToolsVersion>
+    <VCToolsVersion>14.50.35717</VCToolsVersion>
     <MSVCPreviewEnabled>false</MSVCPreviewEnabled>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
@@ -48,8 +47,7 @@
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
-    <VCToolsVersion>
-    </VCToolsVersion>
+    <VCToolsVersion>14.50.35717</VCToolsVersion>
     <PlatformToolset>v145</PlatformToolset>
     <MSVCPreviewEnabled>false</MSVCPreviewEnabled>
   </PropertyGroup>

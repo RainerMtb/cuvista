@@ -19,6 +19,12 @@
 #include "MovieWriter.hpp"
 #include "Util.hpp"
 
+using namespace util;
+
+
+//--------------------------
+//---- setup ---------------
+//--------------------------
 
 FrameResult::FrameResult(MainData& data, ThreadPoolBase& threadPool) :
 	mData { data },
@@ -34,32 +40,35 @@ FrameResult::FrameResult(MainData& data, ThreadPoolBase& threadPool) :
 	}
 
 	//prepare lists
-	mConsList.reserve(siz);
-	mPointList.resize(siz);
-	mWork.resize(siz);
-	mBestCluster.reserve(siz);
+	mResultData.consList.resize(siz);
+	mResultData.bestCluster.resize(siz);
+	for (int i = 0; i < 4; i++) {
+		mResultData.clusters.emplace_back(i);
+		mResultData.clusters[i].points.resize(siz);
+		mResultData.clusters[i].work.resize(siz);
+	}
 
-	params.eps = 10.0;
-	params.f1 = 20000.0 / std::max(mData.w, mData.h);
+	//collect dbscan flags
+	mResultData.flags.resize(6);
+
+	params.f1 = 25000.0 / std::max(mData.w, mData.h);
 	params.f2 = 25.0;
 }
-
-const AffineTransform& FrameResult::getTransform() const {
-	return mBestTransform;
-}
-
-void FrameResult::reset() {
-	mAffineSolver->reset();
-	mAffineSolver->frameIndex = 0;
-	mBestTransform.reset();
-}
-
-using namespace util;
 
 
 //--------------------------
 //---- functions -----------
 //--------------------------
+
+const AffineTransform& FrameResult::getTransform() const {
+	return mResultData.transform;
+}
+
+void FrameResult::reset() {
+	mAffineSolver->reset();
+	mAffineSolver->frameIndex = 0;
+	mResultData.transform.reset();
+}
 
 bool FrameResult::clusterDistance(const PointContext& pc1, const PointContext& pc2) const {
 	double s = pc1.length + pc2.length;
@@ -90,16 +99,23 @@ struct {
 } SortDelta;
 
 
-//--------------------------
-//--------- main -----------
-//--------------------------
+//--------------------------------
+//--------- main entry point -----
+//--------------------------------
 
-const AffineTransform& FrameResult::computeTransform(std::span<PointResult> results, int64_t frameIndex) {
+const AffineTransform& FrameResult::computeTransform(std::span<PointResult> results, int64_t frameIndex, double gamma) {
 	//util::ConsoleTimer timer("FrameResult");
 	mAffineSolver->reset();
 	mAffineSolver->frameIndex = frameIndex;
+	mResultData.frameIndex = frameIndex;
+	mResultData.gamma = gamma;
+	mResultData.bestCluster.clear();
+	mResultData.bestClusterVector = -1;
+	mResultData.bestClusterIndex = -1;
 
-	mConsList.clear();
+	std::ranges::fill(mResultData.flags, 0);
+	mResultData.consList.clear();
+	size_t numValid = 0;
 	//consider region of interest and build list of PointContext
 	for (PointResult& pr : results) {
 		pr.isConsens = false;
@@ -109,106 +125,128 @@ const AffineTransform& FrameResult::computeTransform(std::span<PointResult> resu
 		const RoiCrop& roi = mData.roiCrop;
 		if (pr.isValid() && x > roi.horizontal && x < mData.w - roi.horizontal && y > roi.vertical && y < mData.h - roi.vertical) {
 			pr.isConsidered = true;
-			mConsList.emplace_back(pr);
+			numValid++;
 		}
 	}
-	size_t numValid = mConsList.size();
-	
-	//second copy of initial points
-	mPointList = mConsList;
 
 	if (numValid > params.minConsPoints) {
+		mResultData.transform.reset();
 		//util::ConsoleTimer ic("trf " + std::to_string(frameIndex));
 
 		// STEP 1 traditional method
-		mBestTransform = computeClassic(numValid, frameIndex);
-		
-		debugData.pointsClassic = mConsList;
+		if (mData.runTransformClassic) {
+			mResultData.consList.resize(numValid);
+			std::ranges::copy_if(results, mResultData.consList.begin(), [] (const PointResult& pr) { return pr.isConsidered; });
+			mResultData.transform = computeClassic(numValid, frameIndex);
+			//debugLogger().format("frame {} classic {}", frameIndex, mResultData.consList.size());
+		}
 
 		// STEP 2 dbscan
-		debugData.runDbScan = mData.runDbScan && mConsList.size() < numValid * params.minDbScanRel && mConsList.size() < params.minDbScanAbs;
-		if (debugData.runDbScan) {
-			mClusterSizes.clear();
-			mBestCluster.clear();
-			computeDbScan(frameIndex);
+		mResultData.flags[0] = mData.runTransformDbScan;
+		mResultData.flags[1] = mResultData.consList.size() < numValid * params.minDbScanRel;
+		mResultData.flags[2] = mResultData.consList.size() < params.minDbScanAbs;
+		if (std::accumulate(mResultData.flags.begin(), mResultData.flags.end(), 0) == 3) {
+			//run dbscan on points in different order
+			std::vector<std::future<void>> futs(4);
+			for (int i = 0; i < 4; i++) {
+				futs[i] = mPool.add([&, numValid, frameIndex, i] { computeDbScan(results, numValid, frameIndex, i); });
+			}
+			for (auto& f : futs) f.wait();
 
-			if (mClusterSizes.size() == 0) {
-				//likely a hard scene change, return default transform
-				mBestTransform = AffineTransform();
-				//writeVideo(mPointList, frameIndex, std::to_string(frameIndex) + " points"); // <<<<<<<<<<<<
-
-			} else {
-				//compute transform from largest cluster
-				int idx = mClusterSizes[0].index;
-				AffineTransform trf;
-
-				auto fcnSelect = [&] (const PointContext& pc) { return pc.clusterIndex == idx; };
-				std::copy_if(mPointList.begin(), mPointList.end(), std::back_inserter(mBestCluster), fcnSelect);
-				
-				trf = mAffineSolver->computeSimilar(mBestCluster);
-				for (PointContext& pc : mBestCluster) {
-					auto [tx, ty] = mAffineSolver->transform(pc.x, pc.y);
-					pc.distance = sqr(pc.x + pc.u - tx) + sqr(pc.y + pc.v - ty);
-					pc.distanceRelative = pc.distance / pc.length;
-				}
-				std::sort(mBestCluster.begin(), mBestCluster.end(), SortRel);
-
-				size_t siz = mBestCluster.size() * params.finalSizePercent / 100;
-				if (siz > mConsList.size() && siz > params.minConsPoints) {
-					//writeVideo(mConsList, frameIndex, std::to_string(frameIndex) + " classic"); // <<<<<<<<<<<<
-					//writeVideo(mBestCluster, frameIndex, std::to_string(frameIndex) + " dbscan"); // <<<<<<<<<<<<
-					mBestCluster.resize(siz);
-					mBestTransform = mAffineSolver->computeSimilar(mBestCluster);
-					std::swap(mBestCluster, mConsList);
+			//find largest cluster
+			ClusterData nullCluster = {};
+			const ClusterData* bestCluster = &nullCluster;
+			int sizMax = 0;
+			for (const ClusterData& cd : mResultData.clusters) {
+				if (cd.sizes.size() > 0) {
+					const ClusterSize& cs = cd.sizes.front();
+					if (cs.siz > sizMax) {
+						sizMax = cs.siz;
+						mResultData.bestClusterVector = cd.index;
+						mResultData.bestClusterIndex = cs.index;
+						bestCluster = &cd;
+					}
 				}
 			}
 
-			debugData.pointsDbscan = mBestCluster;
-			debugData.clusterSizes = mClusterSizes;
+			size_t sizeBestCluster = 0;
+			size_t sizeAllClusters = 0;
+			if (mResultData.bestClusterVector > -1) {
+				auto fcnSelect = [&] (const PointContext& pc) { return pc.clusterIndex == mResultData.bestClusterIndex; };
+				std::ranges::copy_if(bestCluster->points, std::back_inserter(mResultData.bestCluster), fcnSelect);
+				sizeBestCluster = mResultData.bestCluster.size();
+				sizeAllClusters = std::accumulate(bestCluster->sizes.begin(), bestCluster->sizes.end(), 0ull, [] (size_t s, const ClusterSize& cs) { return s + cs.siz; });
+			}
+
+			//compare clusters and classic result
+			size_t numCons = mResultData.consList.size();
+			mResultData.flags[3] = sizeBestCluster > numCons * 10;
+			mResultData.flags[4] = sizeBestCluster > sizeAllClusters * 10 / 100;
+			mResultData.flags[5] = bestCluster->sizes.size() < 20;
+			if (sizeBestCluster == 0) {
+				//likely a hard scene change, return default transform
+				mResultData.transform = AffineTransform();
+				mResultData.consList.clear();
+				mResultData.dbscanIndex++;
+				//debugLogger().format("frame {} dbscan no cluster", frameIndex);
+				//writeVideo(mPointList, frameIndex, std::to_string(frameIndex) + " points");
+
+			} else if (std::accumulate(mResultData.flags.begin(), mResultData.flags.end(), 0) == 6) {
+				//compute transform from largest cluster
+				computeDbScanTransform(frameIndex);
+				mResultData.consList = mResultData.bestCluster;
+				mResultData.dbscanIndex++;
+				//debugLogger().format("#{} frame {} [{}] dbscan {}", mResultData.dbscanIndex, frameIndex, bestCluster->sizes.size(), collectionToString(bestCluster->sizes, 8));
+			}
 		}
 
-		for (PointContext& pc : mConsList) pc.ptr->isConsens = true;
+		//mark final set of consens points
+		for (PointContext& pc : mResultData.consList) pc.ptr->isConsens = true;
 	}
 
 	//std::cout << "frame " << frameIndex << ", " << mBestTransform << std::endl;
-	return mBestTransform;
+	return mResultData.transform;
 }
 
-//----------------------- classic ------------------
+
+//-----------------------------
+//--------- classic -----------
+//-----------------------------
+
 AffineTransform FrameResult::computeClassic(size_t numValid, int64_t frameIndex) {
 	//calculate average displacement distance and cut off outsiders
 	double averageLength = 0.0;
-	for (PointContext& pc : mConsList) {
+	for (PointContext& pc : mResultData.consList) {
 		averageLength += pc.length;
 	}
 	averageLength /= numValid;
 
 	//set delta value to deviation from average length
-	for (PointContext& pc : mConsList) {
+	for (PointContext& pc : mResultData.consList) {
 		pc.delta = std::abs(pc.length - averageLength);
 	}
 
-	std::sort(mConsList.begin(), mConsList.end(), SortDelta);
-	mConsList.resize(numValid * params.consLoopPercent / 100);
+	std::sort(mResultData.consList.begin(), mResultData.consList.end(), SortDelta);
+	mResultData.consList.resize(numValid * params.consLoopPercent / 100);
 	AffineTransform trf;
 
 	size_t numCons = 0;
-	for (int i = 0; i < params.consLoopCount && mConsList.size() > params.minConsPoints; i++) {
+	for (int i = 0; i < params.consLoopCount && mResultData.consList.size() > params.minConsPoints; i++) {
 		//average length of current points
 		averageLength = 0.0;
-		for (const PointContext& pc : mConsList) {
+		for (const PointContext& pc : mResultData.consList) {
 			averageLength += pc.length;
 		}
-		averageLength /= mConsList.size();
+		averageLength /= mResultData.consList.size();
 
 		//transform for selected points
-		trf = mAffineSolver->computeSimilar(mConsList);
+		trf = mAffineSolver->computeSimilar(mResultData.consList);
 
 		numCons = 0;
 		size_t numConsAbsolute = 0;
 		size_t numConsRelative = 0;
 		//calculate error distance based on transform
-		for (PointContext& pc : mConsList) {
+		for (PointContext& pc : mResultData.consList) {
 			auto [tx, ty] = mAffineSolver->transform(pc.x, pc.y);
 			pc.distance = sqr(pc.x + pc.u - tx) + sqr(pc.y + pc.v - ty);
 			pc.distanceRelative = pc.distance / pc.length;
@@ -225,44 +263,89 @@ AffineTransform FrameResult::computeClassic(size_t numValid, int64_t frameIndex)
 
 		//only then rely on relatives when there are many more than absolute ones
 		if (numConsAbsolute > 40 || numConsAbsolute * 10 > numConsRelative) {
-			std::sort(mConsList.begin(), mConsList.end(), SortDist);
+			std::ranges::sort(mResultData.consList, SortDist);
 
 		} else {
 			//std::cout << data.status.frameInputIndex << " ABS " << numConsAbsolute << " REL " << numConsRelative << std::endl;
-			std::sort(mConsList.begin(), mConsList.end(), SortRel);
+			std::ranges::sort(mResultData.consList, SortRel);
 		}
 
 		//stop if enough points are consens
-		size_t cutoff = mConsList.size() * params.consLoopPercent / 100;
+		size_t cutoff = mResultData.consList.size() * params.consLoopPercent / 100;
 		if (numCons > cutoff) {
 			break;
 
 		} else {
-			mConsList.resize(cutoff);
+			mResultData.consList.resize(cutoff);
 		}
 	}
 
-	mConsList.resize(numCons);
+	mResultData.consList.resize(numCons);
 	return trf;
 }
 
-//----------------------- dbscan ------------------
+
+//----------------------------
+//--------- dbscan -----------
+//----------------------------
+
 //adaptation of dbscan to find clusters of movements
-void FrameResult::computeDbScan(int64_t frameIndex) {
+void FrameResult::computeDbScan(std::span<PointResult> results, size_t numValid, int64_t frameIndex, size_t index) {
 	//writeImage(mBestTransform, mConsList, frameIndex, "classic");
 	//util::ConsoleTimer ct("dbscan " + std::to_string(frameIndex));
+	ClusterData& cd = mResultData.clusters[index];
+	std::vector<PointContext>& points = cd.points;
+	std::vector<PointContext*>& work = cd.work;
+	cd.sizes.clear();
+
+	//copy input points
+	switch (index) {
+	case 0:
+		//normal order
+		points.resize(numValid);
+		std::copy_if(results.begin(), results.end(), points.begin(), [] (const PointResult& pr) { return pr.isConsidered; });
+		break;
+
+	case 1:
+		//reversed order
+		points.resize(numValid);
+		std::copy_if(results.rbegin(), results.rend(), points.begin(), [] (const PointResult& pr) { return pr.isConsidered; });
+		break;
+
+	case 2:
+		//column major
+		points.clear();
+		for (int c = 0; c < mData.ixCount; c++) {
+			for (int r = 0; r < mData.iyCount; r++) {
+				int idx = c + r * mData.ixCount;
+				if (PointResult& pr = results[idx]; pr.isValid()) points.emplace_back(pr);
+			}
+		}
+		break;
+
+	case 3:
+		//reversed column major
+		points.clear();
+		for (int c = mData.ixCount - 1; c >= 0; c--) {
+			for (int r = mData.iyCount - 1; r >= 0; r--) {
+				int idx = c + r * mData.ixCount;
+				if (PointResult& pr = results[idx]; pr.isValid()) points.emplace_back(pr);
+			}
+		}
+		break;
+	}
 
 	//build clusters
-	for (PointContext& pc : mPointList) {
+	for (PointContext& pc : points) {
 		int idxRead = 0;
 		int idxWrite = 0;
 		int idxMarker = 0;
-	
+
 		if (pc.clusterIndex == -2) {
 			//build new region including center point
-			for (PointContext& check : mPointList) {
+			for (PointContext& check : points) {
 				if (check.clusterIndex < 0 && clusterDistance(pc, check)) {
-					mWork[idxWrite] = &check;
+					work[idxWrite] = &check;
 					idxWrite++;
 				}
 			}
@@ -270,24 +353,24 @@ void FrameResult::computeDbScan(int64_t frameIndex) {
 			//check neighborhood size including center point
 			if (idxWrite > params.minPts) {
 				//build new cluster
-				int clusterIdx = mClusterSizes.size();
-				mWork[0]->clusterIndex = clusterIdx;
-				mWork[0]->clusterGeneration = 0;
+				int clusterIdx = cd.sizes.size();
+				work[0]->clusterIndex = clusterIdx;
+				work[0]->clusterGeneration = 0;
 				for (int idx = 1; idx < idxWrite; idx++) {
-					mWork[idx]->clusterIndex = clusterIdx;
-					mWork[idx]->clusterGeneration = 0;
+					work[idx]->clusterIndex = clusterIdx;
+					work[idx]->clusterGeneration = 0;
 				}
 
 				//do not expand cluster recursively, seems to work better this way
 				int numel = idxWrite;
 				for (idxRead = 1; idxRead < numel; idxRead++) {
-					const PointContext* pr = mWork[idxRead];
+					const PointContext* pr = work[idxRead];
 
 					//neighborhood to this center point
 					idxMarker = idxWrite;
-					for (PointContext& check : mPointList) {
+					for (PointContext& check : points) {
 						if (check.clusterIndex < 0 && clusterDistance(*pr, check)) {
-							mWork[idxWrite] = &check;
+							work[idxWrite] = &check;
 							idxWrite++;
 						}
 					}
@@ -296,8 +379,8 @@ void FrameResult::computeDbScan(int64_t frameIndex) {
 					if (idxWrite - idxMarker >= params.minPts) {
 						//mark as belonging to this cluster
 						for (int idx = idxMarker; idx < idxWrite; idx++) {
-							mWork[idx]->clusterIndex = clusterIdx;
-							mWork[idx]->clusterGeneration = pr->clusterGeneration + 1;
+							work[idx]->clusterIndex = clusterIdx;
+							work[idx]->clusterGeneration = pr->clusterGeneration + 1;
 						}
 
 					} else {
@@ -307,29 +390,45 @@ void FrameResult::computeDbScan(int64_t frameIndex) {
 				}
 
 				//store established cluster size
-				mClusterSizes.emplace_back(clusterIdx, idxWrite);
+				cd.sizes.emplace_back(clusterIdx, idxWrite);
 			}
 		}
 	}
 
-	auto fcnSort = [] (const ClusterSize& cs1, const ClusterSize& cs2) { return cs1.siz > cs2.siz; };
-	std::sort(mClusterSizes.begin(), mClusterSizes.end(), fcnSort);
-	assert(checkSizes() && "invalid clusters");
+	std::ranges::sort(cd.sizes, [] (const ClusterSize& cs1, const ClusterSize& cs2) { return cs1.siz > cs2.siz; });
 	//std::cout << "frame " << frameIndex << ": [" << mClusterSizes.size() << "] " << util::collectionToString(mClusterSizes, 15) << std::endl;
 }
 
-//--- for debugging
-const FrameResultData& FrameResult::getResultData() const {
-	debugData.transform = mBestTransform;
-	debugData.clusterSizes = mClusterSizes;
-	return debugData;
+void FrameResult::computeDbScanTransform(int64_t frameIndex) {
+	AffineTransform trf;
+
+	trf = mAffineSolver->computeSimilar(mResultData.bestCluster);
+	for (PointContext& pc : mResultData.bestCluster) {
+		auto [tx, ty] = mAffineSolver->transform(pc.x, pc.y);
+		pc.distance = sqr(pc.x + pc.u - tx) + sqr(pc.y + pc.v - ty);
+		pc.distanceRelative = pc.distance / pc.length;
+	}
+	std::ranges::sort(mResultData.bestCluster, SortRel);
+
+	//writeVideo(mConsList, frameIndex, std::to_string(frameIndex) + " classic"); // <<<<<<<<<<<<
+	//writeVideo(mBestCluster, frameIndex, std::to_string(frameIndex) + " dbscan"); // <<<<<<<<<<<<
+	size_t siz = mResultData.bestCluster.size() * params.finalSizePercent / 100;
+	mResultData.bestCluster.resize(siz);
+	mResultData.transform = mAffineSolver->computeSimilar(mResultData.bestCluster);
 }
 
-//--- for debugging
-bool FrameResult::checkSizes() const {
-	int sum = std::count_if(mPointList.begin(), mPointList.end(), [&] (const PointContext& pc) { return pc.clusterIndex < 0; });
-	for (const ClusterSize& cs : mClusterSizes) sum += cs.siz;
-	return sum == mPointList.size();
+std::vector<int> FrameResultData::getClusterSizes() const {
+	std::vector<int> out;
+	if (bestClusterVector > -1) {
+		for (const ClusterSize& cs : clusters[bestClusterVector].sizes) {
+			out.push_back(cs.siz);
+		}
+	}
+	return out;
+}
+
+const FrameResultData& FrameResult::getResultData() const {
+	return mResultData;
 }
 
 //--- for debugging

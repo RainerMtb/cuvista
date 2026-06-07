@@ -19,19 +19,8 @@
 #include "Deshaker.hpp"
 #include "ImageClasses.hpp"
 
-static void f1() {
-	std::shared_ptr<RawMemoryStoreWriter> externalWriter = std::make_shared<RawMemoryStoreWriter>(250, true, true);
-	util::debugLogger = std::make_shared<util::DebugLoggerTcp>("10.0.0.1", 5555);
-	std::string argsLine = "-device 3 -i D:/VideoTest/12.mp4 -o null -frames 200";
-
-	auto args = util::splitString(argsLine, " ");
-	DeshakerResult result = deshake(args, &std::cout, externalWriter);
-	std::cout << std::endl << "------- Log -------" << std::endl;
-	std::cout << result.log << std::endl;
-}
-
-static void f2() {
-	util::debugLogger = std::make_shared<util::DebugLoggerString>();
+int main() {
+	util::debugLoggerPtr = std::make_shared<util::DebugLoggerString>();
 	//util::debugLogger = std::make_shared<util::DebugLoggerTcp>("10.0.0.1", 5555);
 
 	std::vector<std::string> argsLines = {
@@ -39,17 +28,18 @@ static void f2() {
 		/*1*/ "-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -bgmode color -y -enc ffmpeg:hevc -frames 4 -progress 0",
 		/*2*/ "-device 1 -i d:/VideoTest/02short.mp4 -o null -mode 2",
 		/*3*/ "-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -bgmode color -y -zoom -8",
-		/*4*/ "-i d:/VideoTest/06b.mkv -o f:/videoOut.nv12 -resvid -bgmode color -y -zoom -8 -device 3",
-		/*5*/ "-device 3 -frames 5 -i d:/VideoTest/04.ts -o d:/VideoTest/out/images/im%03d.jpg -progress 0 -y",
+		/*4*/ "-i D:/VideoTest/x3/VID.mp4 -o f:/videoOut.mp4 -y -zoom 5 -radius 0.3",
+		/*5*/ "-device 2 -i f:/pic/input.mp4 -o f:/videoOut.mp4 -y",
 		/*6*/ "-device 3 -i D:/VideoTest/12.mp4 -o f:/videoOut.mp4 -y -frames 200",
 		/*7*/ "-device 3 -i D:/VideoTest/02short.mp4 -o f:/videoOut.mp4 -y -stack 60:60",
-		/*8*/ "-i d:/VideoTest/06b.mkv -o null -bgmode color -y -zoom -8 -device 3",
-		/*9*/ "-i d:/videoTest/15.ts -o f:/videoOut.mp4 -y -device 0 -frames 150 -log tcp://10.0.0.1:5555",
+		/*8*/ "-i d:/VideoTest/06b.mkv -o f:/videoOut.nv12 -resvid -bgmode color -y -zoom -8 -device 3 -noclassic",
+		/*9*/ "-i d:/VideoTest/06b.mkv -o f:/videoOut.mp4 -y -device 2 -nodbscan",
+		/*10*/ "-i d:/videoTest/15.ts -o f:/videoOut.mp4 -y -device 0 -frames 150 -log tcp://10.0.0.1:5555",
 	};
 
-	int idx = 2;
+	int idx = 4;
 	std::string argsLine = argsLines[idx];
-	std::cout << "------- CuvistaTest -------" << std::endl;
+	std::cout << "------- TestCuvista -------" << std::endl;
 	std::cout << "------- params: " << argsLine << std::endl << std::endl;
 
 	auto args = util::splitString(argsLine, " ");
@@ -57,8 +47,4 @@ static void f2() {
 
 	std::cout << std::endl << "------- Log -------" << std::endl;
 	std::cout << result.log << std::endl;
-}
-
-int main() {
-	f2();
 }

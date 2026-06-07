@@ -19,6 +19,7 @@
 #pragma once
 
 #include <span>
+#include <vector>
 #include "AffineTransform.hpp"
 #include "MainData.hpp"
 #include "ThreadPoolBase.h"
@@ -29,13 +30,27 @@ struct ClusterSize {
 	friend std::ostream& operator << (std::ostream& out, const ClusterSize& cs);
 };
 
+struct ClusterData {
+	int index;
+	std::vector<PointContext> points;
+	std::vector<PointContext*> work;
+	std::vector<ClusterSize> sizes;
+};
+
 //hold result data for analysis
 struct FrameResultData {
 	AffineTransform transform;
-	std::vector<PointContext> pointsClassic;
-	std::vector<PointContext> pointsDbscan;
-	std::vector<ClusterSize> clusterSizes;
-	bool runDbScan;
+	std::vector<PointContext> consList;
+	std::vector<ClusterData> clusters;
+	std::vector<PointContext> bestCluster;
+	std::vector<int> flags;
+	int64_t frameIndex = -1;
+	int bestClusterVector = -1;
+	int bestClusterIndex = -1;
+	double gamma = 0.0;
+	int dbscanIndex = 0;
+
+	std::vector<int> getClusterSizes() const;
 };
 
 
@@ -45,13 +60,11 @@ class FrameResult {
 	using SamplerPtr = std::shared_ptr<SamplerBase<PointContext>>;
 
 public:
-	inline static FrameResultData debugData = {};
-
 	//construct lists and solver class
 	FrameResult(MainData& data, ThreadPoolBase& threadPool);
 
 	//compute resulting transformation for this frame
-	const AffineTransform& computeTransform(std::span<PointResult> results, int64_t frameIndex);
+	const AffineTransform& computeTransform(std::span<PointResult> results, int64_t frameIndex, double gamma);
 
 	//get the last computed treansform
 	const AffineTransform& getTransform() const;
@@ -66,13 +79,7 @@ private:
 	const MainData& mData;
 	ThreadPoolBase& mPool;
 	std::unique_ptr<AffineSolver> mAffineSolver;
-	AffineTransform mBestTransform;
-	std::vector<PointContext> mConsList;
-	
-	std::vector<PointContext> mPointList;
-	std::vector<PointContext> mBestCluster;
-	std::vector<PointContext*> mWork;
-	std::vector<ClusterSize> mClusterSizes;
+	FrameResultData mResultData;
 
 	struct {
 		int consLoopCount = 8;                      //max number of loops when searching for consensus set
@@ -81,20 +88,21 @@ private:
 		double consDistanceSqr = util::sqr(1.25);   //max offset for a point to be in the consensus set
 
 		size_t minConsPoints = 8;      //min numbers of points for consensus set
-		double minDbScanRel = 0.08;    //when to try dbscan
-		int minDbScanAbs = 80;         //when to start dbscan
-		int minPts = 20;               //min cluster size
+		double minDbScanRel = 0.1;     //when to try dbscan
+		int minDbScanAbs = 100;        //when to start dbscan
 		int finalSizePercent = 75;     //reduction of best cluster
 
-		double eps = -1.0;    //eps value for dbscan
+		int minPts = 25;      //min cluster size
+		double eps = 10.0;    //eps value for dbscan
 		double f1 = -1.0;     //factor for angle delta
 		double f2 = -1.0;     //factor for vector length
 	} params;
 
 	AffineTransform computeClassic(size_t numValid, int64_t frameIndex);
-	void computeDbScan(int64_t frameIndex);
+	void computeDbScan(std::span<PointResult> results, size_t numValid, int64_t frameIndex, size_t index);
+
+	void computeDbScanTransform(int64_t frameIndex);
 	bool clusterDistance(const PointContext& pc1, const PointContext& pc2) const;
 
-	bool checkSizes() const;
 	void writeVideo(std::span<PointContext> res, int64_t frameIndex, const std::string& title) const;
 };

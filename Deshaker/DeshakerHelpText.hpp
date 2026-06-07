@@ -138,6 +138,9 @@ advanced computation parameters:
                 number of pixels to crop away horizontally and vertically
                 may be used to ignore text along the edge of input
                 default 0:0
+-nodbscan       do not run dbscan algorithm, this will improve performace,
+                probably improves quality when input has smooth movements,
+                but will not catch sharp scene changes
                 
 keyboard input options at runtime:
 key [e]         stop reading input, write pending output, then terminate

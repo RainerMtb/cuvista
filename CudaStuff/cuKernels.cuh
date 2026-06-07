@@ -19,7 +19,7 @@
 #pragma once
 
 #include "cuUtil.cuh"
-#include "BaseData.hpp"
+#include "CoreData.hpp"
 
 namespace cu {
 	cudaError_t input(uchar* srcYuv, int srcStep, int srcWidth, uchar* destVuyx, int destStep, int destWidth, int h, cudaStream_t cs = 0);

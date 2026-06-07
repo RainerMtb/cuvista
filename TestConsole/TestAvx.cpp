@@ -19,6 +19,21 @@
 #include "TestMain.hpp"
 #include "AvxUtil.hpp"
 
+void illegalInstruction() {
+	MainData data;
+	data.collectDeviceInfo();
+	NullReader reader;
+	data.validate(reader);
+	NullWriter writer(data, reader);
+	MovieFrameConsecutive frame(data, reader, writer);
+	AvxFrame avx(data, data.deviceInfoAvx, frame, defaultPool);
+	avx.init();
+	std::vector<int> hist(256);
+	AffineDataFloat trf = {};
+	avx.createPyramid(0, hist, trf, true);
+	std::cout << "done" << std::endl;
+}
+
 void avxCompute() {
 	for (size_t s = 1; s <= 8; s++) {
 		for (int i = 0; i < 4; i++) {

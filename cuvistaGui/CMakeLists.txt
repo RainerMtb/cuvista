@@ -46,7 +46,7 @@ qt_generate_deploy_app_script(
     OUTPUT_SCRIPT deploy_script
     NO_COMPILER_RUNTIME
     NO_TRANSLATIONS
-    DEPLOY_TOOL_OPTIONS --no-ffmpeg
+    DEPLOY_TOOL_OPTIONS --no-ffmpeg --no-system-d3d-compiler
 )
 
 install(SCRIPT "${deploy_script}")

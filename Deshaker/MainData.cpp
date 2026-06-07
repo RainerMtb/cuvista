@@ -268,11 +268,11 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 			printSummary = false;
 			progressType = ProgressType::NONE;
 
-		} else if (args.nextArg("rundbscan")) {
-			runDbScan = true;
+		} else if (args.nextArg("noclassic")) {
+			runTransformClassic = false;
 
 		} else if (args.nextArg("nodbscan")) {
-			runDbScan = false;
+			runTransformDbScan = false;
 
 		} else if (args.nextArg("levels", next)) {
 			//pyramid levels to compute
@@ -322,7 +322,7 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 			}
 
 		} else if (args.nextArg("log", next)) {
-			util::debugLogger = util::DebugLogger::create(next);
+			util::DebugLogger::open(next);
 
 		} else {
 			throw AVException("invalid parameter '" + args.str() + "'");

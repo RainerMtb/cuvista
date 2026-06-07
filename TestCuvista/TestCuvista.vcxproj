@@ -25,8 +25,7 @@
     <EnableASAN>false</EnableASAN>
     <EnableFuzzer>false</EnableFuzzer>
     <PlatformToolset>v145</PlatformToolset>
-    <VCToolsVersion>
-    </VCToolsVersion>
+    <VCToolsVersion>14.50.35717</VCToolsVersion>
     <MSVCPreviewEnabled>false</MSVCPreviewEnabled>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
@@ -34,8 +33,7 @@
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
-    <VCToolsVersion>
-    </VCToolsVersion>
+    <VCToolsVersion>14.50.35717</VCToolsVersion>
     <PlatformToolset>v145</PlatformToolset>
     <MSVCPreviewEnabled>false</MSVCPreviewEnabled>
   </PropertyGroup>
@@ -72,7 +70,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(SolutionDir)lib\$(Platform);$(SolutionDir)bin\$(Platform)\$(Configuration);$(CUDA_PATH)\lib\$(Platform);$(FFMPEG_PATH)\lib;$(SolutionDir)bin_inter\cuvista\$(Platform)\$(Configuration)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>AvxStuff.lib;Common.lib;cpu_features.lib;OpenCl.lib;CudaStuff.lib;Matrix.lib;Deshaker.obj;Deshaker.lib;cudart_static.lib;nvencodeapi.lib;cuda.lib;avcodec.lib;avformat.lib;avutil.lib;swscale.lib;swresample.lib;Ole32.lib;ws2_32.lib</AdditionalDependencies>
+      <AdditionalDependencies>AvxStuff.lib;Common.lib;cpu_features.lib;OpenCl.lib;CudaStuff.lib;Matrix.lib;Deshaker.obj;Deshaker.lib;cudart_static.lib;nvencodeapi.lib;cuda.lib;avcodec.lib;avformat.lib;avutil.lib;swscale.lib;swresample.lib;Ole32.lib;ws2_32.lib;Shell32.lib</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>libcmt.lib; msvcrt.lib; libcmtd.lib</IgnoreSpecificDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>
@@ -91,7 +89,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(SolutionDir)lib\$(Platform);$(SolutionDir)bin\$(Platform)\$(Configuration);$(CUDA_PATH)\lib\$(Platform);$(FFMPEG_PATH)\lib;$(SolutionDir)bin_inter\cuvista\$(Platform)\$(Configuration)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>AvxStuff.lib;Common.lib;cpu_features.lib;OpenCl.lib;CudaStuff.lib;Matrix.lib;Deshaker.obj;Deshaker.lib;cudart_static.lib;nvencodeapi.lib;cuda.lib;avcodec.lib;avformat.lib;avutil.lib;swscale.lib;swresample.lib;Ole32.lib;ws2_32.lib</AdditionalDependencies>
+      <AdditionalDependencies>AvxStuff.lib;Common.lib;cpu_features.lib;OpenCl.lib;CudaStuff.lib;Matrix.lib;Deshaker.obj;Deshaker.lib;cudart_static.lib;nvencodeapi.lib;cuda.lib;avcodec.lib;avformat.lib;avutil.lib;swscale.lib;swresample.lib;Ole32.lib;ws2_32.lib;Shell32.lib</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>libcmt.lib</IgnoreSpecificDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>

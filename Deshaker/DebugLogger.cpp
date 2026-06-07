@@ -52,14 +52,14 @@ std::string DebugLoggerFile::str() {
 	return std::format("file {} {} bytes", filename, siz); 
 }
 
-std::shared_ptr<DebugLogger> DebugLogger::create(const std::string& logger) {
+void DebugLogger::open(const std::string& logger) {
 	std::regex patternTcp("^tcp://(.+):(\\d+)$");
 
 	if (logger.starts_with("file://")) {
-		return std::make_shared<DebugLoggerFile>(logger.substr(7));
+		debugLoggerPtr = std::make_shared<DebugLoggerFile>(logger.substr(7));
 
 	} else if (std::smatch matcher; std::regex_match(logger, matcher, patternTcp)) {
-		return std::make_shared<DebugLoggerTcp>(matcher[1].str(), std::stoi(matcher[2]));
+		debugLoggerPtr = std::make_shared<DebugLoggerTcp>(matcher[1].str(), std::stoi(matcher[2]));
 
 	} else {
 		throw AVException("invalid log parameter '" + logger + "'");

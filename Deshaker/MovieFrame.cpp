@@ -18,7 +18,6 @@
 
 #include "MovieFrame.hpp"
 #include "MovieReader.hpp"
-#include "ProgressDisplay.hpp"
 #include "Util.hpp"
 
 
@@ -79,11 +78,11 @@ std::string MovieFrame::ptsForFrameAsString(int64_t frameIndex) const {
 }
 
 const AffineTransform& MovieFrame::computeTransform(std::span<PointResult> results, int64_t frameIndex) {
-	return mFrameResult.computeTransform(results, frameIndex);
+	return mFrameResult.computeTransform(results, frameIndex, mGamma);
 }
 
 const AffineTransform& FrameExecutor::computeTransform(std::span<PointResult> results, int64_t frameIndex) {
-	return mFrame.mFrameResult.computeTransform(results, frameIndex);
+	return mFrame.computeTransform(results, frameIndex);
 }
 
 //read transform parameters from file, usually for second run
@@ -109,19 +108,34 @@ void MovieFrame::progressUpdate(ProgressInfo& progressInfo, ProgressBase& progre
 	progress.update(progressInfo, forceUpdate);
 }
 
-void MovieFrame::checkPyramidGamma(int64_t frameIndex, std::span<int> histogram, std::span<int> histogramOld, FrameExecutor& executor) {
-	int s = mData.w * mData.h;
-	int64_t frameToAdjust = frameIndex - 1;
-	//executor.adjustPyramid(frameToAdjust, x);
-	//Matf::concatHorz(executor->getPyramid(frameToAdjust), executor->getPyramid(frameIndex)).saveAsBMP(std::format("f:/pic/im{}.bmp", frameToAdjust), 1.0f);
-}
-
 void MovieFrame::adjustPyramid(int64_t frameToAdjust, double gamma, FrameExecutor& executor) {
 	for (size_t i = 0; i < mLutGamma.size(); i++) {
 		double x = 1.0 * i / (mLutGamma.size() - 1);
 		mLutGamma[i] = (float) std::pow(x, gamma);
 	}
 	executor.adjustPyramid(frameToAdjust, mLutGamma);
+}
+
+void MovieFrame::checkPyramidGamma(int64_t frameIndex, std::span<int> histogram, std::span<int> histogramOld, FrameExecutor& executor) {
+	mGamma = 0.0;
+	double s = 255.0 * mData.w * mData.h;
+
+	auto lumaFcn = [&] (std::span<int> hist) {
+		int64_t sum = 0;
+		for (int64_t i = 0; i < hist.size(); i++) sum += i * hist[i];
+		return sum / s;
+	};
+
+	double cur = lumaFcn(histogram);
+	double old = lumaFcn(histogramOld);
+	double delta = std::abs(std::log(cur) - std::log(old));
+	//debugLogger().format("frame {} delta {:.4f}", frameIndex, delta);
+	if (delta > 0.075 && delta < 0.35) {
+		mGamma = std::log(cur) / std::log(old);
+		adjustPyramid(frameIndex - 1, mGamma, executor);
+		//debugLogger().format("frame {}-{} cur {:.4f} old {:.4f} gamma = {:.4f}", frameIndex - 1, frameIndex, cur, old, mGamma);
+		//Matf::concatHorz(executor.getPyramid(frameIndex - 1), executor.getPyramid(frameIndex)).saveAsBMP(std::format("f:/pic/im{}.bmp", frameIndex - 1), 1.0f);
+	}
 }
 
 
@@ -163,7 +177,7 @@ LoopResult MovieFrameCombined::runLoop(ProgressBase& progress, UserInput& input,
 				executor->inputData(mReader.frameIndex);
 				executor->createPyramid(mReader.frameIndex, histogram, {}, false);
 				//transform for previous frame
-				mFrameResult.computeTransform(mResultPoints, mReader.frameIndex - 1);
+				computeTransform(mResultPoints, mReader.frameIndex - 1);
 				mTrajectory.addTrajectoryTransform(mFrameResult.getTransform());
 				//begin computing smooth transform
 				if (mReader.frameIndex > mData.radius) mTrajectory.computeSmoothTransform(mData, mReader.frameIndex - mData.radius - 1);
@@ -191,7 +205,7 @@ LoopResult MovieFrameCombined::runLoop(ProgressBase& progress, UserInput& input,
 				//read next frame async
 				std::future<void> f = mReader.readAsync(*executor);
 				//now compute transform for previous frame while results for current frame are potentially computed on device
-				mFrameResult.computeTransform(mResultPoints, readIndex - 1);
+				computeTransform(mResultPoints, readIndex - 1);
 				const AffineTransform& currentTransform = mFrameResult.getTransform();
 				mTrajectory.addTrajectoryTransform(currentTransform);
 				mTrajectory.computeSmoothTransform(mData, readIndex - mData.radius - 1);
@@ -207,7 +221,7 @@ LoopResult MovieFrameCombined::runLoop(ProgressBase& progress, UserInput& input,
 
 			} else if (state == StateCombined::LAST_COMPUTE) {
 				//compute last transform
-				mFrameResult.computeTransform(mResultPoints, mReader.frameIndex - 1);
+				computeTransform(mResultPoints, mReader.frameIndex - 1);
 				//add last transform
 				mTrajectory.addTrajectoryTransform(mFrameResult.getTransform());
 				//compute all remaining transforms
@@ -365,7 +379,7 @@ LoopResult MovieFrameConsecutive::runLoop(ProgressBase& progress, UserInput& inp
 				std::swap(histogram, histogramOld);
 				executor->computeStart(idx, mResultPoints);
 				executor->computeTerminate(idx, mResultPoints);
-				mFrameResult.computeTransform(mResultPoints, idx);
+				computeTransform(mResultPoints, idx);
 				mTrajectory.addTrajectoryTransform(mFrameResult.getTransform());
 				mWriter.writeInput(*executor);
 				f.wait();
@@ -401,7 +415,7 @@ LoopResult MovieFrameConsecutive::runLoop(ProgressBase& progress, UserInput& inp
 				std::swap(histogram, histogramOld);
 				executor->computeStart(idx, mResultPoints);
 				executor->computeTerminate(idx, mResultPoints);
-				const AffineTransform& newTransform = mFrameResult.computeTransform(mResultPoints, idx);
+				const AffineTransform& newTransform = computeTransform(mResultPoints, idx);
 				mTrajectory.setTrajectoryTransform(newTransform);
 				mWriter.writeInput(*executor);
 				f.wait();

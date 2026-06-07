@@ -39,7 +39,7 @@ namespace util {
 		if (delta < 1000) ss << str << "=" << delta << " us";
 		else if (delta < 1'000'000) ss << str << "=" << delta / 1000.0 << " ms";
 		else ss << str << "=" << delta / 1e6 << " s";
-		debugLogger->log(ss.str());
+		debugLogger().log(ss.str());
 	}
 
 	void ConsoleTimer::interval(const std::string& str) {
@@ -270,5 +270,5 @@ namespace util {
 }
 
 util::DebugLogger& debugLogger() {
-	return *util::debugLogger;
+	return *util::debugLoggerPtr;
 }

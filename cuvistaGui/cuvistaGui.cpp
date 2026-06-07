@@ -39,6 +39,7 @@ template <class... Args> QString qformat(std::format_string<Args...> fmt, Args&&
 cuvistaGui::cuvistaGui(QWidget *parent) : 
     QMainWindow(parent) 
 {
+    //debugLogger().open("tcp://10.0.0.1:5555");
     ui.setupUi(this);
     mPlayerWindow = new PlayerWindow(this);
     mProgressWindow = new ProgressWindow(this);
@@ -422,6 +423,7 @@ void cuvistaGui::stabilize() {
     mData.ir = ui.sliderIr->value();
     mData.cpuThreadsRequired = { ui.sliderCpuThreads->value() };
     mData.cudaThreads = ui.sliderCudaThreads->value() * 4;
+    mData.runTransformDbScan = ui.chkDbScan->isChecked();
 
     using uchar = unsigned char;
     uchar rgb[] = { (uchar) mBackgroundColor.red(), (uchar) mBackgroundColor.green(), (uchar) mBackgroundColor.blue() };
@@ -663,6 +665,7 @@ void cuvistaGui::resetGui() {
     ui.spinFrameLimit->setValue(defaultParam.frameLimit);
     ui.sliderQuality->setValue(defaultParam.encodingQuality);
     ui.sliderLevels->setValue(defaultParam.levels);
+    ui.chkDbScan->setChecked(true);
 
     mReader.close();
     ui.texInput->clear();

@@ -344,7 +344,7 @@
                         <FontIconSource Glyph="&#xE700;"/>
                     </TabViewItem.IconSource>
 
-                    <Grid RowDefinitions="auto, 32, 32, 32, 32"
+                    <Grid RowDefinitions="auto, 32, 32, 32, 32, 32"
                         ColumnDefinitions="auto, *"
                         RowSpacing="12"
                         ColumnSpacing="20"
@@ -354,7 +354,7 @@
                         Padding="12">
 
                         <TextBlock Grid.Row="0" Grid.ColumnSpan="2" VerticalAlignment="Center" TextWrapping="WrapWholeWords"
-                                   Text="changing these parameters may affect results and performance in unpredictable ways, there may actually be no significant effect, overall results depend on hardware and input video"
+                                   Text="changing parameters may affect results and performance in unpredictable ways, there may actually be no significant effect"
                                    />
 
                         <TextBlock Grid.Row="1" Text="Pyramid Levels" VerticalAlignment="Center"/>
@@ -362,7 +362,7 @@
                             <Slider x:Name="sliderLevels" Minimum="1" Maximum="6" Width="120" TickPlacement="TopLeft" 
                                     TickFrequency="1" IsThumbToolTipEnabled="False"></Slider>
                             <TextBlock Grid.Column="1" Text="{Binding ElementName=sliderLevels, Path=Value}" VerticalAlignment="Center"/>
-                            <TextBlock Grid.Column="2" Text="(parameter for stabilization)" VerticalAlignment="Center" TextAlignment="Right"/>
+                            <TextBlock Grid.Column="2" Text="(algorithm parameter)" VerticalAlignment="Center" TextAlignment="Right"/>
                         </Grid>
                         
                         <TextBlock Grid.Row="2" Text="Integration Radius" VerticalAlignment="Center"/>
@@ -370,7 +370,7 @@
                             <Slider x:Name="sliderIr" Minimum="1" Maximum="3" Width="120" TickPlacement="TopLeft" 
                                     TickFrequency="1" IsThumbToolTipEnabled="False"></Slider>
                             <TextBlock Grid.Column="1" Text="{Binding ElementName=sliderIr, Path=Value}" VerticalAlignment="Center" />
-                            <TextBlock Grid.Column="2" Text="(parameter for stabilization)" VerticalAlignment="Center" TextAlignment="Right"/>
+                            <TextBlock Grid.Column="2" Text="(algorithm parameter)" VerticalAlignment="Center" TextAlignment="Right"/>
                         </Grid>
                         
                         <TextBlock Grid.Row="3" Text="Cpu Threads" VerticalAlignment="Center"/>
@@ -387,6 +387,12 @@
                                     TickFrequency="4" IsThumbToolTipEnabled="False" SnapsTo="Ticks"></Slider>
                             <TextBlock Grid.Column="1" Text="{Binding ElementName=sliderCudaThreads, Path=Value}" VerticalAlignment="Center"/>
                             <TextBlock Grid.Column="2" Text="(performance parameter)" VerticalAlignment="Center" TextAlignment="Right"/>
+                        </Grid>
+                        
+                        <TextBlock Grid.Row="5" Text="Enable DbScan" VerticalAlignment="Center"/>
+                        <Grid Grid.Row="5" Grid.Column="1" ColumnSpacing="16" ColumnDefinitions="auto, *">
+                            <CheckBox x:Name="chkDbScan" VerticalAlignment="Center" IsChecked="True"/>
+                            <TextBlock Grid.Column="1" Text="(algorithm and performance parameter)" VerticalAlignment="Center" TextAlignment="Right"/>
                         </Grid>
                     </Grid>
 

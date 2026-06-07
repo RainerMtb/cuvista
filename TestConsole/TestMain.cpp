@@ -18,21 +18,6 @@
 
 #include "TestMain.hpp"
 
-void x() {
-	MainData data;
-	data.collectDeviceInfo();
-	NullReader reader;
-	data.validate(reader);
-	NullWriter writer(data, reader);
-	MovieFrameConsecutive frame(data, reader, writer);
-	AvxFrame avx(data, data.deviceInfoAvx, frame, defaultPool);
-	avx.init();
-	std::vector<int> hist(256);
-	AffineDataFloat trf = {};
-	avx.createPyramid(0, hist, trf, true);
-	std::cout << "done" << std::endl;
-}
-
 int main() {
 	//std::cout << "----------------------------" << std::endl << "TestMain:" << std::endl;
 	//qrdec();
@@ -64,8 +49,8 @@ int main() {
 
 	//testZoom();
 	//testVideo1();
-	//testLuma();
-	x();
+	testLuma2();
+	//illegalInstruction();
 
 	//util::base64_encode("f:/testData.mp4", "f:/testData.txt");
 	//cudaDriverApi();

@@ -40,8 +40,7 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>MultiByte</CharacterSet>
     <PlatformToolset>v145</PlatformToolset>
-    <VCToolsVersion>
-    </VCToolsVersion>
+    <VCToolsVersion>14.50.35717</VCToolsVersion>
     <MSVCPreviewEnabled>false</MSVCPreviewEnabled>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
@@ -49,14 +48,13 @@
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
-    <VCToolsVersion>
-    </VCToolsVersion>
+    <VCToolsVersion>14.50.35717</VCToolsVersion>
     <PlatformToolset>v145</PlatformToolset>
     <MSVCPreviewEnabled>false</MSVCPreviewEnabled>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 13.2.props" />
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 13.3.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -95,7 +93,6 @@
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
       <AdditionalOptions>-fmad=false -std=c++20 -arch=all %(AdditionalOptions)</AdditionalOptions>
-      <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
       <CodeGeneration>
       </CodeGeneration>
       <Defines>BUILD_CUDA=1</Defines>
@@ -103,6 +100,7 @@
       <CompileOut>$(SolutionDir)bin\$(Platform)\$(Configuration)\%(Filename)%(Extension).obj</CompileOut>
       <AdditionalCompilerOptions>
       </AdditionalCompilerOptions>
+      <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
     </CudaCompile>
     <CudaLink>
       <GPUDebugInfo>true</GPUDebugInfo>
@@ -147,6 +145,6 @@
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 13.2.targets" />
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 13.3.targets" />
   </ImportGroup>
 </Project>

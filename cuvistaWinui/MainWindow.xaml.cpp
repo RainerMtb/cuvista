@@ -74,6 +74,7 @@ namespace winrt::cuvistaWinui::implementation {
         InitializeComponent(); //should not be used??
         lblStatus().Text(hformat("Version {}", CUVISTA_VERSION));
 
+        //debugLogger().open("tcp://10.0.0.1:5555");
         mData.console = &mData.nullStream;
         mData.printHeader = false;
         mData.printSummary = false;
@@ -347,6 +348,7 @@ namespace winrt::cuvistaWinui::implementation {
         mData.ir = (int) sliderIr().Value();
         mData.cpuThreadsRequired = { (int) sliderCpuThreads().Value()};
         mData.cudaThreads = (unsigned int) sliderCudaThreads().Value();
+        mData.runTransformDbScan = chkDbScan().IsChecked().Value();
 
         mData.backgroundColor = Color::rgb(mBackgroundColor.R, mBackgroundColor.G, mBackgroundColor.B);
         mData.backgroundColor.toYUVfloat(&mData.bgcol4.y, &mData.bgcol4.u, &mData.bgcol4.v);
@@ -729,6 +731,7 @@ namespace winrt::cuvistaWinui::implementation {
 
         sliderLevels().Value(defaultParam.levels);
         sliderQuality().Value(defaultParam.encodingQuality);
+        chkDbScan().IsChecked(true);
 
         mReader.close();
         mInputFile = {};

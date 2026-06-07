@@ -110,13 +110,13 @@ void runSelfTest(util::MessagePrinter& out, std::vector<DeviceInfoBase*> deviceL
 			
 			//inputFirst.saveBmpPlanes(std::format("f:/in1_{}.bmp", name));
 			if (uint64_t crc = inputFirst.crc(); crc != crcInputFirst) {
-				util::debugLogger->format("{} fail input1 {:x}", name, crc);
+				debugLogger().format("{} fail input1 {:x}", name, crc);
 				out.print("FAIL input1 ");
 				check = false;
 			}
 			//inputSecond.saveBmpPlanes(std::format("f:/in2_{}.bmp", name));
 			if (uint64_t crc = inputSecond.crc(); crc != crcInputSecond) {
-				util::debugLogger->format("{} fail input2 {:x}", name, crc);
+				debugLogger().format("{} fail input2 {:x}", name, crc);
 				out.print("FAIL input2 ");
 				check = false;
 			}
@@ -124,13 +124,13 @@ void runSelfTest(util::MessagePrinter& out, std::vector<DeviceInfoBase*> deviceL
 			Matf pyramid = executor->getPyramid(0);
 			//pyramid.saveAsBMP(std::format("f:/pyr_{}.bmp", name), 1.0f);
 			if (uint64_t crc = pyramid.crc(); crc != crcPyramid) {
-				util::debugLogger->format("{} fail pyramid {:x}", name, crc);
+				debugLogger().format("{} fail pyramid {:x}", name, crc);
 				out.print("FAIL pyramid ");
 				check = false;
 			}
 
 			if (uint64_t crc = util::CRC64().addDirect(luma1).addDirect(luma2).result(); crc != crcLuma) {
-				util::debugLogger->format("{} fail luma {:x}", name, crc);
+				debugLogger().format("{} fail luma {:x}", name, crc);
 				out.print("FAIL luma ");
 				check = false;
 			}
@@ -149,7 +149,7 @@ void runSelfTest(util::MessagePrinter& out, std::vector<DeviceInfoBase*> deviceL
 					crc64.addDirect(pr.v);
 				}
 				if (uint64_t crc = crc64.result(); crc != crcResult) {
-					util::debugLogger->format("{} fail result {:x}", name, crc);
+					debugLogger().format("{} fail result {:x}", name, crc);
 					out.print("FAIL result ");
 					check = false;
 				}
@@ -160,7 +160,7 @@ void runSelfTest(util::MessagePrinter& out, std::vector<DeviceInfoBase*> deviceL
 			//transformed.saveAsBinary(std::format("f:/trf_{}.mat", name));
 			//transformed.saveAsBMP(std::format("f:/trf_{}.bmp", name), 1.0f);
 			if (uint64_t crc = transformed.crc(); crc != crcTransformed) {
-				util::debugLogger->format("{} fail transformed {:x}", name, crc);
+				debugLogger().format("{} fail transformed {:x}", name, crc);
 				out.print("FAIL transformed ");
 				check = false;
 			}
@@ -169,7 +169,7 @@ void runSelfTest(util::MessagePrinter& out, std::vector<DeviceInfoBase*> deviceL
 			const ImageVuyx& output = writer.getOutputFrame();
 			//output.saveBmpColor(std::format("f:/out_{}.bmp", name));
 			if (uint64_t crc = output.crc(); crc != crcOutput) {
-				util::debugLogger->format("{} fail output {:x}", name, crc);
+				debugLogger().format("{} fail output {:x}", name, crc);
 				out.print("FAIL output ");
 				check = false;
 			}
@@ -179,7 +179,7 @@ void runSelfTest(util::MessagePrinter& out, std::vector<DeviceInfoBase*> deviceL
 			executor->getOutput(0, nv12, 0, nullptr);
 			//nv12.saveBmpColor(std::format("f:/nv12_{}.bmp", name));
 			if (uint64_t crc = nv12.crc(); crc != crcNv12) {
-				util::debugLogger->format("{} fail nv12 {:x}", name, crc);
+				debugLogger().format("{} fail nv12 {:x}", name, crc);
 				out.print("FAIL nv12 ");
 				check = false;
 			}
@@ -189,7 +189,7 @@ void runSelfTest(util::MessagePrinter& out, std::vector<DeviceInfoBase*> deviceL
 			Matf pyrGamma = executor->getPyramid(0);
 			//pyrGamma.saveAsBinary(std::format("f:/gamma_{}.mat", name));
 			if (uint64_t crc = pyrGamma.crc(); crc != crcPyrGamma) {
-				util::debugLogger->format("{} fail gamma {:x}", name, crc);
+				debugLogger().format("{} fail gamma {:x}", name, crc);
 				out.print("FAIL gamma ");
 				check = false;
 			}

@@ -138,6 +138,8 @@ public:
 	void writeInput(const FrameExecutor& executor) override;
 	
 	void writeYuvFiles(const std::string& inputFile, const std::string& outputFile, int maxFrames);
+	void writeInputFile(const std::string& inputFile, int maxFrames);
+	void writeOutputFile(const std::string& outputFile, int maxFrames);
 };
 
 

@@ -19,8 +19,10 @@
 #include "TestMain.hpp"
 
 void testVideo1() {
-	std::string inFile = "d:/VideoTest/02short.mp4"; //std::string inFile = "f:/pic/input.mp4";
+	//std::string inFile = "d:/VideoTest/02short.mp4";
+	std::string inFile = "f:/pic/input.mp4";
 	std::string resultsFile = "f:/pic/results.dat";
+	std::string videoInput = "f:/pic/videoInput.yuv";
 
 	MainData data;
 	data.fileIn = inFile;
@@ -40,10 +42,13 @@ void testVideo1() {
 	frame->runLoop(executor);
 
 	//write results binary
+	std::cout << "write results" << std::endl;
 	std::ofstream resfile(resultsFile, std::ios::binary);
 	auto writefcn = [&] (auto value) { resfile.write(reinterpret_cast<const char*>(&value), sizeof(value)); };
 	writefcn(data.w);
 	writefcn(data.h);
+	writefcn(data.ixCount);
+	writefcn(data.iyCount);
 
 	int idx = 0;
 	for (std::span<PointResult> spr : writer.results) {
@@ -60,28 +65,13 @@ void testVideo1() {
 		idx++;
 	}
 
-	std::cout << std::endl << "results " << resultsFile << std::endl;
+	//write video
+	std::cout << "write video" << std::endl;
+	writer.writeInputFile(videoInput, maxFrames);
+	std::cout << std::endl << "results = " << resultsFile << ", video = " << videoInput << std::endl;
 }
 
-void testLuma() {
-	std::cout << "analyze image pair" << std::endl;
-	ImageYuv dest = ImageYuv::readBmpFile("D:/VideoTest/06a.38.bmp");
-	ImageYuv concat(1080, 1920 * 2);
-	dest.copyTo(concat, 0, 1920, 255);
-
-	ImageYuv src = ImageYuv::readBmpFile("D:/VideoTest/06a.37.bmp");
-	for (int i = 0; i < 5; i++) {
-		src.copyTo(dest);
-		float gamma = 1.0f + 0.05f * i;
-		std::cout << gamma << std::endl;
-		dest.adjustGamma(1.0f / gamma);
-		std::string str = std::format("{:.3f}", gamma);
-		dest.writeText(str, 860, 0, im::TextAlign::TOP_CENTER);
-		dest.copyTo(concat, 0, 0, 255);
-		concat.saveBmpColor(std::format("f:/image{}a.bmp", i));
-	}
-
-	/*
+void testLuma2() {
 	std::cout << "analyze image pair" << std::endl;
 	MainData data;
 	data.deviceRequested = true;
@@ -98,8 +88,7 @@ void testLuma() {
 	CudaFrame executor(data, cudaDevices[0], frame, frame.mPool);
 
 	executor.init();
-	ImageYuv src = ImageYuv::readBmpFile("D:/VideoTest/06a.37.bmp");
-	std::cout << "rms " << src.lumaRms() << std::endl;
+	ImageYuv src = ImageYuv::readBmpFile("D:/VideoTest/06b.30.bmp");
 	Image8& input = executor.inputDestination(0);
 	src.copyTo(input);
 	executor.inputData(0);
@@ -107,18 +96,17 @@ void testLuma() {
 	executor.createPyramid(0, histOld, {}, false);
 
 	ImageYuv concat(1080, 1920 * 2);
-	src.copyTo(concat, 0, 0, 255);
+	src.copyTo(concat, 0, 1920, 255);
 
-	ImageYuv im = ImageYuv::readBmpFile("D:/VideoTest/06a.38.bmp");
+	ImageYuv im = ImageYuv::readBmpFile("D:/VideoTest/06b.29.bmp");
 	for (int i = 0; i < 5; i++) {
 		im.copyTo(src);
-		float gamma = 1.0f / (1.0f - 0.05f * i);
+		float gamma = 1.0f + 0.05f * i;
 		src.adjustGamma(gamma);
 
-		std::cout << "gamma " << gamma << " lumaRms " << src.lumaRms() << std::endl;
 		std::string str = std::format("{:.3f}", gamma);
 		src.writeText(str, 860, 0, im::TextAlign::TOP_CENTER);
-		src.copyTo(concat, 0, 1920, 255);
+		src.copyTo(concat, 0, 0, 255);
 		concat.saveBmpColor(std::format("f:/image{}a.bmp", i));
 
 		Image8& input = executor.inputDestination(1);
@@ -135,9 +123,9 @@ void testLuma() {
 		FrameResultData resultData = executor.mFrame.getResultData();
 		ResultImageWriter::writeImage(resultData, frame.mResultPoints, 1, dest, frame.mPool, false);
 		dest.writeText(str, 860, 20, im::TextAlign::TOP_CENTER);
-		//dest.saveBmpColor(std::format("f:/image{}b.bmp", i));
+		dest.saveBmpColor(std::format("f:/image{}b.bmp", i));
 
-		std::cout << "[" << resultData.clusterSizes.size() << "] " << util::collectionToString(resultData.clusterSizes, 15) << std::endl;
+		auto sizes = resultData.getClusterSizes();
+		std::cout << "#" << i << " gamma=" << gamma << " [" << sizes.size() << "] " << util::collectionToString(sizes, 10) << std::endl;
 	}
-	*/
 }

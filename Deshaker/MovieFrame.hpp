@@ -80,6 +80,7 @@ protected:
 
 	const MainData& mData;
 	std::vector<float> mLutGamma;
+	double mGamma = 0.0;
 
 	void progressUpdate(ProgressInfo& progressInfo, ProgressBase& progress, double totalProgress, bool forceUpdate) const;
 

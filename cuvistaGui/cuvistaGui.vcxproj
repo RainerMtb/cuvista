@@ -23,15 +23,13 @@
     <CharacterSet>Unicode</CharacterSet>
     <EnableASAN>false</EnableASAN>
     <PlatformToolset>v145</PlatformToolset>
-    <VCToolsVersion>
-    </VCToolsVersion>
+    <VCToolsVersion>14.50.35717</VCToolsVersion>
     <MSVCPreviewEnabled>false</MSVCPreviewEnabled>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <CharacterSet>Unicode</CharacterSet>
-    <VCToolsVersion>
-    </VCToolsVersion>
+    <VCToolsVersion>14.50.35717</VCToolsVersion>
     <PlatformToolset>v145</PlatformToolset>
     <MSVCPreviewEnabled>false</MSVCPreviewEnabled>
   </PropertyGroup>
@@ -53,7 +51,7 @@
     <QtModules>core;gui;widgets;multimediawidgets</QtModules>
     <QtBuildConfig>release</QtBuildConfig>
     <QtDeploy>true</QtDeploy>
-    <QtDeployDir>$(SolutionDir)bin\$(Platform)\Deploy</QtDeployDir>
+    <QtDeployDir>$(SolutionDir)bin\$(Platform)\Deploy\</QtDeployDir>
     <QtDeployLibDir>
     </QtDeployLibDir>
     <QtDeployNoTranslations>true</QtDeployNoTranslations>
@@ -62,6 +60,7 @@
     <QtDeployExcludeModules>ffmpeg</QtDeployExcludeModules>
     <QMakeCodeLines>
     </QMakeCodeLines>
+    <QtDeployNoQuickImport>true</QtDeployNoQuickImport>
   </PropertyGroup>
   <Target Name="QtMsBuildNotFound" BeforeTargets="CustomBuild;ClCompile" Condition="!Exists('$(QtMsBuild)\qt.targets') or !Exists('$(QtMsBuild)\qt.props')">
     <Message Importance="High" Text="QtMsBuild: could not locate qt.targets, qt.props; project may not build correctly." />
@@ -97,7 +96,7 @@
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(SolutionDir)lib\$(Platform);$(SolutionDir)bin\$(Platform)\$(Configuration);$(CUDA_PATH)\lib\$(Platform);$(FFMPEG_PATH)\lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>AvxStuff.lib;Common.lib;cpu_features.lib;OpenCL.lib;Matrix.lib;Deshaker.lib;CudaStuff.lib;cudart_static.lib;cuda.lib;nvencodeapi.lib;avcodec.lib;avformat.lib;avutil.lib;swscale.lib;swresample.lib;Ole32.lib;ws2_32.lib;$(Qt_LIBS_)</AdditionalDependencies>
+      <AdditionalDependencies>AvxStuff.lib;Common.lib;cpu_features.lib;OpenCL.lib;Matrix.lib;Deshaker.lib;CudaStuff.lib;cudart_static.lib;cuda.lib;nvencodeapi.lib;avcodec.lib;avformat.lib;avutil.lib;swscale.lib;swresample.lib;Ole32.lib;ws2_32.lib;Shell32.lib;$(Qt_LIBS_)</AdditionalDependencies>
       <DelayLoadDLLs>nvEncodeAPI64.dll;OpenCL.dll;</DelayLoadDLLs>
       <IgnoreSpecificDefaultLibraries>libcmt.lib; msvcrt.lib; libcmtd.lib</IgnoreSpecificDefaultLibraries>
     </Link>
@@ -111,13 +110,19 @@
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(SolutionDir)lib\$(Platform);$(SolutionDir)bin\$(Platform)\$(Configuration);$(CUDA_PATH)\lib\$(Platform);$(FFMPEG_PATH)\lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>AvxStuff.lib;Common.lib;cpu_features.lib;OpenCL.lib;Matrix.lib;Deshaker.lib;CudaStuff.lib;cudart_static.lib;cuda.lib;nvencodeapi.lib;avcodec.lib;avformat.lib;avutil.lib;swscale.lib;swresample.lib;Ole32.lib;ws2_32.lib;$(Qt_LIBS_)</AdditionalDependencies>
+      <AdditionalDependencies>AvxStuff.lib;Common.lib;cpu_features.lib;OpenCL.lib;Matrix.lib;Deshaker.lib;CudaStuff.lib;cudart_static.lib;cuda.lib;nvencodeapi.lib;avcodec.lib;avformat.lib;avutil.lib;swscale.lib;swresample.lib;Ole32.lib;ws2_32.lib;Shell32.lib;$(Qt_LIBS_)</AdditionalDependencies>
       <DelayLoadDLLs>nvEncodeAPI64.dll;OpenCL.dll;</DelayLoadDLLs>
       <IgnoreSpecificDefaultLibraries>libcmt.lib;</IgnoreSpecificDefaultLibraries>
+      <LinkTimeCodeGeneration>UseFastLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
     <PostBuildEvent>
       <Command>copy $(OutDir)cuvistaGui.exe $(SolutionDir)bin\$(Platform)\Deploy
-copy $(FFMPEG_PATH)\bin\*.dll $(SolutionDir)bin\$(Platform)\Deploy
+copy $(FFMPEG_PATH)\bin\avcodec-62.dll $(SolutionDir)bin\$(Platform)\Deploy
+copy $(FFMPEG_PATH)\bin\avdevice-62.dll $(SolutionDir)bin\$(Platform)\Deploy
+copy $(FFMPEG_PATH)\bin\avformat-62.dll $(SolutionDir)bin\$(Platform)\Deploy
+copy $(FFMPEG_PATH)\bin\avutil-60.dll $(SolutionDir)bin\$(Platform)\Deploy
+copy $(FFMPEG_PATH)\bin\swresample-6.dll $(SolutionDir)bin\$(Platform)\Deploy
+copy $(FFMPEG_PATH)\bin\swscale-9.dll $(SolutionDir)bin\$(Platform)\Deploy
 </Command>
     </PostBuildEvent>
     <PostBuildEvent>

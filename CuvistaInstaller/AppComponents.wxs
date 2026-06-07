@@ -78,6 +78,9 @@
 				<File Source="$(DeployDir)\Qt6Network.dll" />
 			</Component>
 			<Component>
+				<File Source="$(DeployDir)\Qt6Svg.dll" />
+			</Component>
+			<Component>
 				<File Source="$(DeployDir)\Qt6Widgets.dll" />
 			</Component>
 
@@ -85,26 +88,59 @@
 			<Component Subdirectory="generic">
 				<File Source="$(DeployDir)\generic\qtuiotouchplugin.dll" />
 			</Component>
+			
+			<Component Subdirectory="iconengines">
+				<File Source="$(DeployDir)\iconengines\qsvgicon.dll" />
+			</Component>
+			<Component Subdirectory="imageformats">
+				<File Source="$(DeployDir)\imageformats\qgif.dll" />
+			</Component>
+			<Component Subdirectory="imageformats">
+				<File Source="$(DeployDir)\imageformats\qicns.dll" />
+			</Component>
+			<Component Subdirectory="imageformats">
+				<File Source="$(DeployDir)\imageformats\qico.dll" />
+			</Component>
+			<Component Subdirectory="imageformats">
+				<File Source="$(DeployDir)\imageformats\qjpeg.dll" />
+			</Component>
+			<Component Subdirectory="imageformats">
+				<File Source="$(DeployDir)\imageformats\qsvg.dll" />
+			</Component>
+			<Component Subdirectory="imageformats">
+				<File Source="$(DeployDir)\imageformats\qtga.dll" />
+			</Component>
+			<Component Subdirectory="imageformats">
+				<File Source="$(DeployDir)\imageformats\qtiff.dll" />
+			</Component>
+			<Component Subdirectory="imageformats">
+				<File Source="$(DeployDir)\imageformats\qwbmp.dll" />
+			</Component>
+			<Component Subdirectory="imageformats">
+				<File Source="$(DeployDir)\imageformats\qwebp.dll" />
+			</Component>
+			
 			<Component Subdirectory="multimedia">
 				<File Source="$(DeployDir)\multimedia\ffmpegmediaplugin.dll" />
 			</Component>
 			<Component Subdirectory="multimedia">
 				<File Source="$(DeployDir)\multimedia\windowsmediaplugin.dll" />
 			</Component>
+			
 			<Component Subdirectory="networkinformation">
 				<File Source="$(DeployDir)\networkinformation\qnetworklistmanager.dll" />
 			</Component>
+			
 			<Component Subdirectory="platforms">
 				<File Source="$(DeployDir)\platforms\qwindows.dll" />
 			</Component>
+			
 			<Component Subdirectory="styles">
 				<File Source="$(DeployDir)\styles\qmodernwindowsstyle.dll" />
 			</Component>
+			
 			<Component Subdirectory="tls">
 				<File Source="$(DeployDir)\tls\qcertonlybackend.dll" />
-			</Component>
-			<Component Subdirectory="tls">
-				<File Source="$(DeployDir)\tls\qopensslbackend.dll" />
 			</Component>
 			<Component Subdirectory="tls">
 				<File Source="$(DeployDir)\tls\qschannelbackend.dll" />
@@ -113,5 +149,3 @@
 			
 	</Fragment>
 </Wix>
-
-<!-- 00000000-0000-0000-0000-000000000000 -->

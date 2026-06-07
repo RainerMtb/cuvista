@@ -56,13 +56,14 @@ void openClnorm1Test();
 
 void compareFramesPlatforms();
 void testVideo1();
-void testLuma();
+void testLuma2();
 
 void pinvTest();
 void compareInv();
 
 void avxCompute();
 void avxTest();
+void illegalInstruction();
 
 void testZoom();
 void testSampler();

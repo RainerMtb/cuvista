@@ -58,7 +58,7 @@ namespace util {
         std::chrono::time_point<std::chrono::system_clock> start = std::chrono::system_clock::now();
         std::mutex mutex;
 
-        static std::shared_ptr<DebugLogger> create(const std::string& logger);
+        static void open(const std::string& logger);
 
         virtual void log(const std::string& msg) = 0;
         virtual std::string str() = 0;
@@ -75,7 +75,7 @@ namespace util {
         std::string str() override { return ""; }
     };
 
-    inline std::shared_ptr<DebugLogger> debugLogger = std::make_shared<DebugLoggerNull>();
+    inline std::shared_ptr<DebugLogger> debugLoggerPtr = std::make_shared<DebugLoggerNull>();
 
 
     //output sent to this ostream will be suppressed

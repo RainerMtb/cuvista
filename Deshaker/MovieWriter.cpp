@@ -148,10 +148,13 @@ void RawMemoryStoreWriter::writeInput(const FrameExecutor& executor) {
 }
 
 void RawMemoryStoreWriter::writeYuvFiles(const std::string& inputFile, const std::string& outputFile, int maxFrames) {
+	writeInputFile(inputFile, maxFrames);
+	writeOutputFile(outputFile, maxFrames);
+}
+
+void RawMemoryStoreWriter::writeInputFile(const std::string& inputFile, int maxFrames) {
 	std::ofstream osin(inputFile, std::ios::binary);
-	int idx;
-	
-	idx = 0;
+	int idx = 0;
 	for (ImageVuyx& image : inputFrames) {
 		static ImageNV12 nv12(image.h(), image.w(), image.w());
 		std::string str = std::format(" frame {:04} ", idx);
@@ -161,9 +164,11 @@ void RawMemoryStoreWriter::writeYuvFiles(const std::string& inputFile, const std
 		idx++;
 		if (idx == maxFrames) break;
 	}
+}
 
+void RawMemoryStoreWriter::writeOutputFile(const std::string& outputFile, int maxFrames) {
 	std::ofstream osout(outputFile, std::ios::binary);
-	idx = 0;
+	int idx = 0;
 	for (ImageVuyx& image : outputFramesYuv) {
 		static ImageNV12 nv12(image.h(), image.w(), image.w());
 		std::string str = std::format(" frame {:04} ", idx);
@@ -818,15 +823,22 @@ void ResultImageWriter::writeImage(const FrameResultData& resultData, std::span<
 	//write text info
 	double frac = numConsidered == 0 ? 0.0 : 100.0 * numConsens / numConsidered;
 	const AffineTransform& trf = resultData.transform;
-	std::string s2 = std::format("transform dx={:.1f} px, dy={:.1f} px, scale={:.5f}, rot={:.5f} deg", trf.dX(), trf.dY(), trf.scale(), trf.rotDegrees());
+	std::string s2 = std::format(" transform dx={:.1f} px, dy={:.1f} px, scale={:.5f}, rot={:.5f} deg ", trf.dX(), trf.dY(), trf.scale(), trf.rotDegrees());
 	Size s = dest.writeText(s2, 0, h);
-	std::string s1 = std::format("frame {}, consensus {}/{} ({:.1f}%)", idx, numConsens, numConsidered, frac);
+	std::string s1 = std::format(" frame {}, consensus {}/{} ({:.1f}%) ", idx, numConsens, numConsidered, frac);
 	dest.writeText(s1, 0, h - s.h);
 
 	//cluster info
-	if (resultData.runDbScan) {
-		std::string str = std::format("clusters: {} {}", resultData.clusterSizes.size(), util::collectionToString(resultData.clusterSizes, 15));
+	auto sizes = resultData.getClusterSizes();
+	if (sizes.size() > 0) {
+		std::string str = std::format(" clusters: {} {} ", sizes.size(), util::collectionToString(sizes, 10));
 		dest.writeText(str, 0, 0, TextAlign::TOP_LEFT);
+	}
+
+	//adjusted gamma
+	if (resultData.gamma > 0.0) {
+		std::string str = std::format(" gamma={:.3f} ", resultData.gamma);
+		dest.writeText(str, 0, h - 2 * s.h);
 	}
 }
 
