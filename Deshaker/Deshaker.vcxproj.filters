@@ -27,6 +27,9 @@
     <Filter Include="System">
       <UniqueIdentifier>{2278ac54-40d8-4ab9-ae67-c408b892321e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="FFmpeg">
+      <UniqueIdentifier>{54d94697-a3a8-4c12-8c70-ec15a19ba9e9}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ProgressDisplay.cpp">
@@ -49,9 +52,6 @@
     </ClCompile>
     <ClCompile Include="Trajectory.cpp">
       <Filter>Transformation</Filter>
-    </ClCompile>
-    <ClCompile Include="FFmpegUtil.cpp">
-      <Filter>Util</Filter>
     </ClCompile>
     <ClCompile Include="RandomSource.cpp">
       <Filter>Transformation</Filter>
@@ -128,6 +128,12 @@
     <ClCompile Include="Version.cpp">
       <Filter>Main</Filter>
     </ClCompile>
+    <ClCompile Include="FFmpegUtil.cpp">
+      <Filter>FFmpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="FFmpeg.cpp">
+      <Filter>FFmpeg</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MovieReader.hpp">
@@ -202,9 +208,6 @@
     <ClInclude Include="ProgressBase.hpp">
       <Filter>Main</Filter>
     </ClInclude>
-    <ClInclude Include="FFmpegUtil.hpp">
-      <Filter>Util</Filter>
-    </ClInclude>
     <ClInclude Include="SelfTest.hpp">
       <Filter>Util</Filter>
     </ClInclude>
@@ -231,6 +234,12 @@
     </ClInclude>
     <ClInclude Include="CudaInterface.hpp">
       <Filter>Frame</Filter>
+    </ClInclude>
+    <ClInclude Include="FFmpegUtil.hpp">
+      <Filter>FFmpeg</Filter>
+    </ClInclude>
+    <ClInclude Include="FFmpeg.hpp">
+      <Filter>FFmpeg</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -65,6 +65,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(SolutionDir)cuvistaCli;$(SolutionDir)AvxStuff;$(SolutionDir)Common;$(SolutionDir)Matrix;$(SolutionDir)CudaStuff;$(SolutionDir)Deshaker;$(SolutionDir)include;$(SolutionDir)OpenCL-CLHPP\include;$(SolutionDir)OpenCL-Headers;$(SolutionDir)cpu_features\include;$(FFMPEG_PATH)\include;$(CUDA_PATH)\include</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -84,6 +85,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(SolutionDir)cuvistaCli;$(SolutionDir)AvxStuff;$(SolutionDir)Common;$(SolutionDir)Matrix;$(SolutionDir)CudaStuff;$(SolutionDir)Deshaker;$(SolutionDir)include;$(SolutionDir)OpenCL-CLHPP\include;$(SolutionDir)OpenCL-Headers;$(SolutionDir)cpu_features\include;$(FFMPEG_PATH)\include;$(CUDA_PATH)\include</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

@@ -70,6 +70,7 @@
       <IntrinsicFunctions>false</IntrinsicFunctions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PreprocessorDefinitions>_UNICODE;UNICODE;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>true</SDLCheck>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -87,6 +88,7 @@
       <IntrinsicFunctions>false</IntrinsicFunctions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PreprocessorDefinitions>_UNICODE;UNICODE;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>true</SDLCheck>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -104,6 +106,7 @@
     <ClCompile Include="CudaFrame.cpp" />
     <ClCompile Include="DebugLogger.cpp" />
     <ClCompile Include="DummyFrame.cpp" />
+    <ClCompile Include="FFmpeg.cpp" />
     <ClCompile Include="FrameResult.cpp" />
     <ClCompile Include="MainData.cpp" />
     <ClCompile Include="SelfTest.cpp" />
@@ -146,6 +149,7 @@
     <ClInclude Include="CudaWriter.hpp" />
     <ClInclude Include="DeviceInfo.hpp" />
     <ClInclude Include="DummyFrame.hpp" />
+    <ClInclude Include="FFmpeg.hpp" />
     <ClInclude Include="FFmpegUtil.hpp" />
     <ClInclude Include="FrameResult.hpp" />
     <ClInclude Include="DeshakerHelpText.hpp" />

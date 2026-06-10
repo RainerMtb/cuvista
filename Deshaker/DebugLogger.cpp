@@ -70,6 +70,7 @@ void DebugLogger::open(const std::string& logger) {
 
 #if defined(_WIN64)
 #include <WinSock2.h> //include before windows.h
+#include <Ws2tcpip.h>
 
 SOCKET sock = INVALID_SOCKET;
 
@@ -82,7 +83,7 @@ DebugLoggerTcp::DebugLoggerTcp(const std::string& ip, int port) {
 	sock = socket(PF_INET, SOCK_STREAM, 0);
 	sockaddr_in servAddr = {};
 	servAddr.sin_family = PF_INET;
-	servAddr.sin_addr.s_addr = inet_addr(ip.c_str());
+	inet_pton(AF_INET, ip.c_str(), &servAddr.sin_addr.s_addr);
 	servAddr.sin_port = htons(port);
 	mIsConnected = connect(sock, (SOCKADDR*) &servAddr, sizeof(servAddr));
 }

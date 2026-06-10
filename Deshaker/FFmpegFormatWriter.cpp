@@ -157,11 +157,11 @@ void FFmpegFormatWriter::openFormat(AVCodecID codecId) {
                 throw AVException("cannot copy audio channel layout");
             osc.audioOutCtx->sample_rate = osc.audioInCtx->sample_rate;
             
-            osc.audioOutCtx->sample_fmt = osc.audioOutCodec->sample_fmts[0]; //deprecated
-            //const AVSampleFormat* sampleFmts = nullptr;
-            //int nFmts;
-            //avcodec_get_supported_config(osc.audioOutCtx, osc.audioOutCodec, AV_CODEC_CONFIG_SAMPLE_FORMAT, 0, (const void**) &sampleFmts, &nFmts);
-            //osc.audioOutCtx->sample_fmt = (sampleFmts)[0];
+            //osc.audioOutCtx->sample_fmt = osc.audioOutCodec->sample_fmts[0]; //deprecated
+            const AVSampleFormat* sampleFmts = nullptr;
+            int nFmts;
+            avcodec_get_supported_config(osc.audioOutCtx, osc.audioOutCodec, AV_CODEC_CONFIG_SAMPLE_FORMAT, 0, (const void**) &sampleFmts, &nFmts);
+            osc.audioOutCtx->sample_fmt = (sampleFmts)[0];
 
             if (fmt_ctx->oformat->flags & AVFMT_GLOBALHEADER)
                 osc.audioOutCtx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;

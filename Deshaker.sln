@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.3.32922.545
+# Visual Studio Version 18
+VisualStudioVersion = 18.6.11822.322 stable
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Matrix", "Matrix\Matrix.vcxproj", "{95E72B8D-8B94-4CE1-BA7F-7D6F8914BFFB}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -119,6 +119,12 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TestCuvista", "TestCuvista\
 		{DA6E0C1A-9AA6-4F82-B404-12339A4DD026} = {DA6E0C1A-9AA6-4F82-B404-12339A4DD026}
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cuvistaFFmpeg", "cuvistaFFmpeg\cuvistaFFmpeg.vcxproj", "{11A8AC0B-8CF6-40BA-A65F-7251361BEEEA}"
+	ProjectSection(ProjectDependencies) = postProject
+		{57C0DBBF-3099-48AC-BF4C-962220C433FE} = {57C0DBBF-3099-48AC-BF4C-962220C433FE}
+		{C208270A-4A84-4159-B202-30E02C893A45} = {C208270A-4A84-4159-B202-30E02C893A45}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -179,6 +185,10 @@ Global
 		{C01481EA-EABA-42AB-BD7A-013D87ECE65F}.Debug|x64.Build.0 = Debug|x64
 		{C01481EA-EABA-42AB-BD7A-013D87ECE65F}.Release|x64.ActiveCfg = Release|x64
 		{C01481EA-EABA-42AB-BD7A-013D87ECE65F}.Release|x64.Build.0 = Release|x64
+		{11A8AC0B-8CF6-40BA-A65F-7251361BEEEA}.Debug|x64.ActiveCfg = Debug|x64
+		{11A8AC0B-8CF6-40BA-A65F-7251361BEEEA}.Debug|x64.Build.0 = Debug|x64
+		{11A8AC0B-8CF6-40BA-A65F-7251361BEEEA}.Release|x64.ActiveCfg = Release|x64
+		{11A8AC0B-8CF6-40BA-A65F-7251361BEEEA}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

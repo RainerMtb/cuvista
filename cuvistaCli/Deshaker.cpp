@@ -39,6 +39,7 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 	std::shared_ptr<MovieFrame> frame;
 
 	try {
+		ff::loadLibrary();
 		data.deviceInfoOpenCl = data.probeOpenCl();
 		data.deviceInfoCuda = data.probeCuda();
 		data.collectDeviceInfo();

@@ -71,6 +71,7 @@ namespace winrt::cuvistaWinui::implementation {
     //-------------------------------------------------------------------------
 
     MainWindow::MainWindow() {
+        ff::loadLibrary();
         InitializeComponent(); //should not be used??
         lblStatus().Text(hformat("Version {}", CUVISTA_VERSION));
 

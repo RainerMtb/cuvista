@@ -39,6 +39,7 @@ template <class... Args> QString qformat(std::format_string<Args...> fmt, Args&&
 cuvistaGui::cuvistaGui(QWidget *parent) : 
     QMainWindow(parent) 
 {
+    ff::loadLibrary();
     //debugLogger().open("tcp://10.0.0.1:5555");
     ui.setupUi(this);
     mPlayerWindow = new PlayerWindow(this);

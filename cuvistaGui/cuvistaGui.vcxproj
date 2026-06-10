@@ -93,6 +93,7 @@
       <PreprocessorDefinitions>QT_NO_DEPRECATED_WARNINGS;$(Qt_DEFINES_);_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(SolutionDir)lib\$(Platform);$(SolutionDir)bin\$(Platform)\$(Configuration);$(CUDA_PATH)\lib\$(Platform);$(FFMPEG_PATH)\lib</AdditionalLibraryDirectories>
@@ -107,6 +108,7 @@
       <AdditionalIncludeDirectories>$(FFMPEG_PATH)\include;$(SolutionDir)Common;$(SolutionDir)Deshaker;$(SolutionDir)Matrix;$(SolutionDir)CudaStuff;$(SolutionDir)include;$(SolutionDir)cpu_features\include;$(Qt_INCLUDEPATH_)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>QT_NO_DEPRECATED_WARNINGS;$(Qt_DEFINES_);NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(SolutionDir)lib\$(Platform);$(SolutionDir)bin\$(Platform)\$(Configuration);$(CUDA_PATH)\lib\$(Platform);$(FFMPEG_PATH)\lib</AdditionalLibraryDirectories>

@@ -80,6 +80,7 @@
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions512</EnableEnhancedInstructionSet>
       <AdditionalIncludeDirectories>$(SolutionDir)Common;$(SolutionDir)Matrix</AdditionalIncludeDirectories>
       <EnableVectorLength>VectorLength512</EnableVectorLength>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

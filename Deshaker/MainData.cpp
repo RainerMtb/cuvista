@@ -586,14 +586,11 @@ std::ostream& MainData::showDeviceInfo(std::ostream& os) const {
 		os << " #" << i << ": " << deviceList[i]->getName() << std::endl;
 	}
 
-	//ffmpeg
-	os << std::endl << "FFMPEG Versions:" << std::endl;
-	os << "libavutil identifier:     " << LIBAVUTIL_IDENT << std::endl;
-	os << "libavcodec identifier:    " << LIBAVCODEC_IDENT << std::endl;
-	os << "libavformat identifier:   " << LIBAVFORMAT_IDENT << std::endl;
-	os << "libswscale identifier:    " << LIBSWSCALE_IDENT << std::endl;
-	os << "libswresample identifier: " << LIBSWRESAMPLE_IDENT << std::endl;
-	if (ffmpeg_check_versions() == false) {
+	//display ffmpeg versions
+	FFmpegVersions versionsCompiled = *ff::versionsCompiled();
+	FFmpegVersions versionsRuntime = *ff::versionsRuntime();
+	os << std::endl << versionsRuntime << std::endl;
+	if (versionsCompiled != versionsRuntime) {
 		os << "warning: different versions of ffmpeg are used at compiletime and runtime" << std::endl;
 	}
 

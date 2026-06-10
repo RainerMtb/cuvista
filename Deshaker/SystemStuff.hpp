@@ -24,7 +24,9 @@
 #include <chrono>
 #include <mutex>
 #include <fstream>
+
 #include "Util.hpp"
+#include "FFmpeg.hpp"
 
 int getSystemConsoleWidth();
 

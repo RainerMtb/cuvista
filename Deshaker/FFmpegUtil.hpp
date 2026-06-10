@@ -31,12 +31,27 @@ extern "C" {
 #include "libavutil/audio_fifo.h"
 }
 
+
+class MovieReader;
+class MovieWriter;
+
+enum class ReaderType {
+	FFMPEG,
+	MEMORY,
+};
+
+enum class WriterType {
+	FFMPEG,
+	CUDA,
+};
+
 struct FFmpegVersions {
 	unsigned int avutil, avcodec, avformat, swscale, swresample;
 
-	auto operator <=> (const FFmpegVersions&) const = default;
+	auto operator <=> (const FFmpegVersions& v) const = default;
+	friend std::ostream& operator << (std::ostream& os, const FFmpegVersions& v);
+	std::string toString(unsigned int val) const;
 };
-
 
 //what to do with any input stream
 enum class StreamHandling {
@@ -140,6 +155,3 @@ void ffmpeg_log_error(int errnum, const char* msg, ErrorSource source);
 
 //callback from ffmpeg to report errors
 void ffmpeg_log(void* avclass, int level, const char* fmt, va_list args);
-
-//compare version strings at compiletime and runtime
-bool ffmpeg_check_versions();

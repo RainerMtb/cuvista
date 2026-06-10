@@ -22,6 +22,20 @@
 #include <format>
 
 
+std::string FFmpegVersions::toString(unsigned int val) const {
+    return std::format("{}.{}.{}", (val >> 16) & 0xFF, (val >> 8) & 0xFF, val & 0xFF);
+}
+
+std::ostream& operator << (std::ostream& os, const FFmpegVersions& v) {
+    os << "FFMPEG Versions:" << std::endl;
+    os << "libavutil:     " << v.toString(v.avutil) << std::endl;
+    os << "libavcodec:    " << v.toString(v.avcodec) << std::endl;
+    os << "libavformat:   " << v.toString(v.avformat) << std::endl;
+    os << "libswscale:    " << v.toString(v.swscale) << std::endl;
+    os << "libswresample: " << v.toString(v.swresample) << std::endl;
+    return os;
+}
+
 std::string av_make_error(int errnum, const char* msg, const std::string& str) {
     std::string info = msg + str;
     if (info.size() > 0) info += ": ";
@@ -32,25 +46,6 @@ std::string av_make_error(int errnum, const char* msg, const std::string& str) {
 
 void ffmpeg_log_error(int errnum, const char* msg, ErrorSource source) {
     errorLogger().logError(av_make_error(errnum, msg), source);
-}
-
-static constexpr FFmpegVersions ffmpeg_build_versions = { 
-    .avutil = LIBAVUTIL_VERSION_INT, 
-    .avcodec = LIBAVCODEC_VERSION_INT, 
-    .avformat = LIBAVFORMAT_VERSION_INT, 
-    .swscale = LIBSWSCALE_VERSION_INT, 
-    .swresample = LIBSWRESAMPLE_VERSION_INT 
-};
-
-bool ffmpeg_check_versions() {
-    FFmpegVersions ffmpeg_runtime_versions = {
-        .avutil = avutil_version(),
-        .avcodec = avcodec_version(),
-        .avformat = avformat_version(),
-        .swscale = swscale_version(),
-        .swresample = swresample_version()
-    };
-    return ffmpeg_build_versions == ffmpeg_runtime_versions;
 }
 
 void ffmpeg_log(void* avclass, int level, const char* fmt, va_list args) {

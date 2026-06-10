@@ -21,7 +21,7 @@
 
 int main() {
 	util::debugLoggerPtr = std::make_shared<util::DebugLoggerString>();
-	//util::debugLogger = std::make_shared<util::DebugLoggerTcp>("10.0.0.1", 5555);
+	//debugLogger().open("tcp://10.0.0.1:5555");
 
 	std::vector<std::string> argsLines = {
 		/*0*/ "-info",
@@ -37,7 +37,7 @@ int main() {
 		/*10*/ "-i d:/videoTest/15.ts -o f:/videoOut.mp4 -y -device 0 -frames 150 -log tcp://10.0.0.1:5555",
 	};
 
-	int idx = 4;
+	int idx = 0;
 	std::string argsLine = argsLines[idx];
 	std::cout << "------- TestCuvista -------" << std::endl;
 	std::cout << "------- params: " << argsLine << std::endl << std::endl;
