@@ -19,21 +19,9 @@
 #pragma once
 
 #include <unordered_map>
-#include "ErrorLogger.hpp"
+#include <string>
+#include <memory>
 
-extern "C" {
-#include "libavcodec/avcodec.h"
-#include "libavformat/avformat.h"
-#include "libavformat/avio.h"
-#include "libswscale/swscale.h"
-#include "libswresample/swresample.h"
-#include "libavutil/opt.h"
-#include "libavutil/audio_fifo.h"
-}
-
-
-class MovieReader;
-class MovieWriter;
 
 enum class ReaderType {
 	FFMPEG,
@@ -43,6 +31,10 @@ enum class ReaderType {
 enum class WriterType {
 	FFMPEG,
 	CUDA,
+	STACKED,
+	FLOW,
+	ASF_PIPE,
+	JPEG_IMAGE,
 };
 
 struct FFmpegVersions {
@@ -63,71 +55,62 @@ enum class StreamHandling {
 	STREAM_DECODE,
 };
 
+struct AVStream;
+struct StreamContext;
+struct OutputStreamContext;
+class FrameExecutor;
+namespace im { class Image8; }
+
+
+enum class MediaType {
+	AUDIO,
+	VIDEO,
+	OTHER,
+};
+
+//general info about stream
+struct StreamInfo {
+	std::string streamType;
+	std::string codec;
+	std::string durationString;
+	MediaType mediaType;
+	int index;
+
+	std::string inputStreamSummary(const std::string& delimiter) const;
+};
+
+//packet of decodec audio for playing live
+struct DecodedAudioPacket {
+	int64_t frameIndex;
+	double pts;
+	std::vector<uint8_t> audioData;
+};
+
+//base class, implementation is in ffmpeg dll
+struct OutputStreamContextBase {
+	StreamHandling handling = StreamHandling::STREAM_IGNORE;
+
+	virtual std::list<DecodedAudioPacket> getAudioData(double ptsLimit) = 0;
+};
+
+//base class, implementation is in ffmpeg dll
+struct StreamContextBase {
+	virtual AVStream* getInputStream() = 0;
+	virtual StreamInfo inputStreamInfo() const = 0;
+	virtual int inputStreamIndex() const = 0;
+
+	virtual size_t outputStreamsCount() const = 0;
+	virtual std::shared_ptr<OutputStreamContextBase> addOutputStreamContext() = 0;
+	virtual std::shared_ptr<OutputStreamContextBase> getOutputStreamContext(size_t index) = 0;
+};
+
+//map enum to info string
 inline std::unordered_map<StreamHandling, std::string> streamHandlerMap = {
 	{StreamHandling::STREAM_COPY, "copy"},
 	{StreamHandling::STREAM_IGNORE, "ignore"},
 	{StreamHandling::STREAM_STABILIZE, "stabilize"},
 	{StreamHandling::STREAM_TRANSCODE, "transcode"},
 	{StreamHandling::STREAM_DECODE, "decode"},
-};
-
-struct StreamInfo {
-	std::string streamType;
-	std::string codec;
-	std::string durationString;
-	AVMediaType mediaType;
-	int index;
-
-	std::string inputStreamSummary() const;
-};
-
-class SidePacket {
-public:
-	int64_t frameIndex;
-	AVPacket* packet;
-	std::vector<uint8_t> audioData;
-	double pts;
-
-	SidePacket(int64_t frameIndex, double pts, size_t audioDataSize);
-	SidePacket(int64_t frameIndex, const AVPacket* packet);
-	~SidePacket();
-};
-
-//structure per output stream
-struct OutputStreamContext {
-	AVStream* inputStream = nullptr;
-
-	AVStream* outputStream = nullptr;
-	StreamHandling handling = StreamHandling::STREAM_IGNORE;
-	std::list<SidePacket> sidePackets;
-	int64_t packetsWritten;
-
-	AVCodecContext* audioInCtx = nullptr;
-	const AVCodec* audioInCodec = nullptr;
-	AVFrame* frameIn = nullptr;
-
-	AVCodecContext* audioOutCtx = nullptr;
-	const AVCodec* audioOutCodec = nullptr;
-	AVPacket* outpkt = nullptr;
-	AVFrame* frameOut = nullptr;
-	int64_t lastPts = 0;
-	int64_t ptsTranscoded = 0;
-	int64_t ptsWritten = INT64_MIN;
-	SwrContext* resampleCtx = nullptr;
-	AVAudioFifo* fifo = nullptr;
-
-	std::mutex mMutexSidePackets;
-
-	~OutputStreamContext();
-};
-
-//structure per stream in input file
-struct StreamContext {
-	AVStream* inputStream = nullptr;
-	int64_t durationMillis = -1;
-	std::vector<std::shared_ptr<OutputStreamContext>> outputStreams;
-
-	StreamInfo inputStreamInfo() const;
 };
 
 //timing values for input packets
@@ -147,11 +130,5 @@ struct Timings {
 	friend std::ostream& operator << (std::ostream& ostream, const Timings& t);
 };
 
-//generate error string from ffmpeg return codes
-std::string av_make_error(int errnum, const char* msg = "", const std::string& str = "");
-
-//log error from ffmpeg return codes
-void ffmpeg_log_error(int errnum, const char* msg, ErrorSource source);
-
-//callback from ffmpeg to report errors
-void ffmpeg_log(void* avclass, int level, const char* fmt, va_list args);
+//convert millis into readable string hh:mm:ss.fff
+std::string millisToTimeString(int64_t millis);

@@ -18,12 +18,98 @@
 
 #pragma once
 
-#include "FFmpegUtil.hpp"
-
-namespace ff {
-	extern "C" __declspec(dllexport) const FFmpegVersions* versionsCompiled();
-	extern "C" __declspec(dllexport) const FFmpegVersions* versionsRuntime();
-
-	extern "C" __declspec(dllexport) MovieReader* createReader(ReaderType readerType);
-	extern "C" __declspec(dllexport) MovieWriter* createWriter(WriterType writerType);
+extern "C" {
+#include "libavcodec/avcodec.h"
+#include "libavformat/avformat.h"
+#include "libavformat/avio.h"
+#include "libswscale/swscale.h"
+#include "libswresample/swresample.h"
+#include "libavutil/opt.h"
+#include "libavutil/audio_fifo.h"
 }
+
+#include <string>
+#include <vector>
+#include <memory>
+#include <mutex>
+
+#include "FFmpegUtil.hpp"
+#include "ErrorLogger.hpp"
+
+
+class SidePacket {
+public:
+	int64_t frameIndex;
+	AVPacket* packet;
+	double pts;
+
+	SidePacket(int64_t frameIndex, const AVPacket* packet);
+	~SidePacket();
+};
+
+//structure per output stream
+struct OutputStreamContext : public OutputStreamContextBase {
+	AVStream* inputStream = nullptr;
+
+	AVStream* outputStream = nullptr;
+	std::list<SidePacket> sidePackets;
+	std::list<DecodedAudioPacket> audioPackets;
+	int64_t packetsWritten;
+
+	AVCodecContext* audioInCtx = nullptr;
+	const AVCodec* audioInCodec = nullptr;
+	AVFrame* frameIn = nullptr;
+
+	AVCodecContext* audioOutCtx = nullptr;
+	const AVCodec* audioOutCodec = nullptr;
+	AVPacket* outpkt = nullptr;
+	AVFrame* frameOut = nullptr;
+	int64_t lastPts = 0;
+	int64_t ptsTranscoded = 0;
+	int64_t ptsWritten = INT64_MIN;
+	SwrContext* resampleCtx = nullptr;
+	AVAudioFifo* fifo = nullptr;
+
+	std::mutex mMutexSidePackets;
+
+	std::list<DecodedAudioPacket> getAudioData(double ptsLimit) override;
+
+	~OutputStreamContext();
+};
+
+//structure per stream in input file
+struct StreamContext : public StreamContextBase {
+	AVStream* inputStream = nullptr;
+	int64_t durationMillis = -1;
+	std::vector<std::shared_ptr<OutputStreamContext>> outputStreams;
+
+	AVStream* getInputStream() override;
+	StreamInfo inputStreamInfo() const override;
+	int inputStreamIndex() const override;
+
+	size_t outputStreamsCount() const override;
+	std::shared_ptr<OutputStreamContextBase> addOutputStreamContext() override;
+	std::shared_ptr<OutputStreamContextBase> getOutputStreamContext(size_t index) override;
+};
+
+
+//generate error string from ffmpeg return codes
+std::string av_make_error(int errnum, const char* msg = "", const std::string& str = "");
+
+//log error from ffmpeg return codes
+void ffmpeg_log_error(int errnum, const char* msg, ErrorSource source);
+
+//callback from ffmpeg to report errors
+void ffmpeg_log(void* avclass, int level, const char* fmt, va_list args);
+
+//library functions to get versions
+extern "C" __declspec(dllexport) const FFmpegVersions* versionsCompiled();
+extern "C" __declspec(dllexport) const FFmpegVersions* versionsRuntime();
+
+class MovieReader;
+class MovieWriter;
+class MainData;
+
+//library functions to get classes
+extern "C" __declspec(dllexport) MovieReader* createReader(ReaderType readerType);
+extern "C" __declspec(dllexport) MovieWriter* createWriter(WriterType writerType, MainData& data, MovieReader& reader);

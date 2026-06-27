@@ -27,10 +27,8 @@
 #endif
 
 #include <filesystem>
-#include "FrameResult.hpp"
-#include "FrameExecutor.hpp"
-#include "CudaWriter.hpp"
 #include "AppUtil.hpp"
+#include "ErrorLogger.hpp"
 
 
 using namespace winrt;
@@ -71,9 +69,11 @@ namespace winrt::cuvistaWinui::implementation {
     //-------------------------------------------------------------------------
 
     MainWindow::MainWindow() {
-        ff::loadLibrary();
         InitializeComponent(); //should not be used??
         lblStatus().Text(hformat("Version {}", CUVISTA_VERSION));
+
+        ff::loadFFmpegLibrary();
+        mReader = std::shared_ptr<MovieReader>(ff::createReader(ReaderType::FFMPEG));
 
         //debugLogger().open("tcp://10.0.0.1:5555");
         mData.console = &mData.nullStream;
@@ -212,16 +212,16 @@ namespace winrt::cuvistaWinui::implementation {
         inputPosition().Width(0.0);
 
         try {
-            mReader.close();
+            mReader->close();
             errorLogger().clear();
-            mReader.open(to_string(mInputFile));
-            mInput = ImageYuv(mReader.h, mReader.w);
+            mReader->open(to_string(mInputFile));
+            mInput = ImageYuv(mReader->h, mReader->w);
 
-            mReader.read(mInput); //read first image
+            mReader->read(mInput); //read first image
 
             if (errorLogger().hasNoError()) {
-                mReader.read(mInput); //try to read again for second image
-                mInputBGRA = ImageXamlBGRA::create(imageInput(), mReader.h, mReader.w);
+                mReader->read(mInput); //try to read again for second image
+                mInputBGRA = ImageXamlBGRA::create(imageInput(), mReader->h, mReader->w);
                 mInput.convertTo(mInputBGRA);
                 inputPosition().Width(1.0 / imageBackground().ActualWidth());
             }
@@ -235,15 +235,18 @@ namespace winrt::cuvistaWinui::implementation {
 
             //info about streams
             std::string str;
-            for (StreamContext& sc : mReader.mInputStreams) {
-                StreamInfo info = sc.inputStreamInfo();
-                str += info.inputStreamSummary();
-                if (sc.inputStream->index == mReader.videoStream->index) {
-                    str += mReader.videoStreamSummary();
+            for (size_t i = 0; i < mReader->inputStreamCount(); i++) {
+                const std::shared_ptr<StreamContextBase> sc = mReader->inputStreamBase(i);
+                StreamInfo info = sc->inputStreamInfo();
+                str += " - ";
+                str += info.inputStreamSummary("\n");
+                str += "\n";
+                if (info.index == mReader->videoStreamIndex) {
+                    str += mReader->videoStreamSummary();
                 }
-                if (info.mediaType == AVMEDIA_TYPE_AUDIO) {
-                    hstring hstr = hformat("Track {}: {}", sc.inputStream->index, info.codec);
-                    mAudioTrackMap.insert({ comboAudioTrack().Items().Size(), sc.inputStream->index });
+                if (info.mediaType == MediaType::AUDIO) {
+                    hstring hstr = hformat("Track {}: {}", info.index, info.codec);
+                    mAudioTrackMap.insert({ comboAudioTrack().Items().Size(), info.index });
                     comboAudioTrack().Items().Append(box_value(hstr));
                 }
             }
@@ -260,8 +263,8 @@ namespace winrt::cuvistaWinui::implementation {
             texInput().Text(to_hstring(str));
             lblStatusLink().Inlines().Clear();
 
-            spinStackLeft().Maximum(mReader.w * 40.0 / 100.0);
-            spinStackRight().Maximum(mReader.w * 40.0 / 100.0);
+            spinStackLeft().Maximum(mReader->w * 40.0 / 100.0);
+            spinStackRight().Maximum(mReader->w * 40.0 / 100.0);
 
         } catch (const AVException& ex) {
             imageInput().Source(xamlImageError().Source());
@@ -354,15 +357,11 @@ namespace winrt::cuvistaWinui::implementation {
         mData.backgroundColor = Color::rgb(mBackgroundColor.R, mBackgroundColor.G, mBackgroundColor.B);
         mData.backgroundColor.toYUVfloat(&mData.bgcol4.y, &mData.bgcol4.u, &mData.bgcol4.v);
 
-        std::shared_ptr<ProgressDialog> progress;
-        std::shared_ptr<MovieFrame> frame;
-        std::shared_ptr<FrameExecutor> executor;
-        std::shared_ptr<MovieWriter> writer;
         try {
             //rewind reader to beginning of input
-            mReader.rewind();
+            mReader->rewind();
             //check input parameters
-            mData.validate(mReader);
+            mData.validate(*mReader);
             //reset input handler
             mUserInput = UserInputEnum::CONTINUE;
             //crop setting for stack
@@ -376,34 +375,34 @@ namespace winrt::cuvistaWinui::implementation {
             //select writer
             OutputOption imageType = mOutputImageTypeMap.at(comboImageType().SelectedValue().as<hstring>());
             if (chkStack().IsChecked().Value())
-                writer = std::make_shared<StackedWriter>(mData, mReader);
+                mWriter = std::shared_ptr<MovieWriter>(ff::createWriter(WriterType::STACKED, mData, *mReader));
             else if (chkSequence().IsChecked().Value() && imageType == OutputOption::IMAGE_BMP)
-                writer = std::make_shared<BmpImageWriter>(mData, mReader);
-            else if (chkSequence().IsChecked().Value() && imageType == OutputOption::IMAGE_BMP)
-                writer = std::make_shared<JpegImageWriter>(mData, mReader);
-            else if (chkEncode().IsChecked().Value() && mData.outputOption.group == OutputGroup::VIDEO_NVENC)
-                writer = std::make_shared<CudaFFmpegWriter>(mData, mReader);
-            else if (chkEncode().IsChecked().Value() && mData.outputOption.group == OutputGroup::VIDEO_FFMPEG)
-                writer = std::make_shared<FFmpegWriter>(mData, mReader);
+                mWriter = std::make_shared<BmpImageWriter>(mData, *mReader);
+            else if (chkSequence().IsChecked().Value() && imageType == OutputOption::IMAGE_JPG)
+                mWriter = std::shared_ptr<MovieWriter>(ff::createWriter(WriterType::JPEG_IMAGE, mData, *mReader));
             else if (chkPlayer().IsChecked().Value())
-                writer = std::make_shared<PlayerWriter>(*this, *executor, mData, mReader);
+                mWriter = std::make_shared<PlayerWriter>(*this, *mExecutor, mData, *mReader);
+            else if (chkEncode().IsChecked().Value() && mData.outputOption.group == OutputGroup::VIDEO_NVENC)
+                mWriter = std::shared_ptr<MovieWriter>(ff::createWriter(WriterType::CUDA, mData, *mReader));
+            else if (chkEncode().IsChecked().Value() && mData.outputOption.group == OutputGroup::VIDEO_FFMPEG)
+                mWriter = std::shared_ptr<MovieWriter>(ff::createWriter(WriterType::FFMPEG, mData, *mReader));
             else
                 co_return;
 
             //open writer
-            writer->open(mData.outputOption);
+            mWriter->open(mData.outputOption);
 
             //select frame handler
             mData.mode = comboMode().SelectedIndex();
             if (mData.mode == 0) {
-                frame = std::make_shared<MovieFrameCombined>(mData, mReader, *writer);
+                mFrame = std::make_shared<MovieFrameCombined>(mData, *mReader, *mWriter);
             } else {
-                frame = std::make_shared<MovieFrameConsecutive>(mData, mReader, *writer);
+                mFrame = std::make_shared<MovieFrameConsecutive>(mData, *mReader, *mWriter);
             }
 
             //select frame executor class
-            executor = mData.deviceList[mData.deviceSelected]->create(mData, *frame);
-            executor->init();
+            mExecutor = mData.deviceList[mData.deviceSelected]->create(mData, *mFrame);
+            mExecutor->init();
 
             //check error logger
             if (errorLogger().hasError()) {
@@ -421,15 +420,15 @@ namespace winrt::cuvistaWinui::implementation {
         //setup dialog
         if (chkPlayer().IsChecked().Value()) {
             //start gui progress class
-            progress = std::make_shared<PlayerProgress>(*this, *executor);
+            mProgress = std::make_shared<PlayerProgress>(*this, *mExecutor);
 
             //player output video image
-            mProgressOutput = ImageXamlBGRA::create(imageVideoPlayer(), mReader.h, mReader.w);
+            mProgressOutput = ImageXamlBGRA::create(imageVideoPlayer(), mReader->h, mReader->w);
             mProgressOutput.loadImageScaledToFit(L"ms-appx:///Assets/signs-02.png");
 
         } else {
             //start gui progress class
-            progress = std::make_shared<ProgressGui>(*this, GetActiveWindow(), *executor);
+            mProgress = std::make_shared<ProgressGui>(*this, GetActiveWindow(), *mExecutor);
 
             //progress dialog
             progressBar().Value(0.0);
@@ -439,9 +438,9 @@ namespace winrt::cuvistaWinui::implementation {
             progressOutputGrid().Background(brush);
 
             //progress dialog images
-            mProgressInput = ImageXamlBGRA::create(imageProgressInput(), mReader.h, mReader.w);
+            mProgressInput = ImageXamlBGRA::create(imageProgressInput(), mReader->h, mReader->w);
             mProgressInput.loadImageScaledToFit(L"ms-appx:///Assets/signs-02.png");
-            mProgressOutput = ImageXamlBGRA::create(imageProgressOutput(), mReader.h, mReader.w);
+            mProgressOutput = ImageXamlBGRA::create(imageProgressOutput(), mReader->h, mReader->w);
             mProgressOutput.loadImageScaledToFit(L"ms-appx:///Assets/signs-02.png");
         }
         lblStatus().Text(L"stabilizing...");
@@ -451,25 +450,25 @@ namespace winrt::cuvistaWinui::implementation {
 
         //start process loop ----------------------------------------------------
         auto loopFunction = [&] {
-            LoopResult result = frame->runLoop(*progress, *this, executor);
-            DispatcherQueue().TryEnqueue([&] { progress->dialog().Hide(); });
+            LoopResult result = mFrame->runLoop(*mProgress, *this, mExecutor);
+            DispatcherQueue().TryEnqueue([&] { mProgress->dialog().Hide(); });
             return result;
         };
         mFutureLoop = std::async(std::launch::async, loopFunction);
 
         //show dialog -----------------------------------------------------------
-        co_await progress->dialog().ShowAsync();
+        co_await mProgress->dialog().ShowAsync();
 
         //dialog hidden again ----------------------------------------------------
         //debugPrint("loop done");
         LoopResult result = mFutureLoop.get();
         double secs = mData.timeElapsedSeconds();
-        double fps = writer->frameIndex / secs;
-        std::string fileSize = util::byteSizeToString(writer->encodedBytesTotal);
-        writer.reset();
-        executor.reset();
-        frame.reset();
-        progress.reset();
+        double fps = mWriter->frameIndex / secs;
+        std::string fileSize = util::byteSizeToString(mWriter->encodedBytesTotal);
+        mWriter.reset();
+        mExecutor.reset();
+        mFrame.reset();
+        mProgress.reset();
 
         if (result == LoopResult::LOOP_ERROR) {
             hstring msg = to_hstring(errorLogger().getErrorMessage());
@@ -496,7 +495,7 @@ namespace winrt::cuvistaWinui::implementation {
 
     fire_and_forget MainWindow::seekAsync(double frac) {
         //debugPrint("seek " + std::to_string(frac));
-        if (mInputReady && mReader.seek(frac) && mReader.read(mInput)) {
+        if (mInputReady && mReader->seek(frac) && mReader->read(mInput)) {
             inputVideoFraction = frac;
             mInput.convertTo(mInputBGRA);
             DispatcherQueue().TryEnqueue([&, frac] {
@@ -592,6 +591,9 @@ namespace winrt::cuvistaWinui::implementation {
         }
     }
 
+    void MainWindow::dialogClosedEvent(const Controls::ContentDialog& sender, const Controls::ContentDialogClosedEventArgs& args) {
+        //debugPrint("closing dialog");
+    }
 
     //---------------------------------------------------------------
     //-------------------- Player Events ----------------------------
@@ -734,7 +736,7 @@ namespace winrt::cuvistaWinui::implementation {
         sliderQuality().Value(defaultParam.encodingQuality);
         chkDbScan().IsChecked(true);
 
-        mReader.close();
+        mReader->close();
         mInputFile = {};
 
         texInput().Text(L"");
@@ -820,5 +822,9 @@ namespace winrt::cuvistaWinui::implementation {
             hstring id = L"input" + to_hstring(idx);
             localValues.Insert(id, box_value(L""));
         }
+
+        mReader->close();
+        mReader.reset();
+        ff::freeFFmpegLibrary();
     }
 }

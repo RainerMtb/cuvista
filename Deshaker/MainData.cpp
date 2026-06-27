@@ -20,10 +20,6 @@
 #include "DeviceInfo.hpp"
 #include "DeshakerHelpText.hpp"
 #include "SystemStuff.hpp"
-#include "MovieReader.hpp"
-#include "MovieWriter.hpp"
-#include "CudaFrame.hpp"
-#include "NvidiaDriver.hpp"
 #include "clMain.hpp"
 #include "SelfTest.hpp"
 
@@ -526,21 +522,17 @@ void MainData::showIntro(const std::string& deviceName, const MovieReader& reade
 	*console << "FILE IN: " << fileIn << std::endl;
 
 	//streams in input
-	for (size_t i = 0; i < reader.mInputStreams.size(); i++) {
-		const StreamContext& sc = reader.mInputStreams[i];
-		StreamInfo info = sc.inputStreamInfo();
-		*console << "  Stream " << i
-			<< ": type: " << info.streamType
-			<< ", codec: " << info.codec
-			<< ", duration: " << info.durationString
-			;
+	for (size_t i = 0; i < reader.inputStreamCount(); i++) {
+		const std::shared_ptr<StreamContextBase> sc = reader.inputStreamBase(i);
+		StreamInfo info = sc->inputStreamInfo();
+		*console << "  " << info.inputStreamSummary(": ");
 
 		*console << " -->";
-		if (sc.outputStreams.size() == 0) {
+		if (sc->outputStreamsCount() == 0) {
 			*console << " other";
 		}
-		for (int idx = 0; idx < sc.outputStreams.size(); idx++) {
-			StreamHandling handling = sc.outputStreams[idx]->handling;
+		for (int idx = 0; idx < sc->outputStreamsCount(); idx++) {
+			StreamHandling handling = sc->getOutputStreamContext(idx)->handling;
 			*console << " " << idx << ":" << streamHandlerMap.at(handling);
 		}
 		*console << std::endl;

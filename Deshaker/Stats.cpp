@@ -21,7 +21,3 @@
 double ReaderStats::fps() const {
     return 1.0 * fpsNum / fpsDen;
 }
-
-AVRational ReaderStats::videoTimeBase() const {
-    return { (int) timeBaseNum, (int) timeBaseDen };
-}

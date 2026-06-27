@@ -17,7 +17,7 @@
  */
 
 #include "Deshaker.hpp"
-#include "ImageClasses.hpp"
+#include "SystemStuff.hpp"
 
 int main() {
 	util::debugLoggerPtr = std::make_shared<util::DebugLoggerString>();
@@ -35,9 +35,11 @@ int main() {
 		/*8*/ "-i d:/VideoTest/06b.mkv -o f:/videoOut.nv12 -resvid -bgmode color -y -zoom -8 -device 3 -noclassic",
 		/*9*/ "-i d:/VideoTest/06b.mkv -o f:/videoOut.mp4 -y -device 2 -nodbscan",
 		/*10*/ "-i d:/videoTest/15.ts -o f:/videoOut.mp4 -y -device 0 -frames 150 -log tcp://10.0.0.1:5555",
+		/*11*/ "-i //READYNAS/Videos/Misc/AudioTestWettenDass.ts -o f:/videoOut.mp4 -y",
+		/*12*/ "-i //READYNAS/Videos/Sugababes_push_the_button.mp4 -o f:/videoOut.mp4 -y",
 	};
 
-	int idx = 0;
+	int idx = 12;
 	std::string argsLine = argsLines[idx];
 	std::cout << "------- TestCuvista -------" << std::endl;
 	std::cout << "------- params: " << argsLine << std::endl << std::endl;

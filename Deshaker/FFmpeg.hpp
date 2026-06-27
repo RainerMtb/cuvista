@@ -19,15 +19,17 @@
 #pragma once
 
 #include "FFmpegUtil.hpp"
+#include "MovieReader.hpp"
+#include "MovieWriter.hpp"
 
 namespace ff {
 
-	void loadLibrary();
-	void freeLibrary();
+	int loadFFmpegLibrary();
+	int freeFFmpegLibrary();
 
 	inline const FFmpegVersions* (*versionsCompiled)();
 	inline const FFmpegVersions* (*versionsRuntime)();
 
 	inline MovieReader* (*createReader)(ReaderType readerType);
-	inline MovieWriter* (*createWriter)(WriterType writerType);
+	inline MovieWriter* (*createWriter)(WriterType writerType, MainData& data, MovieReader& reader);
 }

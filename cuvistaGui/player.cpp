@@ -26,6 +26,7 @@
 #include "player.h"
 #include "MovieFrame.hpp"
 #include "MovieReader.hpp"
+#include "ErrorLogger.hpp"
 
 
 //-------------------------------------------------
@@ -98,15 +99,15 @@ void PlayerWriter::open(OutputOption outputOption) {
     mVideoFrame = QVideoFrame(image);
 
     //handling input streams
-    for (StreamContext& sc : mReader.mInputStreams) {
-        auto posc = std::make_shared<OutputStreamContext>();
-        posc->inputStream = sc.inputStream;
+    for (size_t i = 0; i < mReader.inputStreamCount(); i++) {
+        std::shared_ptr<StreamContextBase> sc = mReader.inputStreamBase(i);
+        std::shared_ptr<OutputStreamContextBase> posc = sc->addOutputStreamContext();
 
-        if (sc.inputStream->index == mReader.videoStream->index) {
+        if (sc->inputStreamIndex() == mReader.videoStreamIndex) {
             posc->handling = StreamHandling::STREAM_STABILIZE;
 
-        } else if (sc.inputStream->index == mAudioStreamIndex) {
-            int sampleRate = mReader.openAudioDecoder(*posc);
+        } else if (sc->inputStreamIndex() == mAudioStreamIndex) {
+            int sampleRate = mReader.openAudioDecoder(posc);
             mAudioFormat.setSampleRate(sampleRate);
             mAudioFormat.setChannelCount(2);
             mAudioFormat.setSampleFormat(QAudioFormat::Float);
@@ -129,8 +130,7 @@ void PlayerWriter::open(OutputOption outputOption) {
             posc->handling = StreamHandling::STREAM_IGNORE;
         }
 
-        outputStreams.push_back(posc);
-        sc.outputStreams.push_back(posc);
+        mOutputStreams.push_back(posc);
     }
 
     //open player window
@@ -186,12 +186,11 @@ void PlayerWriter::writeOutput(const FrameExecutor& executor) {
 
     //play audio
     if (mAudioStreamIndex != -1 && mAudioSink != nullptr && mAudioIODevice != nullptr) {
-        std::shared_ptr<OutputStreamContext> posc = outputStreams[mAudioStreamIndex];
-        std::unique_lock<std::mutex> lock(posc->mMutexSidePackets);
+        std::shared_ptr<OutputStreamContextBase> posc = mOutputStreams[mAudioStreamIndex];
         double videoPts = t1.value_or(0.0) / 1000.0;
-        for (auto it = posc->sidePackets.begin(); it != posc->sidePackets.end() && it->pts < videoPts + 0.25; ) {
-            mAudioIODevice->write(reinterpret_cast<char*>(it->audioData.data()), it->audioData.size());
-            it = posc->sidePackets.erase(it);
+        std::list<DecodedAudioPacket> audioPakets = posc->getAudioData(videoPts + 0.25);
+        for (auto pkt : audioPakets) {
+            qint64 written = mAudioIODevice->write(reinterpret_cast<char*>(pkt.audioData.data()), pkt.audioData.size());
         }
     }
 

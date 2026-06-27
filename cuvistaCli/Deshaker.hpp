@@ -18,12 +18,7 @@
 
 #pragma once
 
-#include "CudaWriter.hpp"
-#include "MovieReader.hpp"
 #include "MovieWriter.hpp"
-#include "MovieFrame.hpp"
-#include "DummyFrame.hpp"
-#include "ProgressDisplayConsole.hpp"
 
 struct DeshakerResult {
 	int statusCode = 0;

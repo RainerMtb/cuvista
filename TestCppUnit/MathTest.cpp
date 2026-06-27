@@ -18,7 +18,7 @@
 
 #include "pch.h"
 #include "CppUnitTest.h"
-#include "Utils.hpp"
+#include "ThreadPool.hpp"
 #include "AffineTransform.hpp"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;

@@ -17,7 +17,6 @@
  */
 
 #include "TestMain.hpp"
-#include "clTest.hpp"
 #include "Util.hpp"
 #include "SelfTestData.hpp"
 
@@ -38,30 +37,30 @@ template <class T> Result runPyramid(MainData& data, int deviceIndex) {
 	errorLogger().clear();
 	try {
 		std::vector<unsigned char> bytes = util::base64_decode(movieTestData);
-		MemoryFFmpegReader reader(bytes);
-		reader.open();
+		std::unique_ptr<MovieReader> reader(ff::createReader(ReaderType::MEMORY));
+		reader->open(bytes);
 		data.collectDeviceInfo();
-		data.validate(reader);
-		OutputWriter writer(data, reader);
+		data.validate(*reader);
+		OutputWriter writer(data, *reader);
 
-		MovieFrameCombined frame(data, reader, writer);
+		MovieFrameCombined frame(data, *reader, writer);
 		std::unique_ptr<FrameExecutor> executor = std::make_unique<T>(data, *data.deviceList[deviceIndex], frame, frame.mPool);
 		std::string name = executor->mDeviceInfo.getNameShort();
 		executor->init();
 
 		std::cout << "running " << name << std::endl;
-		reader.read(*executor);
-		executor->inputData(reader.frameIndex);
+		reader->read(*executor);
+		executor->inputData(reader->frameIndex);
 		std::vector<int> hist1(256);
-		executor->createPyramid(reader.frameIndex, hist1, {}, false);
+		executor->createPyramid(reader->frameIndex, hist1, {}, false);
 
-		reader.read(*executor);
-		executor->inputData(reader.frameIndex);
+		reader->read(*executor);
+		executor->inputData(reader->frameIndex);
 		std::vector<int> hist2(256);
-		executor->createPyramid(reader.frameIndex, hist2, {}, false);
+		executor->createPyramid(reader->frameIndex, hist2, {}, false);
 
-		executor->computeStart(reader.frameIndex, frame.mResultPoints);
-		executor->computeTerminate(reader.frameIndex, frame.mResultPoints);
+		executor->computeStart(reader->frameIndex, frame.mResultPoints);
+		executor->computeTerminate(reader->frameIndex, frame.mResultPoints);
 
 		ImageRGBA im(data.h, data.w);
 		executor->getInput(0, im);
@@ -95,6 +94,7 @@ template <class T> Result runPyramid(MainData& data, int deviceIndex) {
 void compareFramesPlatforms() {
 	std::cout << "comparing platforms..." << std::endl;
 	std::vector<Result> results(4);
+	ff::loadFFmpegLibrary();
 
 	{
 		//CPU
@@ -161,5 +161,6 @@ void compareFramesPlatforms() {
 		std::cout << std::endl;
 	}
 
+	ff::freeFFmpegLibrary();
 	std::cout << errorLogger().getErrorMessage() << std::endl;
 }

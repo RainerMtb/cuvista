@@ -150,9 +150,6 @@ namespace util {
     //convert a number of bytes into more readable values, bytes / kb / Mb
     std::string byteSizeToString(int64_t bytes);
 
-    //convert millis into readable string hh:mm:ss.fff
-    std::string millisToTimeString(int64_t millis);
-
     //set timer start time
     void tickStart();
 
@@ -226,4 +223,5 @@ namespace util {
     }
 }
 
+//forward declaration for debugLogger();
 util::DebugLogger& debugLogger();

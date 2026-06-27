@@ -208,19 +208,6 @@ void draw(const std::string& filename) {
 	bgr.saveBmpColor(filename);
 }
 
-class OpticalFlowImageWriter : public OpticalFlowWriter {
-public:
-	OpticalFlowImageWriter(MainData& data, MovieReader& reader) :
-		OpticalFlowWriter(data, reader) {
-		codec_ctx = avcodec_alloc_context3(NULL);
-	}
-
-	void writeFlow(const MovieFrame& frame, const std::string& fileName) {
-		OpticalFlowWriter::writeFlow(frame);
-		imageInterpolated.saveBmpColor("f:/flow.bmp");
-	}
-};
-
 void testZoom() {
 	std::cout << "testing zoom calculation..." << std::endl;
 	MainData data;

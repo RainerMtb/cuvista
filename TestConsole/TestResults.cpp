@@ -19,6 +19,7 @@
 #include "TestMain.hpp"
 
 void testVideo1() {
+	std::cout << "test video" << std::endl;
 	//std::string inFile = "d:/VideoTest/02short.mp4";
 	std::string inFile = "f:/pic/input.mp4";
 	std::string resultsFile = "f:/pic/results.dat";
@@ -30,19 +31,20 @@ void testVideo1() {
 	data.mode = 1;
 	std::vector<DeviceInfoCuda> cudaDevices = data.probeCuda();
 	data.collectDeviceInfo();
-	FFmpegReader reader;
-	reader.open(inFile);
-	data.validate(reader);
+	ff::loadFFmpegLibrary();
+	auto reader = ff::createReader(ReaderType::FFMPEG);
+	reader->open(inFile);
+	data.validate(*reader);
 
 	int maxFrames = 200;
 	RawMemoryStoreWriter writer(maxFrames);
-	std::shared_ptr<MovieFrame> frame = std::make_shared<MovieFrameConsecutive>(data, reader, writer);
+	std::shared_ptr<MovieFrame> frame = std::make_shared<MovieFrameConsecutive>(data, *reader, writer);
 	std::shared_ptr<FrameExecutor> executor = std::make_shared<CudaFrame>(data, cudaDevices[0], *frame, frame->mPool);
 	executor->init();
 	frame->runLoop(executor);
 
 	//write results binary
-	std::cout << "write results" << std::endl;
+	std::cout << "write results " << resultsFile << std::endl;
 	std::ofstream resfile(resultsFile, std::ios::binary);
 	auto writefcn = [&] (auto value) { resfile.write(reinterpret_cast<const char*>(&value), sizeof(value)); };
 	writefcn(data.w);
@@ -66,9 +68,10 @@ void testVideo1() {
 	}
 
 	//write video
-	std::cout << "write video" << std::endl;
-	writer.writeInputFile(videoInput, maxFrames);
-	std::cout << std::endl << "results = " << resultsFile << ", video = " << videoInput << std::endl;
+	std::cout << "write video " << videoInput << std::endl;
+	writer.writeInputFile(videoInput, maxFrames, executor->mPool);
+	std::cout << "done" << std::endl;
+	ff::freeFFmpegLibrary();
 }
 
 void testLuma2() {

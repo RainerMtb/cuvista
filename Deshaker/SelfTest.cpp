@@ -23,6 +23,7 @@
 #include "MovieWriter.hpp"
 #include "MovieReader.hpp"
 #include "MovieFrame.hpp"
+#include "ErrorLogger.hpp"
 
 void MessagePrinterConsole::print(const std::string& str) {
 	*out << str << std::flush;
@@ -65,34 +66,34 @@ void runSelfTest(util::MessagePrinter& out, std::vector<DeviceInfoBase*> deviceL
 		data.backgroundColor = Color::rgb(0, 50, 0);
 		data.deviceList.push_back(deviceList[i]);
 		//data.cpuThreadsRequired = { 1 };
-		MemoryFFmpegReader reader(movieData);
-		reader.open();
-		data.validate(reader);
-		OutputWriter writer(data, reader);
+		std::unique_ptr<MovieReader> reader(ff::createReader(ReaderType::MEMORY));
+		reader->open(movieData);
+		data.validate(*reader);
+		OutputWriter writer(data, *reader);
 		
 		bool check = true;
 		try {
 			//frame executor
-			MovieFrameCombined frame(data, reader, writer);
+			MovieFrameCombined frame(data, *reader, writer);
 			std::shared_ptr<FrameExecutor> executor = deviceList[i]->create(data, frame);
 			executor->init();
 			if (errorLogger().hasError()) throw AVException(errorLogger().getErrorMessage());
 
 			//first frame
 			//std::cout << "reading" << std::endl;
-			reader.read(*executor);
-			executor->inputData(reader.frameIndex);
+			reader->read(*executor);
+			executor->inputData(reader->frameIndex);
 			std::vector<int> luma1(256);
-			executor->createPyramid(reader.frameIndex, luma1, {}, false);
+			executor->createPyramid(reader->frameIndex, luma1, {}, false);
 			//second frame
-			reader.read(*executor);
-			executor->inputData(reader.frameIndex);
+			reader->read(*executor);
+			executor->inputData(reader->frameIndex);
 			std::vector<int> luma2(256);
-			executor->createPyramid(reader.frameIndex, luma2, {}, false);
+			executor->createPyramid(reader->frameIndex, luma2, {}, false);
 			//compute
 			//std::cout << "computing" << std::endl;
-			executor->computeStart(reader.frameIndex, frame.mResultPoints);
-			executor->computeTerminate(reader.frameIndex, frame.mResultPoints);
+			executor->computeStart(reader->frameIndex, frame.mResultPoints);
+			executor->computeTerminate(reader->frameIndex, frame.mResultPoints);
 			//input
 			ImageRGBA inputFirst(data.h, data.w);
 			executor->getInput(0, inputFirst);

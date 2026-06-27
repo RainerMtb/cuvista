@@ -30,7 +30,8 @@
 #include "UserInputGui.hpp"
 #include "MovieFrame.hpp"
 #include "progress.h"
-#include "CudaWriter.hpp"
+#include "MovieWriter.hpp"
+#include "ErrorLogger.hpp"
 
 template <class... Args> QString qformat(std::format_string<Args...> fmt, Args&&... args) {
     return QString::fromStdString(std::format(fmt, std::forward<Args>(args)...));
@@ -39,8 +40,9 @@ template <class... Args> QString qformat(std::format_string<Args...> fmt, Args&&
 cuvistaGui::cuvistaGui(QWidget *parent) : 
     QMainWindow(parent) 
 {
-    ff::loadLibrary();
     //debugLogger().open("tcp://10.0.0.1:5555");
+    ff::loadFFmpegLibrary();
+    mReader = std::shared_ptr<MovieReader>(ff::createReader(ReaderType::FFMPEG));
     ui.setupUi(this);
     mPlayerWindow = new PlayerWindow(this);
     mProgressWindow = new ProgressWindow(this);
@@ -75,6 +77,9 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
 
     connect(ui.sliderCudaThreads, &QSlider::valueChanged, this, [&] (int value) { ui.lblCudaThreads->setText(QString::number(value * 4)); });
     ui.sliderCudaThreads->setValue(defaultParam.cudaThreads / 4);
+
+    //signal emitted when app is closed
+    connect(QCoreApplication::instance(), &QCoreApplication::aboutToQuit, this, &cuvistaGui::closeApp);
 
     //modes list
     ui.comboMode->addItem(QString("Combined - Single Pass"));
@@ -274,21 +279,21 @@ void cuvistaGui::setInputFile(const QString& inputPath) {
     ui.inputPosition->setValue(0.0);
 
     try {
-        mReader.close();
+        mReader->close();
         errorLogger().clear();
-        mReader.open(mFileInput.filePath().toStdString());
-        mInputYUV = ImageYuv(mReader.h, mReader.w);
+        mReader->open(mFileInput.filePath().toStdString());
+        mInputYUV = ImageYuv(mReader->h, mReader->w);
 
         //read first image
-        mReader.read(mInputYUV);
+        mReader->read(mInputYUV);
 
         if (errorLogger().hasNoError()) {
             //try to read again for second image
-            mReader.read(mInputYUV);
-            ui.inputPosition->setValue(2.0 / mReader.frameCount);
+            mReader->read(mInputYUV);
+            ui.inputPosition->setValue(2.0 / mReader->frameCount);
 
             //set up converter to BGR for display in UI
-            mInputBGR = ImageBgr(mReader.h, mReader.w);
+            mInputBGR = ImageBgr(mReader->h, mReader->w);
             mInputImage = QImage(mInputBGR.data(), mInputBGR.w(), mInputBGR.h(), mInputBGR.strideInBytes(), QImage::Format_BGR888);
             updateInputImage();
         }
@@ -302,15 +307,18 @@ void cuvistaGui::setInputFile(const QString& inputPath) {
 
         //info about streams
         std::string str;
-        for (StreamContext& sc : mReader.mInputStreams) {
-            StreamInfo info = sc.inputStreamInfo();
-            str += info.inputStreamSummary();
-            if (sc.inputStream->index == mReader.videoStream->index) {
-                str += mReader.videoStreamSummary();
+        for (size_t i = 0; i < mReader->inputStreamCount(); i++) {
+            const std::shared_ptr<StreamContextBase> sc = mReader->inputStreamBase(i);
+            StreamInfo info = sc->inputStreamInfo();
+            str += " - ";
+            str += info.inputStreamSummary("\n");
+            str += "\n";
+            if (info.index == mReader->videoStreamIndex) {
+                str += mReader->videoStreamSummary();
             }
-            if (info.mediaType == AVMEDIA_TYPE_AUDIO) {
-                QString qstr = qformat("Track {}: {}", sc.inputStream->index, info.codec);
-                ui.comboAudioTrack->addItem(qstr, QVariant::fromValue(&sc));
+            if (info.mediaType == MediaType::AUDIO) {
+                QString qstr = qformat("Track {}: {}", info.index, info.codec);
+                ui.comboAudioTrack->addItem(qstr, QVariant::fromValue(sc));
             }
         }
 
@@ -318,8 +326,8 @@ void cuvistaGui::setInputFile(const QString& inputPath) {
         ui.comboAudioTrack->setCurrentIndex(ui.comboAudioTrack->count() > 1);
         ui.labelStatus->setText(qformat("Version {}", CUVISTA_VERSION));
         ui.texInput->setPlainText(QString::fromStdString(str).trimmed());
-        ui.spinStackLeft->setMaximum(mReader.w * 40 / 100);
-        ui.spinStackRight->setMaximum(mReader.w * 40 / 100);
+        ui.spinStackLeft->setMaximum(mReader->w * 40 / 100);
+        ui.spinStackRight->setMaximum(mReader->w * 40 / 100);
 
     } catch (const AVException& ex) {
         ui.imageInput->setImage(mErrorImage);
@@ -343,7 +351,7 @@ void cuvistaGui::addInputFile(const QString& inputPath) {
 }
 
 void cuvistaGui::seek(double frac) {
-    if (mInputReady && mReader.seek(frac) && mReader.read(mInputYUV)) {
+    if (mInputReady && mReader->seek(frac) && mReader->read(mInputYUV)) {
         updateInputImage();
         ui.inputPosition->setValue(frac * 100.0);
     }
@@ -433,33 +441,34 @@ void cuvistaGui::stabilize() {
 
     try {
         //rewind reader to beginning of input
-        mReader.rewind();
+        mReader->rewind();
         //check input parameters
-        mData.validate(mReader);
+        mData.validate(*mReader);
         //reset input handler
         mInputHandler.mIsCancelled = false;
         mInputHandler.mBufferedInput = UserInputEnum::CONTINUE;
         //audio track to play
         int audioStreamIndex = -1;
         if (ui.comboAudioTrack->currentIndex() > 0) {
-            audioStreamIndex = ui.comboAudioTrack->currentData().value<StreamContext*>()->inputStream->index;
+            QVariant qv = ui.comboAudioTrack->currentData();
+            audioStreamIndex = qv.value<std::shared_ptr<StreamContextBase>>()->inputStreamIndex();
         }
         //crop setting for stack
         mData.stackCrop = { ui.spinStackLeft->value(), ui.spinStackRight->value() };
 
         //select writer
         if (ui.chkStack->isChecked())
-            mWriter = std::make_shared<StackedWriter>(mData, mReader);
+            mWriter = std::shared_ptr<MovieWriter>(ff::createWriter(WriterType::STACKED, mData, *mReader));
         else if (ui.chkSequence->isChecked() && ui.comboImageType->currentData().value<OutputOption>() == OutputOption::IMAGE_BMP)
-            mWriter = std::make_shared<BmpImageWriter>(mData, mReader);
+            mWriter = std::make_shared<BmpImageWriter>(mData, *mReader);
         else if (ui.chkSequence->isChecked() && ui.comboImageType->currentData().value<OutputOption>() == OutputOption::IMAGE_JPG)
-            mWriter = std::make_shared<JpegImageWriter>(mData, mReader);
+            mWriter = std::shared_ptr<MovieWriter>(ff::createWriter(WriterType::JPEG_IMAGE, mData, *mReader));
         else if (ui.chkPlayer->isChecked())
-            mWriter = std::make_shared<PlayerWriter>(mData, mReader, mPlayerWindow, mWorkingImage, audioStreamIndex);
+            mWriter = std::make_shared<PlayerWriter>(mData, *mReader, mPlayerWindow, mWorkingImage, audioStreamIndex);
         else if (ui.chkEncode->isChecked() && mData.outputOption.group == OutputGroup::VIDEO_NVENC)
-            mWriter = std::make_shared<CudaFFmpegWriter>(mData, mReader);
+            mWriter = std::shared_ptr<MovieWriter>(ff::createWriter(WriterType::CUDA, mData, *mReader));
         else if (ui.chkEncode->isChecked() && mData.outputOption.group == OutputGroup::VIDEO_FFMPEG)
-            mWriter = std::make_shared<FFmpegWriter>(mData, mReader);
+            mWriter = std::shared_ptr<MovieWriter>(ff::createWriter(WriterType::FFMPEG, mData, *mReader));
         else
             return;
 
@@ -469,9 +478,9 @@ void cuvistaGui::stabilize() {
         //select frame handler
         mData.mode = ui.comboMode->currentIndex();
         if (mData.mode == 0) {
-            mFrame = std::make_shared<MovieFrameCombined>(mData, mReader, *mWriter);
+            mFrame = std::make_shared<MovieFrameCombined>(mData, *mReader, *mWriter);
         } else {
-            mFrame = std::make_shared<MovieFrameConsecutive>(mData, mReader, *mWriter);
+            mFrame = std::make_shared<MovieFrameConsecutive>(mData, *mReader, *mWriter);
         }
 
         //select frame executor class
@@ -668,11 +677,19 @@ void cuvistaGui::resetGui() {
     ui.sliderLevels->setValue(defaultParam.levels);
     ui.chkDbScan->setChecked(true);
 
-    mReader.close();
+    mReader->close();
     ui.texInput->clear();
     ui.comboInputFile->clear();
     ui.imageInput->setImage(mInputImagePlaceholder);
     ui.inputPosition->setValue(0.0);
+}
+
+void cuvistaGui::closeApp() {
+    //clearing audio track selection releases input context
+    ui.comboAudioTrack->clear();
+    //release reader object
+    mReader->close();
+    mReader.reset();
 }
 
 //destructor stores settings
@@ -714,4 +731,6 @@ cuvistaGui::~cuvistaGui() {
         QString key = QString("qt/input%1").arg(idx);
         mSettings.setValue(key, "");
     }
+
+    ff::freeFFmpegLibrary();
 }

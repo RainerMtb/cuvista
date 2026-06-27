@@ -25,8 +25,20 @@
 
 #include <any>
 #include "MovieFrame.hpp"
-#include "MovieReader.hpp"
+#include "FrameExecutor.hpp"
 #include "AppImage.hpp"
+#include "ProgressDisplay.hpp"
+
+
+class ProgressDialog : public ProgressDisplay {
+
+public:
+    ProgressDialog(int interval) :
+        ProgressDisplay(interval)
+    {}
+
+    virtual winrt::Microsoft::UI::Xaml::Controls::IContentDialog dialog() = 0;
+};
 
 
 namespace winrt::cuvistaWinui::implementation {
@@ -94,8 +106,9 @@ namespace winrt::cuvistaWinui::implementation {
         void modeSelectionChanged(const IInspectable& sender, const Controls::SelectionChangedEventArgs& args);
 
         void windowClosedEvent(const IInspectable& sender, const WindowEventArgs& args);
+        void dialogClosedEvent(const Controls::ContentDialog& sender, const Controls::ContentDialogClosedEventArgs& args); 
+        
         void sliderVolumeChanged(const IInspectable& sender, const Controls::Primitives::RangeBaseValueChangedEventArgs& args);
-
         void imageGridResize(const IInspectable& sender, const SizeChangedEventArgs& args);
 
     private:
@@ -105,7 +118,11 @@ namespace winrt::cuvistaWinui::implementation {
         MainData mData;
         ImageYuv mInput;
         ImageXamlBGRA mInputBGRA;
-        FFmpegReader mReader;
+        std::shared_ptr<MovieReader> mReader;
+        std::shared_ptr<MovieFrame> mFrame;
+        std::shared_ptr<FrameExecutor> mExecutor;
+        std::shared_ptr<MovieWriter> mWriter;
+        std::shared_ptr<ProgressDialog> mProgress;
 
         bool mInputReady = false;
         double inputVideoFraction = 0.0;

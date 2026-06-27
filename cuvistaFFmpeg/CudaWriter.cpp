@@ -16,13 +16,13 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
-#include "MovieFrame.hpp"
-#include "MovieReader.hpp"
-#include "Util.hpp"
-#include "ThreadPool.hpp"
+#include "Writer.hpp"
+#include "Reader.hpp"
+#include "NvEncoder.hpp"
 #include "DeviceInfo.hpp"
-#include "CudaWriter.hpp"
-#include "CudaInterface.hpp"
+#include "ErrorLogger.hpp"
+#include "MainData.hpp"
+
 
 #if defined(BUILD_CUDA) && BUILD_CUDA == 0
 
@@ -40,10 +40,10 @@ bool CudaFFmpegWriter::flush() { return false; }
 
 #else
 
-//cuda encoding contructor
+ //cuda encoding contructor
 CudaFFmpegWriter::CudaFFmpegWriter(MainData& data, MovieReader& reader) :
     FFmpegFormatWriter(data, reader),
-    nvPackets { std::make_unique<std::list<NvPacket>>() } 
+    nvPackets { std::make_unique<std::list<NvPacket>>() }
 {}
 
 //open cuda encoder
@@ -150,7 +150,8 @@ void CudaFFmpegWriter::writeOutput(const FrameExecutor& executor) {
     assert(cudaPtr != nullptr && "invalid cuda frame pointer");
     bool needsCopy = executor.getOutput(frameIndex, outputNV12, nv12stride, cudaPtr);
     if (needsCopy) {
-        nvenc->encodeNvData(outputNV12.data(), outputNV12.sizeInBytes(), cudaPtr);
+        int siz = (int) outputNV12.sizeInBytes();
+        nvenc->encodeNvData(outputNV12.data(), siz, cudaPtr);
     }
     encodeFrame(frameIndex);
     encodingQueue.push_back(encoderPool.add([this, pkts = *nvPackets] { writePacketsToFile(pkts, false); }));

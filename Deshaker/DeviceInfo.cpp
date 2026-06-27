@@ -30,6 +30,10 @@
 #include <thread>
 #include <format>
 
+extern "C" {
+#include "cpuinfo_x86.h" 
+}
+
 static cpu_features::X86Info cpuInfo = cpu_features::GetX86Info();
 
 

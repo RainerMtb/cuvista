@@ -76,7 +76,7 @@ private:
     QAudioSink* mAudioSink;
     QIODevice* mAudioIODevice;
     std::chrono::time_point<std::chrono::steady_clock> mNextPts;
-    std::vector<std::shared_ptr<OutputStreamContext>> outputStreams;
+    std::vector<std::shared_ptr<OutputStreamContextBase>> mOutputStreams;
 
 public:
     PlayerWriter(MainData& data, MovieReader& reader, PlayerWindow* player, QImage imageWorking, int audioStreamCtx);

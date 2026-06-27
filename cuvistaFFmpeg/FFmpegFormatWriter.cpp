@@ -16,9 +16,12 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
-#include "MovieWriter.hpp"
-#include "MovieReader.hpp"
-#include <filesystem>
+#include "Writer.hpp"
+#include "Reader.hpp"
+#include "ErrorLogger.hpp"
+#include "AVException.hpp"
+#include "MainData.hpp"
+
 
 FFmpegFormatWriter::FFmpegFormatWriter(MainData& data, MovieReader& reader) :
     NullWriter(data, reader)
@@ -49,27 +52,28 @@ void FFmpegFormatWriter::openFormat(AVCodecID codecId, AVFormatContext* ctx, int
     fmt_ctx = ctx;
 
     //set default stream handling
-    for (StreamContext& sc : mReader.mInputStreams) {
+    for (size_t i = 0; i < mReader.inputStreamCount(); i++) {
+        std::shared_ptr<StreamContext> sc = mReader.inputStream(i);
         auto osc = std::make_shared<OutputStreamContext>();
-        osc->inputStream = sc.inputStream;
+        osc->inputStream = sc->inputStream;
 
-        if (sc.inputStream->index == mReader.videoStream->index) {
+        if (sc->inputStream->index == mReader.videoStreamIndex) {
             osc->handling = StreamHandling::STREAM_STABILIZE;
 
         } else {
-            int codecSupported = avformat_query_codec(fmt_ctx->oformat, sc.inputStream->codecpar->codec_id, FF_COMPLIANCE_NORMAL);
+            int codecSupported = avformat_query_codec(fmt_ctx->oformat, sc->inputStream->codecpar->codec_id, FF_COMPLIANCE_NORMAL);
             //codecSupported = false; //force transcode for debugging <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
             if (codecSupported == 1) {
                 osc->handling = StreamHandling::STREAM_COPY;
 
-            } else if (sc.inputStream->codecpar->codec_type == AVMEDIA_TYPE_AUDIO) {
+            } else if (sc->inputStream->codecpar->codec_type == AVMEDIA_TYPE_AUDIO) {
                 osc->handling = StreamHandling::STREAM_TRANSCODE;
 
             } else {
                 osc->handling = StreamHandling::STREAM_IGNORE;
             }
         }
-        sc.outputStreams.push_back(osc);
+        sc->outputStreams.push_back(osc);
         outputStreams.push_back(osc);
     }
 
@@ -276,8 +280,7 @@ void FFmpegFormatWriter::transcodeAudio(AVPacket* pkt, OutputStreamContext& osc,
                 if (bufsiz < 0)
                     ffmpeg_log_error(retval, "cannot allocate samples", ErrorSource::WRITER);
 
-                const uint8_t** indata = (const uint8_t**) (osc.frameIn->extended_data);
-                sampleCount = swr_convert(osc.resampleCtx, samplesArray, sampleCount, indata, osc.frameIn->nb_samples);
+                sampleCount = swr_convert(osc.resampleCtx, samplesArray, sampleCount, osc.frameIn->extended_data, osc.frameIn->nb_samples);
                 if (sampleCount < 0)
                     ffmpeg_log_error(sampleCount, "cannot convert samples", ErrorSource::WRITER);
 
@@ -356,8 +359,6 @@ int FFmpegFormatWriter::writePacket(AVPacket* packet) {
 
 //write packets to output
 void FFmpegFormatWriter::writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsIdx, bool terminate) {
-    AVStream* videoInputStream = mReader.videoStream;
-    
     /*
     overall plan:
     lookup pts value from input for this frame index to use for output frame
@@ -385,13 +386,13 @@ void FFmpegFormatWriter::writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsI
         mReader.mVideoPacketList.erase(vpcIter);
     }
 
-    int64_t pts = vpc.pts - videoInputStream->start_time;
+    int64_t pts = vpc.pts - mReader.videoStartTime;
     //offset pts to always start at 0
     pkt->pts = pts;
     //calculate dts with offset to pts coming from current encoder
-    AVRational r1 = { videoInputStream->avg_frame_rate.den, videoInputStream->avg_frame_rate.num };
-    AVRational r2 = videoInputStream->time_base;
-    pkt->dts = pts - av_rescale_q(ptsIdx - dtsIdx, r1, r2);
+    AVRational rFps = { mReader.fpsDen, mReader.fpsNum };
+    AVRational rBase = { mReader.timeBaseNum, mReader.timeBaseDen };
+    pkt->dts = pts - av_rescale_q(ptsIdx - dtsIdx, rFps, rBase);
     //copy duration from input
     pkt->duration = vpc.duration;
 
@@ -407,7 +408,7 @@ void FFmpegFormatWriter::writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsI
 
     //STEP 2: convert to output timebase
     //rescale packet from input timebase to output timebase
-    av_packet_rescale_ts(pkt, videoInputStream->time_base, videoStream->time_base);
+    av_packet_rescale_ts(pkt, rBase, videoStream->time_base);
 
     //process secondary streams
     //write packets from other streams that were read before this video frame

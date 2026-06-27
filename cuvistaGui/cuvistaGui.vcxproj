@@ -94,13 +94,18 @@
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
+      <DisableSpecificWarnings>5240</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(SolutionDir)lib\$(Platform);$(SolutionDir)bin\$(Platform)\$(Configuration);$(CUDA_PATH)\lib\$(Platform);$(FFMPEG_PATH)\lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>AvxStuff.lib;Common.lib;cpu_features.lib;OpenCL.lib;Matrix.lib;Deshaker.lib;CudaStuff.lib;cudart_static.lib;cuda.lib;nvencodeapi.lib;avcodec.lib;avformat.lib;avutil.lib;swscale.lib;swresample.lib;Ole32.lib;ws2_32.lib;Shell32.lib;$(Qt_LIBS_)</AdditionalDependencies>
+      <AdditionalDependencies>AvxStuff.lib;Common.lib;cpu_features.lib;OpenCL.lib;Matrix.lib;Deshaker.lib;CudaStuff.lib;cudart_static.lib;cuda.lib;nvencodeapi.lib;Ole32.lib;ws2_32.lib;Shell32.lib;$(Qt_LIBS_)</AdditionalDependencies>
       <DelayLoadDLLs>nvEncodeAPI64.dll;OpenCL.dll;</DelayLoadDLLs>
       <IgnoreSpecificDefaultLibraries>libcmt.lib; msvcrt.lib; libcmtd.lib</IgnoreSpecificDefaultLibraries>
     </Link>
+    <QtMoc>
+      <NoWarnings>
+      </NoWarnings>
+    </QtMoc>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -109,10 +114,11 @@
       <PreprocessorDefinitions>QT_NO_DEPRECATED_WARNINGS;$(Qt_DEFINES_);NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
+      <DisableSpecificWarnings>5240</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(SolutionDir)lib\$(Platform);$(SolutionDir)bin\$(Platform)\$(Configuration);$(CUDA_PATH)\lib\$(Platform);$(FFMPEG_PATH)\lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>AvxStuff.lib;Common.lib;cpu_features.lib;OpenCL.lib;Matrix.lib;Deshaker.lib;CudaStuff.lib;cudart_static.lib;cuda.lib;nvencodeapi.lib;avcodec.lib;avformat.lib;avutil.lib;swscale.lib;swresample.lib;Ole32.lib;ws2_32.lib;Shell32.lib;$(Qt_LIBS_)</AdditionalDependencies>
+      <AdditionalDependencies>AvxStuff.lib;Common.lib;cpu_features.lib;OpenCL.lib;Matrix.lib;Deshaker.lib;CudaStuff.lib;cudart_static.lib;cuda.lib;nvencodeapi.lib;Ole32.lib;ws2_32.lib;Shell32.lib;$(Qt_LIBS_)</AdditionalDependencies>
       <DelayLoadDLLs>nvEncodeAPI64.dll;OpenCL.dll;</DelayLoadDLLs>
       <IgnoreSpecificDefaultLibraries>libcmt.lib;</IgnoreSpecificDefaultLibraries>
       <LinkTimeCodeGeneration>UseFastLinkTimeCodeGeneration</LinkTimeCodeGeneration>
@@ -130,6 +136,10 @@ copy $(FFMPEG_PATH)\bin\swscale-9.dll $(SolutionDir)bin\$(Platform)\Deploy
     <PostBuildEvent>
       <Message>copy to deploy dir</Message>
     </PostBuildEvent>
+    <QtMoc>
+      <NoWarnings>
+      </NoWarnings>
+    </QtMoc>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'" Label="Configuration">
     <ClCompile>

@@ -20,7 +20,16 @@
 #include "CppUnitTest.h"
 #include "NvEncoder.hpp"
 #include "ImageClasses.hpp"
-#include "FFmpegUtil.hpp"
+
+extern "C" {
+#include "libavcodec/avcodec.h"
+#include "libavformat/avformat.h"
+#include "libavformat/avio.h"
+#include "libswscale/swscale.h"
+#include "libswresample/swresample.h"
+#include "libavutil/opt.h"
+#include "libavutil/audio_fifo.h"
+}
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 using namespace im;

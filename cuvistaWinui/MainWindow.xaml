@@ -110,14 +110,10 @@
         </ContentDialog>
         
         <!-- Player Dialog -->
-        <ContentDialog x:Name="playerDialog">
-            <ContentDialog.Resources>
-                <x:Double x:Key="ContentDialogMaxWidth">1400</x:Double>
-                <x:Double x:Key="ContentDialogMaxHeight">800</x:Double>
-            </ContentDialog.Resources>
+        <ContentDialog x:Name="playerDialog" Closed="dialogClosedEvent">
             <StackPanel Orientation="Vertical" Spacing="8">
-                <Grid Background="Black">
-                    <Image x:Name="imageVideoPlayer" Stretch="Uniform" MinWidth="480" MinHeight="480" MaxHeight="700"/>
+                <Grid ColumnDefinitions="auto" Background="Black" MinWidth="640" MinHeight="480">
+                    <Image x:Name="imageVideoPlayer" Stretch="Uniform"/>
                 </Grid>
                 <Grid ColumnDefinitions="auto, *, auto, auto, auto, auto, auto, auto" ColumnSpacing="8">
                     <TextBlock x:Name="lblPlayerStatus" Text="Status" Grid.Column="0" VerticalAlignment="Center"/>

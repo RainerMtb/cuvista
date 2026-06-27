@@ -18,45 +18,7 @@
 
 #pragma once
 
-#include "AVException.hpp"
-#include "Stats.hpp"
-#include "ImageClasses.hpp"
-#include "FrameExecutor.hpp"
-
-#include <span>
-#include <optional>
-
-using namespace im;
-
-class MovieReader : public ReaderStats {
-
-public:
-	std::mutex mVideoPacketMutex;
-	std::list<VideoPacketContext> mVideoPacketList;
-	std::vector<StreamContext> mInputStreams;
-	bool mStoreSidePackets = true;
-	std::string mSource;
-
-	virtual ~MovieReader() = default;
-
-	virtual void open(const std::string& source) = 0;
-	virtual void start() {}
-	virtual bool read(Image8& inputFrame) = 0;
-	virtual bool read(FrameExecutor& executor) { return false; };
-	virtual std::future<void> readAsync(FrameExecutor& executor);
-	virtual void close() {}
-	virtual void rewind() {}
-	virtual bool seek(double fraction) { return true; }
-	virtual int openAudioDecoder(OutputStreamContext& osc) { return -1; }
-
-	std::optional<std::string> ptsForFrameAsString(int64_t frameIndex);
-	std::optional<int64_t> ptsForFrameAsMillis(int64_t frameIndex);
-	double ptsForFrame(int64_t frameIndex);
-	std::string videoStreamSummary() const;
-
-protected:
-	int sideDataMaxSize = 20 * 1024 * 1024;
-};
+#include "MovieReaderBase.hpp"
 
 
 class NullReader : public MovieReader {
@@ -65,7 +27,7 @@ public:
 	NullReader();
 
 	void open(const std::string& source) override {};
-	bool read(Image8& inputFrame) override;
+	bool read(im::Image8& inputFrame) override;
 };
 
 
@@ -73,64 +35,5 @@ class ImageReader : public MovieReader {
 
 public:
 	void open(const std::string& source) override {};
-	bool read(Image8& inputFrame) override { return false; };
-};
-
-
-class FFmpegFormatReader : public MovieReader {
-
-protected:
-	bool isFormatOpen = false;
-	bool isStoredPacket = false;
-	AVFormatContext* av_format_ctx = nullptr;
-	AVCodecContext* av_codec_ctx = nullptr;
-	AVFrame* av_frame = nullptr;
-	AVPacket* av_packet = nullptr;
-
-	void close() override;
-	~FFmpegFormatReader() override;
-
-	void openInput(AVFormatContext* fmt, const std::string& source);
-};
-
-
-//main class to decode input
-class FFmpegReader : public FFmpegFormatReader {
-
-private:
-	SwsContext* sws_scaler_ctx = nullptr;
-	AVSampleFormat decodingSampleFormat = AV_SAMPLE_FMT_FLT;
-
-public:
-	~FFmpegReader() override;
-
-	void open(const std::string& source) override;
-	bool read(Image8& inputFrame) override;
-	bool read(FrameExecutor& executor) override;
-	void close() override;
-	void rewind() override;
-	int openAudioDecoder(OutputStreamContext& osc) override;
-
-	bool seek(double fraction);
-};
-
-
-//provide data to ffmpeg from memory
-class MemoryFFmpegReader : public FFmpegReader {
-
-private:
-	AVIOContext* av_avio = nullptr;
-	unsigned char* mBuffer = nullptr;
-
-	std::span<unsigned char> mData;
-	int64_t mDataPos = 0;
-
-	static int readBuffer(void* opaque, unsigned char* buf, int bufsiz);
-	static int64_t seekBuffer(void* opaque, int64_t offset, int whence);
-	
-public:
-	MemoryFFmpegReader(std::span<unsigned char> movieData);
-	~MemoryFFmpegReader() override;
-
-	void open(const std::string& source = "") override;
+	bool read(im::Image8& inputFrame) override { return false; };
 };

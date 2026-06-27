@@ -188,5 +188,12 @@
       <Filter>externDLL</Filter>
     </None>
     <None Include="Package.StoreAssociation.xml" />
+    <None Include="$(SolutionDir)bin\$(Platform)\$(Configuration)\cuvistaFFmpeg.dll">
+      <Filter>externDLL</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Natvis Include="$(MSBuildThisFileDirectory)..\..\natvis\wil.natvis" />
+    <Natvis Include="$(MSBuildThisFileDirectory)..\..\natvis\wil.natstepfilter" />
   </ItemGroup>
 </Project>

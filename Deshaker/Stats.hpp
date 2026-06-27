@@ -18,25 +18,24 @@
 
 #pragma once
 
-#include "FFmpegUtil.hpp"
 #include <atomic>
+#include <string_view>
 
 class ReaderStats {
 public:
 	int h = 0, w = 0;
 	int fpsNum = -1, fpsDen = -1;
-	int64_t timeBaseNum = -1, timeBaseDen = -1;
+	int timeBaseNum = -1, timeBaseDen = -1;
 	std::string_view sourceName;
 
 	int64_t frameIndex = -1;
 	int64_t frameCount = -1;
+	int64_t videoStartTime = -1;
+	int videoStreamIndex = -1;
 	bool endOfInput = false;
 	bool startOfInput = true;
 
-	AVStream* videoStream = nullptr;
-
 	double fps() const;
-	AVRational videoTimeBase() const;
 };
 
 

@@ -2,8 +2,16 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClInclude Include="FFmpegMain.hpp" />
+    <ClInclude Include="Reader.hpp" />
+    <ClInclude Include="Writer.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="FFmpegMain.cpp" />
+    <ClCompile Include="Reader.cpp" />
+    <ClCompile Include="CudaWriter.cpp" />
+    <ClCompile Include="FFmpegFormatWriter.cpp" />
+    <ClCompile Include="FFmpegWriter.cpp" />
+    <ClCompile Include="StackedWriter.cpp" />
+    <ClCompile Include="Writer.cpp" />
   </ItemGroup>
 </Project>

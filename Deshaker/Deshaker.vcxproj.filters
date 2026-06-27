@@ -35,14 +35,8 @@
     <ClCompile Include="ProgressDisplay.cpp">
       <Filter>Main</Filter>
     </ClCompile>
-    <ClCompile Include="FFmpegWriter.cpp">
-      <Filter>Writer</Filter>
-    </ClCompile>
     <ClCompile Include="MovieReader.cpp">
       <Filter>Reader</Filter>
-    </ClCompile>
-    <ClCompile Include="NvEncoder.cpp">
-      <Filter>Writer</Filter>
     </ClCompile>
     <ClCompile Include="MovieWriter.cpp">
       <Filter>Writer</Filter>
@@ -59,14 +53,8 @@
     <ClCompile Include="ProgressDisplayConsole.cpp">
       <Filter>Main</Filter>
     </ClCompile>
-    <ClCompile Include="CudaWriter.cpp">
-      <Filter>Writer</Filter>
-    </ClCompile>
     <ClCompile Include="NvidiaDriver.cpp">
       <Filter>Util</Filter>
-    </ClCompile>
-    <ClCompile Include="FFmpegFormatWriter.cpp">
-      <Filter>Writer</Filter>
     </ClCompile>
     <ClCompile Include="clTest.cpp">
       <Filter>OpenCl</Filter>
@@ -85,9 +73,6 @@
     </ClCompile>
     <ClCompile Include="DeviceInfo.cpp">
       <Filter>Util</Filter>
-    </ClCompile>
-    <ClCompile Include="StackedWriter.cpp">
-      <Filter>Writer</Filter>
     </ClCompile>
     <ClCompile Include="MainData.cpp">
       <Filter>Main</Filter>
@@ -134,13 +119,16 @@
     <ClCompile Include="FFmpeg.cpp">
       <Filter>FFmpeg</Filter>
     </ClCompile>
+    <ClCompile Include="NvEncoder.cpp">
+      <Filter>Writer</Filter>
+    </ClCompile>
+    <ClCompile Include="MovieWriterBase.cpp">
+      <Filter>FFmpeg</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MovieReader.hpp">
       <Filter>Reader</Filter>
-    </ClInclude>
-    <ClInclude Include="NvEncoder.hpp">
-      <Filter>Writer</Filter>
     </ClInclude>
     <ClInclude Include="DeshakerHelpText.hpp">
       <Filter>Util</Filter>
@@ -186,9 +174,6 @@
     </ClInclude>
     <ClInclude Include="CpuFrame.hpp">
       <Filter>Frame</Filter>
-    </ClInclude>
-    <ClInclude Include="CudaWriter.hpp">
-      <Filter>Writer</Filter>
     </ClInclude>
     <ClInclude Include="FrameResult.hpp">
       <Filter>Transformation</Filter>
@@ -239,6 +224,15 @@
       <Filter>FFmpeg</Filter>
     </ClInclude>
     <ClInclude Include="FFmpeg.hpp">
+      <Filter>FFmpeg</Filter>
+    </ClInclude>
+    <ClInclude Include="NvEncoder.hpp">
+      <Filter>Writer</Filter>
+    </ClInclude>
+    <ClInclude Include="MovieReaderBase.hpp">
+      <Filter>FFmpeg</Filter>
+    </ClInclude>
+    <ClInclude Include="MovieWriterBase.hpp">
       <Filter>FFmpeg</Filter>
     </ClInclude>
   </ItemGroup>

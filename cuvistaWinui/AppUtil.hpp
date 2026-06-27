@@ -19,7 +19,6 @@
 #pragma once
 
 #include <chrono>
-#include "ProgressDisplay.hpp"
 #include "FrameExecutor.hpp"
 
 
@@ -42,16 +41,6 @@ void loadImageScaled(winrt::Microsoft::UI::Xaml::Controls::IImage image, winrt::
 //progress dialog window
 struct ITaskbarList3;
 struct MainWindow;
-
-class ProgressDialog : public ProgressDisplay {
-
-public:
-    ProgressDialog(int interval) :
-        ProgressDisplay(interval)
-    {}
-
-    virtual winrt::Microsoft::UI::Xaml::Controls::IContentDialog dialog() = 0;
-};
 
 
 class ProgressGui : public ProgressDialog {
@@ -87,7 +76,7 @@ private:
     winrt::cuvistaWinui::implementation::MainWindow& mainWindow;
     FrameExecutor& mExecutor;
     std::chrono::time_point<std::chrono::steady_clock> mNextPts;
-    std::shared_ptr<OutputStreamContext> mAudioContext;
+    std::shared_ptr<OutputStreamContextBase> mAudioContext;
     winrt::Windows::Media::Audio::IAudioGraph mAudioGraph;
     winrt::Windows::Media::Audio::IAudioFrameInputNode mAudioInputNode;
     bool mPlayAudio;

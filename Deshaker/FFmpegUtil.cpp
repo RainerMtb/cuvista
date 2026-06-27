@@ -17,9 +17,8 @@
  */
 
 #include "FFmpegUtil.hpp"
-#include "Util.hpp"
-#include "ErrorLogger.hpp"
 #include <format>
+#include <iostream>
 
 
 std::string FFmpegVersions::toString(unsigned int val) const {
@@ -36,113 +35,29 @@ std::ostream& operator << (std::ostream& os, const FFmpegVersions& v) {
     return os;
 }
 
-std::string av_make_error(int errnum, const char* msg, const std::string& str) {
-    std::string info = msg + str;
-    if (info.size() > 0) info += ": ";
-    char av_errbuf[AV_ERROR_MAX_STRING_SIZE];
-    info += av_make_error_string(av_errbuf, AV_ERROR_MAX_STRING_SIZE, errnum);
-    return info;
-}
-
-void ffmpeg_log_error(int errnum, const char* msg, ErrorSource source) {
-    errorLogger().logError(av_make_error(errnum, msg), source);
-}
-
-void ffmpeg_log(void* avclass, int level, const char* fmt, va_list args) {
-    if (level <= AV_LOG_INFO) {
-        //collect ffmpeg log
-        const size_t ffmpeg_bufsiz = 256;
-        char ffmpeg_logbuf[ffmpeg_bufsiz];
-        std::vsnprintf(ffmpeg_logbuf, ffmpeg_bufsiz, fmt, args);
-
-        //trim trailing newline
-        char* ptr = ffmpeg_logbuf;
-        while (ptr != ffmpeg_logbuf + ffmpeg_bufsiz && *ptr != '\0') {
-            ptr++;
-        }
-        ptr--;
-        while (ptr >= ffmpeg_logbuf && *ptr == '\n') {
-            *ptr = '\0';
-            ptr--;
-        }
-        errorLogger().logFFmpeg(level, ffmpeg_logbuf);
-
-        //set error message for fatal log
-        if (level <= AV_LOG_FATAL) {
-            errorLogger().logError(ffmpeg_logbuf, ErrorSource::FFMPEG);
-        }
-    }
-};
-
 std::ostream& operator << (std::ostream& ostream, const Timings& t) {
     ostream << "pts=" << t.pts << ", dts=" << t.dts << ", dur=" << t.duration;
     return ostream;
 }
 
-SidePacket::SidePacket(int64_t frameIndex, double pts, size_t audioDataSize) :
-    frameIndex { frameIndex },
-    packet { nullptr },
-    audioData(audioDataSize),
-    pts { pts }
-{}
+std::string millisToTimeString(int64_t millis) {
+	int64_t sign = millis < 0 ? -1 : 1;
+	millis = std::abs(millis);
+	int64_t sec = millis / 1000;
+	int64_t min = sec / 60;
+	int64_t hrs = min / 60;
 
-SidePacket::SidePacket(int64_t frameIndex, const AVPacket* packet) :
-    frameIndex { frameIndex },
-    packet { av_packet_clone(packet) },
-    pts { std::numeric_limits<double>::quiet_NaN() }
-{}
+	millis %= 1000;
+	sec %= 60;
+	min %= 60;
+	hrs %= 60;
 
-SidePacket::~SidePacket() {
-    if (packet) {
-        av_packet_free(&packet);
-    }
+	std::string timeString = "";
+	if (hrs > 0) timeString = std::format("{}:{:02}:{:02}.{:03}", hrs * sign, min, sec, millis);
+	else timeString = std::format("{:02}:{:02}.{:03}", min * sign, sec, millis);
+	return timeString;
 }
 
-OutputStreamContext::~OutputStreamContext() {
-    sidePackets.clear();
-
-    if (audioInCtx) {
-        avcodec_free_context(&audioInCtx);
-    }
-    if (audioOutCtx) {
-        avcodec_free_context(&audioOutCtx);
-    }
-    if (outpkt) {
-        av_packet_free(&outpkt);
-    }
-    if (frameIn) {
-        av_frame_free(&frameIn);
-    }
-    if (frameOut) {
-        av_frame_free(&frameOut);
-    }
-    if (resampleCtx) {
-        swr_free(&resampleCtx);
-    }
-    if (fifo) {
-        av_audio_fifo_free(fifo);
-    }
-}
-
-StreamInfo StreamContext::inputStreamInfo() const {
-    std::string tstr;
-    if (inputStream->duration != AV_NOPTS_VALUE)
-        tstr = util::millisToTimeString(inputStream->duration * inputStream->time_base.num * 1000 / inputStream->time_base.den);
-    else if (durationMillis != -1)
-        tstr = util::millisToTimeString(durationMillis);
-    else
-        tstr = "unknown";
-
-    AVCodecParameters* param = inputStream->codecpar;
-    return { 
-        .streamType = av_get_media_type_string(param->codec_type), 
-        .codec = avcodec_get_name(param->codec_id), 
-        .durationString = tstr, 
-        .mediaType = param->codec_type, 
-        .index = inputStream->index 
-    };
-}
-
-std::string StreamInfo::inputStreamSummary() const {
-    return std::format("- stream {}\ntype: {}, codec: {}, duration: {}\n", index, streamType, codec, durationString);
+std::string StreamInfo::inputStreamSummary(const std::string& delimiter) const {
+	return std::format("stream #{}{}type: {}, codec: {}, duration: {}", index, delimiter, streamType, codec, durationString);
 }

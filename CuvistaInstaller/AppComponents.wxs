@@ -49,6 +49,9 @@
 			<Component>
 				<File Source="$(DeployDir)\swscale-9.dll" />
 			</Component>
+			<Component>
+				<File Source="$(DeployDir)\cuvistaFFmpeg.dll" />
+			</Component>
 			
 			<!-- files -->
 			<Component>

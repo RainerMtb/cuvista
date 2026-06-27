@@ -209,14 +209,14 @@ using namespace winrt::Windows::Media::Audio;
 //on ui thread
 void PlayerWriter::open(OutputOption outputOption) {
     //handling input streams
-    for (StreamContext& sc : mReader.mInputStreams) {
-        auto posc = std::make_shared<OutputStreamContext>();
-        posc->inputStream = sc.inputStream;
+    for (size_t i = 0; i < mReader.inputStreamCount(); i++) {
+        std::shared_ptr<StreamContextBase> sc = mReader.inputStreamBase(i);
+        std::shared_ptr<OutputStreamContextBase> posc = sc->addOutputStreamContext();
 
-        if (sc.inputStream->index == mReader.videoStream->index) {
+        if (sc->inputStreamIndex() == mReader.videoStreamIndex) {
             posc->handling = StreamHandling::STREAM_STABILIZE;
 
-        } else if (sc.inputStream->index == mainWindow.mAudioStreamIndex) {
+        } else if (sc->inputStreamIndex() == mainWindow.mAudioStreamIndex) {
             posc->handling = StreamHandling::STREAM_DECODE;
             mAudioContext = posc;
             mPlayAudio = true;
@@ -224,7 +224,6 @@ void PlayerWriter::open(OutputOption outputOption) {
         } else {
             posc->handling = StreamHandling::STREAM_IGNORE;
         }
-        sc.outputStreams.push_back(posc);
     }
 
     loadImageScaled(mainWindow.imageRealtime(), L"ms-appx:///Assets/signs-01.png");
@@ -240,7 +239,7 @@ void PlayerWriter::open(OutputOption outputOption) {
 //on background thread
 void PlayerWriter::start() {
     if (mAudioContext) {
-        int sampleRate = mReader.openAudioDecoder(*mAudioContext);
+        int sampleRate = mReader.openAudioDecoder(mAudioContext);
         AudioGraphSettings setting = AudioGraphSettings(winrt::Windows::Media::Render::AudioRenderCategory::Media);
         CreateAudioGraphResult result = AudioGraph::CreateAsync(setting).get();
         if (result.Status() == AudioGraphCreationStatus::Success) {
@@ -290,21 +289,17 @@ void PlayerWriter::writeOutput(const FrameExecutor& executor) {
 
     //play audio
     if (mAudioContext && mAudioGraph && mAudioInputNode) {
-        std::unique_lock<std::mutex> lock(mAudioContext->mMutexSidePackets);
         double videoPts = t1.value_or(0.0) / 1000.0;
-        for (auto it = mAudioContext->sidePackets.begin(); it != mAudioContext->sidePackets.end() && it->pts < videoPts + 0.25; ) {
-            uint32_t siz = (uint32_t) it->audioData.size();
-            Windows::Media::AudioFrame frame(siz);
+        std::list<DecodedAudioPacket> audioPackets = mAudioContext->getAudioData(videoPts + 0.25);
+        for (auto pkt : audioPackets) {
+            Windows::Media::AudioFrame frame((uint32_t) (pkt.audioData.size()));
             Windows::Media::AudioBuffer buffer = frame.LockBuffer(Windows::Media::AudioBufferAccessMode::Write);
             winrt::Windows::Foundation::IMemoryBufferReference ref = buffer.CreateReference();
-            std::copy_n(it->audioData.data(), siz, ref.data());
+            std::copy_n(pkt.audioData.data(), pkt.audioData.size(), ref.data());
             ref.Close();
             buffer.Close();
-            it = mAudioContext->sidePackets.erase(it);
-
             mAudioInputNode.AddFrame(frame);
         }
-
         mAudioInputNode.OutgoingGain(mainWindow.mAudioGain);
     }
 

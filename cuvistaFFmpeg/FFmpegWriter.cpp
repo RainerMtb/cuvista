@@ -16,11 +16,10 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
-#include <filesystem>
-#include "MovieReader.hpp"
-#include "MovieWriter.hpp"
-#include "MovieFrame.hpp"
-#include "Util.hpp"
+#include "Reader.hpp"
+#include "Writer.hpp"
+#include "AVException.hpp"
+#include "MainData.hpp"
 
 
 void FFmpegWriter::open(std::span<std::string> codecNames, AVCodecID codecId, AVPixelFormat pixfmt, int h, int w, int stride) {
@@ -218,7 +217,7 @@ void FFmpegWriter::write(int bufferIndex) {
 
 
 void FFmpegWriter::writeOutput(const FrameExecutor& executor) {
-    int64_t idx = frameIndex % imageBufferSize;
+    int idx = frameIndex % imageBufferSize;
     executor.getOutput(frameIndex, imageBuffer[idx]);
     write(idx);
 }

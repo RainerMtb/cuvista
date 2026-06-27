@@ -24,8 +24,6 @@
 #include <QSettings>
 
 #include "MovieFrame.hpp"
-#include "MovieReader.hpp"
-#include "FrameResult.hpp"
 #include "FrameExecutor.hpp"
 #include "UserInputGui.hpp"
 
@@ -49,6 +47,7 @@ public slots:
     void resetGui();
     void showStatusMessage(const std::string& msg);
     void addInputFile(const QString& inputPath);
+    void closeApp();
 
 signals:
     void sigShowStatusMessage(const std::string& str);
@@ -70,6 +69,7 @@ private:
     PlayerWindow* mPlayerWindow;
     ProgressWindow* mProgressWindow;
     QThread* mThread;
+    std::shared_ptr<MovieReader> mReader;
     std::shared_ptr<MovieWriter> mWriter;
     std::shared_ptr<MovieFrame> mFrame;
     std::shared_ptr<FrameExecutor> mExecutor;
@@ -81,7 +81,6 @@ private:
     ImageYuv mInputYUV;
     ImageBgr mInputBGR;
     QImage mInputImage;
-    FFmpegReader mReader;
 
     QColor mBackgroundColor;
 

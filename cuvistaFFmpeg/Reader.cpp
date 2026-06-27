@@ -1,0 +1,525 @@
+/*
+ * This file is part of CUVISTA - Cuda Video Stabilizer
+ * Copyright (c) 2023 Rainer Bitschi cuvista@a1.net
+ *
+ * This program is free software : you can redistribute it and /or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.If not, see < http://www.gnu.org/licenses/>.
+ */
+
+#include <regex>
+#include <numeric>
+#include <vector>
+
+#include "Reader.hpp"
+#include "AVException.hpp"
+#include "FrameExecutor.hpp"
+#include "FFmpegMain.hpp"
+
+using namespace im;
+
+
+ //----------------------------------
+ //-------- FFmpeg Reader -----------
+ //----------------------------------
+
+void FFmpegReader::open(const std::string& source) {
+    mSource = source;
+
+    //av_log_set_level(AV_LOG_ERROR);
+    av_log_set_callback(ffmpeg_log);
+
+    // Allocate format context
+    AVFormatContext* av_fmt = avformat_alloc_context();
+    if (av_fmt == nullptr)
+        throw AVException("could not create AVFormatContext");
+
+    openInput(av_fmt, source);
+}
+
+
+//open audio decoding
+int FFmpegReader::openAudioDecoder(std::shared_ptr<OutputStreamContextBase> sposc) {
+    std::shared_ptr<OutputStreamContext> posc = dynamic_pointer_cast<OutputStreamContext>(sposc);
+    if (!posc)
+        throw AVException("cannot cast to output stream context");
+
+    //input format and codec
+    AVCodecID id = posc->inputStream->codecpar->codec_id;
+    posc->audioInCodec = avcodec_find_decoder(id);
+    if (!posc->audioInCodec)
+        throw AVException(std::format("cannot find audio decoder for '{}'", avcodec_get_name(id)));
+    posc->audioInCtx = avcodec_alloc_context3(posc->audioInCodec);
+    if (!posc->audioInCtx)
+        throw AVException("cannot allocate audio decoder context");
+    int retval = avcodec_parameters_to_context(posc->audioInCtx, posc->inputStream->codecpar);
+    if (retval < 0)
+        throw AVException(av_make_error(retval, "cannot copy audio parameters to input context"));
+    retval = avcodec_open2(posc->audioInCtx, posc->audioInCodec, NULL);
+    if (retval < 0)
+        throw AVException(av_make_error(retval, "cannot open audio decoder"));
+    posc->audioInCtx->time_base = posc->inputStream->time_base;
+
+    //converter to float stereo
+    int sampleRate = posc->audioInCtx->sample_rate;
+    retval = swr_alloc_set_opts2(&posc->resampleCtx, &bufferChannelFormat, bufferSampleFormat, sampleRate, 
+        &posc->audioInCtx->ch_layout, posc->audioInCtx->sample_fmt, sampleRate, 0, NULL);
+    if (retval < 0)
+        throw AVException("cannot set audio resampler options");
+    retval = swr_init(posc->resampleCtx);
+    if (retval < 0)
+        throw AVException(av_make_error(retval, "cannot init audio resampler"));
+
+    //allocate output frame
+    posc->frameIn = av_frame_alloc();
+    if (!posc->frameIn)
+        throw AVException("cannot allocate audio output frame");
+
+    return sampleRate;
+}
+
+
+size_t FFmpegFormatReader::inputStreamCount() const {
+    return mInputStreams.size();
+}
+
+
+std::shared_ptr<StreamContext> FFmpegFormatReader::inputStream(size_t index) const {
+    return mInputStreams[index];
+}
+
+
+std::shared_ptr<StreamContextBase> FFmpegFormatReader::inputStreamBase(size_t index) const {
+    return mInputStreams[index];
+}
+
+
+//open ffmpeg file
+void FFmpegFormatReader::openInput(AVFormatContext* fmt, const std::string& source) {
+    av_format_ctx = fmt;
+    int err;
+
+    // Open the file using libavformat
+    err = avformat_open_input(&av_format_ctx, source.c_str(), NULL, NULL);
+    if (err < 0)
+        throw AVException(av_make_error(err, "", std::format("could not open file '{}'", source)));
+    else
+        isFormatOpen = true;
+
+    //without find_stream_info width or height might be 0
+    err = avformat_find_stream_info(av_format_ctx, NULL);
+    if (err < 0)
+        throw AVException(av_make_error(err, "could not get stream info"));
+
+    //search streams
+    const AVCodec* av_codec = nullptr;
+    int64_t frameCountEstimate = 0;
+    for (size_t i = 0; i < av_format_ctx->nb_streams; i++) {
+        AVStream* stream = av_format_ctx->streams[i];
+
+        int64_t millis = -1;
+        const AVDictionaryEntry* entry = av_dict_get(stream->metadata, "DURATION", NULL, 0);
+        if (entry != nullptr) {
+            std::string str = entry->value;
+            std::regex pattern("(\\d+):(\\d+):(\\d+)[\\.,](\\d{3})\\d*");
+            std::smatch matcher;
+            if (std::regex_match(str, matcher, pattern)) {
+                millis = std::stoll(matcher[1]) * 3'600'000 + std::stoll(matcher[2]) * 60'000 + std::stoll(matcher[3]) * 1000 + std::stoll(matcher[4]);
+            }
+        }
+
+        if (av_stream == nullptr && stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
+            //store first video stream
+            av_codec = avcodec_find_decoder(stream->codecpar->codec_id);
+            if (av_codec) {
+                av_stream = stream;
+            }
+            //calculate frame count on duration tag
+            AVRational rate = stream->avg_frame_rate;
+            if (millis != -1 && rate.den > 0) {
+                frameCountEstimate = rate.num * millis / rate.den / 1000;
+            }
+        }
+
+        //store every stream found in input
+        std::shared_ptr<StreamContext> sc = std::make_shared<StreamContext>();
+        sc->inputStream = stream;
+        sc->durationMillis = millis;
+        mInputStreams.push_back(sc);
+    }
+    //continue only when there is a video stream to decode
+    if (av_stream == nullptr || av_codec == nullptr)
+        throw AVException("could not find a valid video stream");
+
+    // Set up a codec context for the decoder
+    if ((av_codec_ctx = avcodec_alloc_context3(av_codec)) == nullptr)
+        throw AVException("could not create AVCodecContext");
+    if (avcodec_parameters_to_context(av_codec_ctx, av_stream->codecpar) < 0)
+        throw AVException("could not initialize AVCodecContext");
+
+    //enable multi threading for decoder
+    av_codec_ctx->thread_count = 0;
+
+    //open decoder
+    if (avcodec_open2(av_codec_ctx, av_codec, NULL) < 0)
+        throw AVException("could not open codec");
+
+    av_frame = av_frame_alloc();
+    if (!av_frame)
+        throw AVException("could not allocate AVFrame");
+    av_packet = av_packet_alloc();
+    if (!av_packet)
+        throw AVException("could not allocate AVPacket");
+
+    //set values in Stats object
+    videoStreamIndex = av_stream->index;
+    videoStartTime = av_stream->start_time;
+
+    fpsNum = av_stream->avg_frame_rate.num;
+    fpsDen = av_stream->avg_frame_rate.den;
+    timeBaseNum = av_stream->time_base.num;
+    timeBaseDen = av_stream->time_base.den;
+    h = av_codec_ctx->height;
+    w = av_codec_ctx->width;
+    sourceName = source;
+
+    //find the best number for frame count
+    if (av_stream->nb_frames > 0) {
+        frameCount = av_stream->nb_frames;
+
+    } else if (av_stream->duration > 0) {
+        frameCount = av_stream->duration * fpsNum * timeBaseNum / fpsDen / timeBaseDen;
+
+    } else if (frameCountEstimate > 0) {
+        frameCount = frameCountEstimate;
+
+    } else {
+        frameCount = 0;
+    }
+    //av_dump_format(av_format_ctx, av_stream->index, av_format_ctx->url, 0); //uses av_log
+}
+
+
+void FFmpegFormatReader::close() {
+    avcodec_free_context(&av_codec_ctx);
+    av_packet_free(&av_packet);
+    av_frame_free(&av_frame);
+    if (isFormatOpen) {
+        avformat_close_input(&av_format_ctx);
+        avformat_free_context(av_format_ctx);
+        isFormatOpen = false;
+    }
+}
+
+
+FFmpegFormatReader::~FFmpegFormatReader() {
+    close();
+}
+
+
+bool FFmpegReader::read(FrameExecutor& executor) {
+    Image8& inputFrame = executor.inputDestination(frameIndex + 1);
+    return read(inputFrame);
+}
+
+
+//read one frame from ffmpeg
+bool FFmpegReader::read(Image8& inputFrame) {
+    assert(inputFrame.imageType() == ImageType::YUV && "invalid image format");
+    //util::ConsoleTimer timer("read");
+    frameIndex++;
+    endOfInput = true;
+    int response = 0;
+
+    while (true) {
+        //we may have a stored packet from last run
+        if (isStoredPacket) {
+            isStoredPacket = false;
+
+        } else {
+            av_packet_unref(av_packet); //unref old packet
+            response = av_read_frame(av_format_ctx, av_packet); //read new packet from input format
+        }
+
+        if (response == AVERROR_EOF) {
+            //termination signal means we still need to drain the decoder buffer
+            response = avcodec_send_packet(av_codec_ctx, NULL); //send termination, can be done repeatedly
+            response = avcodec_receive_frame(av_codec_ctx, av_frame);
+            if (response == AVERROR_EOF) { //really the end of the file
+                break;
+
+            } else if (response < 0) {
+                errorLogger().logError(av_make_error(response, "failed to receive frame"), ErrorSource::READER);
+                break;
+
+            } else { //we still got a frame
+                endOfInput = false;
+                break;
+            }
+
+        } else {
+            //decode a packet
+            int sidx = av_packet->stream_index;
+            if (sidx == av_stream->index) {
+                //we have a video packet
+                response = avcodec_send_packet(av_codec_ctx, av_packet); //send packet to decoder
+                if (response == AVERROR(EAGAIN)) { //we have to receive frames first before we can send new data
+                    isStoredPacket = true;
+
+                } else if (response < 0) {
+                    ffmpeg_log_error(response, "failed to send packet", ErrorSource::READER);
+                    break;
+                }
+
+                response = avcodec_receive_frame(av_codec_ctx, av_frame); //try to get a frame from decoder
+                if (response == AVERROR(EAGAIN) || response == AVERROR_EOF) { //we have to send more packets before getting next frame
+                    continue;
+
+                } else if (response < 0) { //something wrong
+                    ffmpeg_log_error(response, "failed to receive frame", ErrorSource::READER);
+                    break;
+
+                } else { //we got a frame
+                    endOfInput = false;
+                    break;
+                }
+
+            } else if (mStoreSidePackets == false) {
+                // do nothing here
+
+            } else {
+                //provide side packets to writers
+                for (std::shared_ptr<OutputStreamContext> posc : mInputStreams[sidx]->outputStreams) {
+                    OutputStreamContext& osc = *posc;
+                    if (osc.handling == StreamHandling::STREAM_COPY || osc.handling == StreamHandling::STREAM_TRANSCODE) {
+                        std::unique_lock<std::mutex> lock(osc.mMutexSidePackets);
+                        //we should store a packet from a secondary stream for processing
+                        osc.sidePackets.emplace_back(frameIndex, av_packet);
+                        //std::cout << "stream " << sidx << " pts " << av_packet->pts << " dts " << av_packet->dts << std::endl;
+
+                        //limiting packets in memory
+                        auto fcn = [] (int sum, const SidePacket& pkt) { return sum + pkt.packet->size; };
+                        int siz = std::accumulate(osc.sidePackets.begin(), osc.sidePackets.end(), 0, fcn);
+                        while (siz > sideDataMaxSize) {
+                            siz -= osc.sidePackets.front().packet->size;
+                            osc.sidePackets.pop_front();
+                        }
+
+                    } else if (osc.handling == StreamHandling::STREAM_DECODE) {
+                        //decode the packets and store raw bytes
+                        std::shared_ptr<StreamContext> sc = mInputStreams[sidx];
+                        response = avcodec_send_packet(osc.audioInCtx, av_packet);
+                        if (response == AVERROR_EOF) {
+                            break;
+
+                        } else if (response < 0) {
+                            ffmpeg_log_error(response, "cannot send audio packet to decoder", ErrorSource::READER);
+                            break;
+                        }
+
+                        double t0 = double(videoStartTime) * timeBaseNum / timeBaseDen;
+                        double timestamp = double(av_packet->pts) * sc->inputStream->time_base.num / sc->inputStream->time_base.den - t0;
+
+                        int bytesPerSample = av_get_bytes_per_sample(bufferSampleFormat);
+                        while (response >= 0) {
+                            response = avcodec_receive_frame(osc.audioInCtx, osc.frameIn);
+                            if (response == AVERROR(EAGAIN) || response == AVERROR_EOF)
+                                break;
+
+                            else if (response < 0) {
+                                ffmpeg_log_error(response, "cannot receive audio packet from decoder", ErrorSource::READER);
+                                break;
+                            }
+
+                            //no sample rate conversion makes conversion functions simpler
+                            int sampleCount = swr_get_out_samples(osc.resampleCtx, osc.frameIn->nb_samples);
+                            int byteCount = sampleCount * bytesPerSample * 2; //two output channels in packed format
+                            if (sampleCount > 0) {
+                                DecodedAudioPacket audioPacket = {
+                                    .frameIndex = frameIndex,
+                                    .pts = timestamp,
+                                    .audioData = std::vector<uint8_t>(byteCount),
+                                };
+                                //destination must be an array of arrays, only the first array is written with packed audio
+                                uint8_t* dest[AV_NUM_DATA_POINTERS] = { audioPacket.audioData.data() };
+                                int converted = swr_convert(osc.resampleCtx, dest, sampleCount, osc.frameIn->extended_data, osc.frameIn->nb_samples);
+                                if (converted > 0) {
+                                    byteCount = converted * bytesPerSample * 2;
+                                    audioPacket.audioData.resize(byteCount);
+
+                                    //static std::ofstream file("f:/audio.raw", std::ios::binary);
+                                    //file.write(reinterpret_cast<char*>(audioPacket.audioData.data()), audioPacket.audioData.size());
+                                    std::unique_lock<std::mutex> lock(osc.mMutexSidePackets);
+                                    osc.audioPackets.push_back(std::move(audioPacket));
+                                }
+                            }
+                        }
+                    } //end audio decoding
+                } //end of stream
+            }
+        }
+    }
+
+    if (endOfInput == false) {
+        int w = av_codec_ctx->width;
+        int h = av_codec_ctx->height;
+        //std::cout << w << " " << h << std::endl;
+
+        //set up sws scaler after first frame has been decoded
+        if (!sws_scaler_ctx) {
+            sws_scaler_ctx = sws_getContext(w, h, av_codec_ctx->pix_fmt, w, h, AV_PIX_FMT_YUV444P, SWS_BILINEAR, NULL, NULL, NULL);
+        }
+        if (!sws_scaler_ctx) {
+            ffmpeg_log_error(0, "failed to initialize ffmpeg scaler", ErrorSource::READER);
+        }
+
+        //scale image data to YUV444
+        //swscaling directly to VUYX gives different results on windows and linux ????
+        uint8_t* frame_buffer[] = { inputFrame.plane(0), inputFrame.plane(1), inputFrame.plane(2), nullptr, nullptr, nullptr, nullptr, nullptr };
+        int linesizes[] = { inputFrame.stride(), inputFrame.stride(), inputFrame.stride(), 0, 0, 0, 0, 0 };
+        sws_scale(sws_scaler_ctx, av_frame->data, av_frame->linesize, 0, av_frame->height, frame_buffer, linesizes);
+
+        //store parameters for writer
+        int64_t timestamp = av_frame->best_effort_timestamp - av_stream->start_time;
+        std::unique_lock<std::mutex> lock(mVideoPacketMutex);
+        mVideoPacketList.emplace_back(frameIndex, av_frame->pts, av_frame->pkt_dts, av_frame->duration, timestamp);
+        //std::printf("frameIndex=%zd pts=%zd dts=%zd duration=%zd timestamp=%zd\n", frameIndex, av_frame->pts, av_frame->pkt_dts, av_frame->duration, av_frame->best_effort_timestamp);
+
+        //in some cases pts values are not in proper sequence, but frames decoded by ffmpeg are indeed in correct order
+        //in that case just reorder pts values -- bug in ffmpeg
+        auto it = mVideoPacketList.end();
+        it--;
+        while (it != mVideoPacketList.begin() && it->pts < std::prev(it)->pts) {
+            std::swap(it->pts, std::prev(it)->pts);
+            it--;
+        }
+
+        //stamp frame index into image
+        //inputFrame.writeText(std::to_string(frameIndex), 20, 20, 3, 3, im::TextAlign::TOP_LEFT);
+        //inputFrame.saveBmpPlanes(std::format("/mnt/f/wsl{:03d}.bmp", frameIndex));
+        //inputFrame.saveBmpPlanes(std::format("f:/win{:03d}.bmp", frameIndex));
+        inputFrame.index = frameIndex;
+    }
+
+    return endOfInput == false;
+}
+
+bool FFmpegReader::seek(double fraction) {
+    int64_t target = av_format_ctx->start_time + int64_t(av_format_ctx->duration * fraction);
+    int64_t min_ts = INT_MIN; //always use min_ts = INT_MIN
+    int64_t max_ts = INT_MAX;
+
+    int response = avformat_seek_file(av_format_ctx, -1, min_ts, target, max_ts, 0);
+    if (response < 0) {
+        std::string err = av_make_error(response, "faild to seek in input");
+
+    } else {
+        avcodec_flush_buffers(av_codec_ctx);
+    }
+
+    return response >= 0;
+}
+
+void FFmpegReader::rewind() {
+    frameIndex = -1;
+    endOfInput = false;
+    startOfInput = true;
+    mVideoPacketList.clear();
+    for (std::shared_ptr<StreamContext> s : mInputStreams) {
+        s->outputStreams.clear();
+    }
+
+    bool isSeekable = seek(0.0);
+    if (isSeekable == false) {
+        close();
+        open(mSource);
+    }
+}
+
+void FFmpegReader::close() {
+    sws_freeContext(sws_scaler_ctx);
+
+    videoStreamIndex = -1;
+    videoStartTime = -1;
+    av_stream = nullptr;
+    sws_scaler_ctx = nullptr;
+    mVideoPacketList.clear();
+    mInputStreams.clear();
+}
+
+FFmpegReader::~FFmpegReader() {}
+
+
+//-----------------------------------
+//-------- Memory FFmpeg Reader -----
+//-----------------------------------
+
+
+void MemoryFFmpegReader::open(std::span<unsigned char> movieData) {
+    mData = movieData;
+
+    //custom avio
+    int bufsiz = 4 * 1024;
+    mBuffer = (unsigned char*) av_malloc(bufsiz);
+    av_avio = avio_alloc_context(mBuffer, bufsiz, 0, this, &MemoryFFmpegReader::readBuffer, nullptr, &MemoryFFmpegReader::seekBuffer);
+
+    //custom format context
+    AVFormatContext* av_fmt = avformat_alloc_context();
+    av_fmt->pb = av_avio;
+    av_fmt->flags |= AVFMT_FLAG_CUSTOM_IO;
+
+    //open input using format and io context
+    openInput(av_fmt, "");
+}
+
+int MemoryFFmpegReader::readBuffer(void* opaque, unsigned char* buf, int bufsiz) {
+    //std::cout << "read" << std::endl;
+    MemoryFFmpegReader* ptr = static_cast<MemoryFFmpegReader*>(opaque);
+    int i = 0;
+    int64_t siz = ptr->mData.size();
+    while (ptr->mDataPos < siz && i < bufsiz) {
+        buf[i] = ptr->mData[ptr->mDataPos];
+        ptr->mDataPos++;
+        i++;
+    }
+    return i;
+}
+
+int64_t MemoryFFmpegReader::seekBuffer(void* opaque, int64_t offset, int whence) {
+    //std::cout << "seek" << std::endl;
+    MemoryFFmpegReader* ptr = static_cast<MemoryFFmpegReader*>(opaque);
+    int64_t out = 0;
+    switch (whence) {
+    case AVSEEK_SIZE:
+        out = ptr->mData.size();
+        break;
+
+    case SEEK_CUR:
+        ptr->mDataPos += offset;
+        out = ptr->mDataPos;
+        break;
+
+    case SEEK_END:
+        ptr->mDataPos = ptr->mData.size() + offset;
+        out = ptr->mDataPos;
+        break;
+
+    case SEEK_SET:
+        ptr->mDataPos = offset;
+        out = ptr->mDataPos;
+    }
+    return out;
+}
+
+MemoryFFmpegReader::~MemoryFFmpegReader() {
+    avio_context_free(&av_avio); //seems to also free the buffer
+}

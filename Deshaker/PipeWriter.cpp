@@ -18,6 +18,7 @@
 
 #include "MovieWriter.hpp"
 #include "MovieFrame.hpp"
+#include "ErrorLogger.hpp"
 #include <fcntl.h>
 
 /*

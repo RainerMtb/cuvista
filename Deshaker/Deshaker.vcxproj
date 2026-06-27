@@ -109,12 +109,11 @@
     <ClCompile Include="FFmpeg.cpp" />
     <ClCompile Include="FrameResult.cpp" />
     <ClCompile Include="MainData.cpp" />
+    <ClCompile Include="MovieWriterBase.cpp" />
+    <ClCompile Include="NvEncoder.cpp" />
     <ClCompile Include="SelfTest.cpp" />
-    <ClCompile Include="StackedWriter.cpp" />
     <ClCompile Include="CpuFrame.cpp" />
-    <ClCompile Include="CudaWriter.cpp" />
     <ClCompile Include="DeviceInfo.cpp" />
-    <ClCompile Include="FFmpegFormatWriter.cpp" />
     <ClCompile Include="FFmpegUtil.cpp" />
     <ClCompile Include="NvidiaDriver.cpp" />
     <ClCompile Include="PipeWriter.cpp" />
@@ -122,8 +121,6 @@
     <ClCompile Include="RandomSource.cpp" />
     <ClCompile Include="MovieFrame.cpp" />
     <ClCompile Include="MovieReader.cpp" />
-    <ClCompile Include="FFmpegWriter.cpp" />
-    <ClCompile Include="NvEncoder.cpp" />
     <ClCompile Include="ProgressDisplay.cpp" />
     <ClCompile Include="MovieWriter.cpp" />
     <ClCompile Include="Stats.cpp" />
@@ -146,7 +143,6 @@
     <ClInclude Include="CpuFrame.hpp" />
     <ClInclude Include="CudaFrame.hpp" />
     <ClInclude Include="CudaInterface.hpp" />
-    <ClInclude Include="CudaWriter.hpp" />
     <ClInclude Include="DeviceInfo.hpp" />
     <ClInclude Include="DummyFrame.hpp" />
     <ClInclude Include="FFmpeg.hpp" />
@@ -155,7 +151,10 @@
     <ClInclude Include="DeshakerHelpText.hpp" />
     <ClInclude Include="MainData.hpp" />
     <ClInclude Include="MovieFrame.hpp" />
+    <ClInclude Include="MovieReaderBase.hpp" />
     <ClInclude Include="MovieWriter.hpp" />
+    <ClInclude Include="MovieWriterBase.hpp" />
+    <ClInclude Include="NvEncoder.hpp" />
     <ClInclude Include="NvidiaDriver.hpp" />
     <ClInclude Include="ProgressBase.hpp" />
     <ClInclude Include="ProgressDisplay.hpp" />
@@ -165,7 +164,6 @@
     <ClInclude Include="Stats.hpp" />
     <ClInclude Include="RandomSource.hpp" />
     <ClInclude Include="MovieReader.hpp" />
-    <ClInclude Include="NvEncoder.hpp" />
     <ClInclude Include="SystemStuff.hpp" />
     <ClInclude Include="ThreadPool.hpp" />
     <ClInclude Include="Trajectory.hpp" />

@@ -16,7 +16,12 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
+#include "MovieReader.hpp"
+#include "MovieWriter.hpp"
 #include "Deshaker.hpp"
+#include "ErrorLogger.hpp"
+#include "MovieFrame.hpp"
+#include "ProgressDisplayConsole.hpp"
 
 DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console, std::shared_ptr<MovieWriter> externalWriter) {
 	enableAnsiSupport();
@@ -39,31 +44,33 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 	std::shared_ptr<MovieFrame> frame;
 
 	try {
-		ff::loadLibrary();
+		int retval = ff::loadFFmpegLibrary();
+		if (retval != 0) throw AVException("error loading ffmpeg");
+
 		data.deviceInfoOpenCl = data.probeOpenCl();
 		data.deviceInfoCuda = data.probeCuda();
 		data.collectDeviceInfo();
 		data.probeInput(argsInput);
 
 		//create MovieReader
-		reader = std::make_unique<FFmpegReader>();
+		reader = std::unique_ptr<MovieReader>(ff::createReader(ReaderType::FFMPEG));
 		reader->open(data.fileIn);
 		data.validate(*reader);
 
 		//----------- create appropriate MovieWriter
 		std::vector<std::shared_ptr<MovieWriter>> writerList;
 		if (data.outputOption == OutputOption::VIDEO_STACK)
-			writerList.push_back(std::make_shared<StackedWriter>(data, *reader));
+			writerList.emplace_back(ff::createWriter(WriterType::STACKED, data, *reader));
 		else if (data.outputOption == OutputOption::VIDEO_FLOW)
-			writerList.push_back(std::make_shared<OpticalFlowWriter>(data, *reader));
+			writerList.emplace_back(ff::createWriter(WriterType::FLOW, data, *reader));
 		else if (data.outputOption == OutputOption::PIPE_RAW)
 			writerList.push_back(std::make_shared<RawPipeWriter>(data, *reader));
 		else if (data.outputOption == OutputOption::PIPE_ASF)
-			writerList.push_back(std::make_shared<AsfPipeWriter>(data, *reader));
+			writerList.emplace_back(ff::createWriter(WriterType::ASF_PIPE, data, *reader));
 		else if (data.outputOption == OutputOption::IMAGE_BMP)
 			writerList.push_back(std::make_shared<BmpImageWriter>(data, *reader));
 		else if (data.outputOption == OutputOption::IMAGE_JPG)
-			writerList.push_back(std::make_shared<JpegImageWriter>(data, *reader));
+			writerList.emplace_back(ff::createWriter(WriterType::JPEG_IMAGE, data, *reader));
 		else if (data.outputOption == OutputOption::RAW_YUV444)
 			writerList.push_back(std::make_shared<RawYuvWriter>(data, *reader));
 		else if (data.outputOption == OutputOption::RAW_NV12)
@@ -71,9 +78,9 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 		else if (data.outputOption == OutputOption::OPTION_NONE)
 			writerList.push_back(std::make_shared<NullWriter>(data, *reader));
 		else if (data.outputOption.group == OutputGroup::VIDEO_FFMPEG)
-			writerList.push_back(std::make_shared<FFmpegWriter>(data, *reader));
+			writerList.emplace_back(ff::createWriter(WriterType::FFMPEG, data, *reader));
 		else if (data.outputOption.group == OutputGroup::VIDEO_NVENC)
-			writerList.push_back(std::make_shared<CudaFFmpegWriter>(data, *reader));
+			writerList.emplace_back(ff::createWriter(WriterType::CUDA, data, *reader));
 
 		//----------- add secondary Writers
 		if (!data.trajectoryFile.empty()) {
@@ -190,6 +197,7 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 		*data.console << "\x1B[1;36m" << str << "\x1B[0m" << std::endl;
 	}
 
+	int err = ff::freeFFmpegLibrary();
 	result.statusCode = errorLogger().hasError() ? 20 : 0;
 	result.secs = secs;
 	return result;

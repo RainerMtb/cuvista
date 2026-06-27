@@ -16,8 +16,16 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
-#include "MovieWriter.hpp"
-#include "MovieFrame.hpp"
+#include "Writer.hpp"
+#include "MainData.hpp"
+
+StackedWriter::StackedWriter(MainData& data, MovieReader& reader) :
+	FFmpegWriter(data, reader, 1),
+	mWidth { data.w - data.stackCrop.left - data.stackCrop.right },
+	mWidthTotal { 2 * mWidth },
+	mInputFrame(data.h, data.w, data.stride4),
+	mOutputFrame(data.h, data.w, data.stride4)
+{}
 
 void StackedWriter::open(OutputOption outputOption) {
 	FFmpegWriter::open(outputOption, AV_PIX_FMT_YUV420P, mData.h, mWidthTotal, util::alignValue(mWidthTotal * 4, 64), mData.fileOut);
@@ -34,8 +42,8 @@ void StackedWriter::writeOutput(const FrameExecutor& executor) {
 	//scale mInputFrame by min zoom and write to left side of mOutputFrame
 	auto fcn = [&] (size_t r) {
 		for (size_t c = 0; c < mWidth; c++) {
-			float x = (c - mData.w / 2.0f) / mData.zoomMin + mData.w / 2.0f + mData.stackCrop.left;
-			float y = (r - mData.h / 2.0f) / mData.zoomMin + mData.h / 2.0f;
+			float x = (float) ((c - mData.w / 2.0) / mData.zoomMin + mData.w / 2.0 + mData.stackCrop.left);
+			float y = (float) ((r - mData.h / 2.0) / mData.zoomMin + mData.h / 2.0);
 			if (x >= 0.0f && x <= mData.w - 1.0f && y >= 0.0f && y <= mData.h - 1.0f) {
 				combinedFrame.at(0, r, c) = mInputFrame.sample(0, x, y);
 				combinedFrame.at(1, r, c) = mInputFrame.sample(1, x, y);

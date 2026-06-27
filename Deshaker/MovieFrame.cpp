@@ -19,6 +19,7 @@
 #include "MovieFrame.hpp"
 #include "MovieReader.hpp"
 #include "Util.hpp"
+#include "ErrorLogger.hpp"
 
 
 //only constructor for Frame class

@@ -38,18 +38,40 @@ namespace ff {
         funcPtr = (F) f;
     }
 
-    void loadLibrary() {
-        ffmpegLib = LoadLibraryA("cuvistaFFmpeg.dll");
-        if (!ffmpegLib) throw std::exception("cannot load ffmpeg library");
+    int loadFFmpegLibrary() {
+        int retval = 0;
+        try {
+            ffmpegLib = LoadLibraryA("cuvistaFFmpeg.dll");
+            if (!ffmpegLib) throw std::exception("cannot load ffmpeg library");
 
-        loadFunction(ffmpegLib, "versionsCompiled", versionsCompiled);
-        loadFunction(ffmpegLib, "versionsRuntime", versionsRuntime);
-        loadFunction(ffmpegLib, "createReader", createReader);
-        loadFunction(ffmpegLib, "createWriter", createWriter);
+            loadFunction(ffmpegLib, "versionsCompiled", versionsCompiled);
+            loadFunction(ffmpegLib, "versionsRuntime", versionsRuntime);
+            loadFunction(ffmpegLib, "createReader", createReader);
+            loadFunction(ffmpegLib, "createWriter", createWriter);
+
+        } catch (std::exception e) {
+            errorLogger().logError(e.what(), ErrorSource::FFMPEG);
+            retval = 1;
+
+        } catch (...) {
+            retval = 10;
+        }
+        return retval;
     }
 
-    void freeLibrary() {
-        FreeLibrary(ffmpegLib);
+    int freeFFmpegLibrary() {
+        int retval = 0;
+        try {
+            retval = FreeLibrary(ffmpegLib); //returns non-zero on success
+            if (retval != 0) {
+                retval = GetLastError();
+            }
+
+        } catch (...) {
+            retval = 1;
+        }
+
+        return retval;
     }
 }
 
