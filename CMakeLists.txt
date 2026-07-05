@@ -65,14 +65,11 @@ if (CMAKE_SYSTEM_NAME MATCHES Windows)
         ws2_32
         Ole32
     )
-
     link_directories("${PROJECT_SOURCE_DIR}/lib/x64")
 endif()
 
 if (CMAKE_SYSTEM_NAME MATCHES Linux)
     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-    #set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "/usr/lib")
-    
     # for wsl use libraries at C:\Windows\System32\lxss\lib
     link_directories("/usr/lib/wsl/lib")
 endif()

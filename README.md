@@ -136,19 +136,23 @@ export CMAKE_PREFIX_PATH=~/Qt/6.11.1/gcc_64:/usr/local/cuda
 cmake .. --fresh
 cmake --build . --parallel
 ```
-Upon successfull completion you will find the executables which should execute right away
+Upon successfull completion you will find the executables
 ```
 cuvistaCli/cuvista
 cuvistaGui/cuvistaGui
+cuvistaFFmpeg/libcuvistaFFmpeg.so
 ```
-
-When done, run ```cuvista -info``` to see available devices and run a test
+The executables need to dynamically load the library, in order make the operating system find the file you may use
+```
+export LD_LIBRARY_PATH=/path/to/cuvistaFFmpeg
+```
+Finally run ```cuvistaCli/cuvista -info``` to check your setup
 
 
 ## Future Plans
 - Improve performance and robustness of stabilization
-- Implement Vulkan Compute
 - Make a plugin for video editing software
+- Implement Vulkan Compute
 
  
 ## Built and Tested on following Tools and versions

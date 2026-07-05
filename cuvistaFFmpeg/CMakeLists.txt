@@ -55,6 +55,10 @@ add_library(cuvistaFFmpeg SHARED
     StackedWriter.cpp
 )
 
+if (CMAKE_SYSTEM_NAME MATCHES Windows)
+    set_target_properties(cuvistaFFmpeg PROPERTIES PREFIX "")
+endif()
+
 target_include_directories(cuvistaFFmpeg PUBLIC 
     "${PROJECT_SOURCE_DIR}/Common"
     "${PROJECT_SOURCE_DIR}/Matrix"
