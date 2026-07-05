@@ -16,7 +16,7 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
-#include "MovieReader.hpp"
+#include "MovieReaderImpl.hpp"
 #include "ImageClasses.hpp"
 
 using namespace im;

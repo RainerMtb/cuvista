@@ -19,6 +19,7 @@
 #pragma once
 
 #include "MovieWriter.hpp"
+#include "Trajectory.hpp"
 
 struct DeshakerResult {
 	int statusCode = 0;

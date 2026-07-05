@@ -6,13 +6,15 @@ add_executable(cuvista
     CMakeIcon.rc
 )
 
-target_include_directories(cuvista PRIVATE "${PROJECT_SOURCE_DIR}/Deshaker")
+target_include_directories(cuvista PRIVATE 
+    "${PROJECT_SOURCE_DIR}/Deshaker"
+)
 
 target_link_libraries(cuvista PRIVATE 
     Common
-    Matrix 
+    Matrix
     CudaStuff 
-    Deshaker 
+    Deshaker
     "${CORE_LIBS}"
 )
 

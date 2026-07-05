@@ -18,15 +18,22 @@
 
 #pragma once
 
-#include "App.xaml.g.h"
+#include "MovieReader.hpp"
 
-namespace winrt::cuvistaWinui::implementation {
 
-    struct App : AppT<App> {
-        App();
-        fire_and_forget OnLaunched(const Microsoft::UI::Xaml::LaunchActivatedEventArgs& args);
+class NullReader : public MovieReader {
 
-    private:
-        winrt::Microsoft::UI::Xaml::Window window = nullptr;
-    };
-}
+public:
+	NullReader();
+
+	void open(const std::string& source) override {};
+	bool read(im::Image8& inputFrame) override;
+};
+
+
+class ImageReader : public MovieReader {
+
+public:
+	void open(const std::string& source) override {};
+	bool read(im::Image8& inputFrame) override { return false; };
+};

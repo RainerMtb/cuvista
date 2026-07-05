@@ -29,6 +29,7 @@
 #include <filesystem>
 #include "AppUtil.hpp"
 #include "ErrorLogger.hpp"
+#include "MovieWriterImpl.hpp"
 
 
 using namespace winrt;
@@ -64,24 +65,17 @@ namespace winrt::cuvistaWinui::implementation {
     }
 
 
-    //-------------------------------------------------------------------------
-    //-------------------- MainWindow Constructor -----------------------------
-    //-------------------------------------------------------------------------
+    //------------------------------------------------------------------
+    //-------------------- MainWindow Init -----------------------------
+    //------------------------------------------------------------------
 
     MainWindow::MainWindow() {
         InitializeComponent(); //should not be used??
-        lblStatus().Text(hformat("Version {}", CUVISTA_VERSION));
+    }
 
-        ff::loadFFmpegLibrary();
-        mReader = std::shared_ptr<MovieReader>(ff::createReader(ReaderType::FFMPEG));
-
+    fire_and_forget MainWindow::OnLoading(const FrameworkElement& sender, const IInspectable& args) {
         //debugLogger().open("tcp://10.0.0.1:5555");
-        mData.console = &mData.nullStream;
-        mData.printHeader = false;
-        mData.printSummary = false;
-        mData.deviceInfoCuda = mData.probeCuda();
-        mData.deviceInfoOpenCl = mData.probeOpenCl();
-        mData.collectDeviceInfo();
+        lblStatus().Text(hformat("Version {}", CUVISTA_VERSION));
 
         //set modes list
         comboMode().Items().Append(box_string("Combined - Single Pass"));
@@ -90,15 +84,6 @@ namespace winrt::cuvistaWinui::implementation {
             comboMode().Items().Append(box_string(std::format("Multi Pass - Analyze {}x", i)));
         }
         comboMode().SelectedIndex(0);
-
-        //available devices
-        int siz = (int) mData.deviceList.size();
-        for (int i = 0; i < siz; i++) {
-            comboDevice().Items().Append(box_string(mData.deviceList[i]->getName()));
-        }
-
-        //select highest device, set encoding options
-        comboDevice().SelectedIndex(siz - 1);
 
         //set background color
         auto localValues = mLocalSettings.Values();
@@ -176,6 +161,29 @@ namespace winrt::cuvistaWinui::implementation {
         sliderCpuThreads().Maximum(threads);
         sliderCpuThreads().Value(3.0 * threads / 4);
         sliderCudaThreads().Value(defaultParam.cudaThreads);
+
+        int err = ff::loadFFmpegLibrary();
+        if (err != 0) {
+            co_await showErrorDialogAsync("Error Loading FFmpeg", errorLogger().getErrorMessage());
+            exit(1);
+        }
+        mReader = std::shared_ptr<MovieReader>(ff::createReader(ReaderType::FFMPEG));
+
+        mData.console = &mData.nullStream;
+        mData.printHeader = false;
+        mData.printSummary = false;
+        mData.deviceInfoCuda = mData.probeCuda();
+        mData.deviceInfoOpenCl = mData.probeOpenCl();
+        mData.collectDeviceInfo();
+
+        //available devices
+        int siz = (int) mData.deviceList.size();
+        for (int i = 0; i < siz; i++) {
+            comboDevice().Items().Append(box_string(mData.deviceList[i]->getName()));
+        }
+
+        //select highest device, set encoding options
+        comboDevice().SelectedIndex(siz - 1);
 
         //load file when given as command line argument or when file was dropped on the app icon
         LPWSTR cmd = GetCommandLineW();
@@ -331,7 +339,7 @@ namespace winrt::cuvistaWinui::implementation {
         //use error code, otherwise a non existent output file will throw an exception
         std::error_code ec;
         if (std::filesystem::equivalent(p1, p2, ec)) {
-            showErrorDialogAsync(L"Invalid File Selection", L"Please select different files\nfor input and output");
+            showErrorDialogAsync("Invalid File Selection", "Please select different files\nfor input and output");
             co_return;
         }
 
@@ -410,9 +418,9 @@ namespace winrt::cuvistaWinui::implementation {
             }
 
         } catch (AVException e) {
-            hstring msg = to_hstring(e.what());
-            showErrorDialogAsync(L"Error", msg);
-            lblStatus().Text(msg);
+            std::string str = e.what();
+            showErrorDialogAsync("Error", str);
+            lblStatus().Text(to_hstring(str));
             errorLogger().clear();
             co_return;
         }
@@ -448,32 +456,31 @@ namespace winrt::cuvistaWinui::implementation {
         //start timing
         mData.timeStart();
 
-        //start process loop ----------------------------------------------------
-        auto loopFunction = [&] {
-            LoopResult result = mFrame->runLoop(*mProgress, *this, mExecutor);
-            DispatcherQueue().TryEnqueue([&] { mProgress->dialog().Hide(); });
-            return result;
-        };
-        mFutureLoop = std::async(std::launch::async, loopFunction);
+        //show dialog and run process loop ----------------------------------------------------
+        mProgress->dialog().ShowAsync();
 
-        //show dialog -----------------------------------------------------------
-        co_await mProgress->dialog().ShowAsync();
+        auto loop = [=] () -> winrt::Windows::Foundation::IAsyncOperation<IInspectable> { 
+            co_await winrt::resume_background();
+            LoopResult res = mFrame->runLoop(*mProgress, *this, mExecutor); 
+            co_return winrt::make<LoopResultWrapper>(res);
+        };
+        IInspectable iis = co_await loop();
+        LoopResultWrapper* resPtr = winrt::get_self<LoopResultWrapper>(iis);
+        LoopResult result = resPtr->result;
+
+        //hide dialog from main thread
+        mProgress->dialog().Hide();
 
         //dialog hidden again ----------------------------------------------------
         //debugPrint("loop done");
-        LoopResult result = mFutureLoop.get();
         double secs = mData.timeElapsedSeconds();
         double fps = mWriter->frameIndex / secs;
         std::string fileSize = util::byteSizeToString(mWriter->encodedBytesTotal);
-        mWriter.reset();
-        mExecutor.reset();
-        mFrame.reset();
-        mProgress.reset();
 
         if (result == LoopResult::LOOP_ERROR) {
-            hstring msg = to_hstring(errorLogger().getErrorMessage());
-            showErrorDialogAsync(L"Error", msg);
-            lblStatus().Text(msg);
+            std::string str = errorLogger().getErrorMessage();
+            showErrorDialogAsync("Error", str);
+            lblStatus().Text(to_hstring(str));
             errorLogger().clear();
 
         } else if (result == LoopResult::LOOP_CANCELLED) {
@@ -595,6 +602,11 @@ namespace winrt::cuvistaWinui::implementation {
         //debugPrint("closing dialog");
     }
 
+    void MainWindow::windowSizeChanged(const IInspectable& sender, const WindowSizeChangedEventArgs& args) {
+        auto siz = args.Size();
+        playerDialogImageGrid().Height(siz.Height * 0.8);
+    }
+
     //---------------------------------------------------------------
     //-------------------- Player Events ----------------------------
     //---------------------------------------------------------------
@@ -679,14 +691,17 @@ namespace winrt::cuvistaWinui::implementation {
     //-------------------- Private Methods ------------------------------------
     //-------------------------------------------------------------------------
 
-    fire_and_forget MainWindow::showErrorDialogAsync(hstring title, hstring content) {
+    winrt::Windows::Foundation::IAsyncOperation<Controls::ContentDialogResult> MainWindow::showErrorDialogAsync(hstring title, hstring content) {
         Controls::ContentDialog dialog;
         dialog.Title(box_value(title));
         dialog.Content(box_value(content));
         dialog.CloseButtonText(L"OK");
         dialog.XamlRoot(rootPanel().XamlRoot());
-        co_await dialog.ShowAsync();
-        co_return;
+        return dialog.ShowAsync();
+    }
+
+    winrt::Windows::Foundation::IAsyncOperation<Controls::ContentDialogResult> MainWindow::showErrorDialogAsync(const std::string& title, const std::string& content) {
+        return showErrorDialogAsync(to_hstring(title), to_hstring(content));
     }
 
     void MainWindow::addInputFile(hstring file) {
@@ -785,10 +800,6 @@ namespace winrt::cuvistaWinui::implementation {
    void MainWindow::windowClosedEvent(const IInspectable& sender, const WindowEventArgs& args) {
         //debugPrint("closed");
         //args.Handled(true); //cancel the event
-       if (mFutureLoop.valid()) {
-           mUserInput = UserInputEnum::QUIT;
-           mFutureLoop.wait();
-       }
 
         auto localValues = mLocalSettings.Values();
         localValues.Insert(L"colorRed", box_value(mBackgroundColor.R));
@@ -823,8 +834,10 @@ namespace winrt::cuvistaWinui::implementation {
             localValues.Insert(id, box_value(L""));
         }
 
-        mReader->close();
-        mReader.reset();
+        mUserInput = UserInputEnum::QUIT;
+        mPlayerPaused = false;
+        while (mFrame && mFrame->isRunning()) {}
         ff::freeFFmpegLibrary();
     }
-}
+
+} // close namespace

@@ -155,7 +155,7 @@ When done, run ```cuvista -info``` to see available devices and run a test
 - Windows 11
 - Ubuntu 26.04
 - Visual Studio 2026
-- Nvidia Cuda 13.3
+- Nvidia Cuda 13.3.1
 - Nvidia Video Codec SDK 13.0.37
 - FFmpeg 8.1
 - Qt 6.11.1

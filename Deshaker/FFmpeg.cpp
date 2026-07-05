@@ -34,7 +34,7 @@ namespace ff {
 
     template <typename F> void loadFunction(HMODULE lib, const char* funcName, F& funcPtr) {
         FARPROC f = GetProcAddress(lib, funcName);
-        if (f == NULL) throw std::exception(std::format("error loading function '{}' code {}", funcName, GetLastError()).c_str());
+        if (f == NULL) throw std::runtime_error(std::format("error loading function '{}' code {}", funcName, std::system_category().message(GetLastError())));
         funcPtr = (F) f;
     }
 
@@ -42,14 +42,14 @@ namespace ff {
         int retval = 0;
         try {
             ffmpegLib = LoadLibraryA("cuvistaFFmpeg.dll");
-            if (!ffmpegLib) throw std::exception("cannot load ffmpeg library");
+            if (!ffmpegLib) throw std::runtime_error(std::system_category().message(GetLastError()));
 
             loadFunction(ffmpegLib, "versionsCompiled", versionsCompiled);
             loadFunction(ffmpegLib, "versionsRuntime", versionsRuntime);
             loadFunction(ffmpegLib, "createReader", createReader);
             loadFunction(ffmpegLib, "createWriter", createWriter);
 
-        } catch (std::exception e) {
+        } catch (const std::exception& e) {
             errorLogger().logError(e.what(), ErrorSource::FFMPEG);
             retval = 1;
 
@@ -66,6 +66,54 @@ namespace ff {
             if (retval != 0) {
                 retval = GetLastError();
             }
+
+        } catch (...) {
+            retval = 1;
+        }
+
+        return retval;
+    }
+}
+
+#elif defined(__linux__)
+
+#include <dlfcn.h>
+
+namespace ff {
+    
+    void* ffmpegLib = nullptr;
+
+    template <typename F> void loadFunction(void* lib, const char* funcName, F& funcPtr) {
+        void* f = dlsym(lib, funcName);
+        if (f == NULL) throw std::runtime_error(std::format("error loading function '{}': {}", funcName, dlerror()));
+        funcPtr = (F) f;
+    }
+
+    int loadFFmpegLibrary() {
+        int retval = 0;
+        try {
+            ffmpegLib = dlopen("libcuvistaFFmpeg.so", RTLD_NOW);
+            if (!ffmpegLib) throw std::runtime_error(dlerror());
+
+            loadFunction(ffmpegLib, "versionsCompiled", versionsCompiled);
+            loadFunction(ffmpegLib, "versionsRuntime", versionsRuntime);
+            loadFunction(ffmpegLib, "createReader", createReader);
+            loadFunction(ffmpegLib, "createWriter", createWriter);
+
+        } catch (const std::exception& e) {
+            errorLogger().logError(e.what(), ErrorSource::FFMPEG);
+            retval = 1;
+
+        } catch (...) {
+            retval = 10;
+        }
+        return retval;
+    }
+
+    int freeFFmpegLibrary() {
+        int retval = 0;
+        try {
+            retval = dlclose(ffmpegLib); //returns 0 on success
 
         } catch (...) {
             retval = 1;

@@ -18,265 +18,82 @@
 
 #pragma once
 
-#include "MovieWriterBase.hpp"
-#include "MovieReaderBase.hpp"
-#include "Trajectory.hpp"
+#include "Stats.hpp"
+#include "FFmpegUtil.hpp"
+#include "OutputOption.hpp"
 #include "FrameExecutor.hpp"
 
+class MovieReader;
+class MainData;
+class MovieFrame;
 
-//-----------------------------------------------------------------------------------
-class MovieWriterCollection : public NullWriter {
 
-private:
-	std::vector<std::shared_ptr<MovieWriter>> writers;
-	std::vector<int> hasFrames;
+ //-----------------------------------------------------------------------------------
+ // each writer must increment frame counter when beeing called to write
+ //-----------------------------------------------------------------------------------
 
-	void updateStats();
+class MovieWriter : public WriterStats {
 
 public:
-	MovieWriterCollection(MainData& data, MovieReader& reader, std::vector<std::shared_ptr<MovieWriter>> writers);
-
-	void open(OutputOption outputOption) override;
-	void start() override;
-	void writeInput(const FrameExecutor& executor) override;
-	void writeOutput(const FrameExecutor& executor) override;
-	bool flush() override;
-	void close() override;
+	virtual ~MovieWriter() = default;
+	virtual void open(OutputOption outputOption) {}
+	virtual void start() {}
+	virtual void writeInput(const FrameExecutor& executor) {}
+	virtual void writeOutput(const FrameExecutor& executor) {}
+	virtual bool flush() { return false; }
+	virtual void close() {}
 };
 
 
 //-----------------------------------------------------------------------------------
-class OutputWriter : public NullWriter {
+class MainWriter : public MovieWriter {
 
 protected:
-	ImageVuyx outputFrame; //frame to get from main loop and to send to output
+	const MainData& mData;
 
 public:
-	OutputWriter(MainData& data, MovieReader& reader, int outputStride) :
-		NullWriter(data, reader),
-		outputFrame(data.h, data.w, outputStride) 
+	MainWriter(MainData& data) :
+		mData(data)
 	{}
-
-	OutputWriter(MainData& data, MovieReader& reader) :
-		OutputWriter(data, reader, data.stride4) 
-	{}
-
-	const ImageVuyx& getOutputFrame();
-	void writeOutput(const FrameExecutor& executor) override;
 };
 
 
 //-----------------------------------------------------------------------------------
-class RawMemoryStoreWriter : public MovieWriter {
+class NullWriter : public MainWriter {
 
 protected:
-	size_t maxFrameCount;
-	int inputFrameIndex = 0;
-	bool doWriteInput;
-	bool doWriteOutput;
+	MovieReader& mReader;
 
 public:
-	std::list<ImageVuyx> outputFramesYuv;
-	std::list<ImageRGBA> outputFramesRgba;
-	std::list<ImageBGRA> outputFramesBgra;
-	std::list<ImageVuyx> inputFrames;
-	std::list<std::vector<PointResult>> results;
-
-	RawMemoryStoreWriter(size_t maxFrameCount = 250, bool writeInput = true, bool writeOutput = true) :
-		maxFrameCount { maxFrameCount },
-		doWriteInput { writeInput },
-		doWriteOutput { writeOutput} 
+	NullWriter(MainData& data, MovieReader& reader) :
+		MainWriter(data),
+		mReader { reader }
 	{}
 
-	void writeOutput(const FrameExecutor& executor) override;
-	void writeInput(const FrameExecutor& executor) override;
-	
-	void writeYuvFiles(const std::string& inputFile, const std::string& outputFile, int maxFrames);
-	void writeInputFile(const std::string& inputFile, int maxFrames, ThreadPoolBase& pool = defaultPool);
-	void writeOutputFile(const std::string& outputFile, int maxFrames, ThreadPoolBase& pool = defaultPool);
-};
-
-
-//-----------------------------------------------------------------------------------
-class BmpImageWriter : public ImageWriter {
-
-private:
-	ImageBGRA imageBgra;
-	std::jthread worker;
-
-public:
-	BmpImageWriter(MainData& data, MovieReader& reader) :
-		ImageWriter(data, reader),
-		worker { [] {} },
-		imageBgra(data.h, data.w)
-	{}
-
-	void close() override;
 	void writeOutput(const FrameExecutor& executor) override;
 };
 
 
 //-----------------------------------------------------------------------------------
-class RawNv12Writer : public NullWriter {
-
-private:
-	std::ofstream file;
-	ImageNV12 nv12;
-
-public:
-	RawNv12Writer(MainData& data, MovieReader& reader) :
-		NullWriter(data, reader),
-		nv12(data.h, data.w, data.stride)
-	{}
-
-	void open(OutputOption outputOption) override;
-	void writeOutput(const FrameExecutor& executor) override;
-};
-
-
-//-----------------------------------------------------------------------------------
-class RawYuvWriter : public NullWriter {
-
-private:
-	std::ofstream file;
-	ImageYuv yuv;
-
-public:
-	RawYuvWriter(MainData& data, MovieReader& reader) :
-		NullWriter(data, reader),
-		yuv(data.h, data.w, data.stride)
-	{}
-
-	void open(OutputOption outputOption) override;
-	void writeOutput(const FrameExecutor& executor) override;
-};
-
-
-//-----------------------------------------------------------------------------------
-class RawPipeWriter : public NullWriter, public PipeWriter {
-
-private:
-	ImageYuv output;
-
-public:
-	RawPipeWriter(MainData& data, MovieReader& reader) :
-		NullWriter(data, reader),
-		output(data.h, data.w)
-	{}
-
-	void open(OutputOption outputOption) override;
-	void writeOutput(const FrameExecutor& executor) override;
-	void close() override;
-};
-
-
-//------------- transformation file -------------------------------------------------
-class TransformsFile {
+class ImageWriter : public NullWriter {
 
 protected:
-	inline static std::string id = "CUVI";
-	std::ofstream mFile;
-
-	template <class T> void writeValue(T val) {
-		mFile.write(reinterpret_cast<const char*>(&val), sizeof(val));
-	}
-
-public:
-	TransformsFile() {}
-
-	static std::map<int64_t, TransformValues> readTransformMap(const std::string& trajectoryFile);
-
-	void open(const std::string& trajectoryFile);
-	void writeTransform(const Affine2D& transform, int64_t frameIndex);
-};
-
-
-//--------------- write transforms --------------------------------------------------
-class TransformsWriter : public MovieWriterBase, public TransformsFile {
-
-public:
-	TransformsWriter(MainData& data) :
-		MovieWriterBase(data),
-		TransformsFile() 
+	ImageWriter(MainData& data, MovieReader& reader) :
+		NullWriter(data, reader)
 	{}
 
-	void start() override;
-	void writeInput(const FrameExecutor& executor) override;
+	std::string makeFilename(const std::string& extension) const;
+
+public:
+	static std::string makeFilename(const std::string& pattern, int64_t index, const std::string& extension);
+	static std::string makeFilenameSamples(const std::string& pattern, const std::string& extension);
 };
 
 
-//--------------- write point results as large text file ----------------------------
-class ResultDetailsWriter : public MovieWriterBase {
+//-----------------------------------------------------------------------------------
+class PipeWriter {
 
-private:
-	std::string mDelim = ";";
-	std::ofstream mFile;
-
-	void write(std::span<PointResult> results, int64_t frameIndex);
-
-public:
-	ResultDetailsWriter(MainData& data) :
-		MovieWriterBase(data) {}
-
-	static void write(std::span<PointResult> results, const std::string& filename);
-
-	void start() override;
-	void writeInput(const FrameExecutor& executor) override;
-};
-
-
-//--------------- write individual images to show point results ---------------------
-class ResultImageWriter : public MovieWriterBase {
-
-private:
-	ImageVuyx yuv;
-	ImageBGRA bgra;
-
-public:
-	ResultImageWriter(MainData& data) :
-		MovieWriterBase(data),
-		yuv(data.h, data.w),
-		bgra(data.h, data.w) 
-	{}
-
-	ResultImageWriter(MainData& data, MovieReader& reader) :
-		ResultImageWriter(data)
-	{}
-
-	void start() override {}
-	void writeInput(const FrameExecutor& executor) override;
-
-	static void writeImage(const FrameResultData& resultData, std::span<PointResult> res, int64_t idx, Image8& dest, ThreadPoolBase& pool = defaultPool, bool drawTransformed = true);
-};
-
-
-//--------------- write individual images to show point results ---------------------
-class ResultVideoWriter : public MovieWriterBase {
-
-private:
-	std::ofstream file;
-	ImageNV12 nv12;
-	ImageBGRA bgra;
-
-public:
-	ResultVideoWriter(MainData& data, MovieReader& reader) :
-		MovieWriterBase(data)
-	{}
-
-	void open(OutputOption outputOption) override;
-	void writeInput(const FrameExecutor& executor) override;
-};
-
-
-//--------------------------------------------------------------------------------------
-//simple writer for debugging, writes YUV data to file, cannot be used in executor loop
-class SimpleYuvWriter {
-
-private:
-	std::ofstream os;
-
-public:
-	SimpleYuvWriter(const std::string& file);
-
-	void write(ImageVuyx& image);
+protected:
+	virtual void openPipe();
+	virtual void closePipe();
 };

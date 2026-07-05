@@ -17,8 +17,7 @@
  */
 
 #include "MovieFrame.hpp"
-#include "MovieReader.hpp"
-#include "Util.hpp"
+#include "MovieWriterImpl.hpp"
 #include "ErrorLogger.hpp"
 
 
@@ -72,6 +71,10 @@ LoopResult MovieFrame::runLoop(std::shared_ptr<FrameExecutor> executor) {
 
 LoopResult MovieFrame::runLoop(ProgressBase& progress, UserInput& input, std::shared_ptr<FrameExecutor> executor) {
 	return LoopResult::LOOP_NONE;
+}
+
+bool MovieFrame::isRunning() const {
+	return false;
 }
 
 std::string MovieFrame::ptsForFrameAsString(int64_t frameIndex) const {
@@ -144,12 +147,12 @@ void MovieFrame::checkPyramidGamma(int64_t frameIndex, std::span<int> histogram,
 //---------- DESHAKER LOOP COMBINED -----------------------------
 //---------------------------------------------------------------
 
+bool MovieFrameCombined::isRunning() const {
+	return state != StateCombined::DONE;
+}
+
 LoopResult MovieFrameCombined::runLoop(ProgressBase& progress, UserInput& input, std::shared_ptr<FrameExecutor> executor) {
 	assert(mData.mode == 0 && "mode must be == 0 here");
-	InputState inputState = InputState::NONE;
-	StateCombined state = StateCombined::READ_FIRST;
-	bool hasFramesToFlush = false;
-	ProgressInfo progressInfo = { mReader.frameCount };
 	LoopResult loopResult = LoopResult::LOOP_SUCCESS;
 	std::vector<int> histogramOld(256);
 	std::vector<int> histogram(256);
@@ -333,14 +336,14 @@ LoopResult MovieFrameCombined::runLoop(ProgressBase& progress, UserInput& input,
 // -------- DESHAKER LOOP CONSECUTIVE-------
 // -----------------------------------------
 
+
+bool MovieFrameConsecutive::isRunning() const {
+	return state != StateConsecutive::DONE;
+}
+
 LoopResult MovieFrameConsecutive::runLoop(ProgressBase& progress, UserInput& input, std::shared_ptr<FrameExecutor> executor) {
 	assert(mData.mode > 0 && "mode must be > 0 here");
-	InputState inputState = InputState::NONE;
-	StateConsecutive state = StateConsecutive::READ_FIRST_FRAME;
-	bool hasFramesToFlush = false;
-	int currentPass = 1;
 	int64_t maxFrames = mData.maxFrames;
-	ProgressInfo progressInfo = { mReader.frameCount };
 	double progressPerReaderPass = 80.0 / (80.0 * mData.mode + 20.0);
 	LoopResult loopResult = LoopResult::LOOP_SUCCESS;
 	std::vector<int> histogramOld(256);

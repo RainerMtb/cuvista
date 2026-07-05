@@ -18,7 +18,6 @@
 
 #pragma once
 
-#include "MovieWriter.hpp"
 #include "ThreadPool.hpp"
 #include "SystemStuff.hpp"
 #include "MainData.hpp"
@@ -125,6 +124,9 @@ public:
 
 	//run loop with default progress and input, used for development
 	LoopResult runLoop(std::shared_ptr<FrameExecutor> executor);
+
+	//query if frame is active
+	virtual bool isRunning() const;
 };
 
 
@@ -134,16 +136,33 @@ public:
 
 
 class MovieFrameCombined : public MovieFrame {
+
+private:
+	InputState inputState = InputState::NONE;
+	StateCombined state = StateCombined::READ_FIRST;
+	bool hasFramesToFlush = false;
+	ProgressInfo progressInfo = { mReader.frameCount };
+
 public:
 	MovieFrameCombined(MainData& data, MovieReader& reader, MovieWriter& writer);
 
 	LoopResult runLoop(ProgressBase& progress, UserInput& input, std::shared_ptr<FrameExecutor> executor) override;
+	bool isRunning() const override;
 };
 
 
 class MovieFrameConsecutive : public MovieFrame {
+
+private:
+	InputState inputState = InputState::NONE;
+	StateConsecutive state = StateConsecutive::READ_FIRST_FRAME;
+	bool hasFramesToFlush = false;
+	int currentPass = 1;
+	ProgressInfo progressInfo = { mReader.frameCount };
+
 public:
 	MovieFrameConsecutive(MainData& data, MovieReader& reader, MovieWriter& writer);
 
 	LoopResult runLoop(ProgressBase& progress, UserInput& input, std::shared_ptr<FrameExecutor> executor) override;
+	bool isRunning() const override;
 };

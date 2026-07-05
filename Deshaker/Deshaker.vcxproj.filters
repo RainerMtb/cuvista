@@ -35,10 +35,10 @@
     <ClCompile Include="ProgressDisplay.cpp">
       <Filter>Main</Filter>
     </ClCompile>
-    <ClCompile Include="MovieReader.cpp">
+    <ClCompile Include="MovieReaderImpl.cpp">
       <Filter>Reader</Filter>
     </ClCompile>
-    <ClCompile Include="MovieWriter.cpp">
+    <ClCompile Include="MovieWriterImpl.cpp">
       <Filter>Writer</Filter>
     </ClCompile>
     <ClCompile Include="AffineTransform.cpp">
@@ -122,12 +122,12 @@
     <ClCompile Include="NvEncoder.cpp">
       <Filter>Writer</Filter>
     </ClCompile>
-    <ClCompile Include="MovieWriterBase.cpp">
+    <ClCompile Include="MovieWriter.cpp">
       <Filter>FFmpeg</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="MovieReader.hpp">
+    <ClInclude Include="MovieReaderImpl.hpp">
       <Filter>Reader</Filter>
     </ClInclude>
     <ClInclude Include="DeshakerHelpText.hpp">
@@ -184,7 +184,7 @@
     <ClInclude Include="ThreadPool.hpp">
       <Filter>Util</Filter>
     </ClInclude>
-    <ClInclude Include="MovieWriter.hpp">
+    <ClInclude Include="MovieWriterImpl.hpp">
       <Filter>Writer</Filter>
     </ClInclude>
     <ClInclude Include="MovieFrame.hpp">
@@ -229,10 +229,10 @@
     <ClInclude Include="NvEncoder.hpp">
       <Filter>Writer</Filter>
     </ClInclude>
-    <ClInclude Include="MovieReaderBase.hpp">
+    <ClInclude Include="MovieReader.hpp">
       <Filter>FFmpeg</Filter>
     </ClInclude>
-    <ClInclude Include="MovieWriterBase.hpp">
+    <ClInclude Include="MovieWriter.hpp">
       <Filter>FFmpeg</Filter>
     </ClInclude>
   </ItemGroup>

@@ -30,20 +30,27 @@
 #include "ProgressDisplay.hpp"
 
 
-class ProgressDialog : public ProgressDisplay {
-
-public:
-    ProgressDialog(int interval) :
-        ProgressDisplay(interval)
-    {}
-
-    virtual winrt::Microsoft::UI::Xaml::Controls::IContentDialog dialog() = 0;
-};
-
-
 namespace winrt::cuvistaWinui::implementation {
     
     using namespace winrt::Microsoft::UI::Xaml;
+
+    class ProgressDialog : public ProgressDisplay {
+
+    public:
+        ProgressDialog(int interval) :
+            ProgressDisplay(interval)
+        {}
+
+        virtual winrt::Microsoft::UI::Xaml::Controls::IContentDialog dialog() = 0;
+    };
+
+    struct LoopResultWrapper : winrt::implements<LoopResultWrapper, winrt::Windows::Foundation::IInspectable> {
+        LoopResult result;
+
+        LoopResultWrapper(LoopResult result) :
+            result { result } 
+        {}
+    };
 
     struct CustomRuntimeXaml : CustomRuntimeXamlT<CustomRuntimeXaml> {
 
@@ -72,11 +79,12 @@ namespace winrt::cuvistaWinui::implementation {
 
         ImageXamlBGRA mProgressInput;
         ImageXamlBGRA mProgressOutput;
-        bool mPlayerPaused;
-        int mAudioStreamIndex;
+        bool mPlayerPaused = false;
+        int mAudioStreamIndex = -1;
         double mAudioGain = 1.0;
 
         MainWindow();
+        fire_and_forget OnLoading(const FrameworkElement& sender, const IInspectable& args);
 
         void btnColorOk(const IInspectable& sender, const RoutedEventArgs& args);
         void btnColorCancel(const IInspectable& sender, const RoutedEventArgs& args);
@@ -106,6 +114,7 @@ namespace winrt::cuvistaWinui::implementation {
         void modeSelectionChanged(const IInspectable& sender, const Controls::SelectionChangedEventArgs& args);
 
         void windowClosedEvent(const IInspectable& sender, const WindowEventArgs& args);
+        void windowSizeChanged(const IInspectable& sender, const WindowSizeChangedEventArgs& args);
         void dialogClosedEvent(const Controls::ContentDialog& sender, const Controls::ContentDialogClosedEventArgs& args); 
         
         void sliderVolumeChanged(const IInspectable& sender, const Controls::Primitives::RangeBaseValueChangedEventArgs& args);
@@ -119,9 +128,9 @@ namespace winrt::cuvistaWinui::implementation {
         ImageYuv mInput;
         ImageXamlBGRA mInputBGRA;
         std::shared_ptr<MovieReader> mReader;
+        std::shared_ptr<MovieWriter> mWriter;
         std::shared_ptr<MovieFrame> mFrame;
         std::shared_ptr<FrameExecutor> mExecutor;
-        std::shared_ptr<MovieWriter> mWriter;
         std::shared_ptr<ProgressDialog> mProgress;
 
         bool mInputReady = false;
@@ -131,7 +140,6 @@ namespace winrt::cuvistaWinui::implementation {
 
         hstring mInfoBoxString;
         std::future<void> mFutureInfo = std::async([&] {});
-        std::future<LoopResult> mFutureLoop = std::async([&] { return LoopResult::LOOP_NONE; });
 
         std::map<hstring, OutputOption> mOutputImageTypeMap = {
             { L"BMP", OutputOption::IMAGE_BMP },
@@ -147,7 +155,8 @@ namespace winrt::cuvistaWinui::implementation {
 
         fire_and_forget seekAsync(double frac);
 
-        fire_and_forget showErrorDialogAsync(hstring title, hstring content);
+        winrt::Windows::Foundation::IAsyncOperation<Controls::ContentDialogResult> showErrorDialogAsync(hstring title, hstring content);
+        winrt::Windows::Foundation::IAsyncOperation<Controls::ContentDialogResult> showErrorDialogAsync(const std::string& title, const std::string& content);
 
         void infoBoxAppendText(std::string str);
 

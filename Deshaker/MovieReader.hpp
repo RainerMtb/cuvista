@@ -18,22 +18,54 @@
 
 #pragma once
 
-#include "MovieReaderBase.hpp"
+#include "Stats.hpp"
+#include "FFmpegUtil.hpp"
+#include "FrameExecutor.hpp"
 
+#include <optional>
+#include <span>
+#include <mutex>
+#include <future>
 
-class NullReader : public MovieReader {
+//-----------------------------------------------------------------------------------
+// reader must increment frame counter when beeing called to read
+//-----------------------------------------------------------------------------------
+
+struct StreamContext;
+struct OutputStreamContext;
+namespace im { class Image8; }
+
+class MovieReader : public ReaderStats {
 
 public:
-	NullReader();
+	std::mutex mVideoPacketMutex;
+	std::list<VideoPacketContext> mVideoPacketList;
+	bool mStoreSidePackets = true;
+	std::string mSource;
 
-	void open(const std::string& source) override {};
-	bool read(im::Image8& inputFrame) override;
-};
+	virtual ~MovieReader() = default;
 
+	virtual void open(const std::string& source) = 0;
+	virtual void open(std::span<unsigned char> movieData) {}
+	virtual void start() {}
+	virtual bool read(im::Image8& inputFrame) = 0;
+	virtual bool read(FrameExecutor& executor) { return false; };
+	virtual std::future<void> readAsync(FrameExecutor& executor);
+	virtual void close() {}
 
-class ImageReader : public MovieReader {
+	virtual void rewind() {}
+	virtual bool seek(double fraction) { return true; }
+	virtual int openAudioDecoder(std::shared_ptr<OutputStreamContextBase> sposc) { return -1; }
 
-public:
-	void open(const std::string& source) override {};
-	bool read(im::Image8& inputFrame) override { return false; };
+	virtual size_t inputStreamCount() const { return 0; }
+	virtual std::shared_ptr<StreamContext> inputStream(size_t index) const { return nullptr; }
+	virtual std::shared_ptr<StreamContextBase> inputStreamBase(size_t index) const { return nullptr; }
+
+	std::optional<std::string> ptsForFrameAsString(int64_t frameIndex);
+	std::optional<int64_t> ptsForFrameAsMillis(int64_t frameIndex);
+	double ptsForFrame(int64_t frameIndex);
+	std::string videoStreamSummary() const;
+
+protected:
+	int sideDataMaxSize = 20 * 1024 * 1024;
 };

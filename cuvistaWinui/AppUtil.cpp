@@ -227,7 +227,7 @@ void PlayerWriter::open(OutputOption outputOption) {
     }
 
     loadImageScaled(mainWindow.imageRealtime(), L"ms-appx:///Assets/signs-01.png");
-    mainWindow.imageRealtime().Visibility(winrt::Microsoft::UI::Xaml::Visibility::Collapsed);
+    mainWindow.imageRealtime().Visibility(Microsoft::UI::Xaml::Visibility::Collapsed);
     mainWindow.lblSpeaker().Symbol(mPlayAudio ? Controls::Symbol::Volume : Controls::Symbol::Mute);
     mainWindow.sliderVolume().IsEnabled(mPlayAudio);
     mainWindow.lblPlayerStatus().Text(L"Buffering...");
@@ -240,7 +240,7 @@ void PlayerWriter::open(OutputOption outputOption) {
 void PlayerWriter::start() {
     if (mAudioContext) {
         int sampleRate = mReader.openAudioDecoder(mAudioContext);
-        AudioGraphSettings setting = AudioGraphSettings(winrt::Windows::Media::Render::AudioRenderCategory::Media);
+        AudioGraphSettings setting = AudioGraphSettings(Windows::Media::Render::AudioRenderCategory::Media);
         CreateAudioGraphResult result = AudioGraph::CreateAsync(setting).get();
         if (result.Status() == AudioGraphCreationStatus::Success) {
             mAudioGraph = result.Graph();
@@ -259,6 +259,12 @@ void PlayerWriter::start() {
                 //connect
                 mAudioInputNode.AddOutgoingConnection(deviceOutputNode);
 
+                //samples callback
+                //mAudioInputNode.QuantumStarted([&] (const AudioFrameInputNode& sender, const FrameInputNodeQuantumStartedEventArgs& args) {
+                //    int32_t samples = args.RequiredSamples();
+                //    size_t sampleBytes = samples * 2 * sizeof(float);
+                //});
+
                 //start audio graph
                 mAudioGraph.Start();
             }
@@ -276,7 +282,10 @@ void PlayerWriter::writeOutput(const FrameExecutor& executor) {
     auto t2 = mReader.ptsForFrameAsMillis(frameIndex + 1);
     int64_t delta = t1.has_value() && t2.has_value() ? (*t2 - *t1) : 0;
 
-    using namespace winrt::Microsoft::UI::Xaml;
+    //drain audio buffer - without this there usually are about 40k samples queued up - wtf is windows media doing ???
+    if (mAudioContext && mAudioGraph && mAudioInputNode) {
+        while (mAudioInputNode.QueuedSampleCount() > mAudioGraph.EncodingProperties().SampleRate() / 20) {}
+    }
 
     //check time to play video frame
     auto tnow = std::chrono::steady_clock::now();
@@ -285,12 +294,15 @@ void PlayerWriter::writeOutput(const FrameExecutor& executor) {
     while (tnow < mNextPts || mainWindow.mPlayerPaused) {
         tnow = std::chrono::steady_clock::now();
     }
+
+    //update video frame
     mainWindow.DispatcherQueue().TryEnqueue([&] { mainWindow.mProgressOutput.invalidate(); });
 
-    //play audio
+    //play audio packets when available
     if (mAudioContext && mAudioGraph && mAudioInputNode) {
+        //debugPrint(to_hstring(mAudioInputNode.QueuedSampleCount()));
         double videoPts = t1.value_or(0.0) / 1000.0;
-        std::list<DecodedAudioPacket> audioPackets = mAudioContext->getAudioData(videoPts + 0.25);
+        std::list<DecodedAudioPacket> audioPackets = mAudioContext->getAudioData(videoPts);
         for (auto pkt : audioPackets) {
             Windows::Media::AudioFrame frame((uint32_t) (pkt.audioData.size()));
             Windows::Media::AudioBuffer buffer = frame.LockBuffer(Windows::Media::AudioBufferAccessMode::Write);
@@ -300,11 +312,15 @@ void PlayerWriter::writeOutput(const FrameExecutor& executor) {
             buffer.Close();
             mAudioInputNode.AddFrame(frame);
         }
+
+        //set volume
         mAudioInputNode.OutgoingGain(mainWindow.mAudioGain);
     }
 
     //set next presentation time
     mNextPts = tnow + std::chrono::milliseconds(delta);
+
+    //always advance frame counter
     frameIndex++;
 }
 

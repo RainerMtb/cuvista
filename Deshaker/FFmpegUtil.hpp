@@ -19,6 +19,8 @@
 #pragma once
 
 #include <unordered_map>
+#include <list>
+#include <vector>
 #include <string>
 #include <memory>
 
@@ -55,13 +57,6 @@ enum class StreamHandling {
 	STREAM_DECODE,
 };
 
-struct AVStream;
-struct StreamContext;
-struct OutputStreamContext;
-class FrameExecutor;
-namespace im { class Image8; }
-
-
 enum class MediaType {
 	AUDIO,
 	VIDEO,
@@ -92,6 +87,8 @@ struct OutputStreamContextBase {
 
 	virtual std::list<DecodedAudioPacket> getAudioData(double ptsLimit) = 0;
 };
+
+struct AVStream;
 
 //base class, implementation is in ffmpeg dll
 struct StreamContextBase {

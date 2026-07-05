@@ -30,7 +30,7 @@
 #include "UserInputGui.hpp"
 #include "MovieFrame.hpp"
 #include "progress.h"
-#include "MovieWriter.hpp"
+#include "MovieWriterImpl.hpp"
 #include "ErrorLogger.hpp"
 
 template <class... Args> QString qformat(std::format_string<Args...> fmt, Args&&... args) {
@@ -41,7 +41,13 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     QMainWindow(parent) 
 {
     //debugLogger().open("tcp://10.0.0.1:5555");
-    ff::loadFFmpegLibrary();
+    int err = ff::loadFFmpegLibrary();
+    if (err != 0) {
+        QString msg = QString::fromStdString(errorLogger().getErrorMessage());
+        QMessageBox::critical(this, QString("Error Loading FFmpeg"), msg, QMessageBox::Ok);
+        exit(1);
+    }
+
     mReader = std::shared_ptr<MovieReader>(ff::createReader(ReaderType::FFMPEG));
     ui.setupUi(this);
     mPlayerWindow = new PlayerWindow(this);

@@ -23,8 +23,7 @@
 using namespace winrt;
 using namespace Microsoft::UI::Xaml;
 
-namespace winrt::cuvistaWinui::implementation
-{
+namespace winrt::cuvistaWinui::implementation {
     App::App() {
         // Xaml objects should not call InitializeComponent during construction.
         // See https://github.com/microsoft/cppwinrt/tree/master/nuget#initializecomponent

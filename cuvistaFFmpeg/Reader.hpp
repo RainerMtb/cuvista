@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include "MovieReaderBase.hpp"
+#include "MovieReader.hpp"
 #include "FFmpegMain.hpp"
 
 class FFmpegFormatReader : public MovieReader {

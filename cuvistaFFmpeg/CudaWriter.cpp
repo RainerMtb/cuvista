@@ -16,9 +16,9 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
+#include "CudaInterface.hpp"
 #include "Writer.hpp"
 #include "Reader.hpp"
-#include "NvEncoder.hpp"
 #include "DeviceInfo.hpp"
 #include "ErrorLogger.hpp"
 #include "MainData.hpp"

@@ -14,4 +14,7 @@
     <ClCompile Include="StackedWriter.cpp" />
     <ClCompile Include="Writer.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="CMakeLists.txt" />
+  </ItemGroup>
 </Project>

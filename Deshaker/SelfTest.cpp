@@ -20,8 +20,8 @@
 #include "SelfTestData.hpp"
 #include "AVException.hpp"
 #include "MainData.hpp"
-#include "MovieWriter.hpp"
-#include "MovieReader.hpp"
+#include "MovieWriterImpl.hpp"
+#include "MovieReaderImpl.hpp"
 #include "MovieFrame.hpp"
 #include "ErrorLogger.hpp"
 

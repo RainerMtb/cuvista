@@ -30,6 +30,7 @@ extern "C" {
 
 #include <string>
 #include <vector>
+#include <list>
 #include <memory>
 #include <mutex>
 
@@ -102,14 +103,21 @@ void ffmpeg_log_error(int errnum, const char* msg, ErrorSource source);
 //callback from ffmpeg to report errors
 void ffmpeg_log(void* avclass, int level, const char* fmt, va_list args);
 
-//library functions to get versions
-extern "C" __declspec(dllexport) const FFmpegVersions* versionsCompiled();
-extern "C" __declspec(dllexport) const FFmpegVersions* versionsRuntime();
 
 class MovieReader;
 class MovieWriter;
 class MainData;
 
+#if defined(_WIN64)
+#define LIBRARY_EXPORT extern "C" __declspec(dllexport)
+#else
+#define LIBRARY_EXPORT extern "C"
+#endif
+
+//library functions to get versions
+LIBRARY_EXPORT const FFmpegVersions* versionsCompiled();
+LIBRARY_EXPORT const FFmpegVersions* versionsRuntime();
+
 //library functions to get classes
-extern "C" __declspec(dllexport) MovieReader* createReader(ReaderType readerType);
-extern "C" __declspec(dllexport) MovieWriter* createWriter(WriterType writerType, MainData& data, MovieReader& reader);
+LIBRARY_EXPORT MovieReader* createReader(ReaderType readerType);
+LIBRARY_EXPORT MovieWriter* createWriter(WriterType writerType, MainData& data, MovieReader& reader);

@@ -43,7 +43,7 @@ struct ITaskbarList3;
 struct MainWindow;
 
 
-class ProgressGui : public ProgressDialog {
+class ProgressGui : public winrt::cuvistaWinui::implementation::ProgressDialog {
 
 private:
     winrt::cuvistaWinui::implementation::MainWindow& mainWindow;
@@ -98,7 +98,7 @@ public:
 };
 
 
-class PlayerProgress : public ProgressDialog {
+class PlayerProgress : public winrt::cuvistaWinui::implementation::ProgressDialog {
 
 private:
     winrt::cuvistaWinui::implementation::MainWindow& mainWindow;

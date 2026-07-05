@@ -122,8 +122,8 @@ DebugLoggerTcp::DebugLoggerTcp(const std::string& ip, int port) {
 	sock = socket(AF_INET, SOCK_STREAM, 0);
 	sockaddr_in servAddr = {};
 	servAddr.sin_family = AF_INET;
-	servAddr.sin_addr.s_addr = inet_addr(ip.c_str());
 	servAddr.sin_port = htons(port);
+	inet_pton(AF_INET, ip.c_str(), &servAddr.sin_addr.s_addr);
 	mIsConnected = connect(sock, (sockaddr*) &servAddr, sizeof(servAddr));
 }
 

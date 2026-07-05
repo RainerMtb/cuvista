@@ -59,61 +59,26 @@ if (BUILD_CUDA MATCHES 1 AND CMAKE_SYSTEM_NAME MATCHES Windows)
     )
 endif()
 
+# more library settings per platform
+if (CMAKE_SYSTEM_NAME MATCHES Windows)
+    list(APPEND CORE_LIBS
+        ws2_32
+        Ole32
+    )
 
-# --------------------------------
-# settings specific to Linux
+    link_directories("${PROJECT_SOURCE_DIR}/lib/x64")
+endif()
+
 if (CMAKE_SYSTEM_NAME MATCHES Linux)
-    find_package(PkgConfig REQUIRED)
-    pkg_check_modules(ffmpeg REQUIRED IMPORTED_TARGET
-        libavcodec
-        libavdevice
-        libavfilter
-        libavformat
-        libavutil
-        libswresample
-        libswscale
-    )
-
-    list(APPEND CORE_LIBS 
-        PkgConfig::ffmpeg
-    )
-
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+    #set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "/usr/lib")
+    
     # for wsl use libraries at C:\Windows\System32\lxss\lib
     link_directories("/usr/lib/wsl/lib")
 endif()
 
-
-# --------------------------------
-# settings specific to Windows
-if (CMAKE_SYSTEM_NAME MATCHES Windows)
-    message(NOTICE "Looking for ffmpeg components in folder '${FFMPEG_PATH}'...")
-    #check one exemplary shared ffmpeg file, assume others will be there as well
-    find_library(ffmpegLIB avcodec.lib REQUIRED NO_DEFAULT_PATH HINTS "${FFMPEG_PATH}/lib")
-    find_path(ffmpegH avcodec.h REQUIRED NO_DEFAULT_PATH HINTS "${FFMPEG_PATH}/include/libavcodec")
-    find_program(ffmpegDLL avcodec-62.dll REQUIRED NO_DEFAULT_PATH HINTS "${FFMPEG_PATH}/bin")
-
-    link_directories("${PROJECT_SOURCE_DIR}/lib/x64")
-    link_directories("${FFMPEG_PATH}/lib")
-
-    include_directories("${PROJECT_SOURCE_DIR}/include")
-    include_directories("${FFMPEG_PATH}/include")
-
-    list(APPEND CORE_LIBS
-        avcodec
-        avdevice
-        avfilter
-        avformat
-        avutil
-        swresample
-        swscale
-        ws2_32
-        Ole32
-    )
-endif()
-
-# do not build cllayerinfo
+# do not build opencl cllayerinfo
 set(ENABLE_OPENCL_LAYERINFO OFF)
-
 
 # --------------------------------
 # main stuff, declare targets
@@ -125,6 +90,7 @@ add_subdirectory(Matrix)
 add_subdirectory(CudaStuff)
 add_subdirectory(AvxStuff)
 add_subdirectory(Deshaker)
+add_subdirectory(cuvistaFFmpeg)
 add_subdirectory(cuvistaCli)
 
 
@@ -152,7 +118,12 @@ if (CMAKE_CXX_COMPILER_ID MATCHES MSVC)
     target_compile_options(Matrix PRIVATE /MP)
     target_compile_options(AvxStuff PRIVATE /MP /arch:AVX512)
     target_compile_options(Deshaker PRIVATE -D BUILD_CUDA=${BUILD_CUDA} /MP)
+    target_compile_options(cuvistaFFmpeg PRIVATE -D BUILD_CUDA=${BUILD_CUDA} /MP)
+    target_compile_options(cuvista PRIVATE /MP)
+
+    target_link_options(cuvistaFFmpeg PRIVATE /NODEFAULTLIB:libcmt.lib)
     target_link_options(cuvista PRIVATE /NODEFAULTLIB:libcmt.lib)
+    
     if (TARGET cuvistaGui)
         target_compile_options(cuvistaGui PRIVATE /MP)
         target_link_options(cuvistaGui PRIVATE /NODEFAULTLIB:libcmt.lib) 
@@ -164,7 +135,9 @@ if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
     target_compile_options(Matrix PRIVATE -O1 -ffp-contract=off)
     target_compile_options(AvxStuff PRIVATE -O1 -ffp-contract=off -mavx512f -mavx512vl -mavx512bw -mavx512dq -mavx512vbmi2 -mavx512vbmi)
     target_compile_options(Deshaker PRIVATE -O1 -ffp-contract=off -D BUILD_CUDA=${BUILD_CUDA} -Wno-deprecated-declarations)
+    target_compile_options(cuvistaFFmpeg PRIVATE -O1 -ffp-contract=off -D BUILD_CUDA=${BUILD_CUDA})
     target_compile_options(cuvista PRIVATE -O1 -ffp-contract=off)
+    
     if (TARGET cuvistaGui)
         target_compile_options(cuvistaGui PRIVATE -ffp-contract=off)
     endif()

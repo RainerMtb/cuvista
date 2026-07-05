@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include "MovieWriterBase.hpp"
+#include "MovieWriter.hpp"
 #include "FFmpegMain.hpp"
 #include "ThreadPool.hpp"
 #include "ImageClasses.hpp"

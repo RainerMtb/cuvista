@@ -16,7 +16,8 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
-#include "MovieWriter.hpp"
+#include "MovieWriterImpl.hpp"
+#include "FrameResult.hpp"
 #include "Util.hpp"
 
 using namespace util;
