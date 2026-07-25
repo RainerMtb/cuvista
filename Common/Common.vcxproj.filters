@@ -20,7 +20,7 @@
     <ClInclude Include="CharMap.hpp" />
     <ClInclude Include="Color.hpp" />
     <ClInclude Include="ImageHeaders.hpp" />
-    <ClInclude Include="ThreadPoolBase.h" />
+    <ClInclude Include="ThreadPoolBase.hpp" />
     <ClInclude Include="FrameExecutor.hpp" />
     <ClInclude Include="OutputOption.hpp" />
     <ClInclude Include="ImageClasses.hpp" />

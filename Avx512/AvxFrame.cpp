@@ -18,6 +18,7 @@
 
 #include "AvxFrame.hpp"
 #include "AvxUtil.hpp"
+#include "Avx2Wrapper.hpp"
 #include <iostream>
 
 using namespace avx;
@@ -437,11 +438,11 @@ void AvxFrame::computeTerminate(int64_t frameIndex, std::span<PointResult> resul
 
 					//if (frameIndex == 1 && ix0 == 63 && iy0 == 1) avx::toConsole(s); //----------------
 
-					double ns = avx::norm1(s);
+					double ns = V8d::norm1(s);
 					std::span<V8d> g = s;
 					std::vector<size_t> piv = { 0, 1, 2, 3, 4, 5 };
-					avx::inv(g, piv);
-					double gs = avx::norm1(g);
+					V8d::inv(g, piv);
+					double gs = V8d::norm1(g);
 					double rcond = 1 / (ns * gs);
 					result = (std::isnan(rcond) || rcond < mData.deps) ? PointResultType::FAIL_SINGULAR : PointResultType::RUNNING;
 					//if (frameIndex == 1 && ix0 == 75 && iy0 == 10) avx::toConsole(g); //----------------
@@ -509,7 +510,7 @@ void AvxFrame::computeTerminate(int64_t frameIndex, std::span<PointResult> resul
 							V8d jm = dx1 * dy1 * f00 + dx1 * dy * f10 + dx * dy1 * f01 + dx * dy * f11;
 
 							//delta
-							V8f im = V8f(pyr1.addr(rowOffset + ym + r - ir, xm - ir), maskIW);
+							V8f im = pyr1.addr(rowOffset + ym + r - ir, xm - ir);
 							V8d nan = mData.dnan;
 							delta[r] = _mm512_mask_sub_pd(nan, mask, _mm512_cvtps_pd(im), jm);
 						}
@@ -856,7 +857,7 @@ void AvxFrame::yuvToRgba(const ImageYuv& yuv, Image8& dest) const {
 				u = _mm512_permute_ps(u, 0);
 				__m512 v = _mm512_cvtepi32_ps(_mm512_cvtepu8_epi32(_mm_maskz_expandloadu_epi8(0x1111, yuv.addr(2, r, c))));
 				v = _mm512_permute_ps(v, 0);
-				avx::yuvToRgbaPacked(y, u, v, destPtr + c * 4, fu, fv);
+				V16f::yuvToRgbaPacked(y, u, v, destPtr + c * 4, fu, fv);
 			}
 		}
 	};
@@ -882,13 +883,13 @@ void AvxFrame::vuyxToRgba(const AvxMatf& vuyx, Image8& dest) const {
 				V16f y = _mm512_permute_ps(vuyx4, mask8(2, 2, 2, 2));
 				V16f u = _mm512_permute_ps(vuyx4, mask8(1, 1, 1, 1));
 				V16f v = _mm512_permute_ps(vuyx4, mask8(0, 0, 0, 0));
-				avx::yuvToRgbaPacked(y * f, u * f, v * f, destPtr + c, fu, fv);
+				V16f::yuvToRgbaPacked(y * f, u * f, v * f, destPtr + c, fu, fv);
 			}
 			V16f vuyx4 = srcPtr + destW - 16;
 			V16f y = _mm512_permute_ps(vuyx4, mask8(2, 2, 2, 2));
 			V16f u = _mm512_permute_ps(vuyx4, mask8(1, 1, 1, 1));
 			V16f v = _mm512_permute_ps(vuyx4, mask8(0, 0, 0, 0));
-			avx::yuvToRgbaPacked(y * f, u * f, v * f, destPtr + destW - 16, fu, fv);
+			V16f::yuvToRgbaPacked(y * f, u * f, v * f, destPtr + destW - 16, fu, fv);
 		}
 	};
 	mPool.workAndWait(func, 0, vuyx.h());

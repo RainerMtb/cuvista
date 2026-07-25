@@ -2,13 +2,11 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="AvxFrame.cpp" />
-    <ClCompile Include="AvxUtil.cpp" />
     <ClCompile Include="AvxWrapper.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AvxFrame.hpp" />
     <ClInclude Include="AvxMat.hpp" />
-    <ClInclude Include="AvxUtil.hpp" />
     <ClInclude Include="AvxWrapper.hpp" />
   </ItemGroup>
   <ItemGroup>

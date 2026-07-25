@@ -19,30 +19,34 @@
 #pragma once
 
 #include <span>
-#include "AvxWrapper.hpp"
-#include "CoreData.hpp"
 #include "Affine2D.hpp"
+#include "CoreData.hpp"
+#include "ThreadPoolBase.hpp"
 
-namespace avx {
 
-	void yuvToRgbaPacked(V16f y, V16f u, V16f v, unsigned char* dest, V16f fu, V16f fv);
+class AffineSolverBase {
 
-	void inv(std::span<V8d> v);
-	void inv(std::span<V8d> v, std::span<size_t> piv);
+public:
+	virtual void computeSimilar(std::span<PointBase> points, Affine2D& dest) = 0;
+};
 
-	double norm1(std::span<V8d> v);
 
-	void toConsole(std::span<V8d> v, int digits = 5);
+class AffineSolverDirect : public AffineSolverBase {
 
-	void toConsole(V8d v, int digits = 5);
+protected:
+	Matd M;
+	size_t m = 0;
+	double dx = 0, dy = 0;
+	double b = 0, s0 = 0, s1 = 0, e = 0, f = 0, g = 0, h = 0, j = 0, k = 0, n = 0;
+	double rd[4] = {};
 
-	void computeSimilar(std::span<PointBase> points, Matd& M, Affine2D& affine);
+	ThreadPoolBase& threadPool;
 
-	static constexpr unsigned char mask8(int a, int b, int c, int d) {
-		return a & 3 | (b & 3) << 2 | (c & 3) << 4 | (d & 3) << 6;
-	}
+	void initParam(std::span<PointBase> points);
 
-	static constexpr unsigned char mask8(int m0, int m1, int m2, int m3, int m4, int m5, int m6, int m7) {
-		return m0 & 1 | (m1 & 1) << 1 | (m2 & 1) << 2 | (m3 & 1) << 3 | (m4 & 1) << 4 | (m5 & 1) << 5 | (m6 & 1) << 6 | (m7 & 1) << 7;
-	}
-}
+public:
+	AffineSolverDirect(ThreadPoolBase& threadPool, size_t maxPoints) :
+		threadPool { threadPool },
+		M { Matd::allocate(6, maxPoints * 2 + 16) }
+	{}
+};

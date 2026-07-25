@@ -21,17 +21,19 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <CharacterSet>Unicode</CharacterSet>
-    <EnableASAN>false</EnableASAN>
     <PlatformToolset>v145</PlatformToolset>
-    <VCToolsVersion>14.50.35717</VCToolsVersion>
-    <MSVCPreviewEnabled>false</MSVCPreviewEnabled>
+    <VCToolsVersion>
+    </VCToolsVersion>
+    <MSVCPreviewEnabled>true</MSVCPreviewEnabled>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <CharacterSet>Unicode</CharacterSet>
-    <VCToolsVersion>14.50.35717</VCToolsVersion>
+    <VCToolsVersion>
+    </VCToolsVersion>
     <PlatformToolset>v145</PlatformToolset>
-    <MSVCPreviewEnabled>false</MSVCPreviewEnabled>
+    <MSVCPreviewEnabled>true</MSVCPreviewEnabled>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Condition="Exists('$(QtMsBuild)\qt_defaults.props')">
@@ -98,7 +100,7 @@
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(SolutionDir)lib\$(Platform);$(SolutionDir)bin\$(Platform)\$(Configuration);$(CUDA_PATH)\lib\$(Platform);$(FFMPEG_PATH)\lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>AvxStuff.lib;Common.lib;cpu_features.lib;OpenCL.lib;Matrix.lib;Deshaker.lib;CudaStuff.lib;cudart_static.lib;cuda.lib;nvencodeapi.lib;Ole32.lib;ws2_32.lib;Shell32.lib;$(Qt_LIBS_)</AdditionalDependencies>
+      <AdditionalDependencies>Avx2.lib;Avx512.lib;Common.lib;cpu_features.lib;OpenCL.lib;Matrix.lib;Deshaker.lib;CudaStuff.lib;cudart_static.lib;cuda.lib;nvencodeapi.lib;Ole32.lib;ws2_32.lib;Shell32.lib;$(Qt_LIBS_)</AdditionalDependencies>
       <DelayLoadDLLs>nvEncodeAPI64.dll;OpenCL.dll;</DelayLoadDLLs>
       <IgnoreSpecificDefaultLibraries>libcmt.lib; msvcrt.lib; libcmtd.lib</IgnoreSpecificDefaultLibraries>
     </Link>
@@ -118,7 +120,7 @@
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(SolutionDir)lib\$(Platform);$(SolutionDir)bin\$(Platform)\$(Configuration);$(CUDA_PATH)\lib\$(Platform);$(FFMPEG_PATH)\lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>AvxStuff.lib;Common.lib;cpu_features.lib;OpenCL.lib;Matrix.lib;Deshaker.lib;CudaStuff.lib;cudart_static.lib;cuda.lib;nvencodeapi.lib;Ole32.lib;ws2_32.lib;Shell32.lib;$(Qt_LIBS_)</AdditionalDependencies>
+      <AdditionalDependencies>Avx2.lib;Avx512.lib;Common.lib;cpu_features.lib;OpenCL.lib;Matrix.lib;Deshaker.lib;CudaStuff.lib;cudart_static.lib;cuda.lib;nvencodeapi.lib;Ole32.lib;ws2_32.lib;Shell32.lib;$(Qt_LIBS_)</AdditionalDependencies>
       <DelayLoadDLLs>nvEncodeAPI64.dll;OpenCL.dll;</DelayLoadDLLs>
       <IgnoreSpecificDefaultLibraries>libcmt.lib;</IgnoreSpecificDefaultLibraries>
       <LinkTimeCodeGeneration>UseFastLinkTimeCodeGeneration</LinkTimeCodeGeneration>

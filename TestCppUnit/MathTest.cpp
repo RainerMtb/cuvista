@@ -20,6 +20,8 @@
 #include "CppUnitTest.h"
 #include "ThreadPool.hpp"
 #include "AffineTransform.hpp"
+#include "AvxWrapper.hpp"
+#include "Avx2Wrapper.hpp"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
@@ -41,10 +43,10 @@ public:
 			{ 1, 0, 0,  64.0,  -40.0, -24.2886,  0.0104, PointResultType::SUCCESS_ABSOLUTE_ERR }
 		};
 
-		AffineSolverSimple ass(2);
-		ass.computeSimilarDirect(pr[0], pr[1]);
-		testTransform(ass, pr[0]);
-		testTransform(ass, pr[1]);
+		AffineTransform at;
+		at.computeSimilarDirect(pr[0], pr[1]);
+		testTransform(at, pr[0]);
+		testTransform(at, pr[1]);
 	}
 
 	TEST_METHOD(transformAffine) {
@@ -102,18 +104,43 @@ public:
 
 		//checks
 		for (int i = 0; i < pointSets.size() && i < resultSet.size(); i++) {
-			std::wstring str = L"check " + std::to_wstring(i);
 			auto points = pointSets[i];
-			AffineSolverSimple trf1(points.size());
-			AffineSolver& as1 = trf1;
-			as1.computeSimilar(points);
-			Assert::IsTrue(resultSet[i].equals(trf1, 1e-12), str.c_str());
+			{
+				AffineSolver as;
+				as.setSolver(std::make_shared<AffineSolverSimple>(points.size()));
+				const AffineTransform& trf = as.computeSimilar(points);
+				std::wstring str = L"check " + std::to_wstring(i) + L" simple";
+				Assert::IsTrue(resultSet[i].equals(trf, 1e-12), str.c_str());
+			}
 
-			ThreadPool pool(2);
-			AffineSolverFast trf2(pool, points.size());
-			AffineSolver& as2 = trf2;
-			as2.computeSimilar(points);
-			Assert::IsTrue(resultSet[i].equals(trf2, 1e-12), str.c_str());
+			{
+				ThreadPool pool(4);
+				AffineSolver as;
+				as.setSolver(std::make_shared<AffineSolverFast>(pool, points.size()));
+				const AffineTransform& trf = as.computeSimilar(points);
+				as.computeSimilar(points);
+				std::wstring str = L"check " + std::to_wstring(i) + L" fast";
+				Assert::IsTrue(resultSet[i].equals(trf, 1e-12), str.c_str());
+			}
+
+			{
+				ThreadPool pool(4);
+				AffineSolver as;
+				as.setSolver(std::make_shared<AffineSolverAvx512>(pool, points.size()));
+				const AffineTransform& trf = as.computeSimilar(points);
+				as.computeSimilar(points);
+				std::wstring str = L"check " + std::to_wstring(i) + L" avx512";
+				Assert::IsTrue(resultSet[i].equals(trf, 1e-12), str.c_str());
+			}
+
+			{
+				ThreadPool pool(4);
+				AffineSolver as;
+				as.setSolver(std::make_shared<AffineSolverAvx2>(pool, points.size()));
+				const AffineTransform& trf = as.computeSimilar(points);
+				std::wstring str = L"check " + std::to_wstring(i) + L" avx2";
+				Assert::IsTrue(resultSet[i].equals(trf, 1e-12), str.c_str());
+			}
 		}
 	}
 
@@ -136,14 +163,14 @@ public:
 				}
 
 				//compute transforms
-				AffineSolverSimple trf1(points.size());
-				AffineSolver& as1 = trf1;
-				as1.computeSimilar(points);
+				AffineSolver as1;
+				as1.setSolver(std::make_shared<AffineSolverSimple>(points.size()));
+				const AffineTransform& trf1 = as1.computeSimilar(points);
 
 				ThreadPool pool(2);
-				AffineSolverFast trf2(pool, points.size());
-				AffineSolver& as2 = trf2;
-				as2.computeSimilar(points);
+				AffineSolver as2;
+				as2.setSolver(std::make_shared<AffineSolverFast>(pool, points.size()));
+				const AffineTransform& trf2 = as2.computeSimilar(points);
 
 				Assert::IsTrue(trf1.equals(trf2, 1e-12));
 			}
@@ -155,8 +182,8 @@ public:
 		PointResult p2 = { 1, 0, 0, 6, 10, 1.0, 0.5 };
 		PointResult p3 = { 2, 0, 0, 8, 14, 1.0, 0.5 };
 
-		AffineSolverSimple ass(8);
-		AffineSolver& as = ass;
+		AffineSolver as;
+		as.setSolver(std::make_shared<AffineSolverSimple>(8));
 		AffineTransform trf;
 
 		trf = as.computeSimilarDirect(p1, p2);

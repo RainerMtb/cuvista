@@ -11,9 +11,6 @@ target_include_directories(cuvista PRIVATE
 )
 
 target_link_libraries(cuvista PRIVATE 
-    Common
-    Matrix
-    CudaStuff 
     Deshaker
     "${CORE_LIBS}"
 )

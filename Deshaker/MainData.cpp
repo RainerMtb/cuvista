@@ -320,9 +320,15 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 		} else if (args.nextArg("log", next)) {
 			util::DebugLogger::open(next);
 
+		} else if (args.nextArg("noavx512")) {
+			useAvx512 = false;
+
+		} else if (args.nextArg("noavx2")) {
+			useAvx2 = false;
+
 		} else {
 			throw AVException("invalid parameter '" + args.str() + "'");
-		}
+		} 
 	}
 
 	//show title
@@ -385,7 +391,7 @@ void MainData::collectDeviceInfo() {
 	deviceList.push_back(&deviceInfoCpu);
 
 	//check for Avx512
-	if (deviceInfoAvx.hasAvx512()) {
+	if (useAvx512 && hasAvx512()) {
 		deviceInfoAvx.videoEncodingOptions = deviceInfoCpu.videoEncodingOptions;
 		deviceList.push_back(&deviceInfoAvx);
 	}
@@ -698,10 +704,6 @@ std::vector<DeviceInfoOpenCl> MainData::probeOpenCl() {
 
 std::string MainData::getCpuName() const {
 	return deviceInfoCpu.getName();
-}
-
-bool MainData::hasAvx10() const {
-	return deviceInfoAvx.hasAvx10();
 }
 
 bool MainData::hasAvx512() const {

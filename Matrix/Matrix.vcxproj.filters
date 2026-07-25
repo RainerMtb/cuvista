@@ -31,9 +31,11 @@
     <ClInclude Include="SVDecompositor.hpp">
       <Filter>Decomposition</Filter>
     </ClInclude>
+    <ClInclude Include="AffineSolverDirect.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Affine2D.cpp" />
+    <ClCompile Include="AffineSolverDirect.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="CMakeLists.txt" />

@@ -44,7 +44,7 @@ void avxCompute() {
 			std::vector<V8d> vector(s);
 			__mmask8 mask = (1 << s) - 1;
 			for (int i = 0; i < s; i++) vector[i] = V8d(a.addr(i, 0), mask);
-			avx::inv(vector);
+			V8d::inv(vector);
 			Matd ainvAvx = Matd::zeros(s, s);
 			for (int i = 0; i < s; i++) vector[i].storeu(ainvAvx.addr(i, 0), mask);
 
@@ -66,7 +66,7 @@ void avxCompute() {
 			//test norm1
 			double anCPU = a.norm1();
 			for (int i = 0; i < s; i++) vector[i] = V8d(a.addr(i, 0), mask);
-			double anAvx = avx::norm1(vector);
+			double anAvx = V8d::norm1(vector);
 			double d = anCPU - anAvx;
 
 			if (d == 0.0) {

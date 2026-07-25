@@ -23,8 +23,9 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
     <PlatformToolset>v145</PlatformToolset>
-    <MSVCPreviewEnabled>false</MSVCPreviewEnabled>
-    <VCToolsVersion>14.50.35717</VCToolsVersion>
+    <MSVCPreviewEnabled>true</MSVCPreviewEnabled>
+    <VCToolsVersion>
+    </VCToolsVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
@@ -32,8 +33,9 @@
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
     <PlatformToolset>v145</PlatformToolset>
-    <MSVCPreviewEnabled>false</MSVCPreviewEnabled>
-    <VCToolsVersion>14.50.35717</VCToolsVersion>
+    <MSVCPreviewEnabled>true</MSVCPreviewEnabled>
+    <VCToolsVersion>
+    </VCToolsVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">

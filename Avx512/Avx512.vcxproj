@@ -12,13 +12,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AvxFrame.cpp" />
-    <ClCompile Include="AvxUtil.cpp" />
     <ClCompile Include="AvxWrapper.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AvxFrame.hpp" />
     <ClInclude Include="AvxMat.hpp" />
-    <ClInclude Include="AvxUtil.hpp" />
     <ClInclude Include="AvxWrapper.hpp" />
   </ItemGroup>
   <ItemGroup>
@@ -39,17 +37,19 @@
     <EnableASAN>false</EnableASAN>
     <EnableFuzzer>false</EnableFuzzer>
     <PlatformToolset>v145</PlatformToolset>
-    <VCToolsVersion>14.50.35717</VCToolsVersion>
-    <MSVCPreviewEnabled>false</MSVCPreviewEnabled>
+    <VCToolsVersion>
+    </VCToolsVersion>
+    <MSVCPreviewEnabled>true</MSVCPreviewEnabled>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
-    <VCToolsVersion>14.50.35717</VCToolsVersion>
+    <VCToolsVersion>
+    </VCToolsVersion>
     <PlatformToolset>v145</PlatformToolset>
-    <MSVCPreviewEnabled>false</MSVCPreviewEnabled>
+    <MSVCPreviewEnabled>true</MSVCPreviewEnabled>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -78,7 +78,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions512</EnableEnhancedInstructionSet>
-      <AdditionalIncludeDirectories>$(SolutionDir)Common;$(SolutionDir)Matrix</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Avx2;$(SolutionDir)Common;$(SolutionDir)Matrix</AdditionalIncludeDirectories>
       <EnableVectorLength>VectorLength512</EnableVectorLength>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
@@ -94,7 +94,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions512</EnableEnhancedInstructionSet>
-      <AdditionalIncludeDirectories>$(SolutionDir)Common;$(SolutionDir)Matrix</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Avx2;$(SolutionDir)Common;$(SolutionDir)Matrix</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <EnableVectorLength>VectorLength512</EnableVectorLength>

@@ -19,9 +19,12 @@
 #include "pch.h"
 #include "CppUnitTest.h"
 #include "Utils.hpp"
+#include "AvxUtil.hpp"
+#include "Avx2Wrapper.hpp"
 #include "AvxWrapper.hpp"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
+using namespace avx;
 
 namespace AvxTest {
 

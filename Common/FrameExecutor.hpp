@@ -21,7 +21,7 @@
 #include <span>
 
 #include "DeviceInfoBase.hpp"
-#include "ThreadPoolBase.h"
+#include "ThreadPoolBase.hpp"
 #include "ImageClasses.hpp"
 #include "CoreData.hpp"
 

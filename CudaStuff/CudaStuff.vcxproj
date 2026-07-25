@@ -40,17 +40,19 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>MultiByte</CharacterSet>
     <PlatformToolset>v145</PlatformToolset>
-    <VCToolsVersion>14.50.35717</VCToolsVersion>
-    <MSVCPreviewEnabled>false</MSVCPreviewEnabled>
+    <VCToolsVersion>
+    </VCToolsVersion>
+    <MSVCPreviewEnabled>true</MSVCPreviewEnabled>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
-    <VCToolsVersion>14.50.35717</VCToolsVersion>
+    <VCToolsVersion>
+    </VCToolsVersion>
     <PlatformToolset>v145</PlatformToolset>
-    <MSVCPreviewEnabled>false</MSVCPreviewEnabled>
+    <MSVCPreviewEnabled>true</MSVCPreviewEnabled>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">

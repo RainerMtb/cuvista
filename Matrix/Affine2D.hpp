@@ -19,12 +19,12 @@
 #pragma once
 
 #include "Mat.hpp"
-#include <utility>
 #include <array>
 
 struct Point {
 	double x, y;
 };
+
 
 class Affine2D : protected Mat<double> {
 
@@ -36,6 +36,8 @@ protected:
 
 public:
 	Affine2D();
+
+	virtual ~Affine2D() = default;
 
 	//set rigid transform parameters directly
 	static Affine2D fromParam(double scale, double rot, double dx, double dy);

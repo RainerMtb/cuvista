@@ -22,7 +22,7 @@
 #include <vector>
 #include "AffineTransform.hpp"
 #include "MainData.hpp"
-#include "ThreadPoolBase.h"
+#include "ThreadPoolBase.hpp"
 
 struct ClusterSize {
 	int index, siz;
@@ -78,7 +78,7 @@ public:
 private:
 	const MainData& mData;
 	ThreadPoolBase& mPool;
-	std::unique_ptr<AffineSolver> mAffineSolver;
+	AffineSolver mAffineSolver;
 	FrameResultData mResultData;
 
 	struct {

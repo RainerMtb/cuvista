@@ -22,20 +22,20 @@
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
-    <EnableASAN>false</EnableASAN>
-    <EnableFuzzer>false</EnableFuzzer>
     <PlatformToolset>v145</PlatformToolset>
-    <VCToolsVersion>14.50.35717</VCToolsVersion>
-    <MSVCPreviewEnabled>false</MSVCPreviewEnabled>
+    <VCToolsVersion>
+    </VCToolsVersion>
+    <MSVCPreviewEnabled>true</MSVCPreviewEnabled>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
-    <VCToolsVersion>14.50.35717</VCToolsVersion>
+    <VCToolsVersion>
+    </VCToolsVersion>
     <PlatformToolset>v145</PlatformToolset>
-    <MSVCPreviewEnabled>false</MSVCPreviewEnabled>
+    <MSVCPreviewEnabled>true</MSVCPreviewEnabled>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -64,14 +64,14 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)cuvistaCli;$(SolutionDir)AvxStuff;$(SolutionDir)Common;$(SolutionDir)Matrix;$(SolutionDir)CudaStuff;$(SolutionDir)Deshaker;$(SolutionDir)include;$(SolutionDir)OpenCL-CLHPP\include;$(SolutionDir)OpenCL-Headers;$(SolutionDir)cpu_features\include;$(FFMPEG_PATH)\include;$(CUDA_PATH)\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Avx2;$(SolutionDir)Avx512;$(SolutionDir)Common;$(SolutionDir)Matrix;$(SolutionDir)CudaStuff;$(SolutionDir)Deshaker;$(SolutionDir)cuvistaCli;$(SolutionDir)include;$(SolutionDir)OpenCL-CLHPP\include;$(SolutionDir)OpenCL-Headers;$(SolutionDir)cpu_features\include;$(FFMPEG_PATH)\include;$(CUDA_PATH)\include</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(SolutionDir)lib\$(Platform);$(SolutionDir)bin\$(Platform)\$(Configuration);$(CUDA_PATH)\lib\$(Platform);$(FFMPEG_PATH)\lib;$(SolutionDir)bin_inter\cuvista\$(Platform)\$(Configuration)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>AvxStuff.lib;Common.lib;cpu_features.lib;OpenCl.lib;CudaStuff.lib;Matrix.lib;Deshaker.obj;Deshaker.lib;cudart_static.lib;nvencodeapi.lib;cuda.lib;Ole32.lib;ws2_32.lib;Shell32.lib</AdditionalDependencies>
+      <AdditionalDependencies>Avx2.lib;Avx512.lib;Common.lib;cpu_features.lib;OpenCl.lib;CudaStuff.lib;Matrix.lib;Deshaker.obj;Deshaker.lib;cudart_static.lib;nvencodeapi.lib;cuda.lib;Ole32.lib;ws2_32.lib;Shell32.lib</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>libcmt.lib; msvcrt.lib; libcmtd.lib</IgnoreSpecificDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>
@@ -84,14 +84,14 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)cuvistaCli;$(SolutionDir)AvxStuff;$(SolutionDir)Common;$(SolutionDir)Matrix;$(SolutionDir)CudaStuff;$(SolutionDir)Deshaker;$(SolutionDir)include;$(SolutionDir)OpenCL-CLHPP\include;$(SolutionDir)OpenCL-Headers;$(SolutionDir)cpu_features\include;$(FFMPEG_PATH)\include;$(CUDA_PATH)\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Avx2;$(SolutionDir)Avx512;$(SolutionDir)Common;$(SolutionDir)Matrix;$(SolutionDir)CudaStuff;$(SolutionDir)Deshaker;$(SolutionDir)cuvistaCli;$(SolutionDir)include;$(SolutionDir)OpenCL-CLHPP\include;$(SolutionDir)OpenCL-Headers;$(SolutionDir)cpu_features\include;$(FFMPEG_PATH)\include;$(CUDA_PATH)\include</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(SolutionDir)lib\$(Platform);$(SolutionDir)bin\$(Platform)\$(Configuration);$(CUDA_PATH)\lib\$(Platform);$(FFMPEG_PATH)\lib;$(SolutionDir)bin_inter\cuvista\$(Platform)\$(Configuration)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>AvxStuff.lib;Common.lib;cpu_features.lib;OpenCl.lib;CudaStuff.lib;Matrix.lib;Deshaker.obj;Deshaker.lib;cudart_static.lib;nvencodeapi.lib;cuda.lib;Ole32.lib;ws2_32.lib;Shell32.lib</AdditionalDependencies>
+      <AdditionalDependencies>Avx2.lib;Avx512.lib;Common.lib;cpu_features.lib;OpenCl.lib;CudaStuff.lib;Matrix.lib;Deshaker.obj;Deshaker.lib;cudart_static.lib;nvencodeapi.lib;cuda.lib;Ole32.lib;ws2_32.lib;Shell32.lib</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>libcmt.lib</IgnoreSpecificDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>

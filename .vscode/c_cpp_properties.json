@@ -3,7 +3,8 @@
         {
             "name": "Linux",
             "includePath": [
-                "${workspaceFolder}/AvxStuff",
+                "${workspaceFolder}/Avx2",
+                "${workspaceFolder}/Avx512",
                 "${workspaceFolder}/Common",
                 "${workspaceFolder}/CudaStuff",
                 "${workspaceFolder}/cuvistaCli",
@@ -24,7 +25,8 @@
         {
             "name": "Windows",
             "includePath": [
-                "${workspaceFolder}/AvxStuff",
+                "${workspaceFolder}/Avx2",
+                "${workspaceFolder}/Avx512",
                 "${workspaceFolder}/Common",
                 "${workspaceFolder}/CudaStuff",
                 "${workspaceFolder}/cuvistaCli",

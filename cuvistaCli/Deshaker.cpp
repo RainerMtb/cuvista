@@ -113,8 +113,8 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 
 		//----------- create Frame Executor Class
 		if (data.dummyFrame) {
-			DeviceInfoBase& dib = data.deviceInfoNull;
-			executor = dib.create(data, *frame);
+			DeviceInfoNull dev;
+			executor = dev.create(data, *frame);
 
 		} else {
 			DeviceInfoBase* dib = data.deviceList[data.deviceSelected];

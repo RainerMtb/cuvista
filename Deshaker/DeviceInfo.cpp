@@ -94,7 +94,7 @@ bool DeviceInfoAvx::hasAvx10() const {
 
 bool DeviceInfoAvx::hasAvx2() const {
 	auto features = cpuInfo.features;
-	return features.sse3 & features.avx2;
+	return features.fma3 & features.avx2;
 }
 
 

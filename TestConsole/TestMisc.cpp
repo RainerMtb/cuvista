@@ -53,35 +53,33 @@ void similarTransform() {
 		}
 	}
 	std::cout << n << " points" << std::endl;
+	AffineSolver as;
 
 	//slow method
-	AffineSolverSimple s1(points.size());
-	Matd x1 = similarTransformFunc(points, s1);
+	as.setSolver(std::make_shared<AffineSolverSimple>(points.size()));
+	Matd x1 = similarTransformFunc(points, as);
 
 	//direct method
 	ThreadPool thr(4);
-	AffineSolverFast s2(thr, points.size());
-	Matd x2 = similarTransformFunc(points, s2);
+	as.setSolver(std::make_shared<AffineSolverFast>(thr, points.size()));
+	Matd x2 = similarTransformFunc(points, as);
 
 	//avx solver
-	AffineSolverAvx s3(points.size());
-	Matd x3 = similarTransformFunc(points, s3);
+	as.setSolver(std::make_shared<AffineSolverAvx512>(thr, points.size()));
+	Matd x3 = similarTransformFunc(points, as);
 
 	for (int i = 0; i < 15; i++) {
 		std::ranges::shuffle(points, gen);
 
-		AffineSolverSimple s1(points.size());
-		AffineSolver& solver1 = s1;
-		Matd t1 = solver1.computeSimilar(points).toParamsMat();
+		as.setSolver(std::make_shared<AffineSolverSimple>(points.size()));
+		Matd t1 = as.computeSimilar(points).toParamsMat();
 
 		ThreadPool thr(8);
-		AffineSolverFast s2(thr, points.size());
-		AffineSolver& solver2 = s2;
-		Matd t2 = solver2.computeSimilar(points).toParamsMat();
+		as.setSolver(std::make_shared<AffineSolverFast>(thr, points.size()));
+		Matd t2 = as.computeSimilar(points).toParamsMat();
 
-		AffineSolverAvx s3(points.size());
-		AffineSolver& solver3 = s3;
-		Matd t3 = solver3.computeSimilar(points).toParamsMat();
+		as.setSolver(std::make_shared<AffineSolverAvx512>(thr, points.size()));
+		Matd t3 = as.computeSimilar(points).toParamsMat();
 
 		std::cout << "results equal 1-2: " << t1.minus(t2).timesTransposed().scalar() << ", ";
 		std::cout << "results equal 1-3: " << t1.minus(t3).timesTransposed().scalar() << std::endl;

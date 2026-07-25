@@ -21,20 +21,9 @@
 #include <immintrin.h>
 #include <iostream>
 #include <vector>
-#include <cstdint>
+#include <span>
+#include "AffineSolverDirect.hpp"
 
-struct Iotas {
-	int32_t i32x8[16] = { 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7 };
-	float fx8[16] = { 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7 };
-	
-	int32_t i32x16[32] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
-    float fx16[32] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
-
-	int64_t i64x8[16] = {0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7};
-	double dx8[16] = {0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7};
-};
-
-inline Iotas iotas;
 
 //wrapper for __m512 (512 bits - 16 floats)
 class V16f {
@@ -95,126 +84,8 @@ public:
 	std::vector<float> vector() const;
 
 	operator __m512() const;
-};
 
-
-//wrapper for __m256 (256 bits - 8 floats)
-class V8f {
-	__m256 a;
-
-public:
-	V8f();
-	V8f(__m256 a);
-
-	V8f(float a, float b, float c, float d, float e, float f, float g, float h);
-	V8f(float a, float b);
-	V8f(float a);
-
-	V8f(const float* data);
-	V8f(const float* data, __mmask8 mask);
-	V8f(const unsigned char* data);
-	V8f(const unsigned char* data, __mmask8 mask);
-
-	V8f operator + (V8f other) const;
-	V8f operator - (V8f other) const;
-	V8f operator * (V8f other) const;
-	V8f operator / (V8f other) const;
-	V8f operator += (V8f other);
-	V8f operator -= (V8f other);
-	V8f operator *= (V8f other);
-	V8f operator /= (V8f other);
-	V8f add(V8f other) const;
-	V8f sub(V8f other) const;
-	V8f mul(V8f other) const;
-	V8f div(V8f other) const;
-
-	template <int i> V8f rot() const {
-		return _mm256_castsi256_ps(_mm256_alignr_epi32(_mm256_castps_si256(a), _mm256_castps_si256(a), i));
-	}
-
-	V8f rot(int i) const;
-
-	V8f broadcast(int i) const;
-
-	float at(size_t i) const;
-
-	float operator [] (size_t i) const;
-
-	friend std::ostream& operator << (std::ostream& os, const V8f& vec);
-
-	float sum(int from, int to) const;
-
-	float sum() const;
-
-	V8f clamp(V8f lo, V8f hi) const;
-
-	void storeu(float* dest) const;
-
-	void storeu(float* dest, __mmask8 mask) const;
-
-	std::vector<float> vector() const;
-
-	operator __m256() const;
-};
-
-
-//wrapper for __m128 (128 bits - 4 floats)
-class V4f {
-	__m128 a;
-
-public:
-	V4f();
-	V4f(__m128 a);
-
-	V4f(float a, float b, float c, float d);
-	V4f(float a, float b);
-	V4f(float a);
-
-	V4f(const float* data);
-	V4f(const float* data, __mmask8 mask);
-	V4f(const unsigned char* data);
-	V4f(const unsigned char* data, __mmask8 mask);
-
-	V4f operator + (V4f other) const;
-	V4f operator - (V4f other) const;
-	V4f operator * (V4f other) const;
-	V4f operator / (V4f other) const;
-	V4f operator += (V4f other);
-	V4f operator -= (V4f other);
-	V4f operator *= (V4f other);
-	V4f operator /= (V4f other);
-	V4f add(V4f other) const;
-	V4f sub(V4f other) const;
-	V4f mul(V4f other) const;
-	V4f div(V4f other) const;
-
-	template <int i> V4f rot() const {
-		return _mm_castsi128_ps(_mm_alignr_epi32(_mm_castps_si128(a), _mm_castps_si128(a), i));
-	}
-
-	V4f rot(int i) const;
-
-	V4f broadcast(int i) const;
-
-	float at(size_t i) const;
-
-	float operator [] (size_t i) const;
-	
-	friend std::ostream& operator << (std::ostream& os, const V4f& vec);
-
-	float sum(int from, int to) const;
-
-	float sum() const;
-
-	V4f clamp(V4f lo, V4f hi) const;
-
-	void storeu(float* dest) const;
-
-	void storeu(float* dest, __mmask8 mask) const;
-
-	std::vector<float> vector() const;
-
-	operator __m128() const;
+	static void yuvToRgbaPacked(V16f y, V16f u, V16f v, unsigned char* dest, V16f fu, V16f fv);
 };
 
 
@@ -276,4 +147,21 @@ public:
 	std::vector<double> vector() const;
 
 	operator __m512d() const;
+
+	static void inv(std::span<V8d> v);
+	static void inv(std::span<V8d> v, std::span<size_t> piv);
+
+	static double norm1(std::span<V8d> v);
+
+	static void toConsole(std::span<V8d> v, int digits = 5);
+	static void toConsole(V8d v, int digits = 5);
+};
+
+
+class AffineSolverAvx512 : public AffineSolverDirect {
+
+public:
+	AffineSolverAvx512(ThreadPoolBase& threadPool, size_t maxPoints);
+
+	void computeSimilar(std::span<PointBase> points, Affine2D& dest) override;
 };

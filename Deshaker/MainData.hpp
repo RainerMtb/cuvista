@@ -111,7 +111,6 @@ public:
 	bool deviceRequested = false;
 	size_t deviceSelected = 0;
 	int cudaEncodingDeviceIndex = 0;
-	DeviceInfoNull deviceInfoNull;
 	std::optional<int> cpuThreadsRequired = std::nullopt;
 
 	std::shared_ptr<SamplerBase<PointContext>> sampler = std::make_shared<UrbgSampler<PointContext, PseudoRandomSource>>();
@@ -128,6 +127,8 @@ public:
 	bool printSummary = true;
 	bool runTransformClassic = true;
 	bool runTransformDbScan = true;
+	bool useAvx512 = true;
+	bool useAvx2 = true;
 
 	std::string fileIn;					//input file path
 	std::string fileOut;				//output file path
@@ -179,8 +180,6 @@ public:
 	double timeElapsedSeconds() const;
 
 	std::string getCpuName() const;
-
-	bool hasAvx10() const;
 
 	bool hasAvx512() const;
 

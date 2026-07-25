@@ -36,7 +36,7 @@
 #include "SVDecompositor.hpp"
 
 #include "CoreMat.hpp"
-#include "ThreadPoolBase.h"
+#include "ThreadPoolBase.hpp"
 #include "MatIterator.hpp"
 #include "OutputLine.hpp"
 #include "Util.hpp"

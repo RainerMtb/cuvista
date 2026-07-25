@@ -28,9 +28,6 @@ target_include_directories(cuvistaGui PRIVATE "${PROJECT_SOURCE_DIR}/cuvistaGui"
 set_target_properties(cuvistaGui PROPERTIES WIN32_EXECUTABLE ON)
 
 target_link_libraries(cuvistaGui PRIVATE
-    Common
-    Matrix 
-    CudaStuff 
     Deshaker 
     "${CORE_LIBS}"
     Qt6::Core

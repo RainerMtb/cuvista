@@ -21,7 +21,8 @@
 #include <span>
 #include "Affine2D.hpp"
 #include "CoreData.hpp"
-#include "ThreadPoolBase.h"
+#include "AffineSolverDirect.hpp"
+#include "ThreadPoolBase.hpp"
 
 
 class AffineTransform : public Affine2D {
@@ -58,51 +59,41 @@ public:
 
 class AffineSolver : public AffineTransform {
 
-public:
-	//compute similar transform, no shear
-	virtual const AffineTransform& computeSimilar(std::span<PointBase> points) = 0;
+protected:
+	std::shared_ptr<AffineSolverBase> solver;
 
-	virtual const AffineTransform& computeSimilar(std::span<PointContext> points);
-	virtual const AffineTransform& computeSimilar(std::span<PointResult> points);
-	
-	virtual ~AffineSolver() {}
+public:
+	void setSolver(std::shared_ptr<AffineSolverBase> solver);
+
+	//compute similar transform, no shear
+	const AffineTransform& computeSimilar(std::span<PointBase> points);
+	const AffineTransform& computeSimilar(std::span<PointContext> points);
+	const AffineTransform& computeSimilar(std::span<PointResult> points);
 };
 
-class AffineSolverSimple : public AffineSolver {
+
+class AffineSolverSimple : public AffineSolverBase {
 
 private:
 	Matd Adata, bdata;
 
-	const AffineTransform& computeSimilar(std::span<PointBase> points) override;
+	void computeSimilar(std::span<PointBase> points, Affine2D& dest) override;
 
 public:
 	AffineSolverSimple(size_t maxPoints) :
 		Adata { Matd::allocate(maxPoints * 2, 4) },
-		bdata { Matd::allocate(maxPoints * 2, 1) } {}
+		bdata { Matd::allocate(maxPoints * 2, 1) } 
+	{}
 };
 
-class AffineSolverFast : public AffineSolver {
+
+class AffineSolverFast : public AffineSolverDirect {
 
 private:
-	ThreadPoolBase& threadPool;
-	Matd Adata;
-
-	const AffineTransform& computeSimilar(std::span<PointBase> points) override;
+	void computeSimilar(std::span<PointBase> points, Affine2D& dest) override;
 
 public:
 	AffineSolverFast(ThreadPoolBase& threadPool, size_t maxPoints) :
-		threadPool { threadPool },
-		Adata { Matd::allocate(6, maxPoints * 2) } {}
-};
-
-class AffineSolverAvx : public AffineSolver {
-
-private:
-	Matd M;
-
-	const AffineTransform& computeSimilar(std::span<PointBase> points) override;
-
-public:
-	AffineSolverAvx(size_t maxPoints) :
-		M { Matd::allocate(6, maxPoints * 2 + 8) } {}
+		AffineSolverDirect(threadPool, maxPoints)
+	{}
 };

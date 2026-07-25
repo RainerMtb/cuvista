@@ -39,7 +39,7 @@ int main() {
 		/*12*/ "-i //READYNAS/Videos/Sugababes_push_the_button.mp4 -o f:/videoOut.mp4 -y",
 	};
 
-	int idx = 12;
+	int idx = 0;
 	std::string argsLine = argsLines[idx];
 	std::cout << "------- TestCuvista -------" << std::endl;
 	std::cout << "------- params: " << argsLine << std::endl << std::endl;

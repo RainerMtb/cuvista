@@ -22,7 +22,7 @@
 #include <vector>
 #include <array>
 #include <iostream>
-#include "ThreadPoolBase.h"
+#include "ThreadPoolBase.hpp"
 
 #undef min
 #undef max

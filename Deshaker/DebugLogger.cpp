@@ -61,6 +61,9 @@ void DebugLogger::open(const std::string& logger) {
 	} else if (std::smatch matcher; std::regex_match(logger, matcher, patternTcp)) {
 		debugLoggerPtr = std::make_shared<DebugLoggerTcp>(matcher[1].str(), std::stoi(matcher[2]));
 
+	} else if (logger == "console://") {
+		debugLoggerPtr = std::make_shared<DebugLoggerConsole>();
+
 	} else {
 		throw AVException("invalid log parameter '" + logger + "'");
 	}

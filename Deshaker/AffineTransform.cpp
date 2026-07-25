@@ -17,7 +17,17 @@
  */
 
 #include "AffineTransform.hpp"
-#include "AvxUtil.hpp"
+#include "AvxWrapper.hpp"
+#include "Avx2Wrapper.hpp"
+
+void AffineSolver::setSolver(std::shared_ptr<AffineSolverBase> solver) {
+	this->solver = solver;
+}
+
+const AffineTransform& AffineSolver::computeSimilar(std::span<PointBase> points) {
+	solver->computeSimilar(points, *this);
+	return *this;
+}
 
 const AffineTransform& AffineSolver::computeSimilar(std::span<PointResult> points) {
 	assert(points.size() >= 2 && "similar transform needs at least two points");
@@ -29,6 +39,11 @@ const AffineTransform& AffineSolver::computeSimilar(std::span<PointContext> poin
 	assert(points.size() >= 2 && "similar transform needs at least two points");
 	std::vector<PointBase> vectorBase(points.begin(), points.end());
 	return computeSimilar(vectorBase);
+}
+
+std::ostream& operator << (std::ostream& os, const AffineTransform& trf) {
+	os << "trf: scale=" << trf.scale() << ", rotm=" << trf.rotMinutes() << ", dx=" << trf.dX() << ", dy=" << trf.dY();
+	return os;
 }
 
 const AffineTransform& AffineTransform::computeSimilarDirect(const PointResult& p1, const PointResult& p2) {
@@ -48,182 +63,6 @@ const AffineTransform& AffineTransform::computeSimilarDirect(const PointResult& 
 	ludec.solveAffine(bp, array);
 	setParam(array[0], array[1], array[2], array[3]);
 	return *this;
-}
-
-const AffineTransform& AffineSolverSimple::computeSimilar(std::span<PointBase> points) {
-	size_t m = points.size() * 2;
-	Matd A = Adata.share(m, 4);
-	A.setValues(0.0);
-	Matd b = bdata.share(m, 1);
-	b.setValues(0.0);
-	auto it = points.begin();
-	for (size_t i = 0; i < points.size(); i++) {
-		double xx = it->x;
-		double yy = it->y;
-		size_t k = i * 2;
-
-		A[k][0] = xx;
-		A[k][1] = yy;
-		A[k][2] = 1.0;
-		A[k + 1][0] = yy;
-		A[k + 1][1] = -xx;
-		A[k + 1][3] = 1.0;
-
-		b[k][0] = xx + it->u;
-		b[k + 1][0] = yy + it->v;
-
-		it++;
-	}
-	//savePointResults(begin, count);
-	QRDecompositor<double> qrdec(A);
-	auto res = qrdec.solve(b);
-	setParam(res->at(0, 0), res->at(1, 0), res->at(2, 0), res->at(3, 0));
-	return *this;
-}
-
-const AffineTransform& AffineSolverFast::computeSimilar(std::span<PointBase> points) {
-	//util::ConsoleTimer timer("computeSimilar");
-	size_t m = points.size() * 2;
-	Matd A = Adata.share(6, m);  //A is transposed when compared to loop version
-
-	int dy = points[0].y;        //represents a2, needs to be smallest value
-	int dx = points[1].x;        //represents a3
-	long long int nn = 0;        //int could overflow
-	long long int s0 = 0;        //in docs s1
-	long long int s1 = 0;        //in docs s2
-
-	double* p = A.addr(4, 0);    //5th row holds adjusted x and y values
-	double* q = A.addr(5, 0);    //6th row holds adjusted b values
-
-	//accumulate s0, s1, nn and adjust coords
-	auto it = points.begin();
-	for (size_t idx = 0; idx < m; ) {
-		int x = it->x - dx;
-		p[idx] = x;
-		s0 += x;
-		nn += x * x;
-		q[idx] = it->x + it->u - dx;
-		idx++;
-
-		int y = it->y - dy;
-		p[idx] = y;
-		s1 += y;
-		nn += y * y;
-		q[idx] = it->y + it->v - dy;
-		idx++;
-
-		it++;
-	}
-
-	//compute parameters
-	double sign0 = p[0] < 0 ? -1.0 : 1.0;
-	double n = std::sqrt(nn) * sign0;
-	double b = p[0] + n;
-	double sign2 = sign0 * n * b < p[3] * s1 ? -1.0 : 1.0;
-	double t = sign2 * std::sqrt(points.size() * nn - s0 * s0 - s1 * s1);
-	double z = b * (n + t) - p[3] * s1;
-	double e = n / t;
-	double f = s1 / (b * t);
-	
-	double sn = s0 + n;
-	double g = sn / (b * t);
-	double h = (p[3] / b * (sn * sn + s1 * s1) - s1 * (n + t)) / (t * z);
-	double j = sn * (t + n) / (t * z);
-	double k = p[3] * n * sn / (t * z);
-	
-	double rd[] = { n, -n, t / n, t / n };
-
-	std::vector<std::future<void>> futs(4);
-	//first row of matrix A
-	futs[0] = threadPool.add([&] {
-		double* a = A.data();
-		a[0] = b / n;
-		a[1] = 0.0;
-		a[2] = 0.0;
-		a[3] = p[3] / n;
-		for (size_t idx = 4; idx < m; ) {
-			a[idx] = p[idx] / n;
-			idx++;
-			a[idx] = p[idx] / n;
-			idx++;
-		}
-	});
-	//second row
-	futs[1] = threadPool.add([&] {
-		double* a = A.data() + m;
-		a[0] = 0.0;
-		a[1] = 1.0 + p[0] / n;
-		a[2] = -p[3] / n;
-		a[3] = 0.0;
-		for (size_t idx = 4; idx < m; ) {
-			a[idx] = -p[idx + 1] / n;
-			idx++;
-			a[idx] = p[idx - 1] / n;
-			idx++;
-		}
-	});
-	//third row
-	futs[2] = threadPool.add([&] {
-		double* a = A.data() + m * 2;
-		a[0] = -s0 / n;
-		a[1] = s1 / n;
-		a[2] = 1.0 + e - p[3] * f;
-		a[3] = -p[3] * g;
-		for (size_t idx = 4; idx < m; ) {
-			a[idx] = e - p[idx + 1] * f - p[idx] * g;
-			idx++;
-			a[idx] = p[idx - 1] * f - p[idx] * g;
-			idx++;
-		}
-	});
-	//fourth row
-	futs[3] = threadPool.add([&] {
-		double* a = A.data() + m * 3;
-		a[0] = -s1 / n;
-		a[1] = -s0 / n;
-		a[2] = 0.0;
-		a[3] = 1.0 + e + p[3] * h;
-		for (size_t idx = 4; idx < m; ) {
-			a[idx] = p[idx + 1] * j + p[idx] * h - k;
-			idx++;
-			a[idx] = e + p[idx] * h - p[idx - 1] * j;
-			idx++;
-		}
-	});
-	for (auto& f : futs) f.wait();
-	//A.trans().toConsole();
-
-	//back substitution step 1
-	for (size_t k = 0; k < 4; k++) {
-		double* row = A.addr(k, 0);
-		double s = std::inner_product(row + k, row + m, q + k, 0.0);
-		s /= -A[k][k];
-		for (size_t i = k; i < m; i++) {
-			q[i] += s * A[k][i];
-		}
-	}
-
-	//back substitution step 2, only need first four values
-	for (int k = 3; k >= 0; k--) {
-		q[k] /= -rd[k];
-		for (int i = 0; i < k; i++) {
-			q[i] -= q[k] * A[k][i];
-		}
-	}
-
-	//readjust transform parameter values back to given points
-	setParam(q[0], q[1], -dx * q[0] - dy * q[1] + q[2] + dx, dx * q[1] - dy * q[0] + q[3] + dy);
-	return *this;
-}
-
-const AffineTransform& AffineSolverAvx::computeSimilar(std::span<PointBase> points) {
-	avx::computeSimilar(points, M, *this);
-	return *this;
-}
-
-std::ostream& operator << (std::ostream& os, const AffineTransform& trf) {
-	os << "trf: scale=" << trf.scale() << ", rotm=" << trf.rotMinutes() << ", dx=" << trf.dX() << ", dy=" << trf.dY();
-	return os;
 }
 
 const AffineTransform& AffineTransform::computeAffineDirect(const PointResult& p1, const PointResult& p2, const PointResult& p3) {
@@ -274,4 +113,123 @@ bool AffineTransform::computeAffine(std::vector<PointResult>& points) {
 	auto res = A.solveInPlace(b);
 	setParam(res->at(0, 0), res->at(1, 0), res->at(2, 0), res->at(3, 0), res->at(4, 0), res->at(5, 0));
 	return res.has_value();
+}
+
+void AffineSolverSimple::computeSimilar(std::span<PointBase> points, Affine2D& dest) {
+	size_t m = points.size() * 2;
+	Matd A = Adata.share(m, 4);
+	A.setValues(0.0);
+	Matd b = bdata.share(m, 1);
+	b.setValues(0.0);
+	auto it = points.begin();
+	for (size_t i = 0; i < points.size(); i++) {
+		double xx = it->x;
+		double yy = it->y;
+		size_t k = i * 2;
+
+		A[k][0] = xx;
+		A[k][1] = yy;
+		A[k][2] = 1.0;
+		A[k + 1][0] = yy;
+		A[k + 1][1] = -xx;
+		A[k + 1][3] = 1.0;
+
+		b[k][0] = xx + it->u;
+		b[k + 1][0] = yy + it->v;
+
+		it++;
+	}
+	//savePointResults(begin, count);
+	QRDecompositor<double> qrdec(A);
+	auto res = qrdec.solve(b);
+	dest.setParam(res->at(0, 0), res->at(1, 0), res->at(2, 0), res->at(3, 0));
+}
+
+void AffineSolverFast::computeSimilar(std::span<PointBase> points, Affine2D& dest) {
+	//util::ConsoleTimer timer("computeSimilar fast");
+	initParam(points);
+	
+	double* p = M.addr(4, 0);
+	double* q = M.addr(5, 0);
+
+	std::vector<std::future<void>> futs(4);
+	//first row of matrix A
+	futs[0] = threadPool.add([&] {
+		double* a = M.addr(0, 0);
+		a[0] = b / n;
+		a[1] = 0.0;
+		a[2] = 0.0;
+		a[3] = p[3] / n;
+		for (size_t idx = 4; idx < m; ) {
+			a[idx] = p[idx] / n;
+			idx++;
+			a[idx] = p[idx] / n;
+			idx++;
+		}
+	});
+	//second row
+	futs[1] = threadPool.add([&] {
+		double* a = M.addr(1, 0);
+		a[0] = 0.0;
+		a[1] = 1.0 + p[0] / n;
+		a[2] = -p[3] / n;
+		a[3] = 0.0;
+		for (size_t idx = 4; idx < m; ) {
+			a[idx] = -p[idx + 1] / n;
+			idx++;
+			a[idx] = p[idx - 1] / n;
+			idx++;
+		}
+	});
+	//third row
+	futs[2] = threadPool.add([&] {
+		double* a = M.addr(2, 0);
+		a[0] = -s0 / n;
+		a[1] = s1 / n;
+		a[2] = 1.0 + e - p[3] * f;
+		a[3] = -p[3] * g;
+		for (size_t idx = 4; idx < m; ) {
+			a[idx] = e - p[idx + 1] * f - p[idx] * g;
+			idx++;
+			a[idx] = p[idx - 1] * f - p[idx] * g;
+			idx++;
+		}
+	});
+	//fourth row
+	futs[3] = threadPool.add([&] {
+		double* a = M.addr(3, 0);
+		a[0] = -s1 / n;
+		a[1] = -s0 / n;
+		a[2] = 0.0;
+		a[3] = 1.0 + e + p[3] * h;
+		for (size_t idx = 4; idx < m; ) {
+			a[idx] = p[idx + 1] * j + p[idx] * h - k;
+			idx++;
+			a[idx] = e + p[idx] * h - p[idx - 1] * j;
+			idx++;
+		}
+	});
+	for (auto& f : futs) f.wait();
+	//A.trans().toConsole();
+
+	//back substitution step 1
+	for (size_t k = 0; k < 4; k++) {
+		double* row = M.addr(k, 0);
+		double s = std::inner_product(row + k, row + m, q + k, 0.0);
+		s /= -M[k][k];
+		for (size_t i = k; i < m; i++) {
+			q[i] += s * M[k][i];
+		}
+	}
+
+	//back substitution step 2, only need first four values
+	for (int k = 3; k >= 0; k--) {
+		q[k] /= -rd[k];
+		for (int i = 0; i < k; i++) {
+			q[i] -= q[k] * M[k][i];
+		}
+	}
+
+	//readjust transform parameter values back to given points
+	dest.setParam(q[0], q[1], -dx * q[0] - dy * q[1] + q[2] + dx, dx * q[1] - dy * q[0] + q[3] + dy);
 }

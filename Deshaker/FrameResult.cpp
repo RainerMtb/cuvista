@@ -19,6 +19,8 @@
 #include "MovieWriterImpl.hpp"
 #include "FrameResult.hpp"
 #include "Util.hpp"
+#include "AvxWrapper.hpp"
+#include "Avx2Wrapper.hpp"
 
 using namespace util;
 
@@ -34,10 +36,14 @@ FrameResult::FrameResult(MainData& data, ThreadPoolBase& threadPool) :
 	size_t siz = data.resultCount;
 
 	//create solver class
-	if (data.hasAvx512()) {
-		mAffineSolver = std::make_unique<AffineSolverAvx>(siz);
+	if (data.useAvx512 && data.hasAvx512()) {
+		mAffineSolver.setSolver(std::make_shared<AffineSolverAvx512>(threadPool, siz));
+
+	} else if (data.useAvx2 && data.hasAvx2()) {
+		mAffineSolver.setSolver(std::make_shared<AffineSolverAvx2>(threadPool, siz));
+
 	} else {
-		mAffineSolver = std::make_unique<AffineSolverFast>(threadPool, siz);
+		mAffineSolver.setSolver(std::make_shared<AffineSolverFast>(threadPool, siz));
 	}
 
 	//prepare lists
@@ -66,8 +72,8 @@ const AffineTransform& FrameResult::getTransform() const {
 }
 
 void FrameResult::reset() {
-	mAffineSolver->reset();
-	mAffineSolver->frameIndex = 0;
+	mAffineSolver.reset();
+	mAffineSolver.frameIndex = 0;
 	mResultData.transform.reset();
 }
 
@@ -106,8 +112,8 @@ struct {
 
 const AffineTransform& FrameResult::computeTransform(std::span<PointResult> results, int64_t frameIndex, double gamma) {
 	//util::ConsoleTimer timer("FrameResult");
-	mAffineSolver->reset();
-	mAffineSolver->frameIndex = frameIndex;
+	mAffineSolver.reset();
+	mAffineSolver.frameIndex = frameIndex;
 	mResultData.frameIndex = frameIndex;
 	mResultData.gamma = gamma;
 	mResultData.bestCluster.clear();
@@ -241,14 +247,14 @@ AffineTransform FrameResult::computeClassic(size_t numValid, int64_t frameIndex)
 		averageLength /= mResultData.consList.size();
 
 		//transform for selected points
-		trf = mAffineSolver->computeSimilar(mResultData.consList);
+		trf = mAffineSolver.computeSimilar(mResultData.consList);
 
 		numCons = 0;
 		size_t numConsAbsolute = 0;
 		size_t numConsRelative = 0;
 		//calculate error distance based on transform
 		for (PointContext& pc : mResultData.consList) {
-			auto [tx, ty] = mAffineSolver->transform(pc.x, pc.y);
+			auto [tx, ty] = mAffineSolver.transform(pc.x, pc.y);
 			pc.distance = sqr(pc.x + pc.u - tx) + sqr(pc.y + pc.v - ty);
 			pc.distanceRelative = pc.distance / pc.length;
 
@@ -403,9 +409,9 @@ void FrameResult::computeDbScan(std::span<PointResult> results, size_t numValid,
 void FrameResult::computeDbScanTransform(int64_t frameIndex) {
 	AffineTransform trf;
 
-	trf = mAffineSolver->computeSimilar(mResultData.bestCluster);
+	trf = mAffineSolver.computeSimilar(mResultData.bestCluster);
 	for (PointContext& pc : mResultData.bestCluster) {
-		auto [tx, ty] = mAffineSolver->transform(pc.x, pc.y);
+		auto [tx, ty] = mAffineSolver.transform(pc.x, pc.y);
 		pc.distance = sqr(pc.x + pc.u - tx) + sqr(pc.y + pc.v - ty);
 		pc.distanceRelative = pc.distance / pc.length;
 	}
@@ -415,7 +421,7 @@ void FrameResult::computeDbScanTransform(int64_t frameIndex) {
 	//writeVideo(mBestCluster, frameIndex, std::to_string(frameIndex) + " dbscan"); // <<<<<<<<<<<<
 	size_t siz = mResultData.bestCluster.size() * params.finalSizePercent / 100;
 	mResultData.bestCluster.resize(siz);
-	mResultData.transform = mAffineSolver->computeSimilar(mResultData.bestCluster);
+	mResultData.transform = mAffineSolver.computeSimilar(mResultData.bestCluster);
 }
 
 std::vector<int> FrameResultData::getClusterSizes() const {

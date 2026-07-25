@@ -22,19 +22,20 @@
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
-    <EnableASAN>false</EnableASAN>
-    <EnableFuzzer>false</EnableFuzzer>
     <PlatformToolset>v145</PlatformToolset>
-    <VCToolsVersion>14.50.35717</VCToolsVersion>
-    <MSVCPreviewEnabled>false</MSVCPreviewEnabled>
+    <VCToolsVersion>
+    </VCToolsVersion>
+    <MSVCPreviewEnabled>true</MSVCPreviewEnabled>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
-    <VCToolsVersion>14.50.35717</VCToolsVersion>
+    <VCToolsVersion>
+    </VCToolsVersion>
     <PlatformToolset>v145</PlatformToolset>
-    <MSVCPreviewEnabled>false</MSVCPreviewEnabled>
+    <MSVCPreviewEnabled>true</MSVCPreviewEnabled>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -66,7 +67,7 @@
     <ClCompile>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)AvxStuff;$(SolutionDir)Common;$(SolutionDir)Matrix;$(SolutionDir)CudaStuff;$(SolutionDir)OpenCL-CLHPP\include;$(SolutionDir)OpenCL-Headers;$(SolutionDir)cpu_features\include;$(SolutionDir)include;$(FFMPEG_PATH)\include;$(CUDA_PATH)\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Avx2;$(SolutionDir)Avx512;$(SolutionDir)Common;$(SolutionDir)Matrix;$(SolutionDir)CudaStuff;$(SolutionDir)OpenCL-CLHPP\include;$(SolutionDir)OpenCL-Headers;$(SolutionDir)cpu_features\include;$(SolutionDir)include;$(FFMPEG_PATH)\include;$(CUDA_PATH)\include</AdditionalIncludeDirectories>
       <IntrinsicFunctions>false</IntrinsicFunctions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PreprocessorDefinitions>_UNICODE;UNICODE;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -84,7 +85,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)AvxStuff;$(SolutionDir)Common;$(SolutionDir)Matrix;$(SolutionDir)CudaStuff;$(SolutionDir)OpenCL-CLHPP\include;$(SolutionDir)OpenCL-Headers;$(SolutionDir)cpu_features\include;$(SolutionDir)include;$(FFMPEG_PATH)\include;$(CUDA_PATH)\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Avx2;$(SolutionDir)Avx512;$(SolutionDir)Common;$(SolutionDir)Matrix;$(SolutionDir)CudaStuff;$(SolutionDir)OpenCL-CLHPP\include;$(SolutionDir)OpenCL-Headers;$(SolutionDir)cpu_features\include;$(SolutionDir)include;$(FFMPEG_PATH)\include;$(CUDA_PATH)\include</AdditionalIncludeDirectories>
       <IntrinsicFunctions>false</IntrinsicFunctions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PreprocessorDefinitions>_UNICODE;UNICODE;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>

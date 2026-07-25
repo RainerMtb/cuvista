@@ -17,7 +17,7 @@
  */
 
 #include <functional>
-#include "ThreadPoolBase.h"
+#include "ThreadPoolBase.hpp"
 
  //execute one job
 std::future<void> ThreadPoolBase::add(std::function<void()> job) {
