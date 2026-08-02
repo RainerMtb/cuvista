@@ -77,6 +77,7 @@ namespace util {
 	struct DebugLoggerConsole : public util::DebugLogger {
 		void log(const std::string& msg) override;
 		std::string str() override;
+		DebugLoggerType type() override;
 	};
 
 	struct DebugLoggerString : public util::DebugLogger {
@@ -84,6 +85,7 @@ namespace util {
 
 		void log(const std::string& msg) override;
 		std::string str() override;
+		DebugLoggerType type() override;
 	};
 
 	struct DebugLoggerTcp : public util::DebugLogger {
@@ -94,6 +96,7 @@ namespace util {
 
 		void log(const std::string& msg) override;
 		std::string str() override;
+		DebugLoggerType type() override;
 	};
 
 	struct DebugLoggerFile : public util::DebugLogger {
@@ -104,5 +107,6 @@ namespace util {
 
 		void log(const std::string& msg) override;
 		std::string str() override;
+		DebugLoggerType type() override;
 	};
 }

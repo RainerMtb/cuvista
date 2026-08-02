@@ -26,6 +26,12 @@
 
 namespace util {
 
+	void DebugLoggerNull::log(const std::string& msg) {}
+
+	std::string DebugLoggerNull::str() { return ""; }
+
+	DebugLoggerType DebugLoggerNull::type() { return DebugLoggerType::NONE; }
+
 	std::string DebugLogger::time() const {
 		std::chrono::time_point<std::chrono::system_clock> end = std::chrono::system_clock::now();
 		long long t = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();

@@ -18,6 +18,7 @@
 
 #include <iostream>
 #include <regex>
+#include <chrono>
 #include "SystemStuff.hpp"
 #include "AVException.hpp"
 
@@ -30,12 +31,16 @@ void DebugLoggerConsole::log(const std::string& msg) {
 
 std::string DebugLoggerConsole::str() { return ""; }
 
+DebugLoggerType DebugLoggerConsole::type() { return DebugLoggerType::CONSOLE; }
+
 void DebugLoggerString::log(const std::string& msg) {
 	std::lock_guard<std::mutex> lock(mutex);
 	ss << time() << msg << std::endl;
 }
 
 std::string DebugLoggerString::str() { return ss.str(); }
+
+DebugLoggerType DebugLoggerString::type() { return DebugLoggerType::STRING; }
 
 
 DebugLoggerFile::DebugLoggerFile(const std::string& filename) :
@@ -52,6 +57,8 @@ std::string DebugLoggerFile::str() {
 	return std::format("file {} {} bytes", filename, siz); 
 }
 
+DebugLoggerType DebugLoggerFile::type() { return DebugLoggerType::FILE; }
+
 void DebugLogger::open(const std::string& logger) {
 	std::regex patternTcp("^tcp://(.+):(\\d+)$");
 
@@ -67,6 +74,8 @@ void DebugLogger::open(const std::string& logger) {
 	} else {
 		throw AVException("invalid log parameter '" + logger + "'");
 	}
+
+	debugLoggerPtr->format("--- starting log {} ---", std::chrono::current_zone()->to_local(std::chrono::system_clock::now()));
 }
 
 //---------------- system specific ---------------------------
@@ -103,6 +112,10 @@ void DebugLoggerTcp::log(const std::string& msg) {
 
 std::string DebugLoggerTcp::str() {
 	return "tcp";
+}
+
+DebugLoggerType DebugLoggerTcp::type() { 
+	return DebugLoggerType::TCP; 
 }
 
 DebugLoggerTcp::~DebugLoggerTcp() {
@@ -142,6 +155,10 @@ void DebugLoggerTcp::log(const std::string& msg) {
 
 std::string DebugLoggerTcp::str() {
 	return "tcp";
+}
+
+DebugLoggerType DebugLoggerTcp::type() { 
+	return DebugLoggerType::TCP; 
 }
 
 DebugLoggerTcp::~DebugLoggerTcp() {

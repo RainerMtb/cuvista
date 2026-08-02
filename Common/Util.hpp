@@ -53,8 +53,19 @@ namespace util {
     };
 
 
+    enum class DebugLoggerType {
+        NONE,
+        CONSOLE,
+        STRING,
+        TCP,
+        FILE,
+    };
+
+
     //logging misc messages
     struct DebugLogger {
+        virtual ~DebugLogger() = default;
+
         std::chrono::time_point<std::chrono::system_clock> start = std::chrono::system_clock::now();
         std::mutex mutex;
 
@@ -62,17 +73,19 @@ namespace util {
 
         virtual void log(const std::string& msg) = 0;
         virtual std::string str() = 0;
+        virtual DebugLoggerType type() = 0;
+
+        std::string time() const;
 
         template <class... Args> void format(std::format_string<Args...> fmt, Args&&... args) {
             log(std::format(fmt, std::forward<Args>(args)...));
         }
-
-        std::string time() const;
     };
 
     struct DebugLoggerNull : public util::DebugLogger {
-        void log(const std::string& msg) override {}
-        std::string str() override { return ""; }
+        void log(const std::string& msg) override;
+        std::string str() override;
+        DebugLoggerType type() override;
     };
 
     inline std::shared_ptr<DebugLogger> debugLoggerPtr = std::make_shared<DebugLoggerNull>();

@@ -28,6 +28,7 @@ enum class ErrorSource {
 	FFMPEG,
 	WRITER,
 	READER,
+	OFX,
 	OTHER,
 };
 
