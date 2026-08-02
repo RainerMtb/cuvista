@@ -10,3 +10,6 @@
 [submodule "cpu_features"]
 	path = cpu_features
 	url = https://github.com/google/cpu_features.git
+[submodule "openfx"]
+	path = openfx
+	url = https://github.com/AcademySoftwareFoundation/openfx.git
