@@ -127,6 +127,3 @@ struct Timings {
 
 	friend std::ostream& operator << (std::ostream& ostream, const Timings& t);
 };
-
-//convert millis into readable string hh:mm:ss.fff
-std::string millisToTimeString(int64_t millis);

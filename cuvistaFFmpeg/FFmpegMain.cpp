@@ -183,9 +183,9 @@ int StreamContext::inputStreamIndex() const {
 StreamInfo StreamContext::inputStreamInfo() const {
     std::string tstr;
     if (inputStream->duration != AV_NOPTS_VALUE)
-        tstr = millisToTimeString(inputStream->duration * inputStream->time_base.num * 1000 / inputStream->time_base.den);
+        tstr = util::millisToTimeString(inputStream->duration * inputStream->time_base.num * 1000 / inputStream->time_base.den);
     else if (durationMillis != -1)
-        tstr = millisToTimeString(durationMillis);
+        tstr = util::millisToTimeString(durationMillis);
     else
         tstr = "unknown";
 

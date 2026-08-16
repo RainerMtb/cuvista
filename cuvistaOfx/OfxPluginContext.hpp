@@ -18,33 +18,27 @@
 
 #pragma once
 
-#include "ImageClasses.hpp"
+#include "ofxMain.hpp"
+#include <memory>
+#include "ofxGuiInterface.hpp"
 
 namespace ofx {
 
-	class OfxImageFloat : public im::ImageBase<float> {
+	class PluginContext {
 
 	public:
-		OfxImageFloat(int h, int w, int stride, float* data);
-		OfxImageFloat(int h, int w, int stride);
-		OfxImageFloat(int h, int w);
-		OfxImageFloat();
+		int pluginIndex = 0;
+		bool dirtyFlag = false;
+		OfxImageClipHandle srcClip = nullptr;
+		OfxImageClipHandle destClip = nullptr;
 
-		constexpr im::ImageType imageType() const override { return im::ImageType::RGBA; }
+		OfxParamHandle paramRadius = nullptr;
+		OfxParamHandle paramZoomMin = nullptr;
+		OfxParamHandle paramZoomDynamic = nullptr;
+		OfxParamHandle paramZoomMax = nullptr;
+		OfxParamHandle paramX = nullptr;
 
-		virtual void saveBmpColor(const std::string& filename) const override;
-	};
-
-	class OfxImageByte : public im::ImageBase<uint8_t> {
-
-	public:
-		OfxImageByte(int h, int w, int stride, uint8_t* data);
-		OfxImageByte(int h, int w, int stride);
-		OfxImageByte(int h, int w);
-		OfxImageByte();
-
-		constexpr im::ImageType imageType() const override { return im::ImageType::RGBA; }
-
-		virtual void saveBmpColor(const std::string& filename) const override;
+		void render(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs);
+		void stabilize(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs);
 	};
 }

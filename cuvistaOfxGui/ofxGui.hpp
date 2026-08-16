@@ -18,33 +18,50 @@
 
 #pragma once
 
-#include "ImageClasses.hpp"
+#include <QApplication>
+#include <QWidget>
+#include <thread>
+#include <filesystem>
+#include "ofxGuiInterface.hpp"
 
 namespace ofx {
 
-	class OfxImageFloat : public im::ImageBase<float> {
+	class GuiApplication : public QApplication {
+		Q_OBJECT
+
+	signals:
+		void sigClose();
+		void sigShow();
+		void sigHide();
+		void sigUpdate(int value);
 
 	public:
-		OfxImageFloat(int h, int w, int stride, float* data);
-		OfxImageFloat(int h, int w, int stride);
-		OfxImageFloat(int h, int w);
-		OfxImageFloat();
+		QWidget* window;
 
-		constexpr im::ImageType imageType() const override { return im::ImageType::RGBA; }
+		GuiApplication(int argc, char** argv);
 
-		virtual void saveBmpColor(const std::string& filename) const override;
+		void shutdown();
+		void showProgress();
+		void updateProgress(int value);
+		void hideProgress();
 	};
 
-	class OfxImageByte : public im::ImageBase<uint8_t> {
+
+	class OfxGuiQt : public OfxGui {
+
+	private:
+		OfxGuiContext& guiContext;
+		std::shared_ptr<GuiApplication> app = {};
+		std::thread guiThread;
 
 	public:
-		OfxImageByte(int h, int w, int stride, uint8_t* data);
-		OfxImageByte(int h, int w, int stride);
-		OfxImageByte(int h, int w);
-		OfxImageByte();
+		OfxGuiQt(OfxGuiContext& guiContext);
+		~OfxGuiQt();
 
-		constexpr im::ImageType imageType() const override { return im::ImageType::RGBA; }
-
-		virtual void saveBmpColor(const std::string& filename) const override;
+		void init() override;
+		void shutdown() override;
+		void showProgress() override;
+		void updateProgress(double progress) override;
+		void hideProgress() override;
 	};
 }

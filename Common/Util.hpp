@@ -152,6 +152,8 @@ namespace util {
         friend std::ostream& operator << (std::ostream& os, const CRC64& crc);
     };
 
+    //id for current thread as string
+    std::string threadId();
 
     //concat given strings by using delimiters
     std::string concatStrings(std::span<std::string_view> strings, std::string_view delimiter, std::string_view prefix, std::string_view suffix);
@@ -159,6 +161,9 @@ namespace util {
     std::string concatStrings(std::span<std::string_view> strings);
 
     std::vector<std::string> splitString(std::string_view str, std::string_view delimiter);
+
+    //millis to a string hh:mm:ss.sss
+    std::string millisToTimeString(int64_t millis);
 
     //convert a number of bytes into more readable values, bytes / kb / Mb
     std::string byteSizeToString(int64_t bytes);

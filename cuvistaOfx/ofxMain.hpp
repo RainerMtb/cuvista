@@ -19,12 +19,17 @@
 #pragma once
 
 extern "C" {
+#include "ofxParam.h"
 #include "ofxImageEffect.h"
 }
 
+#include <list>
 #include <string>
+#include "ofxGuiInterface.hpp"
 
 namespace ofx {
+
+	class ProgressContext;
 
 	enum class PluginState {
 		STARTED,
@@ -35,13 +40,30 @@ namespace ofx {
 		UNKNOWN,
 	};
 
-	PluginState pluginState = PluginState::STARTED;
+	class PluginContext;
 
-	const OfxHost* host = nullptr;
-	OfxPropertySuiteV1* propertySuite = nullptr;
-	OfxImageEffectSuiteV1* imageEffectSuite = nullptr;
+	inline std::list<PluginContext*> pluginContextList;
+	PluginContext* getPluginContext(OfxImageEffectHandle effect);
 
-	OfxStatus render(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs);
+	struct MainContext {
+		OfxPropertySuiteV1* propertySuite = nullptr;
+		OfxImageEffectSuiteV1* imageEffectSuite = nullptr;
+		OfxParameterSuiteV1* parameterSuite = nullptr;
+		OfxGuiContext guiContext;
 
-	std::string propGetString(OfxPropertySetHandle handle, const char* id);
+		bool guiLoadLibrary(OfxGuiContext& guiContext);
+		void guiFreeLibrary(OfxGuiContext& guiContext);
+		void setupParameters(OfxParamSetHandle paramSet);
+
+		bool isLoaded() const;
+
+		std::string getString(OfxPropertySetHandle handle, const char* id, int index);
+		double getDouble(OfxPropertySetHandle handle, const char* id, int index);
+		int getInt(OfxPropertySetHandle handle, const char* id, int index);
+	};
+	inline MainContext main;
+
+	std::string getString(OfxPropertySetHandle handle, const char* id, int index = 0);
+	double getDouble(OfxPropertySetHandle handle, const char* id, int index = 0);
+	int getInt(OfxPropertySetHandle handle, const char* id, int index = 0);
 }

@@ -33,7 +33,7 @@ inline constexpr struct {
 	double radsecMin = 0.1, radsecMax = 10.0;
 	double radsec = 0.5;
 
-	double imZoomMin = 0.1, imZoomMax = 10.0;
+	double zoomMinRange = 0.5, zoomMaxRange = 5.0;
 	double zoomMin = 1.05, zoomMax = 1.15;
 
 	int radiusMin = 1, radiusMax = 500;

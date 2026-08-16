@@ -512,8 +512,8 @@ void MainData::validate(const MovieReader& reader) {
 	if (w % 2 != 0) throw AVException("video width must be factor of two");
 	if (w % 2 != 0) throw AVException("video height must be factor of two");
 	if (zoomMin > zoomMax) throw AVException("invalid zoom values");
-	if (zoomMin < defaultParam.imZoomMin || zoomMin > defaultParam.imZoomMax) throw AVException("invalid zoom values");
-	if (zoomMax < defaultParam.imZoomMin || zoomMax > defaultParam.imZoomMax) throw AVException("invalid zoom values");
+	if (zoomMin < defaultParam.zoomMinRange || zoomMin > defaultParam.zoomMaxRange) throw AVException("invalid zoom values");
+	if (zoomMax < defaultParam.zoomMinRange || zoomMax > defaultParam.zoomMaxRange) throw AVException("invalid zoom values");
 	if (cudaThreads > 32) throw AVException("invalid cuda threads parameter: " + std::to_string(cudaThreads));
 
 	//check ffmpeg versions

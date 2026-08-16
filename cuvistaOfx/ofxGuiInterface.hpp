@@ -18,33 +18,28 @@
 
 #pragma once
 
-#include "ImageClasses.hpp"
+#include <filesystem>
+#include "util.hpp"
 
 namespace ofx {
 
-	class OfxImageFloat : public im::ImageBase<float> {
+	using namespace util;
+
+	class OfxGui {
 
 	public:
-		OfxImageFloat(int h, int w, int stride, float* data);
-		OfxImageFloat(int h, int w, int stride);
-		OfxImageFloat(int h, int w);
-		OfxImageFloat();
+		virtual void init() = 0;
+		virtual void shutdown() = 0;
+		virtual void showProgress() = 0;
+		virtual void updateProgress(double progress) = 0;
+		virtual void hideProgress() = 0;
 
-		constexpr im::ImageType imageType() const override { return im::ImageType::RGBA; }
-
-		virtual void saveBmpColor(const std::string& filename) const override;
+		virtual ~OfxGui() = default;
 	};
 
-	class OfxImageByte : public im::ImageBase<uint8_t> {
-
-	public:
-		OfxImageByte(int h, int w, int stride, uint8_t* data);
-		OfxImageByte(int h, int w, int stride);
-		OfxImageByte(int h, int w);
-		OfxImageByte();
-
-		constexpr im::ImageType imageType() const override { return im::ImageType::RGBA; }
-
-		virtual void saveBmpColor(const std::string& filename) const override;
+	struct OfxGuiContext {
+		std::filesystem::path pluginPath;
+		std::shared_ptr<DebugLogger> debugLogger = {};
+		std::shared_ptr<OfxGui> gui = {};
 	};
 }

@@ -119,7 +119,6 @@ DebugLoggerType DebugLoggerTcp::type() {
 }
 
 DebugLoggerTcp::~DebugLoggerTcp() {
-	log("shutdown");
 	closesocket(sock);
 	WSACleanup();
 }
@@ -162,8 +161,7 @@ DebugLoggerType DebugLoggerTcp::type() {
 }
 
 DebugLoggerTcp::~DebugLoggerTcp() {
-	log("shutdown");
-	close(sock);
+	shutdown(sock);
 }
 
 #else

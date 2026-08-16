@@ -117,10 +117,10 @@ namespace winrt::cuvistaWinui::implementation {
         //limits
         spinRadius().Minimum(defaultParam.radsecMin);
         spinRadius().Maximum(defaultParam.radsecMax);
-        spinZoomMin().Minimum(defaultParam.imZoomMin - 1.0);
-        spinZoomMin().Maximum(defaultParam.imZoomMax - 1.0);
-        spinZoomMax().Minimum(defaultParam.imZoomMin - 1.0);
-        spinZoomMax().Maximum(defaultParam.imZoomMax - 1.0);
+        spinZoomMin().Minimum(defaultParam.zoomMinRange - 1.0);
+        spinZoomMin().Maximum(defaultParam.zoomMaxRange - 1.0);
+        spinZoomMax().Minimum(defaultParam.zoomMinRange - 1.0);
+        spinZoomMax().Maximum(defaultParam.zoomMaxRange - 1.0);
 
         //load recent files list without opening files
         for (int idx = 0; idx < 6; idx++) {

@@ -22,9 +22,35 @@
 #include <numbers>
 #include <cmath>
 #include <regex>
+#include <sstream>
+#include <thread>
 #include "Util.hpp"
 
 namespace util {
+
+	std::string threadId() {
+		std::ostringstream oss;
+		oss << std::this_thread::get_id();
+		return oss.str();
+	}
+
+	std::string millisToTimeString(int64_t millis) {
+		int64_t sign = millis < 0 ? -1 : 1;
+		millis = std::abs(millis);
+		int64_t sec = millis / 1000;
+		int64_t min = sec / 60;
+		int64_t hrs = min / 60;
+
+		millis %= 1000;
+		sec %= 60;
+		min %= 60;
+		hrs %= 60;
+
+		std::string timeString = "";
+		if (hrs > 0) timeString = std::format("{}:{:02}:{:02}.{:03}", hrs * sign, min, sec, millis);
+		else timeString = std::format("{:02}:{:02}.{:03}", min * sign, sec, millis);
+		return timeString;
+	}
 
 	void DebugLoggerNull::log(const std::string& msg) {}
 
@@ -34,10 +60,8 @@ namespace util {
 
 	std::string DebugLogger::time() const {
 		std::chrono::time_point<std::chrono::system_clock> end = std::chrono::system_clock::now();
-		long long t = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-		long long s = t / 1'000'000;
-		t = t % 1'000'000;
-		return std::format("T+{:03d}.{:03d}.{:03d} ", s, t / 1000, t % 1000);
+		int64_t millis = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+		return "T+" + millisToTimeString(millis) + " ";
 	}
 
 	static void printTime(long long int delta, const std::string& str) {
