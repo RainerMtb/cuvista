@@ -58,9 +58,10 @@ struct CoreData {
 	double compMaxTol = 0.15;      //tolerance to stop window pattern matching
 
 	int w = 0;                     //frame width
-	int h = 0;					   //frame height
-	int ir = defaultParam.ir;	   //integration window, radius around point to integrate
-	int iw = 7;					   //integration window, 2 * ir + 1
+	int h = 0;                     //frame height
+	float par = 1.0f;              //pixel aspect ratio
+	int ir = defaultParam.ir;      //integration window, radius around point to integrate
+	int iw = 7;                    //integration window, 2 * ir + 1
 	int ixCount = -1;              //number of results
 	int iyCount = -1;
 	int zMin = -1;                 //pyramid steps used for actual computing

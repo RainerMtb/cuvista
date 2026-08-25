@@ -26,9 +26,6 @@ namespace ofx {
 
 	public:
 		OfxImageFloat(int h, int w, int stride, float* data);
-		OfxImageFloat(int h, int w, int stride);
-		OfxImageFloat(int h, int w);
-		OfxImageFloat();
 
 		constexpr im::ImageType imageType() const override { return im::ImageType::RGBA; }
 
@@ -39,9 +36,6 @@ namespace ofx {
 
 	public:
 		OfxImageByte(int h, int w, int stride, uint8_t* data);
-		OfxImageByte(int h, int w, int stride);
-		OfxImageByte(int h, int w);
-		OfxImageByte();
 
 		constexpr im::ImageType imageType() const override { return im::ImageType::RGBA; }
 

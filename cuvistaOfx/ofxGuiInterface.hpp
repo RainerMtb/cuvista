@@ -28,11 +28,31 @@ namespace ofx {
 	class OfxGui {
 
 	public:
+		//must be called on the application thread, start the gui
 		virtual void init() = 0;
-		virtual void shutdown() = 0;
-		virtual void showProgress() = 0;
+
+		virtual bool checkNewWindow() = 0;
+
+		//must be called on the application thread, show info and tests
+		virtual void openInfo(const std::string& infoString, const std::string& hostName, const std::string& hostVersion) = 0;
+
+		//send signal to append a text line to the info box
+		virtual void updateInfo(const std::string& infoString) = 0;
+
+		//must be called on the application thread, show progress window and start event loop
+		virtual void openProgress() = 0;
+
+		//send signal to update progress
 		virtual void updateProgress(double progress) = 0;
-		virtual void hideProgress() = 0;
+
+		//send signal to close the window
+		virtual void close() = 0;
+
+		//must be called on the application thread, terminate gui
+		virtual void shutdown() = 0;
+
+		//probe if cancelling was requested via the gui
+		virtual bool isCancelled() = 0;
 
 		virtual ~OfxGui() = default;
 	};

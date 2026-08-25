@@ -5,10 +5,41 @@
 
 namespace im {
 
+	class ImageScalerContext {
+
+	private:
+		struct ScalerParam {
+			int x0, x1;
+			float f;
+		};
+		int srcW, destW;
+		int rowSelect;
+		std::vector<ScalerParam> param;
+
+	public:
+		ImageScalerContext(int srcW, int destW, int rowSelect) :
+			srcW { srcW },
+			destW { destW },
+			rowSelect { rowSelect },
+			param(destW)
+		{
+			for (int i = 0; i < destW; i++) {
+				float x = 1.0f * i / destW * srcW;
+				float x0 = std::floor(x);
+				param[i].f = x - x0;
+				param[i].x0 = (int) x0;
+				param[i].x1 = std::min(srcW - 1, param[i].x0 + 1);
+			}
+		}
+	};
+
+
+	//-----------------------------------------------------------------------
+
 	template <class T> class ImageBase : public IImage<T> {
 
 	protected:
-		std::shared_ptr<ImageStoreBase<T>> storePtr;
+		std::shared_ptr<ImageStore<T>> storePtr;
 		std::shared_ptr<ImageTypeBase<T>> typePtr;
 		std::shared_ptr<ImageColorBase<T>> colorPtr;
 
@@ -59,13 +90,13 @@ namespace im {
 		virtual T* data() { return typePtr->plane(0); }
 		virtual const T* data()                            const { return typePtr->plane(0); }
 
-		virtual int h()                           const override { return typePtr->h; }
+		virtual int h()                           const override { return storePtr->h; }
 		virtual int rows()                        const override { return typePtr->rows(); }
-		virtual int w()                           const override { return typePtr->w; }
+		virtual int w()                           const override { return storePtr->w; }
 		virtual int cols()                        const override { return typePtr->cols(); }
-		virtual int planes()                      const override { return typePtr->planes; }
-		virtual int stride()                      const override { return typePtr->stride; }
-		virtual int strideInBytes()               const override { return typePtr->stride * sizeof(T); }
+		virtual int planes()                      const override { return typePtr->planes(); }
+		virtual int stride()                      const override { return storePtr->stride; }
+		virtual int strideInBytes()               const override { return storePtr->stride * sizeof(T); }
 
 		virtual size_t sizeInBytes()              const override { return storePtr->sizeInBytes(); }
 		virtual std::vector<T> bytes()            const override { return storePtr->bytes(); }
@@ -347,6 +378,10 @@ namespace im {
 
 		virtual void drawMarker(double cx, double cy, const Color& color, double radius = 1.5, MarkerType type = MarkerType::DOT) {
 			drawMarker(cx, cy, color, radius, radius, type);
+		}
+
+		virtual void stretchTo(ImageBase<T>& dest, const ImageScalerContext& scalerContext, ThreadPoolBase& pool = defaultPool) const {
+
 		}
 
 		virtual void copyTo(ImageBase<T>& dest, ThreadPoolBase& pool = defaultPool) const {

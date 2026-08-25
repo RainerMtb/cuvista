@@ -636,6 +636,7 @@ namespace winrt::cuvistaWinui::implementation {
         //devices info text
         std::stringstream ss;
         mData.showDeviceInfo(ss);
+        mData.showFFmpegInfo(ss);
         mInfoBoxString = to_hstring(ss.str());
         infoBox().Text(mInfoBoxString);
 

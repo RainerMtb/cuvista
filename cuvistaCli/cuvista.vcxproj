@@ -23,8 +23,6 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
     <PlatformToolset>v145</PlatformToolset>
-    <VCToolsVersion>
-    </VCToolsVersion>
     <MSVCPreviewEnabled>true</MSVCPreviewEnabled>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
@@ -32,8 +30,6 @@
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
-    <VCToolsVersion>
-    </VCToolsVersion>
     <PlatformToolset>v145</PlatformToolset>
     <MSVCPreviewEnabled>true</MSVCPreviewEnabled>
   </PropertyGroup>
@@ -75,7 +71,7 @@
       <AdditionalLibraryDirectories>$(SolutionDir)lib\$(Platform);$(SolutionDir)bin\$(Platform)\$(Configuration);$(CUDA_PATH)\lib\$(Platform);$(FFMPEG_PATH)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>Avx2.lib;Avx512.lib;Common.lib;cpu_features.lib;OpenCL.lib;Matrix.lib;Deshaker.lib;CudaStuff.lib;cudart_static.lib;cuda.lib;nvencodeapi.lib;Ole32.lib;ws2_32.lib;Shell32.lib</AdditionalDependencies>
       <DelayLoadDLLs>nvEncodeAPI64.dll;OpenCL.dll</DelayLoadDLLs>
-      <IgnoreSpecificDefaultLibraries>libcmt.lib; msvcrt.lib; libcmtd.lib</IgnoreSpecificDefaultLibraries>
+      <IgnoreSpecificDefaultLibraries>msvcrt.lib; libcmt.lib</IgnoreSpecificDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">

@@ -165,6 +165,8 @@ public:
 
 	std::ostream& showDeviceInfo(std::ostream& os) const;
 
+	std::ostream& showFFmpegInfo(std::ostream& os) const;
+
 	std::ostream& showEncodingInfo(std::ostream& os) const;
 
 	void showBasicInfo() const;

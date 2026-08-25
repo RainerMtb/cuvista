@@ -86,7 +86,7 @@ namespace ofx {
 	}
 
 	OfxStatus mainEntryFcn(const char* action, const void* handle, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs) {
-		debugLogger().format("-- action {} --", action);
+		//debugLogger().format("-- action {} --", action);
 		OfxImageEffectHandle effect = (OfxImageEffectHandle) handle;
 		std::string actionString = action;
 		OfxStatus status = kOfxStatReplyDefault;
@@ -97,19 +97,20 @@ namespace ofx {
 			main.imageEffectSuite = (OfxImageEffectSuiteV1*) host->fetchSuite(host->host, kOfxImageEffectSuite, 1);
 			main.parameterSuite = (OfxParameterSuiteV1*) host->fetchSuite(host->host, kOfxParameterSuite, 1);
 
-			//print info
+			//host info
+			main.hostName = getString(host->host, kOfxPropName);
 			int dim = 0;
 			main.propertySuite->propGetDimension(host->host, kOfxPropAPIVersion, &dim);
-			std::string version = std::to_string(getInt(host->host, kOfxPropAPIVersion, 0));
+			main.hostApiVersion = std::to_string(getInt(host->host, kOfxPropAPIVersion, 0));
 			for (int i = 1; i < dim; i++) {
-				version += ".";
-				version += std::to_string(getInt(host->host, kOfxPropAPIVersion, i));
+				main.hostApiVersion += ".";
+				main.hostApiVersion += std::to_string(getInt(host->host, kOfxPropAPIVersion, i));
 			}
-			debugLogger().format("Host Name = {}, Api Version = {}", getString(host->host, kOfxPropName), version);
 
 			if (main.isLoaded()) {
 				pluginState = PluginState::LOADED;
 				status = kOfxStatOK;
+				debugLogger().format("-- action Load, plugin loaded, Host Name = {}, Api Version = {}", main.hostName, main.hostApiVersion);
 
 			} else {
 				status = kOfxStatFailed;
@@ -165,7 +166,9 @@ namespace ofx {
 				return kOfxStatFailed;
 			}
 
-			if (main.guiContext.gui) main.guiContext.gui->init();
+			main.mData.deviceInfoOpenCl = main.mData.probeOpenCl();
+			main.mData.deviceInfoCuda = main.mData.probeCuda();
+			main.mData.collectDeviceInfo();
 
 			OfxPropertySetHandle props;
 			// define the mandated single source clip
@@ -211,7 +214,7 @@ namespace ofx {
 			pluginIndex++;
 			pluginContextList.push_back(ctx);
 			main.propertySuite->propSetPointer(effectProps, kOfxPropInstanceData, 0, ctx);
-			debugLogger().format("total instances = {}", pluginContextList.size());
+			debugLogger().format("-- action CreateInstance, total instances = {}", pluginContextList.size());
 			status = kOfxStatOK;
 
 		} else if (actionString == kOfxActionBeginInstanceChanged) { //################################
@@ -224,7 +227,8 @@ namespace ofx {
 				ctx->stabilize(effect, inArgs, outArgs);
 
 			} else if (getString(inArgs, kOfxPropName) == "info" && getString(inArgs, kOfxPropChangeReason) == kOfxChangeUserEdited) {
-
+				PluginContext* ctx = getPluginContext(effect);
+				ctx->showInfo(effect, inArgs, outArgs);
 			}
 			status = kOfxStatOK;
 
@@ -249,7 +253,7 @@ namespace ofx {
 			PluginContext* ctx = getPluginContext(effect);
 			pluginContextList.remove(ctx);
 			delete ctx;
-			debugLogger().format("total instances = {}", pluginContextList.size());
+			debugLogger().format("action DestroyInstance, total instances = {}", pluginContextList.size());
 			status = kOfxStatOK;
 
 		} else if (actionString == kOfxActionUnload) { //################################
@@ -258,10 +262,10 @@ namespace ofx {
 				errorLogger().logError("unloading while there are still effenct instances!");
 				debugLogger().log("unloading while there are still effenct instances!");
 			}
-			if (main.guiContext.gui) main.guiContext.gui->shutdown();
 			main.guiFreeLibrary(main.guiContext);
 			pluginState = PluginState::UNLOADED;
 			status = kOfxStatOK;
+			debugLogger().log("plugin unloaded, good bye");
 
 		} else {
 			debugLogger().format(">> action unhandled {} ##", action);

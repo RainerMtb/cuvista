@@ -35,9 +35,9 @@ namespace im {
 
 	public:
 		T maxValue;
-		std::array<int, 4> colorIndex; //for YUVA color
+		std::vector<int> colorIndex;
 
-		ImageColorBase(std::shared_ptr<ImageTypeBase<T>> typePtr, std::array<int, 4> colorIndex, T maxValue) :
+		ImageColorBase(std::shared_ptr<ImageTypeBase<T>> typePtr, std::vector<int> colorIndex, T maxValue) :
 			typePtr { typePtr },
 			colorIndex { colorIndex },
 			maxValue { maxValue }
@@ -69,20 +69,20 @@ namespace im {
 					destPtr++;
 				}
 			};
-			pool.addAndWait(fcn, 0, typePtr->h);
+			pool.addAndWait(fcn, 0, typePtr->h());
 		}
 
 		template <class R> void convertTo(std::shared_ptr<ImageColorBase<R>> dest, ThreadPoolBase& pool = defaultPool) const {
 			auto fcn = [&] (size_t r) {
 				ImagePixel<T> srcPixel = pixelAt(r, 0);
 				ImagePixel<R> destPixel = dest->pixelAt(r, 0);
-				for (size_t c = 0; c < typePtr->w; c++) {
+				for (size_t c = 0; c < typePtr->w(); c++) {
 					srcPixel.writeTo(colorBase(), dest->colorBase(), destPixel);
 					srcPixel.advance();
 					destPixel.advance();
 				}
 			};
-			pool.addAndWait(fcn, 0, typePtr->h);
+			pool.addAndWait(fcn, 0, typePtr->h());
 		}
 
 		void convertToNV12(std::shared_ptr<ImageColorBase<uchar>> dest, ThreadPoolBase& pool = defaultPool) const {
@@ -92,8 +92,8 @@ namespace im {
 				ImagePixel<T> src;
 				size_t rr = r * 2;
 				uchar* destY = dest->typePtr->row(rr);
-				uchar* destUV = dest->typePtr->row(dest->typePtr->h + r);
-				for (size_t c = 0; c < dest->typePtr->w / 2; c++) {
+				uchar* destUV = dest->typePtr->row(dest->typePtr->h() + r);
+				for (size_t c = 0; c < dest->typePtr->w() / 2; c++) {
 					size_t cc = c * 2;
 					int sumU = 0, sumV = 0;
 
@@ -109,29 +109,29 @@ namespace im {
 
 					src = pixelAt(rr + 1, cc);
 					src.writeTo(colorBase(), ColorBase::YUV, p);
-					destY[cc + dest->typePtr->stride] = *p.s0;
+					destY[cc + dest->typePtr->stride()] = *p.s0;
 					sumU += *p.s1; sumV += *p.s2;
 
 					src = pixelAt(rr + 1, cc + 1);
 					src.writeTo(colorBase(), ColorBase::YUV, p);
-					destY[cc + dest->typePtr->stride + 1] = *p.s0;
+					destY[cc + dest->typePtr->stride() + 1] = *p.s0;
 					sumU += *p.s1; sumV += *p.s2;
 
 					destUV[cc] = sumU / 4;
 					destUV[cc + 1] = sumV / 4;
 				}
 			};
-			pool.addAndWait(fcn, 0, dest->typePtr->h / 2);
+			pool.addAndWait(fcn, 0, dest->typePtr->h() / 2);
 		}
 
 		template <class R> void convertFromNV12(std::shared_ptr<ImageColorBase<R>> dest, ThreadPoolBase& pool = defaultPool) const {
-			for (size_t r = 0; r < typePtr->h / 2; r++) {
+			for (size_t r = 0; r < typePtr->h() / 2; r++) {
 				size_t rr = r * 2;
 				uchar* srcY = typePtr->row(rr);
-				uchar* srcUV = typePtr->row(dest->typePtr->h + r);
+				uchar* srcUV = typePtr->row(dest->typePtr->h() + r);
 				ImagePixel<uchar> srcPix;
 				ImagePixel<R> destPix;
-				for (size_t c = 0; c < typePtr->w / 2; c++) {
+				for (size_t c = 0; c < typePtr->w() / 2; c++) {
 					size_t cc = c * 2;
 
 					srcPix = { srcY + cc, srcUV + cc, srcUV + cc + 1 };
@@ -142,11 +142,11 @@ namespace im {
 					destPix = dest->pixelAt(rr, cc + 1);
 					srcPix.writeTo(ColorBase::YUV, dest->colorBase(), destPix);
 
-					srcPix = { srcY + typePtr->stride + cc, srcUV + cc, srcUV + cc + 1 };
+					srcPix = { srcY + typePtr->stride() + cc, srcUV + cc, srcUV + cc + 1};
 					destPix = dest->pixelAt(rr + 1, cc);
 					srcPix.writeTo(ColorBase::YUV, dest->colorBase(), destPix);
 
-					srcPix = { srcY + typePtr->stride + cc + 1, srcUV + cc, srcUV + cc + 1 };
+					srcPix = { srcY + typePtr->stride() + cc + 1, srcUV + cc, srcUV + cc + 1};
 					destPix = dest->pixelAt(rr + 1, cc + 1);
 					srcPix.writeTo(ColorBase::YUV, dest->colorBase(), destPix);
 				}
@@ -155,9 +155,9 @@ namespace im {
 
 		void saveBmpPlanes(const std::string& filename) const {
 			std::ofstream os(filename, std::ios::binary);
-			int h = typePtr->h;
-			int w = typePtr->w;
-			int planes = this->typePtr->planes;
+			int h = typePtr->h();
+			int w = typePtr->w();
+			int planes = this->typePtr->planes();
 
 			BmpGrayHeader(w, h * planes).writeHeader(os);
 			int stridedWidth = util::alignValue(w, 4);
@@ -189,7 +189,7 @@ namespace im {
 			LocalColor<T> local = getLocalColor(color);
 			for (size_t r = row; r < row + h; r++) {
 				for (size_t c = col; c < col + w; c++) {
-					for (size_t i = 0; i < typePtr->planes; i++) {
+					for (size_t i = 0; i < typePtr->planes(); i++) {
 						this->typePtr->at(i, r, c) = local.colorData[i];
 					}
 				}
@@ -201,7 +201,7 @@ namespace im {
 	template <class T> class ImageColorRgb : public ImageColorBase<T> {
 
 	public:
-		ImageColorRgb(std::shared_ptr<ImageTypeBase<T>> type, std::array<int, 4> colorIndex, T maxValue) :
+		ImageColorRgb(std::shared_ptr<ImageTypeBase<T>> type, std::vector<int> colorIndex, T maxValue) :
 			ImageColorBase<T>(type, colorIndex, maxValue)
 		{}
 
@@ -225,13 +225,13 @@ namespace im {
 		virtual void gray(ThreadPoolBase& pool = defaultPool) override {
 			auto fcn = [&] (size_t r) {
 				ImagePixel<T> pixel = this->pixelAt(r, 0);
-				for (size_t c = 0; c < this->typePtr->w; c++) {
+				for (size_t c = 0; c < this->typePtr->w(); c++) {
 					T gray = im::rgb_to_y(*pixel.s0, *pixel.s1, *pixel.s2);
 					*pixel.s0 = *pixel.s1 = *pixel.s2 = gray;
 					pixel.advance();
 				}
 			};
-			pool.addAndWait(fcn, 0, this->typePtr->h);
+			pool.addAndWait(fcn, 0, this->typePtr->h());
 		}
 	};
 
@@ -239,7 +239,7 @@ namespace im {
 	template <class T> class ImageColorYuv : public ImageColorBase<T> {
 
 	public:
-		ImageColorYuv(std::shared_ptr<ImageTypeBase<T>> type, std::array<int, 4> colorIndex, T maxValue) :
+		ImageColorYuv(std::shared_ptr<ImageTypeBase<T>> type, std::vector<int> colorIndex, T maxValue) :
 			ImageColorBase<T>(type, colorIndex, maxValue)
 		{}
 

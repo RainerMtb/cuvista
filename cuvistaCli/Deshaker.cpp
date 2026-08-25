@@ -36,6 +36,7 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 	//main program start
 	MainData data;
 	data.console = console;
+	DeviceInfoNull deviceNull;
 
 	std::unique_ptr<MovieReader> reader;
 	std::unique_ptr<MovieWriterCollection> writer;
@@ -113,8 +114,7 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 
 		//----------- create Frame Executor Class
 		if (data.dummyFrame) {
-			DeviceInfoNull dev;
-			executor = dev.create(data, *frame);
+			executor = deviceNull.create(data, *frame);
 
 		} else {
 			DeviceInfoBase* dib = data.deviceList[data.deviceSelected];

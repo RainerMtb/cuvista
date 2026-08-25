@@ -24,162 +24,80 @@
 
 namespace im {
 
-	//Data Storage
-	template <class T> class ImageStoreBase {
+	template <class T> class ImageStore {
 
 	public:
-		virtual T* row(size_t r, size_t h, size_t stride) = 0;
-		virtual const T* row(size_t r, size_t h, size_t stride) const = 0;
+		int h, w, stride, planes;
 
-		virtual T* data() = 0;
-		virtual const T* data() const = 0;
+	protected:
+		int storeSize;
+		YAxisDir ydir;
+		std::shared_ptr<T[]> store;
+		T* firstRow = nullptr;
+		int rowOffset = 0;
 
-		virtual size_t sizeInBytes() const = 0;
-		virtual std::vector<T> bytes() const = 0;
-
-		virtual void write(std::ostream& os) const = 0;
-	};
-
-	template <class T> class ImageStoreLocal : public ImageStoreBase<T> {
-
-	private:
-		std::vector<T> store;
-
-	public:
-		ImageStoreLocal(int siz = 0) :
-			store(siz)
-		{}
-
-		virtual T* row(size_t r, size_t h, size_t stride) override {
-			assert(r * stride < store.size() && "invalid row");
-			return store.data() + r * stride;
-		}
-
-		virtual const T* row(size_t r, size_t h, size_t stride) const override {
-			assert(r * stride < store.size() && "invalid row");
-			return store.data() + r * stride;
-		}
-
-		virtual T* data() override {
-			return store.data();
-		}
-
-		virtual const T* data() const override {
-			return store.data();
-		}
-
-		virtual size_t sizeInBytes() const override {
-			return store.size();
-		}
-
-		virtual std::vector<T> bytes() const override {
-			return store;
-		}
-
-		virtual void write(std::ostream& os) const override {
-			os.write(reinterpret_cast<const char*>(store.data()), store.size() * sizeof(T));
-		}
-	};
-
-	template <class T> class ImageStoreShared : public ImageStoreBase<T> {
-
-	private:
-		std::vector<std::span<T>> store;
-
-	public:
-		ImageStoreShared(std::vector<std::span<T>> store = {{}}) :
+		ImageStore(int h, int w, int stride, int planes, int storeSize, YAxisDir ydir, std::shared_ptr<T[]> store) :
+			h { h },
+			w { w },
+			stride { stride },
+			planes { planes },
+			storeSize { storeSize },
+			ydir { ydir },
 			store { store }
-		{}
+		{
+			if (ydir == YAxisDir::DOWN) {
+				firstRow = this->store.get();
+				rowOffset = stride;
 
-		virtual T* row(size_t r, size_t h, size_t stride) override {
-			size_t idx = r / h;
-			size_t rr = r % h;
-			assert(idx < store.size() && rr * stride < store[idx].size() && "invalid row");
-			return store[idx].data() + rr * stride;
-		}
-
-		virtual const T* row(size_t r, size_t h, size_t stride) const override {
-			size_t idx = r / h;
-			size_t rr = r % h;
-			assert(idx < store.size() && rr * stride < store[idx].size() && "invalid row");
-			return store[idx].data() + rr * stride;
-		}
-
-		virtual T* data() override {
-			return store.front().data();
-		}
-
-		virtual const T* data() const override {
-			return store.front().data();
-		}
-
-		virtual size_t sizeInBytes() const {
-			size_t siz = 0;
-			for (auto& s : store) siz += s.size();
-			return siz;
-		}
-
-		virtual std::vector<T> bytes() const {
-			std::vector<T> data;
-			for (auto& s : store) std::copy(s.begin(), s.end(), std::back_inserter(data));
-			return data;
-		}
-
-		virtual util::CRC64 crc() const override {
-			util::CRC64 out;
-			return crc(out);
-		}
-
-		virtual util::CRC64 crc(util::CRC64 base) const override {
-			for (std::span<T> s : store) {
-				for (const T& item : s) base.addDirect(item);
+			} else {
+				firstRow = this->store.get() + (h - 1) * stride;
+				rowOffset = -stride;
 			}
-			return base;
 		}
-
-		virtual void write(std::ostream& os) const override {
-			for (auto& s : store) os.write(reinterpret_cast<const char*>(s.data()), s.size() * sizeof(T));
-		}
-	};
-
-	template <class T> class ImageStoreSharedSingle : public ImageStoreBase<T> {
-
-	private:
-		std::span<T> store;
 
 	public:
-		ImageStoreSharedSingle(std::span<T> store = {}) :
-			store { store }
+		ImageStore(int h, int w, int stride, int planes, int storeSize, YAxisDir ydir, T* data) :
+			ImageStore<T>(h, w, stride, planes, storeSize, ydir, std::shared_ptr<T[]>(data, [] (auto ptr) {}))
 		{}
 
-		virtual T* row(size_t r, size_t h, size_t stride) override {
-			assert(r * stride < store.size() && "invalid row");
-			return store.data() + r * stride;
+		ImageStore(int h, int w, int stride, int planes, int storeSize, YAxisDir ydir) :
+			ImageStore<T>(h, w, stride, planes, storeSize, ydir, std::make_shared<T[]>(storeSize))
+		{}
+
+		ImageStore() :
+			ImageStore<T>(0, 0, 0, 0, 0, YAxisDir::DOWN)
+		{}
+
+		virtual T* row(size_t r) {
+			T* ptr = firstRow + r * rowOffset;
+			assert(ptr >= this->store.get() && ptr < this->store.get() + this->storeSize && "invalid row");
+			return ptr;
 		}
 
-		virtual const T* row(size_t r, size_t h, size_t stride) const override {
-			assert(r * stride < store.size() && "invalid row");
-			return store.data() + r * stride;
+		virtual const T* row(size_t r) const {
+			const T* ptr = firstRow + r * rowOffset;
+			assert(ptr >= this->store.get() && ptr < this->store.get() + this->storeSize && "invalid row");
+			return ptr;
 		}
 
-		virtual T* data() override {
-			return store.data();
+		virtual T* data() {
+			return this->store.get();
 		}
 
-		virtual const T* data() const override {
-			return store.data();
+		virtual const T* data() const {
+			return this->store.get();
 		}
 
 		virtual size_t sizeInBytes() const {
-			return store.size();
+			return this->storeSize;
 		}
 
 		virtual std::vector<T> bytes() const {
-			return std::vector<T>(store.begin(), store.end());
+			return { this->store.get(), this->store.get() + this->storeSize };
 		}
-		
-		virtual void write(std::ostream& os) const override {
-			os.write(reinterpret_cast<const char*>(store.data()), store.size() * sizeof(T));
+
+		virtual void write(std::ostream& os) const {
+			os.write(reinterpret_cast<const char*>(this->store.get()), this->storeSize * sizeof(T));
 		}
 	};
 

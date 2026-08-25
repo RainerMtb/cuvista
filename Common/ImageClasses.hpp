@@ -27,16 +27,15 @@ namespace im {
 
 	public:
 		ImageY(int h, int w, int stride, T maxValue) {
-			this->storePtr = std::make_shared<ImageStoreLocal<T>>(h * stride);
-			this->typePtr = std::make_shared<ImageTypePlanar<T>>(this->storePtr, h, w, stride, 1);
-			this->colorPtr = std::make_shared<ImageColorYuv<T>>(this->typePtr, std::array<int, 4>{ 0, 1, 2, 3 }, maxValue);
+			this->storePtr = std::make_shared<ImageStore<T>>(h, w, stride, 1, h * stride, YAxisDir::DOWN);
+			this->typePtr = std::make_shared<ImageTypePlanar<T>>(this->storePtr);
+			this->colorPtr = std::make_shared<ImageColorYuv<T>>(this->typePtr, std::vector<int>{ 0 }, maxValue);
 		}
 
 		ImageY(int h, int w, int stride, T* data, T maxValue) {
-			std::span<float> span(data, h * stride);
-			this->storePtr = std::make_shared<ImageStoreSharedSingle<T>>(span);
-			this->typePtr = std::make_shared<ImageTypePlanar<T>>(this->storePtr, h, w, stride, 1);
-			this->colorPtr = std::make_shared<ImageColorYuv<T>>(this->typePtr, std::array<int, 4>{ 0, 1, 2, 3 }, maxValue);
+			this->storePtr = std::make_shared<ImageStore<T>>(h, w, stride, 1, h * stride, YAxisDir::DOWN, data);
+			this->typePtr = std::make_shared<ImageTypePlanar<T>>(this->storePtr);
+			this->colorPtr = std::make_shared<ImageColorYuv<T>>(this->typePtr, std::vector<int>{ 0 }, maxValue);
 		}
 
 		ImageY() :

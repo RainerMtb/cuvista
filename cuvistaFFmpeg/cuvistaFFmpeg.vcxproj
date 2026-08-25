@@ -24,8 +24,6 @@
     <CharacterSet>Unicode</CharacterSet>
     <PlatformToolset>v145</PlatformToolset>
     <MSVCPreviewEnabled>true</MSVCPreviewEnabled>
-    <VCToolsVersion>
-    </VCToolsVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
@@ -34,8 +32,6 @@
     <CharacterSet>Unicode</CharacterSet>
     <PlatformToolset>v145</PlatformToolset>
     <MSVCPreviewEnabled>true</MSVCPreviewEnabled>
-    <VCToolsVersion>
-    </VCToolsVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -105,7 +101,8 @@
       <EnableSegmentHeap>true</EnableSegmentHeap>
     </Manifest>
     <PostBuildEvent>
-      <Command>copy $(OutDir)cuvistaFFmpeg.dll $(SolutionDir)bin\$(Platform)\Deploy</Command>
+      <Command>md $(SolutionDir)bin\$(Platform)\Deploy
+copy $(OutDir)cuvistaFFmpeg.dll $(SolutionDir)bin\$(Platform)\Deploy</Command>
     </PostBuildEvent>
     <PostBuildEvent>
       <Message>copy dll to deploy dir</Message>

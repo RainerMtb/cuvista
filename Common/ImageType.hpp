@@ -47,32 +47,31 @@ namespace im {
 	template <class T> class ImageTypeBase {
 
 	protected:
-		std::shared_ptr<ImageStoreBase<T>> storePtr;
+		std::shared_ptr<ImageStore<T>> storePtr;
 
 	public:
-		int h, w, stride, planes;
-
-		ImageTypeBase(std::shared_ptr<ImageStoreBase<T>> storePtr, int h, int w, int stride, int planes) :
-			storePtr { storePtr },
-			h { h },
-			w { w },
-			stride { stride },
-			planes { planes }
+		ImageTypeBase(std::shared_ptr<ImageStore<T>> storePtr) :
+			storePtr { storePtr }
 		{}
 
 		ImageTypeBase() :
-			ImageTypeBase<T>({}, 0, 0, 0, 0)
+			ImageTypeBase<T>(std::shared_ptr<ImageStore<T>>())
 		{}
+
+		int h() const { return storePtr->h; }
+		int w() const { return storePtr->w; }
+		int stride() const { return storePtr->stride; }
+		int planes() const { return storePtr->planes; }
 
 		virtual int rows() const = 0;
 		virtual int cols() const = 0;
 		virtual int pixelOffset() const = 0;
 
-		virtual T* row(size_t r) { return storePtr->row(r, h, stride); }
-		virtual const T* row(size_t r) const { return storePtr->row(r, h, stride); }
+		virtual T* row(size_t r) { return storePtr->row(r); }
+		virtual const T* row(size_t r) const { return storePtr->row(r); }
 
-		virtual T* plane(size_t idx) { return row(idx * h); }
-		virtual const T* plane(size_t idx) const { return row(idx * h); }
+		virtual T* plane(size_t idx) { return row(idx * storePtr->h); }
+		virtual const T* plane(size_t idx) const { return row(idx * storePtr->h); }
 
 		virtual T* addr(size_t idx, size_t r, size_t c) = 0;
 		virtual const T* addr(size_t idx, size_t r, size_t c) const = 0;
@@ -85,12 +84,12 @@ namespace im {
 
 		virtual void copyRow(size_t r, std::shared_ptr<ImageTypeBase<T>> dest) const = 0;
 
-		ImagePixel<T> pixelAt(size_t r, size_t c, std::array<int, 4> colorIndex) {
+		ImagePixel<T> pixelAt(size_t r, size_t c, std::vector<int> colorIndex) {
 			ImagePixel<T> pix;
-			pix.s0 = addr(colorIndex[0], r, c);
-			pix.s1 = addr(colorIndex[1], r, c);
-			pix.s2 = addr(colorIndex[2], r, c);
-			if (planes == 4) pix.s3 = addr(colorIndex[3], r, c);
+			if (colorIndex.size() > 0) pix.s0 = addr(colorIndex[0], r, c);
+			if (colorIndex.size() > 1) pix.s1 = addr(colorIndex[1], r, c);
+			if (colorIndex.size() > 2) pix.s2 = addr(colorIndex[2], r, c);
+			if (colorIndex.size() > 3) pix.s3 = addr(colorIndex[3], r, c);
 			pix.offset = pixelOffset();
 			return pix;
 		}
@@ -114,85 +113,77 @@ namespace im {
 	template <class T> class ImageTypePacked : public ImageTypeBase<T> {
 
 	public:
-		ImageTypePacked(std::shared_ptr<ImageStoreBase<T>> store, int h, int w, int stride, int planes) :
-			ImageTypeBase<T>(store, h, w, stride, planes)
-		{}
-
-		ImageTypePacked() :
-			ImageTypePacked<T>({}, 0, 0, 0, 0)
+		ImageTypePacked(std::shared_ptr<ImageStore<T>> storePtr) :
+			ImageTypeBase<T>(storePtr)
 		{}
 
 		virtual int rows() const override {
-			return this->h;
+			return this->storePtr->h;
 		}
 
 		virtual int cols() const override {
-			return this->w * this->planes;
+			return this->storePtr->w * this->storePtr->planes;
 		}
 
 		virtual int pixelOffset() const override {
-			return this->planes;
+			return this->storePtr->planes;
 		}
 
 		virtual T* addr(size_t idx, size_t r, size_t c) override {
-			assert(idx < this->planes && r < this->h && c < this->w && "invalid address");
-			return this->row(r) + c * this->planes + idx;
+			assert(idx < this->storePtr->planes && r < this->storePtr->h && c < this->storePtr->w && "invalid address");
+			return this->row(r) + c * this->storePtr->planes + idx;
 		}
 
 		virtual const T* addr(size_t idx, size_t r, size_t c) const override {
-			assert(idx < this->planes && r < this->h && c < this->w && "invalid address");
-			return this->row(r) + c * this->planes + idx;
+			assert(idx < this->storePtr->planes && r < this->storePtr->h && c < this->storePtr->w && "invalid address");
+			return this->row(r) + c * this->storePtr->planes + idx;
 		}
 
 		virtual void setColor(int idx, T colorValue) override {
-			for (int r = 0; r < this->h; r++) {
+			for (int r = 0; r < this->storePtr->h; r++) {
 				T* dest = addr(idx, r, 0);
-				for (int c = 0; c < this->w; c++) {
+				for (int c = 0; c < this->storePtr->w; c++) {
 					*dest = colorValue;
-					dest += this->planes;
+					dest += this->storePtr->planes;
 				}
 			}
 		}
 
 		virtual void setColor(const LocalColor<T>& localColor) override {
 			//fill first row
-			for (int c = 0; c < this->w; c++) {
+			for (int c = 0; c < this->storePtr->w; c++) {
 				T* dest = addr(0, 0, c);
-				for (int z = 0; z < this->planes; z++) {
+				for (int z = 0; z < this->storePtr->planes; z++) {
 					*dest = localColor.colorData[z];
 					dest++;
 				}
 			}
 
 			//copy rows
-			int siz = this->w * this->planes;
-			for (int r = 1; r < this->h; r++) {
+			int siz = this->storePtr->w * this->storePtr->planes;
+			for (int r = 1; r < this->storePtr->h; r++) {
 				std::copy_n(this->row(0), siz, this->row(r));
 			}
 		}
 
 		virtual void copyRow(size_t r, std::shared_ptr<ImageTypeBase<T>> dest) const override {
-			std::copy_n(this->row(r), this->w * this->planes, dest->row(r));
+			std::copy_n(this->row(r), this->storePtr->w * this->storePtr->planes, dest->row(r));
 		}
 	};
 
 	template <class T> class ImageTypePlanar : public ImageTypeBase<T> {
 
 	public:
-		ImageTypePlanar(std::shared_ptr<ImageStoreBase<T>> store, int h, int w, int stride, int planes) :
-			ImageTypeBase<T>(store, h, w, stride, planes)
-		{}
-
-		ImageTypePlanar() :
-			ImageTypePlanar<T>({}, 0, 0, 0, 0)
+		ImageTypePlanar(std::shared_ptr<ImageStore<T>> storePtr) :
+			ImageTypeBase<T>(storePtr)
 		{}
 
 		virtual int rows() const override {
-			return this->h * this->planes;
+			return this->storePtr->h * this->storePtr->planes;
 		}
 
 		virtual int cols() const override {
-			return this->w;
+			return this->storePtr->w;
 		}
 
 		virtual int pixelOffset() const override {
@@ -200,47 +191,43 @@ namespace im {
 		}
 
 		virtual T* addr(size_t idx, size_t r, size_t c) override {
-			assert(idx < this->planes && r < this->h && c < this->w && "invalid address");
-			return this->row(idx * this->h + r) + c;
+			assert(idx < this->storePtr->planes && r < this->storePtr->h && c < this->storePtr->w && "invalid address");
+			return this->row(idx * this->storePtr->h + r) + c;
 		}
 
 		virtual const T* addr(size_t idx, size_t r, size_t c) const override {
-			assert(idx < this->planes && r < this->h && c < this->w && "invalid address");
-			return this->row(idx * this->h + r) + c;
+			assert(idx < this->storePtr->planes && r < this->storePtr->h && c < this->storePtr->w && "invalid address");
+			return this->row(idx * this->storePtr->h + r) + c;
 		}
 
 		virtual void setColor(int idx, T colorValue) override {
-			std::fill_n(this->row(1ull * idx * this->h), this->stride * this->h, colorValue);
+			std::fill_n(this->row(1ull * idx * this->storePtr->h), this->storePtr->stride * this->storePtr->h, colorValue);
 		}
 
 		virtual void setColor(const LocalColor<T>& localColor) override {
-			for (int i = 0; i < this->planes; i++) {
+			for (int i = 0; i < this->storePtr->planes; i++) {
 				setColor(i, localColor.colorData[i]);
 			}
 		}
 
 		virtual void copyRow(size_t r, std::shared_ptr<ImageTypeBase<T>> dest) const override {
-			std::copy_n(this->row(r), this->w, dest->row(r));
+			std::copy_n(this->row(r), this->storePtr->w, dest->row(r));
 		}
 	};
 
 	template <class T> class ImageTypeNV12 : public ImageTypeBase<T> {
 
 	public:
-		ImageTypeNV12(std::shared_ptr<ImageStoreBase<T>> store, int h, int w, int stride, int planes) :
-			ImageTypeBase<T>(store, h, w, stride, planes)
-		{}
-
-		ImageTypeNV12() :
-			ImageTypeNV12<T>({}, 0, 0, 0, 0)
+		ImageTypeNV12(std::shared_ptr<ImageStore<T>> storePtr) :
+			ImageTypeBase<T>(storePtr)
 		{}
 
 		virtual int rows() const override {
-			return this->h * 3 / 2;
+			return this->storePtr->h * 3 / 2;
 		}
 
 		virtual int cols() const override {
-			return this->w;
+			return this->storePtr->w;
 		}
 
 		virtual int pixelOffset() const override {
@@ -248,13 +235,13 @@ namespace im {
 		}
 
 		virtual uchar* addr(size_t idx, size_t r, size_t c) override {
-			assert(idx < this->planes && r < this->h && c < this->w && "invalid address");
-			return this->row(0) + r * this->stride + c;
+			assert(idx < this->storePtr->planes && r < this->storePtr->h && c < this->storePtr->w && "invalid address");
+			return this->row(0) + r * this->storePtr->stride + c;
 		}
 
 		virtual const uchar* addr(size_t idx, size_t r, size_t c) const override {
-			assert(idx < this->planes && r < this->h && c < this->w && "invalid address");
-			return this->row(0) + r * this->stride + c;
+			assert(idx < this->storePtr->planes && r < this->storePtr->h && c < this->storePtr->w && "invalid address");
+			return this->row(0) + r * this->storePtr->stride + c;
 		}
 
 		virtual void setColor(int idx, T colorValue) override {
@@ -266,7 +253,7 @@ namespace im {
 		}
 
 		virtual void copyRow(size_t r, std::shared_ptr<ImageTypeBase<T>> dest) const override {
-			std::copy_n(this->row(r), this->w, dest->row(r));
+			std::copy_n(this->row(r), this->storePtr->w, dest->row(r));
 		}
 	};
 

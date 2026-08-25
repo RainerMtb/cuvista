@@ -276,6 +276,7 @@ int main() {
 	testCrcMode0();
 	testCrcMode2();
 	testSpeed();
+	std::this_thread::sleep_for(std::chrono::milliseconds(500));
 	testMain();
 	std::cout << "--- Testing completed ---" << std::endl;
 }

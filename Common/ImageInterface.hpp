@@ -76,10 +76,17 @@ namespace im {
 		UNKNOWN,
 	};
 
+	enum class YAxisDir {
+		UP,
+		DOWN,
+	};
+
+
 	template <class T> struct LocalColor {
 		std::array<T, 4> colorData;
 		double alpha;
 	};
+
 
 	//Interface to Image Classes
 	template <class T> class IImage {

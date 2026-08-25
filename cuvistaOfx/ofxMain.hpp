@@ -25,7 +25,9 @@ extern "C" {
 
 #include <list>
 #include <string>
+
 #include "ofxGuiInterface.hpp"
+#include "MainData.hpp"
 
 namespace ofx {
 
@@ -50,6 +52,10 @@ namespace ofx {
 		OfxImageEffectSuiteV1* imageEffectSuite = nullptr;
 		OfxParameterSuiteV1* parameterSuite = nullptr;
 		OfxGuiContext guiContext;
+		std::string hostName;
+		std::string hostApiVersion;
+
+		MainData mData;
 
 		bool guiLoadLibrary(OfxGuiContext& guiContext);
 		void guiFreeLibrary(OfxGuiContext& guiContext);

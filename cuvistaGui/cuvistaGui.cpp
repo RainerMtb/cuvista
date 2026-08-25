@@ -598,6 +598,7 @@ void cuvistaGui::showInfo() {
 
     std::stringstream ss;
     mData.showDeviceInfo(ss);
+    mData.showFFmpegInfo(ss);
 
     ScrollingTextEdit* textBox = new ScrollingTextEdit(&msgBox);
     QString qstr = QString::fromStdString(ss.str());

@@ -226,6 +226,7 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 			showHeader();
 			*console << std::endl;
 			showDeviceInfo(*console);
+			showFFmpegInfo(*console);
 			showEncodingInfo(*console);
 			MessagePrinterConsole mpc(console);
 			runSelfTest(mpc, deviceList);
@@ -572,6 +573,7 @@ void MainData::showBasicInfo() const {
 //show info about system
 void MainData::showDeviceInfo() const {
 	showDeviceInfo(*console);
+	showFFmpegInfo(*console);
 	showEncodingInfo(*console);
 	throw SilentQuitException();
 }
@@ -582,14 +584,6 @@ std::ostream& MainData::showDeviceInfo(std::ostream& os) const {
 	os << "Devices found on this system:" << std::endl;
 	for (int i = 0; i < deviceList.size(); i++) {
 		os << " #" << i << ": " << deviceList[i]->getName() << std::endl;
-	}
-
-	//display ffmpeg versions
-	FFmpegVersions versionsCompiled = *ff::versionsCompiled();
-	FFmpegVersions versionsRuntime = *ff::versionsRuntime();
-	os << std::endl << versionsRuntime << std::endl;
-	if (versionsCompiled != versionsRuntime) {
-		os << "warning: different versions of ffmpeg are used at compiletime and runtime" << std::endl;
 	}
 
 	//display nvidia info
@@ -631,7 +625,18 @@ std::ostream& MainData::showDeviceInfo(std::ostream& os) const {
 		os << "OpenCL Device:" << std::endl;
 		os << info;
 	}
-	os << std::endl;
+
+	return os;
+}
+
+std::ostream& MainData::showFFmpegInfo(std::ostream& os) const {
+	//display ffmpeg versions
+	FFmpegVersions versionsCompiled = *ff::versionsCompiled();
+	FFmpegVersions versionsRuntime = *ff::versionsRuntime();
+	os << std::endl << versionsRuntime << std::endl;
+	if (versionsCompiled != versionsRuntime) {
+		os << "warning: different versions of ffmpeg are used at compiletime and runtime" << std::endl;
+	}
 
 	return os;
 }

@@ -19,10 +19,22 @@
 #pragma once
 
 #include "ofxMain.hpp"
-#include <memory>
 #include "ofxGuiInterface.hpp"
 
 namespace ofx {
+
+	using SptrGui = std::shared_ptr<OfxGui>;
+
+	class InfoPrinter : public util::MessagePrinter {
+
+	private:
+		SptrGui gui;
+
+	public:
+		InfoPrinter(SptrGui gui);
+		void print(const std::string& str) override;
+		void printNewLine() override;
+	};
 
 	class PluginContext {
 
@@ -40,5 +52,6 @@ namespace ofx {
 
 		void render(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs);
 		void stabilize(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs);
+		void showInfo(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs);
 	};
 }

@@ -20,48 +20,63 @@
 
 #include <QApplication>
 #include <QWidget>
+#include <QPlainTextEdit>
+
 #include <thread>
 #include <filesystem>
 #include "ofxGuiInterface.hpp"
 
 namespace ofx {
 
-	class GuiApplication : public QApplication {
+	class GuiWindow : public QWidget {
+		Q_OBJECT
+
+	public:
+		bool isDone = false;
+		bool cancelRequest = false;
+
+		GuiWindow(QWidget* parent, Qt::WindowFlags f);
+		~GuiWindow();
+
+		void closeEvent(QCloseEvent* event) override;
+	};
+
+
+	class OfxGuiQt : public QObject, public OfxGui {
 		Q_OBJECT
 
 	signals:
 		void sigClose();
-		void sigShow();
-		void sigHide();
-		void sigUpdate(int value);
+		void sigUpdateProgress(int value);
+		void sigUpdateInfo(const std::string& infoString);
 
-	public:
-		QWidget* window;
-
-		GuiApplication(int argc, char** argv);
-
-		void shutdown();
-		void showProgress();
-		void updateProgress(int value);
-		void hideProgress();
-	};
-
-
-	class OfxGuiQt : public OfxGui {
+	private slots:
+		void cancel();
 
 	private:
+		int argc = 1;
+		char ch = '\0';
+		char* argv = &ch;
+		GuiWindow* window = nullptr;
+
 		OfxGuiContext& guiContext;
-		std::shared_ptr<GuiApplication> app = {};
-		std::thread guiThread;
+		QApplication* app = nullptr;
 
 	public:
 		OfxGuiQt(OfxGuiContext& guiContext);
 		~OfxGuiQt();
 
+		bool isCancelled() override;
+
 		void init() override;
+		bool checkNewWindow() override;
 		void shutdown() override;
-		void showProgress() override;
+
+		void openInfo(const std::string& infoString, const std::string& hostName, const std::string& hostVersion) override;
+		void updateInfo(const std::string& infoString) override;
+
+		void openProgress() override;
 		void updateProgress(double progress) override;
-		void hideProgress() override;
+		void close() override;
 	};
 }

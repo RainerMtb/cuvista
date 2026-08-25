@@ -30,10 +30,10 @@ private:
 
 public:
 	MessagePrinterConsole(std::ostream* ostream) :
-		out { ostream } {}
+		out { ostream } 
+	{}
 
 	void print(const std::string& str) override;
-
 	void printNewLine() override;
 };
 

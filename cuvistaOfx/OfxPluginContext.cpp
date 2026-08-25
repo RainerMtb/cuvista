@@ -31,7 +31,7 @@ void PluginContext::render(OfxImageEffectHandle effect, OfxPropertySetHandle inA
 	OfxStatus status = kOfxStatOK;
 	double time = getDouble(inArgs, kOfxPropTime, 0);
 	main.propertySuite->propGetIntN(inArgs, kOfxImageEffectPropRenderWindow, 4, &renderWindow.x1);
-	debugLogger().format("render at {} window x={}:{}, y={}:{}", time, renderWindow.x1, renderWindow.x2, renderWindow.y1, renderWindow.y2);
+	debugLogger().format("render frame {} window x={}:{}, y={}:{} on thread {}", time, renderWindow.x1, renderWindow.x2, renderWindow.y1, renderWindow.y2, threadId());
 
 	OfxPropertySetHandle srcImg = nullptr;
 	status = main.imageEffectSuite->clipGetImage(srcClip, time, NULL, &srcImg);
@@ -78,40 +78,79 @@ void PluginContext::render(OfxImageEffectHandle effect, OfxPropertySetHandle inA
 }
 
 void PluginContext::stabilize(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs) {
-	debugLogger().format("stabilize start {}", threadId());
-	OfxPropertySetHandle clipProperties;
-	main.imageEffectSuite->clipGetHandle(effect, "Source", &srcClip, &clipProperties);
+	SptrGui gui = main.guiContext.gui;
+	if (gui->checkNewWindow()) {
+		debugLogger().format("stabilize start on thread {}", threadId());
+		OfxPropertySetHandle clipProperties;
+		main.imageEffectSuite->clipGetHandle(effect, "Source", &srcClip, &clipProperties);
 
-	double frameRange[2];
-	main.propertySuite->propGetDoubleN(clipProperties, kOfxImageEffectPropFrameRange, 2, frameRange);
-	debugLogger().format("clip frames {}:{}", frameRange[0], frameRange[1]);
+		double frameRange[2];
+		main.propertySuite->propGetDoubleN(clipProperties, kOfxImageEffectPropFrameRange, 2, frameRange);
+		debugLogger().format("clip frames {}:{}", frameRange[0], frameRange[1]);
 
-	OfxStatus status = kOfxStatOK;
-	main.guiContext.gui->showProgress();
-	for (double time = frameRange[0]; time <= frameRange[1]; time += 1.0) {
-		//debugLogger().format("frame {}", time);
+		gui->init();
+		OfxStatus status = kOfxStatOK;
+		auto func = [&] {
+			for (double time = frameRange[0]; time <= frameRange[1] && gui->isCancelled() == false; time += 1.0) {
+				//debugLogger().format("frame {}", time);
 
-		OfxPropertySetHandle srcImg = nullptr;
-		status = main.imageEffectSuite->clipGetImage(srcClip, time, NULL, &srcImg);
-		main.guiContext.gui->updateProgress((time - frameRange[0]) / (frameRange[1] - frameRange[0]));
+				OfxPropertySetHandle srcImg = nullptr;
+				status = main.imageEffectSuite->clipGetImage(srcClip, time, NULL, &srcImg);
+				gui->updateProgress((time - frameRange[0]) / (frameRange[1] - frameRange[0]));
 
-		//if (time == 50.0) {
-		//	// read source image
-		//	OfxRectI srcBounds;
-		//	void* srcPtr = nullptr;
-		//	int srcRowBytes = getInt(srcImg, kOfxImagePropRowBytes, 0);
-		//	main.propertySuite->propGetIntN(srcImg, kOfxImagePropBounds, 4, &srcBounds.x1);
-		//	main.propertySuite->propGetPointer(srcImg, kOfxImagePropData, 0, &srcPtr);
-		//	int h = srcBounds.y2 - srcBounds.y1;
-		//	int w = srcBounds.x2 - srcBounds.x1;
-		//	uint8_t* srcData = reinterpret_cast<uint8_t*>(srcPtr);
-		//	debugLogger().format("image {}x{} stride {} depth {}", w, h, srcRowBytes, getString(srcImg, kOfxImageEffectPropPixelDepth));
-		//	OfxImageByte srcImage(h, w, srcRowBytes, srcData);
-		//	srcImage.saveBmpColor("f:/image.bmp");
-		//}
+				//if (time == 50.0) {
+				//	// read source image
+				//	OfxRectI srcBounds;
+				//	void* srcPtr = nullptr;
+				//	int srcRowBytes = getInt(srcImg, kOfxImagePropRowBytes, 0);
+				//	main.propertySuite->propGetIntN(srcImg, kOfxImagePropBounds, 4, &srcBounds.x1);
+				//	main.propertySuite->propGetPointer(srcImg, kOfxImagePropData, 0, &srcPtr);
+				//	int h = srcBounds.y2 - srcBounds.y1;
+				//	int w = srcBounds.x2 - srcBounds.x1;
+				//	uint8_t* srcData = reinterpret_cast<uint8_t*>(srcPtr);
+				//	debugLogger().format("image {}x{} stride {} depth {}", w, h, srcRowBytes, getString(srcImg, kOfxImageEffectPropPixelDepth));
+				//	OfxImageByte srcImage(h, w, srcRowBytes, srcData);
+				//	srcImage.saveBmpColor("f:/image.bmp");
+				//}
 
-		if (srcImg) main.imageEffectSuite->clipReleaseImage(srcImg);
+				if (srcImg) main.imageEffectSuite->clipReleaseImage(srcImg);
+			}
+			gui->close(); //send signal to break the event loop
+		};
+		std::thread thread(func);
+		gui->openProgress(); //start the event loop in the gui, blocking call
+		thread.join();
+		gui->shutdown();
+		debugLogger().log("stabilize done");
 	}
-	main.guiContext.gui->hideProgress();
-	debugLogger().log("stabilize done");
+}
+
+void PluginContext::showInfo(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs) {
+	SptrGui gui = main.guiContext.gui;
+	if (gui->checkNewWindow()) {
+		debugLogger().log("info show");
+
+		std::stringstream ssInfo;
+		main.mData.showDeviceInfo(ssInfo);
+
+		gui->init();
+		gui->openInfo(ssInfo.str(), main.hostName, main.hostApiVersion);
+		gui->shutdown();
+		debugLogger().log("info done");
+	}
+}
+
+
+//---------------------------------------------------------------------------------
+
+InfoPrinter::InfoPrinter(SptrGui gui) :
+	gui { gui }
+{}
+
+void InfoPrinter::print(const std::string& str) {
+	gui->updateInfo(str);
+}
+
+void InfoPrinter::printNewLine() {
+	gui->updateInfo("\n");
 }
