@@ -72,8 +72,10 @@ public:
 	virtual Mat<float> getPyramid(int64_t frameIndex) const = 0;
 	//get input image as stored in frame buffers
 	virtual void getInput(int64_t frameIndex, Image8& image) const = 0;
+	//stretch image to square pixels
+	virtual void stretchImage(Image8& image, const ImageStretcher& stretcher) const { image.stretch(stretcher, mPool); }
 	//destructor
-	virtual ~FrameExecutor() {}
+	virtual ~FrameExecutor() = default;
 
 	//identify executor type
 	DeviceType getType() const { return mDeviceInfo.getType(); }

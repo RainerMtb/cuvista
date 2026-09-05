@@ -63,16 +63,10 @@ private:
     std::chrono::steady_clock::time_point mTimePoint = std::chrono::steady_clock::now();
     ProgressWindow* mProgressWindow;
     FrameExecutor& mExecutor;
+    ImageStretcher mStretcher;
 
 public:
-    ProgressGui(MainData& data, ProgressWindow* progressWindow, FrameExecutor& executor) :
-        ProgressDisplay(50),
-        mInput(data.h, data.w, data.stride4),
-        mOutput(data.h, data.w, data.stride4),
-        mInputImage(mInput.data(), mInput.w(), mInput.h(), mInput.stride(), QImage::Format_RGBX8888),
-        mOutputImage(mOutput.data(), mOutput.w(), mOutput.h(), mOutput.stride(), QImage::Format_RGBX8888),
-        mProgressWindow { progressWindow },
-        mExecutor { executor } {}
+    ProgressGui(MainData& data, ProgressWindow* progressWindow, FrameExecutor& executor);
 
     void update(const ProgressInfo& progress, bool force) override;
     void updateStatus(const std::string& msg) override;

@@ -34,17 +34,12 @@ namespace im {
 		std::shared_ptr<ImageTypeBase<T>> typePtr;
 
 	public:
-		T maxValue;
-		std::vector<int> colorIndex;
-
-		ImageColorBase(std::shared_ptr<ImageTypeBase<T>> typePtr, std::vector<int> colorIndex, T maxValue) :
-			typePtr { typePtr },
-			colorIndex { colorIndex },
-			maxValue { maxValue }
+		ImageColorBase(std::shared_ptr<ImageTypeBase<T>> typePtr) :
+			typePtr { typePtr }
 		{}
 
 		ImageColorBase() :
-			ImageColorBase<T>({}, {}, 0)
+			ImageColorBase<T>(nullptr)
 		{}
 
 		virtual LocalColor<T> getLocalColor(const Color& color) const = 0;
@@ -54,7 +49,7 @@ namespace im {
 		virtual void gray(ThreadPoolBase& pool = defaultPool) = 0;
 
 		ImagePixel<T> pixelAt(size_t r, size_t c) const {
-			return typePtr->pixelAt(r, c, colorIndex);
+			return typePtr->pixelAt(r, c);
 		}
 
 		template <class R> friend class ImageColorBase;
@@ -78,60 +73,64 @@ namespace im {
 				ImagePixel<R> destPixel = dest->pixelAt(r, 0);
 				for (size_t c = 0; c < typePtr->w(); c++) {
 					srcPixel.writeTo(colorBase(), dest->colorBase(), destPixel);
-					srcPixel.advance();
-					destPixel.advance();
+					srcPixel++;
+					destPixel++;
 				}
 			};
 			pool.addAndWait(fcn, 0, typePtr->h());
 		}
 
 		void convertToNV12(std::shared_ptr<ImageColorBase<uchar>> dest, ThreadPoolBase& pool = defaultPool) const {
+			int w = dest->typePtr->w();
 			auto fcn = [&] (size_t r) {
+				size_t rr = r * 2;
 				uchar y = 0, u = 0, v = 0;
 				ImagePixel<uchar> p = { &y, &u, &v };
-				ImagePixel<T> src;
-				size_t rr = r * 2;
+				ImagePixel<T> srcRow0 = pixelAt(rr, 0);
+				ImagePixel<T> srcRow1 = pixelAt(rr + 1, 0);
 				uchar* destY = dest->typePtr->row(rr);
 				uchar* destUV = dest->typePtr->row(dest->typePtr->h() + r);
-				for (size_t c = 0; c < dest->typePtr->w() / 2; c++) {
+				int stride = dest->typePtr->stride();
+				for (size_t c = 0; c < w / 2; c++) {
 					size_t cc = c * 2;
 					int sumU = 0, sumV = 0;
 
-					src = pixelAt(rr, cc);
-					src.writeTo(colorBase(), ColorBase::YUV, p);
-					destY[cc] = *p.s0;
-					sumU += *p.s1; sumV += *p.s2;
+					srcRow0.writeTo(colorBase(), ColorBase::YUV, p);
+					srcRow0++;
+					destY[cc] = *p[0];
+					sumU += *p[1]; sumV += *p[2];
 
-					src = pixelAt(rr, cc + 1);
-					src.writeTo(colorBase(), ColorBase::YUV, p);
-					destY[cc + 1] = *p.s0;
-					sumU += *p.s1; sumV += *p.s2;
+					srcRow0.writeTo(colorBase(), ColorBase::YUV, p);
+					srcRow0++;
+					destY[cc + 1] = *p[0];
+					sumU += *p[1]; sumV += *p[2];
 
-					src = pixelAt(rr + 1, cc);
-					src.writeTo(colorBase(), ColorBase::YUV, p);
-					destY[cc + dest->typePtr->stride()] = *p.s0;
-					sumU += *p.s1; sumV += *p.s2;
+					srcRow1.writeTo(colorBase(), ColorBase::YUV, p);
+					srcRow1++;
+					destY[cc + stride] = *p[0];
+					sumU += *p[1]; sumV += *p[2];
 
-					src = pixelAt(rr + 1, cc + 1);
-					src.writeTo(colorBase(), ColorBase::YUV, p);
-					destY[cc + dest->typePtr->stride() + 1] = *p.s0;
-					sumU += *p.s1; sumV += *p.s2;
+					srcRow1.writeTo(colorBase(), ColorBase::YUV, p);
+					srcRow1++;
+					destY[cc + stride + 1] = *p[0];
+					sumU += *p[1]; sumV += *p[2];
 
-					destUV[cc] = sumU / 4;
-					destUV[cc + 1] = sumV / 4;
+					*destUV++ = sumU / 4;
+					*destUV++ = sumV / 4;
 				}
 			};
 			pool.addAndWait(fcn, 0, dest->typePtr->h() / 2);
 		}
 
 		template <class R> void convertFromNV12(std::shared_ptr<ImageColorBase<R>> dest, ThreadPoolBase& pool = defaultPool) const {
+			int w = typePtr->w();
 			for (size_t r = 0; r < typePtr->h() / 2; r++) {
 				size_t rr = r * 2;
 				uchar* srcY = typePtr->row(rr);
 				uchar* srcUV = typePtr->row(dest->typePtr->h() + r);
 				ImagePixel<uchar> srcPix;
 				ImagePixel<R> destPix;
-				for (size_t c = 0; c < typePtr->w() / 2; c++) {
+				for (size_t c = 0; c < w / 2; c++) {
 					size_t cc = c * 2;
 
 					srcPix = { srcY + cc, srcUV + cc, srcUV + cc + 1 };
@@ -201,12 +200,12 @@ namespace im {
 	template <class T> class ImageColorRgb : public ImageColorBase<T> {
 
 	public:
-		ImageColorRgb(std::shared_ptr<ImageTypeBase<T>> type, std::vector<int> colorIndex, T maxValue) :
-			ImageColorBase<T>(type, colorIndex, maxValue)
+		ImageColorRgb(std::shared_ptr<ImageTypeBase<T>> type) :
+			ImageColorBase<T>(type)
 		{}
 
 		ImageColorRgb() :
-			ImageColorRgb<T>({}, {}, 0)
+			ImageColorRgb<T>(nullptr)
 		{}
 
 		virtual constexpr ColorBase colorBase() const override {
@@ -215,20 +214,22 @@ namespace im {
 
 		virtual LocalColor<T> getLocalColor(const Color& color) const override {
 			LocalColor<T> local = {};
-			for (size_t idx = 0; idx < this->colorIndex.size(); idx++) {
-				local.colorData[idx] = color.getChannel(this->colorIndex[idx]);
+			auto cols = this->typePtr->colorIndex();
+			for (size_t idx = 0; idx < cols.size(); idx++) {
+				local.colorData[idx] = color.getChannel(cols[idx]);
 			}
 			local.alpha = color.getAlpha();
 			return local;
 		}
 
 		virtual void gray(ThreadPoolBase& pool = defaultPool) override {
+			int w = this->typePtr->w();
 			auto fcn = [&] (size_t r) {
 				ImagePixel<T> pixel = this->pixelAt(r, 0);
-				for (size_t c = 0; c < this->typePtr->w(); c++) {
-					T gray = im::rgb_to_y(*pixel.s0, *pixel.s1, *pixel.s2);
-					*pixel.s0 = *pixel.s1 = *pixel.s2 = gray;
-					pixel.advance();
+				for (size_t c = 0; c < w; c++) {
+					T gray = im::rgb_to_y(*pixel[0], *pixel[1], *pixel[2]);
+					*pixel[0] = *pixel[1] = *pixel[2] = gray;
+					pixel++;
 				}
 			};
 			pool.addAndWait(fcn, 0, this->typePtr->h());
@@ -239,12 +240,12 @@ namespace im {
 	template <class T> class ImageColorYuv : public ImageColorBase<T> {
 
 	public:
-		ImageColorYuv(std::shared_ptr<ImageTypeBase<T>> type, std::vector<int> colorIndex, T maxValue) :
-			ImageColorBase<T>(type, colorIndex, maxValue)
+		ImageColorYuv(std::shared_ptr<ImageTypeBase<T>> type) :
+			ImageColorBase<T>(type)
 		{}
 
 		ImageColorYuv() :
-			ImageColorYuv<T>({}, {}, 0)
+			ImageColorYuv<T>(nullptr)
 		{}
 
 		virtual constexpr ColorBase colorBase() const override {
@@ -259,8 +260,8 @@ namespace im {
 		}
 
 		virtual void gray(ThreadPoolBase& pool = defaultPool) override {
-			this->setColor(1, this->maxValue / 2);
-			this->setColor(2, this->maxValue / 2);
+			this->setColor(1, this->typePtr->maxValue() / 2);
+			this->setColor(2, this->typePtr->maxValue() / 2);
 		}
 	};
 

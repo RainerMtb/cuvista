@@ -127,8 +127,9 @@ void cl::yuv_to_rgba(Kernel kernel, Image src, unsigned char* dest, const Data& 
 	kernel.setArg(0, src);
 	kernel.setArg(1, clData.output);
 	kernel.setArg(2, offset4);
-	clData.queue.enqueueNDRangeKernel(kernel, NullRange, NDRange(w, h));
-	clData.queue.enqueueReadBufferRect(clData.output, CL_TRUE, Size2(), Size2(), Size2(w * 4, h), w * 4LL, 0, stride, 0, dest);
+	cl::size_type srcW = src.getImageInfo<CL_IMAGE_WIDTH>();
+	clData.queue.enqueueNDRangeKernel(kernel, NullRange, NDRange(srcW, h));
+	clData.queue.enqueueReadBufferRect(clData.output, CL_TRUE, Size2(), Size2(), Size2(srcW * 4, 1ull * h), srcW * 4, 0, stride, 0, dest);
 }
 
 void cl::yuv_to_nv12(Kernel kernel, Image src, unsigned char* dest, const Data& clData, int w, int h, int stride) {

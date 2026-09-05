@@ -21,12 +21,35 @@
 #include <QApplication>
 #include <QWidget>
 #include <QPlainTextEdit>
+#include <QImage>
+#include <QPixmap>
+#include <QLabel>
 
 #include <thread>
 #include <filesystem>
 #include "ofxGuiInterface.hpp"
 
 namespace ofx {
+
+	using namespace im;
+
+	class ImageLabel : public QLabel {
+		Q_OBJECT
+
+	private:
+		QPixmap pixmap;
+
+		void resizePixmap();
+
+	public:
+		ImageLabel(QWidget* parent);
+		
+		void resizeEvent(QResizeEvent* event) override;
+
+	public slots:
+		void setImage(QImage image);
+	};
+
 
 	class GuiWindow : public QWidget {
 		Q_OBJECT
@@ -48,6 +71,7 @@ namespace ofx {
 	signals:
 		void sigClose();
 		void sigUpdateProgress(int value);
+		void sigUpdateImage(QImage image);
 		void sigUpdateInfo(const std::string& infoString);
 
 	private slots:
@@ -58,6 +82,7 @@ namespace ofx {
 		char ch = '\0';
 		char* argv = &ch;
 		GuiWindow* window = nullptr;
+		QImage inputImage;
 
 		OfxGuiContext& guiContext;
 		QApplication* app = nullptr;
@@ -76,7 +101,7 @@ namespace ofx {
 		void updateInfo(const std::string& infoString) override;
 
 		void openProgress() override;
-		void updateProgress(double progress) override;
+		void updateProgress(double progress, const Image8& image) override;
 		void close() override;
 	};
 }

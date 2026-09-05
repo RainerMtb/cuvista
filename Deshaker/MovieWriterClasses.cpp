@@ -16,7 +16,7 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
-#include "MovieWriterImpl.hpp"
+#include "MovieWriterClasses.hpp"
 #include "MovieFrame.hpp"
 #include "ErrorLogger.hpp"
 #include <filesystem>
@@ -94,6 +94,15 @@ void MovieWriterCollection::close() {
 // primitive output writer class
 //-----------------------------------------------------------------------------------
 
+OutputWriter::OutputWriter(MainData& data, MovieReader& reader, int outputStride) :
+	NullWriter(data, reader),
+	outputFrame(data.h, data.w, outputStride)
+{}
+
+OutputWriter::OutputWriter(MainData& data, MovieReader& reader) :
+	OutputWriter(data, reader, data.stride4)
+{}
+
 const ImageVuyx& OutputWriter::getOutputFrame() { 
 	return outputFrame; 
 }
@@ -107,6 +116,12 @@ void OutputWriter::writeOutput(const FrameExecutor& executor) {
 //-----------------------------------------------------------------------------------
 // Raw Format Writers
 //-----------------------------------------------------------------------------------
+
+RawMemoryStoreWriter::RawMemoryStoreWriter(size_t maxFrameCount, bool writeInput, bool writeOutput) :
+	maxFrameCount { maxFrameCount },
+	doWriteInput { writeInput },
+	doWriteOutput { writeOutput }
+{}
 
 void RawMemoryStoreWriter::writeOutput(const FrameExecutor& executor) {
 	if (doWriteOutput) {
@@ -182,13 +197,21 @@ void RawMemoryStoreWriter::writeOutputFile(const std::string& outputFile, int ma
 // BMP Images
 //-----------------------------------------------------------------------------------
 
+BmpImageWriter::BmpImageWriter(MainData& data, MovieReader& reader) :
+	ImageWriter(data, reader),
+	worker { [] {} },
+	imageBgra(data.h, data.wOut),
+	stretcher(imageBgra, data.w)
+{}
+
 void BmpImageWriter::writeOutput(const FrameExecutor& executor) {
 	worker.join();
 	executor.getOutput(frameIndex, imageBgra);
+	executor.stretchImage(imageBgra, stretcher);
 	std::string fname = makeFilename("bmp");
 	worker = std::jthread([&, fname] {
 		imageBgra.saveBmpColor(fname);
-		this->outputBytesWritten += 3ull * mData.h * mData.w;
+		this->outputBytesWritten += 3ull * mData.h * mData.wOut;
 		this->encodedBytesTotal += std::filesystem::file_size(std::filesystem::path(fname));
 	});
 	this->frameIndex++;
@@ -203,7 +226,11 @@ void BmpImageWriter::close() {
 // NV12 raw video
 //-----------------------------------------------------------------------------------
 
-//open file
+RawNv12Writer::RawNv12Writer(MainData& data, MovieReader& reader) :
+	NullWriter(data, reader),
+	nv12(data.h, data.w, data.stride)
+{}
+
 void RawNv12Writer::open(OutputOption outputOption) {
 	file = std::ofstream(mData.fileOut, std::ios::binary);
 }
@@ -226,7 +253,11 @@ void RawNv12Writer::writeOutput(const FrameExecutor& executor) {
 // YUV444 packed without striding pixels
 //-----------------------------------------------------------------------------------
 
-//open file
+RawYuvWriter::RawYuvWriter(MainData& data, MovieReader& reader) :
+	NullWriter(data, reader),
+	yuv(data.h, data.w, data.stride)
+{}
+
 void RawYuvWriter::open(OutputOption outputOption) {
 	file = std::ofstream(mData.fileOut, std::ios::binary);
 }
@@ -248,6 +279,11 @@ void RawYuvWriter::writeOutput(const FrameExecutor& executor) {
 //-----------------------------------------------------
 // Write raw data to Pipe
 //-----------------------------------------------------
+
+RawPipeWriter::RawPipeWriter(MainData& data, MovieReader& reader) :
+	NullWriter(data, reader),
+	output(data.h, data.w)
+{}
 
 void RawPipeWriter::open(OutputOption outputOption) {
 	PipeWriter::openPipe();
@@ -330,6 +366,11 @@ void TransformsFile::writeTransform(const Affine2D& transform, int64_t frameInde
 	writeValue(transform.rotMinutes());
 }
 
+TransformsWriter::TransformsWriter(MainData& data) :
+	MainWriter(data),
+	TransformsFile()
+{}
+
 void TransformsWriter::start() {
 	TransformsFile::open(mData.trajectoryFile);
 	outputBytesWritten = mFile.tellp();
@@ -345,6 +386,10 @@ void TransformsWriter::writeInput(const FrameExecutor& executor) {
 //-----------------------------------------------------------------------------------
 // Computed Results per Point
 //-----------------------------------------------------------------------------------
+
+ResultDetailsWriter::ResultDetailsWriter(MainData& data) :
+	MainWriter(data) 
+{}
 
 void  ResultDetailsWriter::start() {
 	mFile = std::ofstream(mData.resultsFile);
@@ -393,6 +438,16 @@ void ResultDetailsWriter::writeInput(const FrameExecutor& executor) {
 //-----------------------------------------------------------------------------------
 // Result Images
 //-----------------------------------------------------------------------------------
+
+ResultImageWriter::ResultImageWriter(MainData& data) :
+	MainWriter(data),
+	yuv(data.h, data.w),
+	bgra(data.h, data.w)
+{}
+
+ResultImageWriter::ResultImageWriter(MainData& data, MovieReader& reader) :
+	ResultImageWriter(data)
+{}
 
 void ResultImageWriter::writeImage(const FrameResultData& resultData, std::span<PointResult> res, int64_t idx, Image8& dest, ThreadPoolBase& pool, bool drawTransformed) {
 	int h = dest.h();
@@ -495,6 +550,10 @@ void ResultImageWriter::writeInput(const FrameExecutor& executor) {
 //-----------------------------------------------------------------------------------
 // Result Video
 //-----------------------------------------------------------------------------------
+
+ResultVideoWriter::ResultVideoWriter(MainData& data, MovieReader& reader) :
+	MainWriter(data)
+{}
 
 void ResultVideoWriter::open(OutputOption outputOption) {
 	file = std::ofstream(mData.fileOut, std::ios::binary);

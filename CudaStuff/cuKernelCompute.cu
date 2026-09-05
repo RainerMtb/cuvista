@@ -17,6 +17,7 @@
  */
 
 #include "cuDeshaker.cuh"
+#include "cuDecompose.cuh"
 
 struct ArrayIndex {
 	int r, c;

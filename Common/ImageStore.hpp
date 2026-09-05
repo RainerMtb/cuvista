@@ -28,6 +28,8 @@ namespace im {
 
 	public:
 		int h, w, stride, planes;
+		std::vector<int> colorIndex;
+		T maxValue;
 
 	protected:
 		int storeSize;
@@ -36,36 +38,38 @@ namespace im {
 		T* firstRow = nullptr;
 		int rowOffset = 0;
 
-		ImageStore(int h, int w, int stride, int planes, int storeSize, YAxisDir ydir, std::shared_ptr<T[]> store) :
+		ImageStore(int h, int w, int stride, int planes, int storeSize, YAxisDir ydir, std::vector<int> colorIndex, T maxValue, std::shared_ptr<T[]> store) :
 			h { h },
 			w { w },
 			stride { stride },
 			planes { planes },
 			storeSize { storeSize },
 			ydir { ydir },
+			colorIndex { colorIndex },
+			maxValue { maxValue },
 			store { store }
 		{
 			if (ydir == YAxisDir::DOWN) {
-				firstRow = this->store.get();
+				firstRow = store.get();
 				rowOffset = stride;
 
 			} else {
-				firstRow = this->store.get() + (h - 1) * stride;
+				firstRow = store.get() + (h - 1) * stride;
 				rowOffset = -stride;
 			}
 		}
 
 	public:
-		ImageStore(int h, int w, int stride, int planes, int storeSize, YAxisDir ydir, T* data) :
-			ImageStore<T>(h, w, stride, planes, storeSize, ydir, std::shared_ptr<T[]>(data, [] (auto ptr) {}))
+		ImageStore(int h, int w, int stride, int planes, int storeSize, YAxisDir ydir, std::vector<int> colorIndex, T maxValue, T* data) :
+			ImageStore<T>(h, w, stride, planes, storeSize, ydir, colorIndex, maxValue, std::shared_ptr<T[]>(data, [] (auto ptr) {}))
 		{}
 
-		ImageStore(int h, int w, int stride, int planes, int storeSize, YAxisDir ydir) :
-			ImageStore<T>(h, w, stride, planes, storeSize, ydir, std::make_shared<T[]>(storeSize))
+		ImageStore(int h, int w, int stride, int planes, int storeSize, YAxisDir ydir, std::vector<int> colorIndex, T maxValue) :
+			ImageStore<T>(h, w, stride, planes, storeSize, ydir, colorIndex, maxValue, std::make_shared<T[]>(storeSize))
 		{}
 
 		ImageStore() :
-			ImageStore<T>(0, 0, 0, 0, 0, YAxisDir::DOWN)
+			ImageStore<T>(0, 0, 0, 0, 0, YAxisDir::DOWN, {}, 0)
 		{}
 
 		virtual T* row(size_t r) {
@@ -81,23 +85,23 @@ namespace im {
 		}
 
 		virtual T* data() {
-			return this->store.get();
+			return store.get();
 		}
 
 		virtual const T* data() const {
-			return this->store.get();
+			return store.get();
 		}
 
 		virtual size_t sizeInBytes() const {
-			return this->storeSize;
+			return storeSize;
 		}
 
 		virtual std::vector<T> bytes() const {
-			return { this->store.get(), this->store.get() + this->storeSize };
+			return { store.get(), store.get() + storeSize };
 		}
 
 		virtual void write(std::ostream& os) const {
-			os.write(reinterpret_cast<const char*>(this->store.get()), this->storeSize * sizeof(T));
+			os.write(reinterpret_cast<const char*>(store.get()), storeSize * sizeof(T));
 		}
 	};
 

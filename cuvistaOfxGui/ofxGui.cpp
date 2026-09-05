@@ -22,11 +22,11 @@
 #include <QProgressBar>
 #include <QPushbutton>
 #include <QCloseEvent>
-#include <QLabel>
 
 #include "version.hpp"
 #include "util.hpp"
 #include "ofxGui.hpp"
+#include "ImageClasses.hpp"
 
 
 #if defined(_WIN64)
@@ -49,6 +49,26 @@ LIBRARY_EXPORT void loadGui(OfxGuiContext& guiContext) {
 
 //----------------------------------------------------------------------------------------
 
+ImageLabel::ImageLabel(QWidget* parent) :
+	QLabel(parent)
+{}
+
+void ImageLabel::resizePixmap() {
+	setPixmap(pixmap.scaled(width(), height(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
+}
+
+void ImageLabel::setImage(QImage image) {
+	this->pixmap = QPixmap::fromImage(image);
+	resizePixmap();
+}
+
+void ImageLabel::resizeEvent(QResizeEvent* event) {
+	resizePixmap();
+}
+
+
+//----------------------------------------------------------------------------------------
+
 GuiWindow::GuiWindow(QWidget* parent, Qt::WindowFlags f) :
 	QWidget(parent, f)
 {}
@@ -56,7 +76,8 @@ GuiWindow::GuiWindow(QWidget* parent, Qt::WindowFlags f) :
 GuiWindow::~GuiWindow() {}
 
 void GuiWindow::closeEvent(QCloseEvent* event) {
-	//clicking close will set cancelRequest, allow closing only when really done
+	// clicking close will set cancelRequest
+	// allow closing only when really done
 	if (isDone) {
 		event->accept();
 
@@ -106,6 +127,10 @@ void OfxGuiQt::openProgress() {
 	window->setWindowTitle("Stabilizing...");
 
 	QVBoxLayout* layout = new QVBoxLayout(window);
+	ImageLabel* imageLabel = new ImageLabel(window);
+	imageLabel->setMinimumSize(160, 80);
+	imageLabel->setAlignment(Qt::AlignCenter);
+	layout->addWidget(imageLabel);
 	QProgressBar* progress = new QProgressBar(window);
 	progress->setMinimum(0);
 	progress->setMaximum(1000);
@@ -116,6 +141,7 @@ void OfxGuiQt::openProgress() {
 
 	QObject::connect(this, &OfxGuiQt::sigClose, window, &QWidget::close, Qt::QueuedConnection);
 	QObject::connect(this, &OfxGuiQt::sigUpdateProgress, progress, &QProgressBar::setValue, Qt::QueuedConnection);
+	QObject::connect(this, &OfxGuiQt::sigUpdateImage, imageLabel, &ImageLabel::setImage);
 	QObject::connect(btnCancel, &QPushButton::clicked, this, &OfxGuiQt::cancel);
 
 	//guiContext.debugLogger->format("gui open progress");
@@ -127,8 +153,10 @@ void OfxGuiQt::openProgress() {
 	window = nullptr;
 }
 
-void OfxGuiQt::updateProgress(double progress) {
+void OfxGuiQt::updateProgress(double progress, const Image8& image) {
 	sigUpdateProgress((int) (progress * 1000.0));
+	inputImage = QImage(image.data(), image.w(), image.h(), image.strideInBytes(), QImage::Format_RGBX8888);
+	sigUpdateImage(inputImage);
 }
 
 //must be called on the application thread

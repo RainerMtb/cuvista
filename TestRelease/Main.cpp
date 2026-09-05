@@ -17,8 +17,8 @@
  */
 
 #include "Deshaker.hpp"
-#include "MovieWriterImpl.hpp"
-#include "MovieReaderImpl.hpp"
+#include "MovieWriterClasses.hpp"
+#include "MovieReaderClasses.hpp"
 
 #include <sstream>
 #include <regex>

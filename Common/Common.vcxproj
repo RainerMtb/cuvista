@@ -114,6 +114,7 @@
     <ClInclude Include="ImageClasses.hpp" />
     <ClInclude Include="ImageColor.hpp" />
     <ClInclude Include="ImageInterface.hpp" />
+    <ClInclude Include="ImagePixel.hpp" />
     <ClInclude Include="ImageStore.hpp" />
     <ClInclude Include="ImageType.hpp" />
     <ClInclude Include="OutputOption.hpp" />

@@ -144,6 +144,7 @@ public:
 	int64_t maxFrames = std::numeric_limits<int64_t>::max();
 	Color backgroundColor = Color::rgb(defaultParam.bgColorRed, defaultParam.bgColorGreen, defaultParam.bgColorBlue);
 
+	//measuring runtime
 	std::chrono::steady_clock::time_point timePoint;
 
 	

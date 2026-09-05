@@ -48,7 +48,9 @@ namespace ofx {
 		OfxParamHandle paramZoomMin = nullptr;
 		OfxParamHandle paramZoomDynamic = nullptr;
 		OfxParamHandle paramZoomMax = nullptr;
-		OfxParamHandle paramX = nullptr;
+
+		int h = 0;
+		int w = 0;
 
 		void render(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs);
 		void stabilize(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs);

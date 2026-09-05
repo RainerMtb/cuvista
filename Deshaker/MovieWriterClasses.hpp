@@ -52,14 +52,8 @@ protected:
 	ImageVuyx outputFrame; //frame to get from main loop and to send to output
 
 public:
-	OutputWriter(MainData& data, MovieReader& reader, int outputStride) :
-		NullWriter(data, reader),
-		outputFrame(data.h, data.w, outputStride) 
-	{}
-
-	OutputWriter(MainData& data, MovieReader& reader) :
-		OutputWriter(data, reader, data.stride4) 
-	{}
+	OutputWriter(MainData& data, MovieReader& reader, int outputStride);
+	OutputWriter(MainData& data, MovieReader& reader);
 
 	const ImageVuyx& getOutputFrame();
 	void writeOutput(const FrameExecutor& executor) override;
@@ -82,11 +76,7 @@ public:
 	std::list<ImageVuyx> inputFrames;
 	std::list<std::vector<PointResult>> results;
 
-	RawMemoryStoreWriter(size_t maxFrameCount = 250, bool writeInput = true, bool writeOutput = true) :
-		maxFrameCount { maxFrameCount },
-		doWriteInput { writeInput },
-		doWriteOutput { writeOutput} 
-	{}
+	RawMemoryStoreWriter(size_t maxFrameCount = 250, bool writeInput = true, bool writeOutput = true);
 
 	void writeOutput(const FrameExecutor& executor) override;
 	void writeInput(const FrameExecutor& executor) override;
@@ -102,14 +92,11 @@ class BmpImageWriter : public ImageWriter {
 
 private:
 	ImageBGRA imageBgra;
+	ImageStretcher stretcher;
 	std::jthread worker;
 
 public:
-	BmpImageWriter(MainData& data, MovieReader& reader) :
-		ImageWriter(data, reader),
-		worker { [] {} },
-		imageBgra(data.h, data.w)
-	{}
+	BmpImageWriter(MainData& data, MovieReader& reader);
 
 	void close() override;
 	void writeOutput(const FrameExecutor& executor) override;
@@ -124,10 +111,7 @@ private:
 	ImageNV12 nv12;
 
 public:
-	RawNv12Writer(MainData& data, MovieReader& reader) :
-		NullWriter(data, reader),
-		nv12(data.h, data.w, data.stride)
-	{}
+	RawNv12Writer(MainData& data, MovieReader& reader);
 
 	void open(OutputOption outputOption) override;
 	void writeOutput(const FrameExecutor& executor) override;
@@ -142,10 +126,7 @@ private:
 	ImageYuv yuv;
 
 public:
-	RawYuvWriter(MainData& data, MovieReader& reader) :
-		NullWriter(data, reader),
-		yuv(data.h, data.w, data.stride)
-	{}
+	RawYuvWriter(MainData& data, MovieReader& reader);
 
 	void open(OutputOption outputOption) override;
 	void writeOutput(const FrameExecutor& executor) override;
@@ -159,10 +140,7 @@ private:
 	ImageYuv output;
 
 public:
-	RawPipeWriter(MainData& data, MovieReader& reader) :
-		NullWriter(data, reader),
-		output(data.h, data.w)
-	{}
+	RawPipeWriter(MainData& data, MovieReader& reader);
 
 	void open(OutputOption outputOption) override;
 	void writeOutput(const FrameExecutor& executor) override;
@@ -182,8 +160,6 @@ protected:
 	}
 
 public:
-	TransformsFile() {}
-
 	static std::map<int64_t, TransformValues> readTransformMap(const std::string& trajectoryFile);
 
 	void open(const std::string& trajectoryFile);
@@ -195,10 +171,7 @@ public:
 class TransformsWriter : public MainWriter, public TransformsFile {
 
 public:
-	TransformsWriter(MainData& data) :
-		MainWriter(data),
-		TransformsFile() 
-	{}
+	TransformsWriter(MainData& data);
 
 	void start() override;
 	void writeInput(const FrameExecutor& executor) override;
@@ -215,8 +188,7 @@ private:
 	void write(std::span<PointResult> results, int64_t frameIndex);
 
 public:
-	ResultDetailsWriter(MainData& data) :
-		MainWriter(data) {}
+	ResultDetailsWriter(MainData& data);
 
 	static void write(std::span<PointResult> results, const std::string& filename);
 
@@ -233,15 +205,8 @@ private:
 	ImageBGRA bgra;
 
 public:
-	ResultImageWriter(MainData& data) :
-		MainWriter(data),
-		yuv(data.h, data.w),
-		bgra(data.h, data.w) 
-	{}
-
-	ResultImageWriter(MainData& data, MovieReader& reader) :
-		ResultImageWriter(data)
-	{}
+	ResultImageWriter(MainData& data);
+	ResultImageWriter(MainData& data, MovieReader& reader);
 
 	void start() override {}
 	void writeInput(const FrameExecutor& executor) override;
@@ -259,9 +224,7 @@ private:
 	ImageBGRA bgra;
 
 public:
-	ResultVideoWriter(MainData& data, MovieReader& reader) :
-		MainWriter(data)
-	{}
+	ResultVideoWriter(MainData& data, MovieReader& reader);
 
 	void open(OutputOption outputOption) override;
 	void writeInput(const FrameExecutor& executor) override;

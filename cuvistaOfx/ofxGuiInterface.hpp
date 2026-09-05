@@ -21,6 +21,10 @@
 #include <filesystem>
 #include "util.hpp"
 
+namespace im {
+	class Image8;
+}
+
 namespace ofx {
 
 	using namespace util;
@@ -43,7 +47,7 @@ namespace ofx {
 		virtual void openProgress() = 0;
 
 		//send signal to update progress
-		virtual void updateProgress(double progress) = 0;
+		virtual void updateProgress(double progress, const im::Image8& image) = 0;
 
 		//send signal to close the window
 		virtual void close() = 0;

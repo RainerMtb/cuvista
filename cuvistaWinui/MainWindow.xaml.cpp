@@ -29,7 +29,7 @@
 #include <filesystem>
 #include "AppUtil.hpp"
 #include "ErrorLogger.hpp"
-#include "MovieWriterImpl.hpp"
+#include "MovieWriterClasses.hpp"
 
 
 using namespace winrt;

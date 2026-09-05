@@ -23,19 +23,37 @@
 
 namespace im {
 
+	class Image8;
+
+	class ImageStretcher {
+
+	public:
+		int sourceWidth, targetWidth;
+		std::vector<uint32_t> x0;
+		std::vector<uint32_t> x1;
+		std::vector<uint32_t> f;
+
+		ImageStretcher(int sourceWidth, int targetWidth, int targetColums);
+		ImageStretcher(const Image8& image, int sourceWidth);
+		ImageStretcher();
+	};
+
+
+	//-----------------------------------------------------------------------
+
 	template <class T> class ImageY : public ImageBase<T> {
 
 	public:
 		ImageY(int h, int w, int stride, T maxValue) {
-			this->storePtr = std::make_shared<ImageStore<T>>(h, w, stride, 1, h * stride, YAxisDir::DOWN);
+			this->storePtr = std::make_shared<ImageStore<T>>(h, w, stride, 1, h * stride, YAxisDir::DOWN, std::vector<int>{ 0 }, maxValue);
 			this->typePtr = std::make_shared<ImageTypePlanar<T>>(this->storePtr);
-			this->colorPtr = std::make_shared<ImageColorYuv<T>>(this->typePtr, std::vector<int>{ 0 }, maxValue);
+			this->colorPtr = std::make_shared<ImageColorYuv<T>>(this->typePtr);
 		}
 
-		ImageY(int h, int w, int stride, T* data, T maxValue) {
-			this->storePtr = std::make_shared<ImageStore<T>>(h, w, stride, 1, h * stride, YAxisDir::DOWN, data);
+		ImageY(int h, int w, int stride, T maxValue, T* data) {
+			this->storePtr = std::make_shared<ImageStore<T>>(h, w, stride, 1, h * stride, YAxisDir::DOWN, std::vector<int>{ 0 }, maxValue, data);
 			this->typePtr = std::make_shared<ImageTypePlanar<T>>(this->storePtr);
-			this->colorPtr = std::make_shared<ImageColorYuv<T>>(this->typePtr, std::vector<int>{ 0 }, maxValue);
+			this->colorPtr = std::make_shared<ImageColorYuv<T>>(this->typePtr);
 		}
 
 		ImageY() :
@@ -58,7 +76,13 @@ namespace im {
 	};
 
 
-	class Image8 : public ImageBase<uchar> {};
+	class Image8 : public ImageBase<uchar> {
+
+	public:
+		ImageStretcher createStretcher(int sourceWidth);
+
+		virtual void stretch(const ImageStretcher& stretcher, ThreadPoolBase& pool = defaultPool);
+	};
 
 	class Image8yuv : public Image8 {};
 

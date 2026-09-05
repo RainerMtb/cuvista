@@ -190,6 +190,8 @@ void FFmpegFormatReader::openInput(AVFormatContext* fmt, const std::string& sour
     timeBaseDen = av_stream->time_base.den;
     h = av_codec_ctx->height;
     w = av_codec_ctx->width;
+    parNum = av_codec_ctx->sample_aspect_ratio.num;
+    parDen = av_codec_ctx->sample_aspect_ratio.den;
     sourceName = source;
 
     //find the best number for frame count

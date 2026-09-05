@@ -26,19 +26,34 @@ namespace ofx {
 
 	public:
 		OfxImageFloat(int h, int w, int stride, float* data);
+		OfxImageFloat(int h, int w, int stride);
 
 		constexpr im::ImageType imageType() const override { return im::ImageType::RGBA; }
 
 		virtual void saveBmpColor(const std::string& filename) const override;
 	};
 
-	class OfxImageByte : public im::ImageBase<uint8_t> {
+
+	class OfxImageByte : public im::Image8 {
 
 	public:
 		OfxImageByte(int h, int w, int stride, uint8_t* data);
+		OfxImageByte(int h, int w, int stride);
 
 		constexpr im::ImageType imageType() const override { return im::ImageType::RGBA; }
 
 		virtual void saveBmpColor(const std::string& filename) const override;
+	};
+
+
+	class OfxException : public std::runtime_error {
+
+	public:
+
+		OfxException() : std::runtime_error("") {}
+
+		OfxException(const std::string& msg) : std::runtime_error(msg.c_str()) {}
+
+		OfxException(const char* msg) : std::runtime_error(msg) {}
 	};
 }

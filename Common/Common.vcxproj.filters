@@ -30,6 +30,7 @@
     <ClInclude Include="ImageColor.hpp" />
     <ClInclude Include="ImageBase.hpp" />
     <ClInclude Include="BaseData.hpp" />
+    <ClInclude Include="ImagePixel.hpp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="CMakeLists.txt" />

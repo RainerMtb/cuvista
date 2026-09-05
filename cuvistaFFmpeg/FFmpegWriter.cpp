@@ -55,6 +55,7 @@ void FFmpegWriter::open(const AVCodec* codec, AVPixelFormat pixfmt, int h, int w
     codec_ctx->pix_fmt = pixfmt;
     codec_ctx->framerate = { mReader.fpsNum, mReader.fpsDen };
     codec_ctx->time_base = { mReader.fpsDen, mReader.fpsNum };
+    codec_ctx->sample_aspect_ratio = { mReader.parNum, mReader.parDen };
     codec_ctx->gop_size = gopSize;
     codec_ctx->max_b_frames = 4;
     codec_ctx->thread_count = std::max(12u, std::thread::hardware_concurrency() / 2); //there is a max setting for x265

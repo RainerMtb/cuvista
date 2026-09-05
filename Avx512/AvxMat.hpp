@@ -53,7 +53,7 @@ public:
 	}
 
 	void saveAsBMP(const std::string& filename) const {
-		im::ImageY<T>(h(), w(), w(), this->array, 1.0f).saveBmpPlanes(filename);
+		im::ImageY<T>(h(), w(), w(), 1.0f, this->array).saveBmpPlanes(filename);
 	}
 
 	void copyTo(AvxMat<T>& dest) const {

@@ -875,21 +875,21 @@ void AvxFrame::vuyxToRgba(const AvxMatf& vuyx, Image8& dest) const {
 		V16f fv = { mFactorV[vidx[0]], mFactorV[vidx[1]], mFactorV[vidx[2]], mFactorV[vidx[3]] };
 		V16f f = 255.0f;
 		for (size_t r = workIndex(); r < vuyx.h(); r = workIndex()) {
-			int destW = dest.w() * 4;
+			int width = vuyx.w();
 			const float* srcPtr = vuyx.addr(r, 0);
 			uchar* destPtr = dest.row(r);
-			for (int c = 0; c < destW - 16; c += 16) {
+			for (int c = 0; c < width - 16; c += 16) {
 				V16f vuyx4 = srcPtr + c;
 				V16f y = _mm512_permute_ps(vuyx4, mask8(2, 2, 2, 2));
 				V16f u = _mm512_permute_ps(vuyx4, mask8(1, 1, 1, 1));
 				V16f v = _mm512_permute_ps(vuyx4, mask8(0, 0, 0, 0));
 				V16f::yuvToRgbaPacked(y * f, u * f, v * f, destPtr + c, fu, fv);
 			}
-			V16f vuyx4 = srcPtr + destW - 16;
+			V16f vuyx4 = srcPtr + width - 16;
 			V16f y = _mm512_permute_ps(vuyx4, mask8(2, 2, 2, 2));
 			V16f u = _mm512_permute_ps(vuyx4, mask8(1, 1, 1, 1));
 			V16f v = _mm512_permute_ps(vuyx4, mask8(0, 0, 0, 0));
-			V16f::yuvToRgbaPacked(y * f, u * f, v * f, destPtr + destW - 16, fu, fv);
+			V16f::yuvToRgbaPacked(y * f, u * f, v * f, destPtr + width - 16, fu, fv);
 		}
 	};
 	mPool.workAndWait(func, 0, vuyx.h());

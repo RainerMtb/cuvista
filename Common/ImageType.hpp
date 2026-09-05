@@ -19,29 +19,10 @@
 #pragma once
 
 #include "ImageStore.hpp"
+#include "ImagePixel.hpp"
 #include "Color.hpp"
 
 namespace im {
-
-	//container for pointers to one pixel
-	template <class T> struct ImagePixel {
-		T* s0 = nullptr;
-		T* s1 = nullptr;
-		T* s2 = nullptr;
-		T* s3 = nullptr;
-		int offset = 0;
-
-		void advance() {
-			s0 += offset;
-			s1 += offset;
-			s2 += offset;
-			if (s3 != nullptr) s3 += offset;
-		}
-
-		void writeTo(ColorBase srcColor, ColorBase destColor, ImagePixel<uchar>& dest) const;
-		void writeTo(ColorBase srcColor, ColorBase destColor, ImagePixel<float>& dest) const;
-	};
-
 
 	//Data Type
 	template <class T> class ImageTypeBase {
@@ -62,6 +43,8 @@ namespace im {
 		int w() const { return storePtr->w; }
 		int stride() const { return storePtr->stride; }
 		int planes() const { return storePtr->planes; }
+		std::vector<int> colorIndex() const { return storePtr->colorIndex; }
+		T maxValue() const { return storePtr->maxValue; }
 
 		virtual int rows() const = 0;
 		virtual int cols() const = 0;
@@ -84,14 +67,13 @@ namespace im {
 
 		virtual void copyRow(size_t r, std::shared_ptr<ImageTypeBase<T>> dest) const = 0;
 
-		ImagePixel<T> pixelAt(size_t r, size_t c, std::vector<int> colorIndex) {
-			ImagePixel<T> pix;
-			if (colorIndex.size() > 0) pix.s0 = addr(colorIndex[0], r, c);
-			if (colorIndex.size() > 1) pix.s1 = addr(colorIndex[1], r, c);
-			if (colorIndex.size() > 2) pix.s2 = addr(colorIndex[2], r, c);
-			if (colorIndex.size() > 3) pix.s3 = addr(colorIndex[3], r, c);
-			pix.offset = pixelOffset();
-			return pix;
+		ImagePixel<T> pixelAt(size_t r, size_t c) {
+			ImagePixel<T> out(storePtr->colorIndex.size());
+			for (size_t i = 0; i < out.size; i++) {
+				out.pix[i] = addr(storePtr->colorIndex[i], r, c);
+			}
+			out.offset = pixelOffset();
+			return out;
 		}
 
 		virtual void crc(util::CRC64& base) const {
@@ -167,7 +149,9 @@ namespace im {
 		}
 
 		virtual void copyRow(size_t r, std::shared_ptr<ImageTypeBase<T>> dest) const override {
-			std::copy_n(this->row(r), this->storePtr->w * this->storePtr->planes, dest->row(r));
+			int siz = this->storePtr->w * this->storePtr->planes;
+			assert(siz <= dest->cols() && "invalid copy");
+			std::copy_n(this->row(r), siz, dest->row(r));
 		}
 	};
 
@@ -211,6 +195,7 @@ namespace im {
 		}
 
 		virtual void copyRow(size_t r, std::shared_ptr<ImageTypeBase<T>> dest) const override {
+			assert(this->storePtr->w <= dest->cols() && "invalid copy");
 			std::copy_n(this->row(r), this->storePtr->w, dest->row(r));
 		}
 	};

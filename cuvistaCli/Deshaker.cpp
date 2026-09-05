@@ -16,8 +16,8 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
-#include "MovieReaderImpl.hpp"
-#include "MovieWriterImpl.hpp"
+#include "MovieReaderClasses.hpp"
+#include "MovieWriterClasses.hpp"
 #include "Deshaker.hpp"
 #include "ErrorLogger.hpp"
 #include "MovieFrame.hpp"

@@ -17,7 +17,7 @@
  */
 
 #include "MovieFrame.hpp"
-#include "MovieWriterImpl.hpp"
+#include "MovieWriterClasses.hpp"
 #include "ErrorLogger.hpp"
 
 

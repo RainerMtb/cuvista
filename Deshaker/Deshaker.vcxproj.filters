@@ -35,10 +35,10 @@
     <ClCompile Include="ProgressDisplay.cpp">
       <Filter>Main</Filter>
     </ClCompile>
-    <ClCompile Include="MovieReaderImpl.cpp">
+    <ClCompile Include="MovieReaderClasses.cpp">
       <Filter>Reader</Filter>
     </ClCompile>
-    <ClCompile Include="MovieWriterImpl.cpp">
+    <ClCompile Include="MovieWriterClasses.cpp">
       <Filter>Writer</Filter>
     </ClCompile>
     <ClCompile Include="AffineTransform.cpp">
@@ -127,7 +127,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="MovieReaderImpl.hpp">
+    <ClInclude Include="MovieReaderClasses.hpp">
       <Filter>Reader</Filter>
     </ClInclude>
     <ClInclude Include="DeshakerHelpText.hpp">
@@ -184,7 +184,7 @@
     <ClInclude Include="ThreadPool.hpp">
       <Filter>Util</Filter>
     </ClInclude>
-    <ClInclude Include="MovieWriterImpl.hpp">
+    <ClInclude Include="MovieWriterClasses.hpp">
       <Filter>Writer</Filter>
     </ClInclude>
     <ClInclude Include="MovieFrame.hpp">

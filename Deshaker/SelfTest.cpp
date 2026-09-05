@@ -20,8 +20,8 @@
 #include "SelfTestData.hpp"
 #include "AVException.hpp"
 #include "MainData.hpp"
-#include "MovieWriterImpl.hpp"
-#include "MovieReaderImpl.hpp"
+#include "MovieWriterClasses.hpp"
+#include "MovieReaderClasses.hpp"
 #include "MovieFrame.hpp"
 #include "ErrorLogger.hpp"
 
@@ -80,7 +80,6 @@ void runSelfTest(util::MessagePrinter& out, std::vector<DeviceInfoBase*> deviceL
 			if (errorLogger().hasError()) throw AVException(errorLogger().getErrorMessage());
 
 			//first frame
-			//std::cout << "reading" << std::endl;
 			reader->read(*executor);
 			executor->inputData(reader->frameIndex);
 			std::vector<int> luma1(256);
@@ -174,7 +173,7 @@ void runSelfTest(util::MessagePrinter& out, std::vector<DeviceInfoBase*> deviceL
 				out.print("FAIL output ");
 				check = false;
 			}
-
+			
 			//output nv12
 			ImageNV12 nv12(data.h, data.w, data.stride);
 			executor->getOutput(0, nv12, 0, nullptr);

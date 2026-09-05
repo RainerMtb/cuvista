@@ -80,7 +80,7 @@ namespace ofx {
 
 	void setHostFcn(OfxHost* host) {
 		debugLogger().open("tcp://10.0.0.1:5555"); //must reopen the logger, host resets the library ???
-		debugLogger().log("set host");
+		debugLogger().format("set host on thread {}", threadId());
 		ofx::host = host;
 		pluginState = PluginState::STARTED;
 	}
@@ -91,7 +91,7 @@ namespace ofx {
 		std::string actionString = action;
 		OfxStatus status = kOfxStatReplyDefault;
 
-		if (actionString == kOfxActionLoad) { //################################
+		if (actionString == kOfxActionLoad) { //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 			//load plugin, fetch and store suites
 			main.propertySuite = (OfxPropertySuiteV1*) host->fetchSuite(host->host, kOfxPropertySuite, 1);
 			main.imageEffectSuite = (OfxImageEffectSuiteV1*) host->fetchSuite(host->host, kOfxImageEffectSuite, 1);
@@ -110,13 +110,13 @@ namespace ofx {
 			if (main.isLoaded()) {
 				pluginState = PluginState::LOADED;
 				status = kOfxStatOK;
-				debugLogger().format("-- action Load, plugin loaded, Host Name = {}, Api Version = {}", main.hostName, main.hostApiVersion);
+				debugLogger().format("-- action Load on thread {}, plugin loaded, Host Name = {}, Api Version = {}", threadId(), main.hostName, main.hostApiVersion);
 
 			} else {
 				status = kOfxStatFailed;
 			}
 
-		} else if (actionString == kOfxActionDescribe) { //################################
+		} else if (actionString == kOfxActionDescribe) { //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 			//describe plugin to host, set global parameters for all clips
 			if (pluginState != PluginState::LOADED) {
 				errorLogger().logError("plugin must be loaded here", ErrorSource::OFX);
@@ -152,7 +152,7 @@ namespace ofx {
 			pluginState = PluginState::DESCRIBED;
 			status = kOfxStatOK;
 
-		} else if (actionString == kOfxImageEffectActionDescribeInContext) { //################################
+		} else if (actionString == kOfxImageEffectActionDescribeInContext) { //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 			//describe plugin to host, set parameters for specific context
 			if (pluginState != PluginState::DESCRIBED) {
 				errorLogger().logError("plugin must be described here", ErrorSource::OFX);
@@ -194,7 +194,7 @@ namespace ofx {
 			pluginState = PluginState::DESCRIBED_IN_CONTEXT;
 			status = kOfxStatOK;
 
-		} else if (actionString == kOfxActionCreateInstance) { //################################
+		} else if (actionString == kOfxActionCreateInstance) { //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 			//init plugin instance, multiple instances are active at a time
 			//here we do not get the correct number of frames in a clip
 			OfxPropertySetHandle effectProps;
@@ -214,13 +214,13 @@ namespace ofx {
 			pluginIndex++;
 			pluginContextList.push_back(ctx);
 			main.propertySuite->propSetPointer(effectProps, kOfxPropInstanceData, 0, ctx);
-			debugLogger().format("-- action CreateInstance, total instances = {}", pluginContextList.size());
+			debugLogger().format("-- action CreateInstance on thread {}, total instances = {}", threadId(), pluginContextList.size());
 			status = kOfxStatOK;
 
-		} else if (actionString == kOfxActionBeginInstanceChanged) { //################################
+		} else if (actionString == kOfxActionBeginInstanceChanged) { 
 			status = kOfxStatReplyDefault;
 
-		} else if (actionString == kOfxActionInstanceChanged) { //################################
+		} else if (actionString == kOfxActionInstanceChanged) { 
 			//handle button push
 			if (getString(inArgs, kOfxPropName) == "stabilize" && getString(inArgs, kOfxPropChangeReason) == kOfxChangeUserEdited) {
 				PluginContext* ctx = getPluginContext(effect);
@@ -232,10 +232,10 @@ namespace ofx {
 			}
 			status = kOfxStatOK;
 
-		} else if (actionString == kOfxActionEndInstanceChanged) { //################################
+		} else if (actionString == kOfxActionEndInstanceChanged) { 
 			status = kOfxStatReplyDefault;
 
-		} else if (actionString == kOfxImageEffectActionGetFramesNeeded) { //################################
+		} else if (actionString == kOfxImageEffectActionGetFramesNeeded) { 
 			PluginContext* ctx = getPluginContext(effect);
 			double time = getDouble(inArgs, kOfxPropTime);
 			main.propertySuite->propSetDouble(outArgs, kOfxImageEffectPropFrameRange, 0, time);
@@ -243,12 +243,21 @@ namespace ofx {
 			debugLogger().format("frames needed {}:{}", time, time);
 			status = kOfxStatOK;
 
-		} else if (actionString == kOfxImageEffectActionRender) { //################################
+		} else if (actionString == kOfxImageEffectActionGetRegionsOfInterest) {
+			status = kOfxStatReplyDefault;
+
+		} else if (actionString == kOfxImageEffectActionBeginSequenceRender) {
+			status = kOfxStatReplyDefault;
+
+		} else if (actionString == kOfxImageEffectActionRender) { //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 			PluginContext* ctx = getPluginContext(effect);
 			ctx->render(effect, inArgs, outArgs);
 			status = kOfxStatOK;
 
-		} else if (actionString == kOfxActionDestroyInstance) { //################################
+		} else if (actionString == kOfxImageEffectActionEndSequenceRender) {
+			status = kOfxStatReplyDefault;
+
+		} else if (actionString == kOfxActionDestroyInstance) { //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 			//destroy plugin instance
 			PluginContext* ctx = getPluginContext(effect);
 			pluginContextList.remove(ctx);
@@ -256,7 +265,7 @@ namespace ofx {
 			debugLogger().format("action DestroyInstance, total instances = {}", pluginContextList.size());
 			status = kOfxStatOK;
 
-		} else if (actionString == kOfxActionUnload) { //################################
+		} else if (actionString == kOfxActionUnload) {
 			//unload plugin
 			if (pluginContextList.size() != 0) {
 				errorLogger().logError("unloading while there are still effenct instances!");

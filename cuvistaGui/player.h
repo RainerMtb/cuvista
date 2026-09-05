@@ -45,8 +45,9 @@ public:
 
     PlayerWindow(QWidget* parent);
     void open(const bool hasAudio);
-    void closeEvent(QCloseEvent* event) override;
     int getAudioVolume();
+
+    void closeEvent(QCloseEvent* event) override;
 
 signals:
     void cancel();
@@ -71,7 +72,9 @@ private:
     int mAudioStreamIndex;
     bool mPlayAudio;
     QAudioFormat mAudioFormat;
+    QVideoFrameFormat mVideoFormat;
     QVideoFrame mVideoFrame;
+    ImageStretcher mStretcher;
     QAudioDevice mAudioDevice;
     QAudioSink* mAudioSink;
     QIODevice* mAudioIODevice;

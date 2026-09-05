@@ -80,6 +80,17 @@ void ProgressWindow::setBackgroundColor(QString style) {
 //-------- handle progess update ----------
 //-----------------------------------------
 
+ProgressGui::ProgressGui(MainData& data, ProgressWindow* progressWindow, FrameExecutor& executor) :
+	ProgressDisplay(50),
+	mInput(data.h, data.wOut),
+	mOutput(data.h, data.wOut),
+	mInputImage(mInput.data(), mInput.w(), mInput.h(), mInput.stride(), QImage::Format_RGBX8888),
+	mOutputImage(mOutput.data(), mOutput.w(), mOutput.h(), mOutput.stride(), QImage::Format_RGBX8888),
+	mProgressWindow { progressWindow },
+	mExecutor { executor },
+	mStretcher(mInput, data.w)
+{}
+
 void ProgressGui::update(const ProgressInfo& progress, bool force) {
 	mProgressWindow->sigProgress(progress.totalProgress);
 
@@ -91,12 +102,14 @@ void ProgressGui::update(const ProgressInfo& progress, bool force) {
 		mTimePoint = timePointNow;
 		uint64_t idx = progress.readIndex - 1;
 		mExecutor.getInput(idx, mInput);
+		mExecutor.stretchImage(mInput, mStretcher);
 		mProgressWindow->sigUpdateInput(mInputImage, QString::fromStdString(mExecutor.mFrame.ptsForFrameAsString(idx)));
 	}
 	if (imageDue && progress.writeIndex > 0 && mProgressWindow->isVisible()) {
 		mTimePoint = timePointNow;
 		uint64_t idx = progress.writeIndex - 1;
 		mExecutor.getOutput(idx, mOutput);
+		mExecutor.stretchImage(mOutput, mStretcher);
 		mProgressWindow->sigUpdateOutput(mOutputImage, QString::fromStdString(mExecutor.mFrame.ptsForFrameAsString(idx)));
 	}
 }

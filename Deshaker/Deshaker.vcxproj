@@ -117,9 +117,9 @@
     <ClCompile Include="ProgressDisplayConsole.cpp" />
     <ClCompile Include="RandomSource.cpp" />
     <ClCompile Include="MovieFrame.cpp" />
-    <ClCompile Include="MovieReaderImpl.cpp" />
+    <ClCompile Include="MovieReaderClasses.cpp" />
     <ClCompile Include="ProgressDisplay.cpp" />
-    <ClCompile Include="MovieWriterImpl.cpp" />
+    <ClCompile Include="MovieWriterClasses.cpp" />
     <ClCompile Include="Stats.cpp" />
     <ClCompile Include="SystemConsole.cpp" />
     <ClCompile Include="SystemInput.cpp" />
@@ -149,7 +149,7 @@
     <ClInclude Include="MainData.hpp" />
     <ClInclude Include="MovieFrame.hpp" />
     <ClInclude Include="MovieReader.hpp" />
-    <ClInclude Include="MovieWriterImpl.hpp" />
+    <ClInclude Include="MovieWriterClasses.hpp" />
     <ClInclude Include="MovieWriter.hpp" />
     <ClInclude Include="NvEncoder.hpp" />
     <ClInclude Include="NvidiaDriver.hpp" />
@@ -160,7 +160,7 @@
     <ClInclude Include="SelfTestData.hpp" />
     <ClInclude Include="Stats.hpp" />
     <ClInclude Include="RandomSource.hpp" />
-    <ClInclude Include="MovieReaderImpl.hpp" />
+    <ClInclude Include="MovieReaderClasses.hpp" />
     <ClInclude Include="SystemStuff.hpp" />
     <ClInclude Include="ThreadPool.hpp" />
     <ClInclude Include="Trajectory.hpp" />

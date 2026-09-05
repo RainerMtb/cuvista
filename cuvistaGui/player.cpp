@@ -94,9 +94,13 @@ PlayerWriter::PlayerWriter(MainData& data, MovieReader& reader, PlayerWindow* pl
 
 //---- on gui thread
 void PlayerWriter::open(OutputOption outputOption) {
-    //buffering frame
-    QImage image = imageScaledToFit(mImageWorking, mData.w, mData.h).convertToFormat(QImage::Format_RGBA8888);
+    //set up placeholder frame
+    QImage image = imageScaledToFit(mImageWorking, mData.wOut, mData.h).convertToFormat(QImage::Format_RGBA8888);
     mVideoFrame = QVideoFrame(image);
+
+    //set up video frame
+    mVideoFormat = QVideoFrameFormat(QSize(mData.wOut, mData.h), QVideoFrameFormat::Format_RGBX8888);
+    mStretcher = ImageStretcher(mData.w, mData.wOut, mData.wOut * 4);
 
     //handling input streams
     for (size_t i = 0; i < mReader.inputStreamCount(); i++) {
@@ -161,13 +165,14 @@ void PlayerWriter::writeOutput(const FrameExecutor& executor) {
     // cannot reuse QVideoFrame, cannot be mapped more than once ???
     // have to create a new QVideoFrame
     // NOTE: MAN QT IS SUCH A CRAP
-    mVideoFrame = QVideoFrame(QVideoFrameFormat(QSize(mData.w, mData.h), QVideoFrameFormat::Format_RGBX8888));
+    mVideoFrame = QVideoFrame(mVideoFormat);
     if (mVideoFrame.map(QVideoFrame::WriteOnly) == false) {
         errorLogger().logError("cannot map video frame");
 
     } else {
         ImageRGBA image(mVideoFrame.height(), mVideoFrame.width(), mVideoFrame.bytesPerLine(0), mVideoFrame.bits(0));
         executor.getOutput(frameIndex, image);
+        executor.stretchImage(image, mStretcher);
         mVideoFrame.unmap();
     }
 

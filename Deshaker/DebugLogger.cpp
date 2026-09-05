@@ -161,7 +161,7 @@ DebugLoggerType DebugLoggerTcp::type() {
 }
 
 DebugLoggerTcp::~DebugLoggerTcp() {
-	shutdown(sock);
+	shutdown(sock, SHUT_RDWR);
 }
 
 #else

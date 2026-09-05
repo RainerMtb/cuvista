@@ -21,3 +21,7 @@
 double ReaderStats::fps() const {
     return 1.0 * fpsNum / fpsDen;
 }
+
+double ReaderStats::par() const {
+    return 1.0 * parNum / parDen;
+}

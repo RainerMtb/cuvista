@@ -30,7 +30,7 @@
 #include "UserInputGui.hpp"
 #include "MovieFrame.hpp"
 #include "progress.h"
-#include "MovieWriterImpl.hpp"
+#include "MovieWriterClasses.hpp"
 #include "ErrorLogger.hpp"
 
 template <class... Args> QString qformat(std::format_string<Args...> fmt, Args&&... args) {
@@ -299,7 +299,9 @@ void cuvistaGui::setInputFile(const QString& inputPath) {
             ui.inputPosition->setValue(2.0 / mReader->frameCount);
 
             //set up converter to BGR for display in UI
-            mInputBGR = ImageBgr(mReader->h, mReader->w);
+            mInputBGR = ImageBgr(mReader->h, mReader->w * mReader->parNum / mReader->parDen);
+            mStretcher = ImageStretcher(mInputBGR, mReader->w);
+            //wrap QImage around existing data
             mInputImage = QImage(mInputBGR.data(), mInputBGR.w(), mInputBGR.h(), mInputBGR.strideInBytes(), QImage::Format_BGR888);
             updateInputImage();
         }
@@ -368,6 +370,7 @@ void cuvistaGui::seek(double frac) {
 
 void cuvistaGui::updateInputImage() {
     mInputYUV.convertTo(mInputBGR);
+    mInputBGR.stretch(mStretcher);
     ui.imageInput->setImage(mInputImage);
 }
 

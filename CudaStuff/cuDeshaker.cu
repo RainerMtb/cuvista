@@ -16,6 +16,7 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
+#include "CoreData.hpp"
 #include "cuDeshaker.cuh"
 #include "cuKernels.cuh"
 #include "ImageClasses.hpp"
@@ -604,7 +605,7 @@ void CudaExecutor::getInput(int64_t frameIndex, Image8& image) const {
 
 	image.setIndex(frameIndex);
 	handleStatus(err, "error @getInput #10");
-	handleStatus(cudaMemcpy2DAsync(image.data(), image.stride(), ptr, mData.stride4, image.w() * 4ull, image.h(), cudaMemcpyDefault, cs[1]), "error @getInput #11");
+	handleStatus(cudaMemcpy2DAsync(image.data(), image.stride(), ptr, mData.stride4, mData.w * 4ull, mData.h, cudaMemcpyDefault, cs[1]), "error @getInput #11");
 	handleStatus(cudaStreamSynchronize(cs[1]), "error @getInput #12");
 	handleStatus(cudaGetLastError(), "error @getInput #13");
 }

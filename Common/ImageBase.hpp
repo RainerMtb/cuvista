@@ -2,39 +2,9 @@
 
 #include "ImageColor.hpp"
 #include "CharMap.hpp"
+#include "Color.hpp"
 
 namespace im {
-
-	class ImageScalerContext {
-
-	private:
-		struct ScalerParam {
-			int x0, x1;
-			float f;
-		};
-		int srcW, destW;
-		int rowSelect;
-		std::vector<ScalerParam> param;
-
-	public:
-		ImageScalerContext(int srcW, int destW, int rowSelect) :
-			srcW { srcW },
-			destW { destW },
-			rowSelect { rowSelect },
-			param(destW)
-		{
-			for (int i = 0; i < destW; i++) {
-				float x = 1.0f * i / destW * srcW;
-				float x0 = std::floor(x);
-				param[i].f = x - x0;
-				param[i].x0 = (int) x0;
-				param[i].x1 = std::min(srcW - 1, param[i].x0 + 1);
-			}
-		}
-	};
-
-
-	//-----------------------------------------------------------------------
 
 	template <class T> class ImageBase : public IImage<T> {
 
@@ -47,7 +17,7 @@ namespace im {
 			double alpha = a * localColor.alpha;
 			if (x >= 0 && x < w() && y >= 0 && y < h()) {
 				for (int i = 0; i < planes() && i < localColor.colorData.size(); i++) {
-					int z = colorPtr->colorIndex[i];
+					int z = storePtr->colorIndex[i];
 					T& val = at(z, y, x);
 					double pix = val * (1.0 - alpha) + localColor.colorData[i] * alpha;
 					val = (T) pix;
@@ -87,8 +57,8 @@ namespace im {
 		virtual T* plane(size_t idx)                    override { return typePtr->plane(idx); }
 		virtual const T* plane(size_t idx)        const override { return typePtr->plane(idx); }
 
-		virtual T* data() { return typePtr->plane(0); }
-		virtual const T* data()                            const { return typePtr->plane(0); }
+		virtual T* data()                                        { return storePtr->data(); }
+		virtual const T* data()                            const { return storePtr->data(); }
 
 		virtual int h()                           const override { return storePtr->h; }
 		virtual int rows()                        const override { return typePtr->rows(); }
@@ -106,19 +76,20 @@ namespace im {
 
 		virtual void gray(ThreadPoolBase& pool = defaultPool)    { return colorPtr->gray(pool); }
 
-		virtual constexpr std::span<int> colorIndex()      const { return colorPtr->colorIndex; }
+		virtual constexpr std::span<int> colorIndex()      const { return storePtr->colorIndex; }
 		virtual constexpr ColorBase colorBase()            const { return colorPtr->colorBase(); }
 
 		virtual ImagePixel<T> pixelAt(size_t r, size_t c)  const { return colorPtr->pixelAt(r, c); }
 
 		virtual void saveBmpPlanes(const std::string& filename) const override { colorPtr->saveBmpPlanes(filename); }
+
 		virtual void saveBmpColor(const std::string& filename) const override;
 
 		virtual void savePgm(const std::string& filename) const override {
 			std::ofstream os(filename, std::ios::binary);
 			PgmHeader(w(), h()).writeHeader(os);
 			std::vector<char> data(w());
-			float scale = 255.0f / colorPtr->maxValue;
+			float scale = 255.0f / storePtr->maxValue;
 
 			for (int z = 0; z < planes(); z++) {
 				for (int r = 0; r < h(); r++) {
@@ -380,10 +351,6 @@ namespace im {
 			drawMarker(cx, cy, color, radius, radius, type);
 		}
 
-		virtual void stretchTo(ImageBase<T>& dest, const ImageScalerContext& scalerContext, ThreadPoolBase& pool = defaultPool) const {
-
-		}
-
 		virtual void copyTo(ImageBase<T>& dest, ThreadPoolBase& pool = defaultPool) const {
 			assert(this->imageType() == dest.imageType() && w() <= dest.w() && h() <= dest.h() && "invalid image for copy");
 			for (size_t r = 0; r < typePtr->rows(); r++) {
@@ -394,15 +361,15 @@ namespace im {
 
 		virtual void copyTo(ImageBase<T>& dest, int y0, int x0, T alpha, ThreadPoolBase& pool = defaultPool) const {
 			assert(this->colorBase() == dest.colorBase() && x0 + w() <= dest.w() && y0 + h() <= dest.h() && "invalid image for copy");
-			T mv = colorPtr->maxValue;
+			T mv = storePtr->maxValue;
 			auto fcn = [&] (size_t r) {
 				for (size_t c = 0; c < w(); c++) {
-					float a = planes() < 4 ? mv : at(colorPtr->colorIndex[3], r, c);
+					float a = planes() < 4 ? mv : at(storePtr->colorIndex[3], r, c);
 					float srcAlpha = a * alpha / mv;
 					float destAlpha = mv - srcAlpha;
 					for (int z = 0; z < 3 && z < planes() && z < dest.planes(); z++) {
-						float f1 = at(colorPtr->colorIndex[z], r, c) * srcAlpha;
-						T* ptr = dest.addr(dest.colorPtr->colorIndex[z], r + y0, c + x0);
+						float f1 = at(storePtr->colorIndex[z], r, c) * srcAlpha;
+						T* ptr = dest.addr(dest.storePtr->colorIndex[z], r + y0, c + x0);
 						float f2 = *ptr * destAlpha;
 						*ptr = (T) ((f1 + f2) / mv);
 					}
@@ -411,8 +378,10 @@ namespace im {
 			pool.addAndWait(fcn, 0, h());
 		}
 
+
 		template <class R> friend class ImageBase;
 
+		//convert to different image type
 		template <class R> void convertTo(ImageBase<R>& dest, ThreadPoolBase& pool = defaultPool) const {
 			assert(w() <= dest.w() && h() <= dest.h() && "invalid conversion");
 			if (this->imageType() == dest.imageType()) {

@@ -21,11 +21,78 @@
 
 namespace im {
 
+	ImageStretcher::ImageStretcher(int sourceWidth, int targetWidth, int targetColums) :
+		sourceWidth { sourceWidth },
+		targetWidth { targetWidth },
+		x0(targetColums),
+		x1(targetColums),
+		f(targetColums)
+	{
+		constexpr uint32_t maxVal = 1 << 16;
+		size_t idx = 0;
+		int n = targetColums / targetWidth;
+
+		for (int c = 0; c < targetWidth; c++) {
+			float fx = 1.0f * c * sourceWidth / targetWidth;
+			float fx0 = std::floor(fx);
+			int ix0 = (int) fx0;
+			int ix1 = std::min(sourceWidth - 1, ix0 + 1);
+			for (int i = 0; i < n; i++) {
+				x0[idx] = ix0 * n + i;
+				x1[idx] = ix1 * n + i;
+				f[idx] = (uint32_t) ((fx - fx0) * maxVal);
+				idx++;
+			}
+		}
+	}
+
+	ImageStretcher::ImageStretcher(const Image8& image, int sourceWidth) :
+		ImageStretcher(sourceWidth, image.w(), image.cols())
+	{}
+
+	ImageStretcher::ImageStretcher() :
+		sourceWidth { 0 },
+		targetWidth { 0 }
+	{}
+
+	ImageStretcher Image8::createStretcher(int sourceWidth) {
+		return ImageStretcher(*this, sourceWidth);
+	}
+
+	void Image8::stretch(const ImageStretcher& stretcher, ThreadPoolBase& pool) {
+		assert(w() == stretcher.targetWidth && cols() == stretcher.f.size() && "invalid parameters");
+		if (stretcher.sourceWidth == stretcher.targetWidth) return;
+		constexpr uint32_t maxVal = 1 << 16;
+
+		auto fcn = [&] (FuncIndex workIndex) {
+			std::vector<uchar> pixelRow(cols());
+
+			for (size_t r = workIndex(); r < rows(); r = workIndex()) {
+				//store one row of pixels
+				uchar* ptr = row(r);
+				std::copy_n(ptr, cols(), pixelRow.data());
+
+				//overwrite pixel row
+				for (size_t c = 0; c < cols(); c++) {
+					uint32_t x0 = pixelRow[stretcher.x0[c]];
+					uint32_t x1 = pixelRow[stretcher.x1[c]];
+					uint32_t f = stretcher.f[c];
+					uint32_t x = x0 * (maxVal - f) + x1 * f;
+					ptr[c] = x / maxVal;
+				}
+			}
+		};
+		pool.workAndWait(fcn, 0, h());
+	}
+
+
+	//------------------------------------------------------------------------------
+
 	ImageBgr::ImageBgr(int h, int w) {
 		int stride = util::alignValue(w * 3, 4);
-		storePtr = std::make_shared<ImageStore<uchar>>(h, w, stride, 3, h * stride, YAxisDir::DOWN);
+		storePtr = std::make_shared<ImageStore<uchar>>(h, w, stride, 3, h * stride, YAxisDir::DOWN, std::vector<int>{ 2, 1, 0 }, 255);
 		typePtr = std::make_shared<ImageTypePacked<uchar>>(storePtr);
-		colorPtr = std::make_shared<ImageColorRgb<uchar>>(typePtr, std::vector<int>{ 2, 1, 0 }, 255);
+		colorPtr = std::make_shared<ImageColorRgb<uchar>>(typePtr);
 	}
 
 	ImageBgr::ImageBgr() :
@@ -117,15 +184,15 @@ namespace im {
 	//-----------------------------------------------------------------------
 
 	ImageVuyxFloat::ImageVuyxFloat(int h, int w, int stride, float* data) {
-		storePtr = std::make_shared<ImageStore<float>>(h, w, stride, 4, h * stride, YAxisDir::DOWN, data);
+		storePtr = std::make_shared<ImageStore<float>>(h, w, stride, 4, h * stride, YAxisDir::DOWN, std::vector<int>{ 2, 1, 0, 3 }, 1.0f, data);
 		typePtr = std::make_shared<ImageTypePacked<float>>(storePtr);
-		colorPtr = std::make_shared<ImageColorYuv<float>>(typePtr, std::vector<int>{ 2, 1, 0, 3 }, 1.0f);
+		colorPtr = std::make_shared<ImageColorYuv<float>>(typePtr);
 	}
 
 	ImageVuyxFloat::ImageVuyxFloat(int h, int w, int stride) {
-		storePtr = std::make_shared<ImageStore<float>>(h, w, stride, 4, h * stride, YAxisDir::DOWN);
+		storePtr = std::make_shared<ImageStore<float>>(h, w, stride, 4, h * stride, YAxisDir::DOWN, std::vector<int>{ 2, 1, 0, 3 }, 1.0f);
 		typePtr = std::make_shared<ImageTypePacked<float>>(storePtr);
-		colorPtr = std::make_shared<ImageColorYuv<float>>(typePtr, std::vector<int>{ 2, 1, 0, 3 }, 1.0f);
+		colorPtr = std::make_shared<ImageColorYuv<float>>(typePtr);
 	}
 
 	ImageVuyxFloat::ImageVuyxFloat(int h, int w) :
@@ -140,9 +207,9 @@ namespace im {
 	//-----------------------------------------------------------------------
 
 	ImageVuyx::ImageVuyx(int h, int w, int stride) {
-		storePtr = std::make_shared<ImageStore<uchar>>(h, w, stride, 4, h * stride, YAxisDir::DOWN);
+		storePtr = std::make_shared<ImageStore<uchar>>(h, w, stride, 4, h * stride, YAxisDir::DOWN, std::vector<int>{ 2, 1, 0, 3 }, 255);
 		typePtr = std::make_shared<ImageTypePacked<uchar>>(storePtr);
-		colorPtr = std::make_shared<ImageColorYuv<uchar>>(typePtr, std::vector<int>{ 2, 1, 0, 3 }, 255);
+		colorPtr = std::make_shared<ImageColorYuv<uchar>>(typePtr);
 	}
 
 	ImageVuyx::ImageVuyx(int h, int w, size_t stride) :
@@ -199,9 +266,9 @@ namespace im {
 	//-----------------------------------------------------------------------
 
 	ImageYuv::ImageYuv(int h, int w, int stride) {
-		storePtr = std::make_shared<ImageStore<uchar>>(h, w, stride, 3, h * stride * 3, YAxisDir::DOWN);
+		storePtr = std::make_shared<ImageStore<uchar>>(h, w, stride, 3, h * stride * 3, YAxisDir::DOWN, std::vector<int>{ 0, 1, 2 }, 255);
 		typePtr = std::make_shared<ImageTypePlanar<uchar>>(storePtr);
-		colorPtr = std::make_shared<ImageColorYuv<uchar>>(typePtr, std::vector<int>{ 0, 1, 2 }, 255);
+		colorPtr = std::make_shared<ImageColorYuv<uchar>>(typePtr);
 	}
 
 	ImageYuv::ImageYuv(int h, int w, size_t stride) :
@@ -314,9 +381,9 @@ namespace im {
 	//-----------------------------------------------------------------------
 
 	ImageNV12::ImageNV12(int h, int w, int stride) {
-		storePtr = std::make_shared<ImageStore<uchar>>(h, w, stride, 3, h * stride * 3 / 2, YAxisDir::DOWN);
+		storePtr = std::make_shared<ImageStore<uchar>>(h, w, stride, 3, h * stride * 3 / 2, YAxisDir::DOWN, std::vector<int>{ 0, 1, 2 }, 255);
 		typePtr = std::make_shared<ImageTypeNV12<uchar>>(storePtr);
-		colorPtr = std::make_shared<ImageColorYuv<uchar>>(typePtr, std::vector<int>{ 0, 1, 2 }, 255);
+		colorPtr = std::make_shared<ImageColorYuv<uchar>>(typePtr);
 	}
 
 	ImageNV12::ImageNV12(int h, int w) :
@@ -331,15 +398,15 @@ namespace im {
 	//-----------------------------------------------------------------------
 
 	ImageBGRA::ImageBGRA(int h, int w, int stride, uchar* data) {
-		storePtr = std::make_shared<ImageStore<uchar>>(h, w, stride, 4, h * stride, YAxisDir::DOWN, data);
+		storePtr = std::make_shared<ImageStore<uchar>>(h, w, stride, 4, h * stride, YAxisDir::DOWN, std::vector<int>{ 2, 1, 0, 3 }, 255, data);
 		typePtr = std::make_shared<ImageTypePacked<uchar>>(storePtr);
-		colorPtr = std::make_shared<ImageColorRgb<uchar>>(typePtr, std::vector<int>{ 2, 1, 0, 3 }, 255);
+		colorPtr = std::make_shared<ImageColorRgb<uchar>>(typePtr);
 	}
 
 	ImageBGRA::ImageBGRA(int h, int w, int stride) {
-		storePtr = std::make_shared<ImageStore<uchar>>(h, w, stride, 4, h * stride, YAxisDir::DOWN);
+		storePtr = std::make_shared<ImageStore<uchar>>(h, w, stride, 4, h * stride, YAxisDir::DOWN, std::vector<int>{ 2, 1, 0, 3 }, 255);
 		typePtr = std::make_shared<ImageTypePacked<uchar>>(storePtr);
-		colorPtr = std::make_shared<ImageColorRgb<uchar>>(typePtr, std::vector<int>{ 2, 1, 0, 3 }, 255);
+		colorPtr = std::make_shared<ImageColorRgb<uchar>>(typePtr);
 	}
 
 	ImageBGRA::ImageBGRA(int h, int w) :
@@ -373,15 +440,15 @@ namespace im {
 	//-----------------------------------------------------------------------
 
 	ImageRGBA::ImageRGBA(int h, int w, int stride, uchar* data) {
-		storePtr = std::make_shared<ImageStore<uchar>>(h, w, stride, 4, h * stride, YAxisDir::DOWN, data);
+		storePtr = std::make_shared<ImageStore<uchar>>(h, w, stride, 4, h * stride, YAxisDir::DOWN, std::vector<int>{ 0, 1, 2, 3 }, 255, data);
 		typePtr = std::make_shared<ImageTypePacked<uchar>>(storePtr);
-		colorPtr = std::make_shared<ImageColorRgb<uchar>>(typePtr, std::vector<int>{ 0, 1, 2, 3 }, 255);
+		colorPtr = std::make_shared<ImageColorRgb<uchar>>(typePtr);
 	}
 
 	ImageRGBA::ImageRGBA(int h, int w, int stride) {
-		storePtr = std::make_shared<ImageStore<uchar>>(h, w, stride, 4, h * stride, YAxisDir::DOWN);
+		storePtr = std::make_shared<ImageStore<uchar>>(h, w, stride, 4, h * stride, YAxisDir::DOWN, std::vector<int>{ 0, 1, 2, 3 }, 255);
 		typePtr = std::make_shared<ImageTypePacked<uchar>>(storePtr);
-		colorPtr = std::make_shared<ImageColorRgb<uchar>>(typePtr, std::vector<int>{ 0, 1, 2, 3 }, 255);
+		colorPtr = std::make_shared<ImageColorRgb<uchar>>(typePtr);
 	}
 
 	ImageRGBA::ImageRGBA(int h, int w) :

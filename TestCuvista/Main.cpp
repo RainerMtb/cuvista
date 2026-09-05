@@ -27,7 +27,7 @@ int main() {
 		/*0*/ "-info",
 		/*1*/ "-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -bgmode color -y -enc ffmpeg:hevc -frames 4 -progress 0",
 		/*2*/ "-device 1 -i d:/VideoTest/02short.mp4 -o null -mode 2",
-		/*3*/ "-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -bgmode color -y -zoom -8 -device 0",
+		/*3*/ "-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -bgmode color -y -zoom -8 -device 0 -enc nvenc:h264",
 		/*4*/ "-i D:/VideoTest/x3/VID.mp4 -o f:/videoOut.mp4 -y -zoom 5 -radius 0.3",
 		/*5*/ "-device 2 -i f:/pic/input.mp4 -o f:/videoOut.mp4 -y",
 		/*6*/ "-device 3 -i D:/VideoTest/12.mp4 -o f:/videoOut.mp4 -y -frames 200",
@@ -35,8 +35,8 @@ int main() {
 		/*8*/ "-i d:/VideoTest/06b.mkv -o f:/videoOut.nv12 -resvid -bgmode color -y -zoom -8 -device 3 -noclassic",
 		/*9*/ "-i d:/VideoTest/06b.mkv -o f:/videoOut.mp4 -y -device 2 -nodbscan",
 		/*10*/ "-i d:/videoTest/15.ts -o f:/videoOut.mp4 -y -device 0 -frames 150 -log tcp://10.0.0.1:5555",
-		/*11*/ "-i //READYNAS/Videos/Misc/AudioTestWettenDass.ts -o f:/videoOut.mp4 -y",
-		/*12*/ "-i //READYNAS/Videos/Sugababes_push_the_button.mp4 -o f:/videoOut.mp4 -y",
+		/*11*/ "-i //READYNAS/Videos/Misc/AudioTestWettenDass.ts -o f:/videoOut.mkv -y -frames 400 -bgmode color -zoom -5",
+		/*12*/ "-i //READYNAS/Videos/Misc/AudioTestWettenDass.ts -o f:/im%02d.bmp -y -frames 10 -bgmode color -zoom -5 -device 1",
 		/*13*/ "-i d:/VideoTest/example.mp4 -o d:/videoTest/out/copy.mp4 -copyframes -y",
 	};
 

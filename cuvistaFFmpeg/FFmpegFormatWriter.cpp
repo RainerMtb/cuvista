@@ -88,7 +88,8 @@ void FFmpegFormatWriter::openFormat(AVCodecID codecId, AVFormatContext* ctx, int
 
 void FFmpegFormatWriter::openFormat(AVCodecID codecId) {
     //av_log_set_level(AV_LOG_ERROR);
-    //custom callback to log ffmpeg errors
+    //custom callback to log ffmpeg messages
+    //this does not includew messages from encoders like hevc or av1 as those do not use ffmpeg logging
     av_log_set_callback(ffmpeg_log);
 
     //setup streams
@@ -100,6 +101,9 @@ void FFmpegFormatWriter::openFormat(AVCodecID codecId) {
             int codecSupported = avformat_query_codec(fmt_ctx->oformat, codecId, FF_COMPLIANCE_STRICT);
             if (codecSupported == 1) {
                 osc.outputStream = videoStream = createNewStream(fmt_ctx, inStream);
+
+                //pixel aspect radio from input
+                videoStream->sample_aspect_ratio = { mData.parNum, mData.parDen };
 
             } else {
                 throw AVException(std::format("cannot write codec '{}' to output", avcodec_get_name(codecId)));

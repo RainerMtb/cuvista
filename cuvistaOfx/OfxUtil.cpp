@@ -22,10 +22,15 @@
 namespace ofx {
 
 	OfxImageFloat::OfxImageFloat(int h, int w, int stride, float* data) {
-		std::span<float> span(data, h * stride);
-		storePtr = std::make_shared<im::ImageStore<float>>(h, w, stride, 4, h * stride, im::YAxisDir::UP, data);
+		storePtr = std::make_shared<im::ImageStore<float>>(h, w, stride, 4, h * stride, im::YAxisDir::UP, std::vector<int>{ 0, 1, 2, 3 }, 1.0f, data);
 		typePtr = std::make_shared<im::ImageTypePacked<float>>(storePtr);
-		colorPtr = std::make_shared<im::ImageColorRgb<float>>(typePtr, std::vector<int>{ 0, 1, 2, 3 }, 1.0f);
+		colorPtr = std::make_shared<im::ImageColorRgb<float>>(typePtr);
+	}
+
+	OfxImageFloat::OfxImageFloat(int h, int w, int stride) {
+		storePtr = std::make_shared<im::ImageStore<float>>(h, w, stride, 4, h * stride, im::YAxisDir::UP, std::vector<int>{ 0, 1, 2, 3 }, 1.0f);
+		typePtr = std::make_shared<im::ImageTypePacked<float>>(storePtr);
+		colorPtr = std::make_shared<im::ImageColorRgb<float>>(typePtr);
 	}
 
 	void OfxImageFloat::saveBmpColor(const std::string& filename) const {
@@ -48,24 +53,29 @@ namespace ofx {
 
 
 	OfxImageByte::OfxImageByte(int h, int w, int stride, uint8_t* data) {
-		std::span<uint8_t> span(data, h * stride);
-		storePtr = std::make_shared<im::ImageStore<uint8_t>>(h, w, stride, 4, h * stride, im::YAxisDir::UP, data);
+		storePtr = std::make_shared<im::ImageStore<uint8_t>>(h, w, stride, 4, h * stride, im::YAxisDir::UP, std::vector<int>{ 0, 1, 2, 3 }, 255, data);
 		typePtr = std::make_shared<im::ImageTypePacked<uint8_t>>(storePtr);
-		colorPtr = std::make_shared<im::ImageColorRgb<uint8_t>>(typePtr, std::vector<int>{ 0, 1, 2, 3 }, 255);
+		colorPtr = std::make_shared<im::ImageColorRgb<uint8_t>>(typePtr);
+	}
+
+	OfxImageByte::OfxImageByte(int h, int w, int stride) {
+		storePtr = std::make_shared<im::ImageStore<uint8_t>>(h, w, stride, 4, h * stride, im::YAxisDir::UP, std::vector<int>{ 0, 1, 2, 3 }, 255);
+		typePtr = std::make_shared<im::ImageTypePacked<uint8_t>>(storePtr);
+		colorPtr = std::make_shared<im::ImageColorRgb<uint8_t>>(typePtr);
 	}
 
 	void OfxImageByte::saveBmpColor(const std::string& filename) const {
 		std::ofstream os(filename, std::ios::binary);
 		im::BmpColorHeader(w(), h()).writeHeader(os);
-		std::vector<unsigned char> imageRow(util::alignValue(w() * 3, 4));
+		std::vector<uint8_t> imageRow(util::alignValue(w() * 3, 4));
 
 		for (int r = 0; r < h(); r++) {
 			const uint8_t* src = data() + r * stride();
-			unsigned char* dest = imageRow.data();
+			uint8_t* dest = imageRow.data();
 			for (int c = 0; c < w(); c++) {
-				*dest++ = (unsigned char) src[2];
-				*dest++ = (unsigned char) src[1];
-				*dest++ = (unsigned char) src[0];
+				*dest++ = src[2];
+				*dest++ = src[1];
+				*dest++ = src[0];
 				src += 4;
 			}
 			os.write(reinterpret_cast<char*>(imageRow.data()), imageRow.size());

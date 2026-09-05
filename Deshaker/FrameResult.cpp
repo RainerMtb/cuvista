@@ -16,7 +16,7 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
-#include "MovieWriterImpl.hpp"
+#include "MovieWriterClasses.hpp"
 #include "FrameResult.hpp"
 #include "Util.hpp"
 #include "AvxWrapper.hpp"

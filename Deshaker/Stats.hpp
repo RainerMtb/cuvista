@@ -26,6 +26,7 @@ public:
 	int h = 0, w = 0;
 	int fpsNum = -1, fpsDen = -1;
 	int timeBaseNum = -1, timeBaseDen = -1;
+	int parNum = 0, parDen = 1;
 	std::string_view sourceName;
 
 	int64_t frameIndex = -1;
@@ -36,6 +37,7 @@ public:
 	bool startOfInput = true;
 
 	double fps() const;
+	double par() const;
 };
 
 

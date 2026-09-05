@@ -35,7 +35,7 @@ JpegImageWriter::JpegImageWriter(MainData& data, MovieReader& reader) :
 void JpegImageWriter::open(OutputOption outputOption) {
 	const AVCodec* codec = avcodec_find_encoder(AV_CODEC_ID_MJPEG);
 	ctx = avcodec_alloc_context3(codec);
-	ctx->width = mData.w;
+	ctx->width = mData.wOut;
 	ctx->height = mData.h;
 	ctx->time_base = { 1, 1 };
 	ctx->framerate = { 1, 1 };
@@ -49,14 +49,15 @@ void JpegImageWriter::open(OutputOption outputOption) {
 	if (retval < 0)
 		throw AVException(av_make_error(retval, "cannot open jpeg codec"));
 
-	swsCtx = sws_getContext(mData.w, mData.h, AV_PIX_FMT_YUV444P, mData.w, mData.h, AV_PIX_FMT_YUVJ444P, 0, NULL, NULL, NULL);
+	//convert color range and consider pixel aspect ratio
+	swsCtx = sws_getContext(mData.w, mData.h, AV_PIX_FMT_YUV444P, mData.wOut, mData.h, AV_PIX_FMT_YUVJ444P, 0, NULL, NULL, NULL);
 	if (!swsCtx) {
 		throw AVException("cannot get scaler context");
 	}
 
 	av_frame = av_frame_alloc();
 	av_frame->format = ctx->pix_fmt;
-	av_frame->width = mData.w;
+	av_frame->width = mData.wOut;
 	av_frame->height = mData.h;
 	av_frame->quality = ctx->global_quality; //quality must be set both to AVContext and AVFrame
 	av_frame_get_buffer(av_frame, 0);

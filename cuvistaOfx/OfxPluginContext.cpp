@@ -21,7 +21,6 @@
 #include "util.hpp"
 #include "ofxGuiInterface.hpp"
 
- //-------------------------------------------------------------------------
 
 using namespace ofx;
 
@@ -58,8 +57,6 @@ void PluginContext::render(OfxImageEffectHandle effect, OfxPropertySetHandle inA
 	float* srcData = reinterpret_cast<float*>(srcPtr);
 	OfxImageFloat srcImage(h, w, srcRowBytes / sizeof(float), srcData);
 	//std::string pixelDepth = propGetString(srcImg, kOfxImageEffectPropPixelDepth);
-	//srcImage.saveBmpColor("f:/image.bmp");
-	//std::ofstream file("f:/file.dat", std::ios::binary); file.write(reinterpret_cast<char*>(srcData), srcRowBytes * h);
 
 	// write destination image
 	OfxRectI destBounds;
@@ -77,43 +74,72 @@ void PluginContext::render(OfxImageEffectHandle effect, OfxPropertySetHandle inA
 	if (destImg) main.imageEffectSuite->clipReleaseImage(destImg);
 }
 
+
+//run stabilization on the clip
 void PluginContext::stabilize(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs) {
 	SptrGui gui = main.guiContext.gui;
 	if (gui->checkNewWindow()) {
+		OfxStatus status = kOfxStatOK;
 		debugLogger().format("stabilize start on thread {}", threadId());
 		OfxPropertySetHandle clipProperties;
-		main.imageEffectSuite->clipGetHandle(effect, "Source", &srcClip, &clipProperties);
-
+		main.imageEffectSuite->clipGetPropertySet(srcClip, &clipProperties);
+	
 		double frameRange[2];
 		main.propertySuite->propGetDoubleN(clipProperties, kOfxImageEffectPropFrameRange, 2, frameRange);
-		debugLogger().format("clip frames {}:{}", frameRange[0], frameRange[1]);
-
+		OfxRectD rectStart;
+		status = main.imageEffectSuite->clipGetRegionOfDefinition(srcClip, frameRange[0], &rectStart);
+		OfxRectD rectEnd;
+		status = main.imageEffectSuite->clipGetRegionOfDefinition(srcClip, frameRange[0], &rectEnd);
+		this->w = (int) (rectStart.x2 - rectStart.x1);
+		this->h = (int) (rectStart.y2 - rectStart.y1);
+		debugLogger().format("clip frame size {}:{}, frame time {}:{}", w, h, frameRange[0], frameRange[1]);
+	
+		int tempAccess = getInt(clipProperties, kOfxImageEffectPropTemporalClipAccess);
+		double par = getDouble(clipProperties, kOfxImagePropPixelAspectRatio);
+		//std::string pixelDepth = getString(clipProperties, kOfxImageEffectPropPixelDepth);
+		//std::string components = getString(clipProperties, kOfxImageEffectPropComponents);
+		debugLogger().format("clip temporal access {} par {:.3f}", tempAccess, par);
+	
 		gui->init();
-		OfxStatus status = kOfxStatOK;
+		ImageRGBA inputImage(h, w);
 		auto func = [&] {
 			for (double time = frameRange[0]; time <= frameRange[1] && gui->isCancelled() == false; time += 1.0) {
 				//debugLogger().format("frame {}", time);
+	
+				try {
+					OfxPropertySetHandle srcImg = nullptr;
+					status = main.imageEffectSuite->clipGetImage(srcClip, time, NULL, &srcImg);
+					if (srcImg == nullptr || status != kOfxStatOK) throw OfxException("no image, " + status);
 
-				OfxPropertySetHandle srcImg = nullptr;
-				status = main.imageEffectSuite->clipGetImage(srcClip, time, NULL, &srcImg);
-				gui->updateProgress((time - frameRange[0]) / (frameRange[1] - frameRange[0]));
+					std::string pixelDepth = getString(srcImg, kOfxImageEffectPropPixelDepth);
+					std::string components = getString(srcImg, kOfxImageEffectPropComponents);
 
-				//if (time == 50.0) {
-				//	// read source image
-				//	OfxRectI srcBounds;
-				//	void* srcPtr = nullptr;
-				//	int srcRowBytes = getInt(srcImg, kOfxImagePropRowBytes, 0);
-				//	main.propertySuite->propGetIntN(srcImg, kOfxImagePropBounds, 4, &srcBounds.x1);
-				//	main.propertySuite->propGetPointer(srcImg, kOfxImagePropData, 0, &srcPtr);
-				//	int h = srcBounds.y2 - srcBounds.y1;
-				//	int w = srcBounds.x2 - srcBounds.x1;
-				//	uint8_t* srcData = reinterpret_cast<uint8_t*>(srcPtr);
-				//	debugLogger().format("image {}x{} stride {} depth {}", w, h, srcRowBytes, getString(srcImg, kOfxImageEffectPropPixelDepth));
-				//	OfxImageByte srcImage(h, w, srcRowBytes, srcData);
-				//	srcImage.saveBmpColor("f:/image.bmp");
-				//}
+					int srcRowBytes = getInt(srcImg, kOfxImagePropRowBytes, 0);
+					int srcBounds[4];
+					status = main.propertySuite->propGetIntN(srcImg, kOfxImagePropBounds, 4, srcBounds);
+					void* srcPtr;
+					status = main.propertySuite->propGetPointer(srcImg, kOfxImagePropData, 0, &srcPtr);
+					int h = srcBounds[3] - srcBounds[1];
+					int w = srcBounds[2] - srcBounds[0];
+					uint8_t* srcData = reinterpret_cast<uint8_t*>(srcPtr);
+					debugLogger().format("time {} image {}:{} stride {} depth {} comp {}", time, w, h, srcRowBytes, pixelDepth, components);
 
-				if (srcImg) main.imageEffectSuite->clipReleaseImage(srcImg);
+					OfxImageByte srcImage(h, w, srcRowBytes, srcData);
+					srcImage.copyTo(inputImage);
+					double progress = (time - frameRange[0]) / (frameRange[1] - frameRange[0]);
+					gui->updateProgress(progress, inputImage);
+
+					main.imageEffectSuite->clipReleaseImage(srcImg);
+
+				} catch (const OfxException e) {
+					debugLogger().log(e.what());
+	
+				} catch (const std::exception e) {
+					debugLogger().log(e.what());
+	
+				} catch (...) {
+					debugLogger().log("unknown exception");
+				}
 			}
 			gui->close(); //send signal to break the event loop
 		};
@@ -124,6 +150,7 @@ void PluginContext::stabilize(OfxImageEffectHandle effect, OfxPropertySetHandle 
 		debugLogger().log("stabilize done");
 	}
 }
+
 
 void PluginContext::showInfo(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs) {
 	SptrGui gui = main.guiContext.gui;

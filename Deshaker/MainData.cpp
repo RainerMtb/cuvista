@@ -418,6 +418,13 @@ void MainData::validate(const MovieReader& reader) {
 	//video frame size
 	this->w = reader.w;
 	this->h = reader.h;
+
+	//pixel aspect ratio
+	this->parNum = reader.parNum;
+	this->parDen = reader.parDen;
+	this->wOut = (reader.parNum == 0 || reader.parDen == 0) ? reader.w : reader.w * reader.parNum / reader.parDen;
+	if (wOut < w)
+		throw AVException("pixel aspect ratio must be greater or equal 1.0");
 	
 	this->stride = util::alignValue(w, 64);
 	this->stride4 = util::alignValue(w * 4, 64);
@@ -557,6 +564,7 @@ void MainData::showIntro(const std::string& deviceName, const MovieReader& reade
 	*console << "VIDEO w=" << w << ", h=" << h
 		<< ", frames=" << (reader.frameCount < 1 ? "unknown" : std::to_string(reader.frameCount))
 		<< ", fps=" << std::format("{:.3f}", reader.fps()) << " (" << reader.fpsNum << ":" << reader.fpsDen << ")"
+		<< ", par=" << std::format("{:.3f}", reader.par()) << " (" << reader.parNum << ":" << reader.parDen << ")"
 		<< ", radius=" << radius
 		<< std::endl;
 

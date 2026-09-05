@@ -80,6 +80,7 @@ private:
     MainData mData;
     ImageYuv mInputYUV;
     ImageBgr mInputBGR;
+    ImageStretcher mStretcher;
     QImage mInputImage;
 
     QColor mBackgroundColor;
