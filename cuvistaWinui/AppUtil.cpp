@@ -157,6 +157,7 @@ void ProgressGui::update(const ProgressInfo& progress, bool force) {
         mTimePoint = timePointNow;
         int64_t idx = progress.readIndex - 1;
         mExecutor.getInput(idx, mainWindow.mProgressInput);
+        mExecutor.stretchImage(mainWindow.mProgressInput, mainWindow.mStretcher);
         winrt::hstring hstr = winrt::to_hstring(mExecutor.mFrame.ptsForFrameAsString(idx));
         mainWindow.DispatcherQueue().TryEnqueue([&, hstr] { 
             mainWindow.textTimeInput().Text(hstr); 
@@ -168,12 +169,14 @@ void ProgressGui::update(const ProgressInfo& progress, bool force) {
         mTimePoint = timePointNow;
         int64_t idx = progress.writeIndex - 1;
         mExecutor.getOutput(idx, mainWindow.mProgressOutput);
+        mExecutor.stretchImage(mainWindow.mProgressOutput, mainWindow.mStretcher);
         winrt::hstring hstr = winrt::to_hstring(mExecutor.mFrame.ptsForFrameAsString(idx));
         mainWindow.DispatcherQueue().TryEnqueue([&, hstr] { 
             mainWindow.textTimeOutput().Text(hstr); 
             mainWindow.mProgressOutput.invalidate();
         });
     }
+    mainWindow.mProgressOutput.saveBmpColor("f:/test.bmp");
 }
 
 
@@ -276,6 +279,7 @@ void PlayerWriter::start() {
 //on background thread
 void PlayerWriter::writeOutput(const FrameExecutor& executor) {
     executor.getOutput(frameIndex, mainWindow.mProgressOutput);
+    executor.stretchImage(mainWindow.mProgressOutput, mainWindow.mStretcher);
 
     //presentation time for next frame
     auto t1 = mReader.ptsForFrameAsMillis(frameIndex);

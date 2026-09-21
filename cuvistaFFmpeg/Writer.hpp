@@ -63,6 +63,10 @@ protected:
 		{ OutputOption::FFMPEG_AV1, AV_CODEC_ID_AV1 },
 		{ OutputOption::FFMPEG_FFV1, AV_CODEC_ID_FFV1 },
 
+		{ OutputOption::VULKAN_H264, AV_CODEC_ID_H264 },
+		{ OutputOption::VULKAN_HEVC, AV_CODEC_ID_HEVC },
+		{ OutputOption::VULKAN_AV1, AV_CODEC_ID_AV1 },
+
 		{ OutputOption::VIDEO_STACK, AV_CODEC_ID_H264 },
 		{ OutputOption::VIDEO_FLOW, AV_CODEC_ID_H264 },
 	};
@@ -88,10 +92,12 @@ protected:
 	void openFormat(AVCodecID codecId);
 	void openFormat(AVCodecID codecId, const std::string& sourceName, int queueSize);
 	void openFormat(AVCodecID codecId, AVFormatContext* ctx, int queueSize);
-	int writePacket(AVPacket* packet);
+	AVStream* createNewStream(AVFormatContext* fmt_ctx, AVStream* inStream);
+
+	void writeSecondaryPackets(bool terminate);
+	int writePacket(AVPacket* pkt);
 	void writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsIdx, bool terminate);
 	void transcodeAudio(AVPacket* pkt, OutputStreamContext& osc, bool terminate);
-	AVStream* createNewStream(AVFormatContext* fmt_ctx, AVStream* inStream);
 };
 
 
@@ -109,8 +115,8 @@ protected:
 	int sendFFmpegFrame(AVFrame* frame);
 	int writeFFmpegPacket(AVFrame* av_frame);
 
-	void open(std::span<std::string> codecNames, AVCodecID codecId, AVPixelFormat pixfmt, int h, int w, int stride);
-	void open(const AVCodec* codec, AVPixelFormat pixfmt, int h, int w, int stride);
+	void open(std::span<std::string> codecNames, AVCodecID codecId, AVPixelFormat pixfmt, int h, int w);
+	void open(const AVCodec* codec, AVPixelFormat pixfmt, int h, int w);
 	void open(OutputOption outputOption, AVPixelFormat pixfmt, int h, int w, int stride, const std::string& sourceName);
 	void write(int bufferIndex);
 
@@ -222,4 +228,24 @@ public:
 	void open(OutputOption outputOption) override;
 	void writeOutput(const FrameExecutor& executor) override;
 	bool flush() override;
+};
+
+
+//--------------- vaapi encoder -----------------------------------------------------
+
+class VulkanFFmpegWriter : public FFmpegWriter {
+
+protected:
+	ImageNV12 outputNV12;
+	AVBufferRef* hw_ctx = nullptr;
+	AVBufferRef* hwframes_ctx = nullptr;
+	AVHWFramesContext* avhw_frames_ctx = nullptr;
+	AVFrame* hw_frame = nullptr;
+
+public:
+	VulkanFFmpegWriter(MainData& data, MovieReader& reader);
+	~VulkanFFmpegWriter() override;
+
+	void open(OutputOption outputOption) override;
+	void writeOutput(const FrameExecutor& executor) override;
 };

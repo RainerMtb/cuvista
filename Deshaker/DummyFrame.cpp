@@ -57,7 +57,7 @@ void DummyFrame::getOutput(int64_t frameIndex, Image8& image) const {
 	mFrames[idx].convertTo(image, mPool);
 }
 
-bool DummyFrame::getOutput(int64_t frameIndex, Image8& image, int cudaNv12stride, unsigned char* cudaNv12ptr) const {
+bool DummyFrame::getOutput(int64_t frameIndex, Image8& image, int nv12stride, unsigned char* cudaNv12ptr) const {
 	size_t idx = frameIndex % mFrames.size();
 	mFrames[idx].convertTo(image, mPool);
 	return true;

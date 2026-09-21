@@ -116,6 +116,7 @@ copy $(OutputPath)cuvistaOfx.dll $(OFX_PLUGIN_PATH)\cuvista.ofx.bundle\Contents\
     <ClCompile Include="OfxUtil.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ofxBanner.hpp" />
     <ClInclude Include="ofxGuiInterface.hpp" />
     <ClInclude Include="ofxMain.hpp" />
     <ClInclude Include="OfxPluginContext.hpp" />

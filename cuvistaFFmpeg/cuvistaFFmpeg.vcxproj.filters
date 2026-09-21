@@ -13,6 +13,7 @@
     <ClCompile Include="FFmpegWriter.cpp" />
     <ClCompile Include="StackedWriter.cpp" />
     <ClCompile Include="Writer.cpp" />
+    <ClCompile Include="VulkanWriter.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="CMakeLists.txt" />

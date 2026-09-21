@@ -79,6 +79,7 @@ namespace winrt::cuvistaWinui::implementation {
 
         ImageXamlBGRA mProgressInput;
         ImageXamlBGRA mProgressOutput;
+        ImageStretcher mStretcher;
         bool mPlayerPaused = false;
         int mAudioStreamIndex = -1;
         double mAudioGain = 1.0;

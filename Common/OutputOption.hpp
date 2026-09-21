@@ -24,6 +24,7 @@
 enum class OutputGroup {
 	VIDEO_NVENC,
 	VIDEO_FFMPEG,
+	VIDEO_VULKAN,
 	VIDEO_OTHER,
 	IMAGE_SEQUENCE,
 	PIPE,
@@ -62,6 +63,10 @@ public:
 	static OutputOption FFMPEG_HEVC;
 	static OutputOption FFMPEG_H264;
 	static OutputOption FFMPEG_FFV1;
+
+	static OutputOption VULKAN_AV1;
+	static OutputOption VULKAN_HEVC;
+	static OutputOption VULKAN_H264;
 
 	static OutputOption NVENC_AV1;
 	static OutputOption NVENC_HEVC;

@@ -41,7 +41,7 @@ void FFmpegFormatWriter::openFormat(AVCodecID codecId, const std::string& source
     openFormat(codecId, ctx, queueSize);
 
     //open output for writing
-    result = avio_open(&fmt_ctx->pb, fmt_ctx->url, AVIO_FLAG_WRITE);
+    result = avio_open(&ctx->pb, ctx->url, AVIO_FLAG_WRITE);
     if (result < 0)
         throw AVException("error opening output file '" + mData.fileOut + "'");
 }
@@ -346,76 +346,9 @@ void FFmpegFormatWriter::transcodeAudio(AVPacket* pkt, OutputStreamContext& osc,
     } //doLoop
 }
 
-//write packet to output
-int FFmpegFormatWriter::writePacket(AVPacket* packet) {
-    auto& osc = outputStreams[packet->stream_index];
-
-    //std::cout << std::format("stream {} pts {:.4f} sec", packet->stream_index, 1.0 * packet->pts * osc->outputStream->time_base.num / osc->outputStream->time_base.den) << std::endl;
-    int result = av_interleaved_write_frame(fmt_ctx, packet); //write_frame also does unref packet
-    if (result == 0) {
-        osc->packetsWritten++;
-
-    } else {
-        ffmpeg_log_error(result, "error writing packet", ErrorSource::WRITER);
-    }
-    return result;
-}
-
-//write packets to output
-void FFmpegFormatWriter::writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsIdx, bool terminate) {
-    /*
-    overall plan:
-    lookup pts value from input for this frame index to use for output frame
-    then offset such that output will start at pts=0
-    then rescale from input stream to potentially different output timescale
-    */
-
-    //STEP 1: looking at input stream
-    //set pts and dts with respect to input timebase
-    //std::cout << "ptsIdx=" << ptsIdx << " dtsIdx=" << dtsIdx << std::endl;
-    auto compareFunc = [&] (const VideoPacketContext& ctx) { return ctx.readIndex == ptsIdx; }; //sometimes wrong, check for increasing pts values
-    VideoPacketContext vpc = {};
-    {
-        std::unique_lock<std::mutex> lock(mReader.mVideoPacketMutex);
-        //for (const auto& c : mReader.mVideoPacketList) std::cout << c.readIndex << " " << c.pts << " " << c.dts << " " << ptsIdx << std::endl;
-        //search for packet info
-        auto vpcIter = std::find_if(mReader.mVideoPacketList.cbegin(), mReader.mVideoPacketList.cend(), compareFunc);
-        //store
-        if (vpcIter == mReader.mVideoPacketList.cend()) {
-            errorLogger().logError("error finding video packet #" + std::to_string(ptsIdx), ErrorSource::WRITER);
-            return;
-        }
-        vpc = *vpcIter;
-        //delete from input list
-        mReader.mVideoPacketList.erase(vpcIter);
-    }
-
-    int64_t pts = vpc.pts - mReader.videoStartTime;
-    //offset pts to always start at 0
-    pkt->pts = pts;
-    //calculate dts with offset to pts coming from current encoder
-    AVRational rFps = { mReader.fpsDen, mReader.fpsNum };
-    AVRational rBase = { mReader.timeBaseNum, mReader.timeBaseDen };
-    pkt->dts = pts - av_rescale_q(ptsIdx - dtsIdx, rFps, rBase);
-    //copy duration from input
-    pkt->duration = vpc.duration;
-
-    //std::printf("stream=%d ptsIdx=%zd dtsIdx=%zd pts=%zd dts=%zd duration=%zd\n", pkt->stream_index, ptsIdx, dtsIdx, pkt->pts, pkt->dts, pkt->duration);
-    //change timing values for invalid frames
-    if (pkt->dts < dtsWritten) {
-        pkt->dts = dtsWritten + 1;
-    }
-    if (pkt->pts < pkt->dts) {
-        pkt->pts = pkt->dts;
-    }
-    dtsWritten = pkt->dts;
-
-    //STEP 2: convert to output timebase
-    //rescale packet from input timebase to output timebase
-    av_packet_rescale_ts(pkt, rBase, videoStream->time_base);
-
-    //process secondary streams
-    //write packets from other streams that were read before this video frame
+//process secondary streams
+//write packets from other streams that were read before this video frame
+void FFmpegFormatWriter::writeSecondaryPackets(bool terminate) {
     for (std::shared_ptr<OutputStreamContext> posc : outputStreams) {
         std::unique_lock<std::mutex> lock(posc->mMutexSidePackets);
         for (auto it = posc->sidePackets.begin(); it != posc->sidePackets.end(); ) {
@@ -449,12 +382,85 @@ void FFmpegFormatWriter::writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsI
                 it++;
             }
         }
-        
+
         if (terminate && posc->handling == StreamHandling::STREAM_TRANSCODE) { //flush transcoding buffers
             transcodeAudio(nullptr, *posc, true);
         }
     }
+}
 
+//write packet to output
+int FFmpegFormatWriter::writePacket(AVPacket* pkt) {
+    int idx = pkt->stream_index;
+    auto& osc = outputStreams[idx];
+
+    //std::printf("stream=%d pts=%zd dts=%zd duration=%zd\n", pkt->stream_index, pkt->pts, pkt->dts, pkt->duration);
+    //std::cout << std::format("stream {} pts {:.4f} sec", pkt->stream_index, 1.0 * pkt->pts * osc->outputStream->time_base.num / osc->outputStream->time_base.den) << std::endl;
+    int result = av_interleaved_write_frame(fmt_ctx, pkt); //write_frame also does unref packet
+    if (result == 0) {
+        osc->packetsWritten++;
+
+    } else {
+        ffmpeg_log_error(result, "error writing packet", ErrorSource::WRITER);
+    }
+    return result;
+}
+
+//write packets to output
+void FFmpegFormatWriter::writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsIdx, bool terminate) {
+    /*
+    overall plan:
+    lookup pts value from input for this frame index to use for output frame
+    then offset such that output will start at pts=0
+    then rescale from input stream to potentially different output timescale
+    */
+
+    AVRational rFps = { mReader.fpsDen, mReader.fpsNum };
+    AVRational rBase = { mReader.timeBaseNum, mReader.timeBaseDen };
+     
+    //STEP 1: looking at input stream
+    //set pts and dts with respect to input timebase
+    //std::cout << "ptsIdx=" << ptsIdx << " dtsIdx=" << dtsIdx << std::endl;
+    auto compareFunc = [&] (const VideoPacketContext& ctx) { return ctx.readIndex == ptsIdx; }; //sometimes wrong, check for increasing pts values
+    VideoPacketContext vpc = {};
+    {
+        std::unique_lock<std::mutex> lock(mReader.mVideoPacketMutex);
+        //for (const auto& c : mReader.mVideoPacketList) std::cout << c.readIndex << " " << c.pts << " " << c.dts << " " << ptsIdx << std::endl;
+        //search for packet info
+        auto vpcIter = std::find_if(mReader.mVideoPacketList.cbegin(), mReader.mVideoPacketList.cend(), compareFunc);
+        //store
+        if (vpcIter == mReader.mVideoPacketList.cend()) {
+            errorLogger().logError("error finding video packet #" + std::to_string(ptsIdx), ErrorSource::WRITER);
+            return;
+        }
+        vpc = *vpcIter;
+        //delete from input list
+        mReader.mVideoPacketList.erase(vpcIter);
+    }
+
+    int64_t pts = vpc.pts - mReader.videoStartTime;
+    //offset pts to always start at 0
+    pkt->pts = pts;
+    //calculate dts with offset to pts coming from current encoder
+    pkt->dts = pts - av_rescale_q(ptsIdx - dtsIdx, rFps, rBase);
+    //copy duration from input
+    pkt->duration = vpc.duration;
+
+    //change timing values for invalid frames
+    if (pkt->dts < dtsWritten) {
+        pkt->dts = dtsWritten + 1;
+    }
+    if (pkt->pts < pkt->dts) {
+        pkt->pts = pkt->dts;
+    }
+    dtsWritten = pkt->dts;
+
+    //STEP 2: convert to output timebase
+    //rescale packet from input timebase to output timebase
+    av_packet_rescale_ts(pkt, rBase, videoStream->time_base);
+    std::printf("stream=%d ptsIdx=%zd dtsIdx=%zd pts=%zd dts=%zd duration=%zd\n", pkt->stream_index, ptsIdx, dtsIdx, pkt->pts, pkt->dts, pkt->duration);
+
+    writeSecondaryPackets(terminate);
     //static std::ofstream testFile("f:/test.h265", std::ios::binary);
     //testFile.write(reinterpret_cast<char*>(videoPacket->data), videoPacket->size);
 

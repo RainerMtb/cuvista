@@ -48,10 +48,9 @@ int main() {
 	//avxTest();
 
 	//testZoom();
-	testVideo1();
+	testVideo1(); //---------
 	//testLuma2();
 	//illegalInstruction();
 
-	//util::base64_encode("f:/testData.mp4", "f:/testData.txt");
 	//cudaDriverApi();
 }

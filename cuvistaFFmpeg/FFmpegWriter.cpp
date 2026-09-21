@@ -22,27 +22,7 @@
 #include "MainData.hpp"
 
 
-void FFmpegWriter::open(std::span<std::string> codecNames, AVCodecID codecId, AVPixelFormat pixfmt, int h, int w, int stride) {
-    //first try to find codec by name
-    const AVCodec* codec = nullptr;
-    for (const std::string& codecName : codecNames) {
-        codec = avcodec_find_encoder_by_name(codecName.c_str());
-        if (codec) break;
-    }
-    //finding by name does not work in thge gui on linux, try by id ???
-    if (!codec) {
-        codec = avcodec_find_encoder(codecId);
-    }
-    if (!codec) {
-        throw AVException("could not find encoder");
-    }
-    //std::cout << "Using encoder: " << codec->name << " - " << codec->long_name << std::endl;
-
-    //open codec
-    open(codec, pixfmt, h, w, stride);
-}
-
-void FFmpegWriter::open(const AVCodec* codec, AVPixelFormat pixfmt, int h, int w, int stride) {
+void FFmpegWriter::open(const AVCodec* codec, AVPixelFormat pixfmt, int h, int w) {
     int result = 0;
 
     codec_ctx = avcodec_alloc_context3(codec);
@@ -92,6 +72,27 @@ void FFmpegWriter::open(const AVCodec* codec, AVPixelFormat pixfmt, int h, int w
     videoPacket = av_packet_alloc();
     if (!videoPacket)
         throw AVException("Could not allocate encoder packet");
+}
+
+
+void FFmpegWriter::open(std::span<std::string> codecNames, AVCodecID codecId, AVPixelFormat pixfmt, int h, int w) {
+    //first try to find codec by name
+    const AVCodec* codec = nullptr;
+    for (const std::string& codecName : codecNames) {
+        codec = avcodec_find_encoder_by_name(codecName.c_str());
+        if (codec) break;
+    }
+    //if finding by name does not work, try by id
+    if (!codec) {
+        codec = avcodec_find_encoder(codecId);
+    }
+    if (!codec) {
+        throw AVException("could not find encoder");
+    }
+    //std::cout << "Using encoder: " << codec->name << " - " << codec->long_name << std::endl;
+
+    //open codec
+    open(codec, pixfmt, h, w);
 
     //allocate one av_frame to be used on encoding
     av_frame = av_frame_alloc();
@@ -102,7 +103,7 @@ void FFmpegWriter::open(const AVCodec* codec, AVPixelFormat pixfmt, int h, int w
     av_frame->width = codec_ctx->width;
     av_frame->height = codec_ctx->height;
 
-    result = av_frame_get_buffer(av_frame, 0);
+    int result = av_frame_get_buffer(av_frame, 0);
     if (result < 0)
         throw AVException("Could not get frame buffer");
 
@@ -114,20 +115,6 @@ void FFmpegWriter::open(const AVCodec* codec, AVPixelFormat pixfmt, int h, int w
 
 //set up ffmpeg encoder
 void FFmpegWriter::open(OutputOption outputOption, AVPixelFormat pixfmt, int h, int w, int stride, const std::string& sourceName) {
-    std::map<OutputOption, AVCodecID> optionToCodecIdMap = {
-        { OutputOption::NVENC_H264, AV_CODEC_ID_H264 },
-        { OutputOption::NVENC_HEVC, AV_CODEC_ID_HEVC },
-        { OutputOption::NVENC_AV1, AV_CODEC_ID_AV1 },
-
-        { OutputOption::FFMPEG_H264, AV_CODEC_ID_H264 },
-        { OutputOption::FFMPEG_HEVC, AV_CODEC_ID_HEVC },
-        { OutputOption::FFMPEG_AV1, AV_CODEC_ID_AV1 },
-        { OutputOption::FFMPEG_FFV1, AV_CODEC_ID_FFV1 },
-
-        { OutputOption::VIDEO_STACK, AV_CODEC_ID_H264 },
-        { OutputOption::VIDEO_FLOW, AV_CODEC_ID_H264 },
-    };
-
     std::map<AVCodecID, std::vector<std::string>> codecToNamesMap = {
         {AV_CODEC_ID_H264, {"libx264", "h264", "h264_qsv"}},
         {AV_CODEC_ID_HEVC, {"libx265", "hevc", "hevc_qsv"}},
@@ -140,7 +127,7 @@ void FFmpegWriter::open(OutputOption outputOption, AVPixelFormat pixfmt, int h, 
     FFmpegFormatWriter::openFormat(codecID, sourceName, imageBufferSize);
 
     std::span<std::string> codecNames = codecToNamesMap[codecID];
-    open(codecNames, codecID, pixfmt, h, w, stride);
+    open(codecNames, codecID, pixfmt, h, w);
 
     sws_scaler_ctx = sws_getContext(w, h, AV_PIX_FMT_VUYX, w, h, pixfmt, SWS_BILINEAR, NULL, NULL, NULL);
     if (!sws_scaler_ctx) 
@@ -178,8 +165,10 @@ int FFmpegWriter::writeFFmpegPacket(AVFrame* av_frame) {
         ffmpeg_log_error(result, "error encoding #2", ErrorSource::WRITER);
 
     } else { 
-        //write packet to output
-        //packet pts starts at 0 and is incremented, but here packets arrive in dts order
+        //static std::ofstream testFile("f:/test.h265", std::ios::binary);
+        //testFile.write(reinterpret_cast<char*>(videoPacket->data), videoPacket->size);
+
+        //write packet to output, here packets arrive in dts order
         //std::printf("stream=%d pts=%zd dts=%zd\n", videoStream->index, videoPacket->pts, videoPacket->dts);
         videoPacket->stream_index = videoStream->index;
         writePacket(videoPacket, videoPacket->pts, videoPacket->dts, av_frame == nullptr);
@@ -192,7 +181,7 @@ void FFmpegWriter::write(int bufferIndex) {
     assert(bufferIndex < imageBufferSize && frameIndex == imageBuffer[bufferIndex].index && "invalid frame index");
     auto fcn = [this, bufferIndex] {
         ImageVuyx& fr = imageBuffer[bufferIndex];
-        //fr.writeText(std::to_string(fr.index), 10, 10, 2, 3, ColorYuv::BLACK, ColorYuv::WHITE);
+        //fr.writeText(std::to_string(fr.index), 10, 10, TextAlign::TOP_LEFT, 2, 3, Color::BLACK, Color::WHITE);
         //scale and put into av_frame
         uint8_t* src[] = { fr.plane(0), nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
         int strides[] = { fr.stride(), 0, 0, 0, 0, 0, 0, 0 };

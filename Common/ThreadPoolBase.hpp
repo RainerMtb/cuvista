@@ -44,6 +44,9 @@ public:
 
 	//number of threads
 	virtual size_t size() const;
+
+	//index of current thread in the poool
+	virtual size_t currentThreadIndex() const;
 };
 
 inline ThreadPoolBase defaultPool;

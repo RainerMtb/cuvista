@@ -40,7 +40,7 @@ namespace ofx {
 
 	public:
 		int pluginIndex = 0;
-		bool dirtyFlag = false;
+		bool dirtyFlag = true;
 		OfxImageClipHandle srcClip = nullptr;
 		OfxImageClipHandle destClip = nullptr;
 
@@ -51,6 +51,7 @@ namespace ofx {
 
 		int h = 0;
 		int w = 0;
+		OfxImageFloat banner;
 
 		void render(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs);
 		void stabilize(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs);

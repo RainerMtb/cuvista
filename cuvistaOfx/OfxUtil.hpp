@@ -18,6 +18,13 @@
 
 #pragma once
 
+extern "C" {
+#include "ofxParam.h"
+#include "ofxImageEffect.h"
+#include "ofxTimeLine.h"
+#include "ofxMessage.h"
+}
+
 #include "ImageClasses.hpp"
 
 namespace ofx {
@@ -27,10 +34,17 @@ namespace ofx {
 	public:
 		OfxImageFloat(int h, int w, int stride, float* data);
 		OfxImageFloat(int h, int w, int stride);
+		OfxImageFloat(int h, int w);
+		OfxImageFloat();
 
 		constexpr im::ImageType imageType() const override { return im::ImageType::RGBA; }
 
-		virtual void saveBmpColor(const std::string& filename) const override;
+		void saveBmpColor(const std::string& filename) const override;
+
+		void copyTo(int y, int x, int h, int w, ImageBase<float>& dest, int destY, int destX, float alpha, ThreadPoolBase& pool = defaultPool) const;
+		void copyTo(int y, int x, int h, int w, ImageBase<float>& dest, int destY, int destX) const override;
+		void copyTo(ImageBase<float>& dest, int destY, int destX) const override;
+		void copyTo(ImageBase<float>& dest) const override;
 	};
 
 
@@ -42,7 +56,7 @@ namespace ofx {
 
 		constexpr im::ImageType imageType() const override { return im::ImageType::RGBA; }
 
-		virtual void saveBmpColor(const std::string& filename) const override;
+		void saveBmpColor(const std::string& filename) const override;
 	};
 
 
@@ -56,4 +70,10 @@ namespace ofx {
 
 		OfxException(const char* msg) : std::runtime_error(msg) {}
 	};
+
+
+	void handleStatus(OfxStatus status, const std::string& message);
+
+	OfxImageFloat loadBannerElement();
+	OfxImageFloat loadBannerInstance(int targetHeight, int targetWidth, const OfxImageFloat& element);
 }

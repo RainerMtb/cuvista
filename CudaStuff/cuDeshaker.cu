@@ -562,7 +562,7 @@ void CudaExecutor::getOutput(int64_t frameIndex, Image8& image) const {
 }
 
 //get output data in nv12 format
-bool CudaExecutor::getOutput(int64_t frameIndex, Image8& image, int cudaNv12stride, unsigned char* cudaNv12ptr) const {
+bool CudaExecutor::getOutput(int64_t frameIndex, Image8& image, int nv12stride, unsigned char* cudaNv12ptr) const {
 	bool needsCopy;
 	int srcStep = mData.strideFloat4 / sizeof(float4);
 	cudaError_t err;
@@ -574,7 +574,7 @@ bool CudaExecutor::getOutput(int64_t frameIndex, Image8& image, int cudaNv12stri
 		needsCopy = true;
 
 	} else {
-		err = cu::outputNvenc(out.output, srcStep, cudaNv12ptr, cudaNv12stride, mData.w, mData.h, cs[1]);
+		err = cu::outputNvenc(out.output, srcStep, cudaNv12ptr, nv12stride, mData.w, mData.h, cs[1]);
 		needsCopy = false;
 	}
 

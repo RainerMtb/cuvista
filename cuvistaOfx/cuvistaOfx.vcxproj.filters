@@ -11,5 +11,6 @@
     <ClInclude Include="OfxPluginContext.hpp" />
     <ClInclude Include="OfxUtil.hpp" />
     <ClInclude Include="ofxGuiInterface.hpp" />
+    <ClInclude Include="ofxBanner.hpp" />
   </ItemGroup>
 </Project>

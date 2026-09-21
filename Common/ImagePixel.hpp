@@ -25,23 +25,15 @@ namespace im {
 
 	//container for pointers to one pixel
 	template <class T> struct ImagePixel {
-		std::array<T*, 4> pix;
+		std::array<T*, 4> pix = { nullptr, nullptr, nullptr, nullptr };
 		int offset = 0;
 		size_t size = 0;
 
-		ImagePixel(std::array<T*, 4> pix, int offset) :
-			pix { pix },
-			offset { offset },
-			size { 4 }
-		{}
-
-		ImagePixel(std::vector<T*> pix, int offset) :
+		ImagePixel(std::initializer_list<T*> pix, int offset) :
 			offset { offset },
 			size { pix.size() }
 		{
-			for (int i = 0; i < size; i++) {
-				this->pix[i] = pix[i];
-			}
+			std::copy(pix.begin(), pix.end(), this->pix.begin());
 		}
 
 		ImagePixel(T* a, T* b, T* c, T* d) :
@@ -67,7 +59,10 @@ namespace im {
 			size { planes }
 		{}
 
-		ImagePixel() {}
+		ImagePixel() :
+			offset { 0 },
+			size { 0 }
+		{}
 
 		ImagePixel<T>& operator ++ () {
 			for (size_t i = 0; i < size; i++) pix[i] += offset;

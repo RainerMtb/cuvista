@@ -45,7 +45,7 @@ public:
 	void computeTerminate(int64_t frameIndex, std::span<PointResult> results) override;
 	void outputData(int64_t frameIndex, AffineDataFloat trf) override;
 	void getOutput(int64_t frameIndex, Image8& image) const override;
-	bool getOutput(int64_t frameIndex, Image8& image, int cudaNv12stride, unsigned char* cudaNv12ptr) const override;
+	bool getOutput(int64_t frameIndex, Image8& image, int nv12stride, unsigned char* cudaNv12ptr) const override;
 	Matf getTransformedOutput() const override;
 	Matf getPyramid(int64_t frameIndex) const override;
 	void getInput(int64_t frameIndex, Image8& image) const override;

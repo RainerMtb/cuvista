@@ -172,14 +172,9 @@ namespace im {
 		}
 
 		//write text into image
-		virtual Size writeText(std::string_view text, int x, int y, TextAlign alignment) {
+		virtual Size writeText(std::string_view text, int x, int y, TextAlign alignment = TextAlign::BOTTOM_LEFT) {
 			int scale = std::min(w(), h()) / 600 + 1;
 			return writeText(text, x, y, alignment, scale, scale, Color::WHITE, Color::BLACK_SEMI);
-		}
-
-		//write text into image
-		virtual Size writeText(std::string_view text, int x, int y) {
-			return writeText(text, x, y, TextAlign::BOTTOM_LEFT);
 		}
 
 		virtual void drawLine(double x0, double y0, double x1, double y1, const Color& color, double alpha = 1.0) {
@@ -351,31 +346,54 @@ namespace im {
 			drawMarker(cx, cy, color, radius, radius, type);
 		}
 
-		virtual void copyTo(ImageBase<T>& dest, ThreadPoolBase& pool = defaultPool) const {
-			assert(this->imageType() == dest.imageType() && w() <= dest.w() && h() <= dest.h() && "invalid image for copy");
+		virtual void copyTo(ImageBase<T>& dest) const {
+			assert(this->imageType() == dest.imageType() && w() <= dest.w() && h() <= dest.h() && "invalid parameters for copy");
 			for (size_t r = 0; r < typePtr->rows(); r++) {
 				typePtr->copyRow(r, dest.typePtr);
 			}
 			dest.setIndex(this->index);
 		}
 
-		virtual void copyTo(ImageBase<T>& dest, int y0, int x0, T alpha, ThreadPoolBase& pool = defaultPool) const {
-			assert(this->colorBase() == dest.colorBase() && x0 + w() <= dest.w() && y0 + h() <= dest.h() && "invalid image for copy");
+		virtual void copyTo(int y, int x, int h, int w, ImageBase<T>& dest, int destY, int destX) const {
+			assert(this->colorBase() == dest.colorBase() && x + w <= this->w() && destY + h <= dest.h() && y + h <= this->h() && destX + w <= dest.w() && "invalid parameters for copy");
+			for (int r = 0; r < h; r++) {
+				ImagePixel<T> srcPix = pixelAt(y + r, x);
+				ImagePixel<T> destPix = dest.pixelAt(destY + r, destX);
+				for (int c = 0; c < w; c++) {
+					for (int i = 0; i < srcPix.size && i < destPix.size; i++) {
+						*destPix[i] = *srcPix[i];
+					}
+					++srcPix;
+					++destPix;
+				}
+			}
+		}
+
+		virtual void copyTo(ImageBase<T>& dest, int destY, int destX) const {
+			copyTo(0, 0, h(), w(), dest, destY, destX);
+		}
+
+		virtual void copyTo(int y, int x, int h, int w, ImageBase<T>& dest, int destY, int destX, T alpha, ThreadPoolBase& pool = defaultPool) const {
+			assert(this->colorBase() == dest.colorBase() && destX + this->w() <= dest.w() && destY + this->h() <= dest.h() && "invalid parameters for copy");
 			T mv = storePtr->maxValue;
 			auto fcn = [&] (size_t r) {
-				for (size_t c = 0; c < w(); c++) {
+				for (size_t c = 0; c < this->w(); c++) {
 					float a = planes() < 4 ? mv : at(storePtr->colorIndex[3], r, c);
 					float srcAlpha = a * alpha / mv;
 					float destAlpha = mv - srcAlpha;
 					for (int z = 0; z < 3 && z < planes() && z < dest.planes(); z++) {
 						float f1 = at(storePtr->colorIndex[z], r, c) * srcAlpha;
-						T* ptr = dest.addr(dest.storePtr->colorIndex[z], r + y0, c + x0);
+						T* ptr = dest.addr(dest.storePtr->colorIndex[z], r + destY, c + destX);
 						float f2 = *ptr * destAlpha;
 						*ptr = (T) ((f1 + f2) / mv);
 					}
 				}
 			};
-			pool.addAndWait(fcn, 0, h());
+			pool.addAndWait(fcn, 0, this->h());
+		}
+
+		virtual void copyTo(ImageBase<T>& dest, int destY, int destX, T alpha, ThreadPoolBase& pool = defaultPool) const {
+			copyTo(0, 0, h(), w(), dest, destY, destX, alpha, pool);
 		}
 
 

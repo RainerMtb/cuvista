@@ -63,26 +63,26 @@ namespace im {
 		assert(w() == stretcher.targetWidth && cols() == stretcher.f.size() && "invalid parameters");
 		if (stretcher.sourceWidth == stretcher.targetWidth) return;
 		constexpr uint32_t maxVal = 1 << 16;
+		int bufH = (int) pool.size();
+		int bufW = cols();
+		ImageY<uchar> buffer(bufH, bufW, 255);
 
-		auto fcn = [&] (FuncIndex workIndex) {
-			std::vector<uchar> pixelRow(cols());
+		auto fcn = [&] (size_t r) {
+			//store one row of pixels in buffer
+			uchar* pixelRow = buffer.row(pool.currentThreadIndex());
+			uchar* ptr = row(r);
+			std::copy_n(ptr, cols(), pixelRow);
 
-			for (size_t r = workIndex(); r < rows(); r = workIndex()) {
-				//store one row of pixels
-				uchar* ptr = row(r);
-				std::copy_n(ptr, cols(), pixelRow.data());
-
-				//overwrite pixel row
-				for (size_t c = 0; c < cols(); c++) {
-					uint32_t x0 = pixelRow[stretcher.x0[c]];
-					uint32_t x1 = pixelRow[stretcher.x1[c]];
-					uint32_t f = stretcher.f[c];
-					uint32_t x = x0 * (maxVal - f) + x1 * f;
-					ptr[c] = x / maxVal;
-				}
+			//overwrite pixel row
+			for (size_t c = 0; c < cols(); c++) {
+				uint32_t x0 = pixelRow[stretcher.x0[c]];
+				uint32_t x1 = pixelRow[stretcher.x1[c]];
+				uint32_t f = stretcher.f[c];
+				uint32_t x = x0 * (maxVal - f) + x1 * f;
+				ptr[c] = x / maxVal;
 			}
 		};
-		pool.workAndWait(fcn, 0, h());
+		pool.addAndWait(fcn, 0, h());
 	}
 
 
@@ -110,22 +110,9 @@ namespace im {
 		assert(os.good() && "error writing file");
 	}
 
-	ImageBgr ImageBgr::ImageBgr::readBmpFile(const std::string& filename) {
+	ImageBgr ImageBgr::ImageBgr::readBmpFile(std::span<uchar> data, std::span<std::vector<uchar>> customColorMap) {
 		ImageBgr image;
-
-		auto readBytes = [] (const char* ptr, int byteCount) {
-			int out = 0;
-			for (int i = 0; i < byteCount; i++, ptr++) {
-				out |= uint8_t(*ptr) << i * 8;
-			}
-			return out;
-		};
-
 		try {
-			//read all bytes from file
-			std::ifstream is(filename, std::ios::binary);
-			std::vector<char> data((std::istreambuf_iterator<char>(is)), (std::istreambuf_iterator<char>()));
-			is.close();
 			int fileSize = (int) data.size();
 
 			//analyse header
@@ -140,44 +127,81 @@ namespace im {
 
 			int w = readBytes(&data[18], 4);
 			int height = readBytes(&data[22], 4);
+			int h = std::abs(height);
+			int stride = (siz - dataOffset) / h;
 
 			int planes = readBytes(&data[26], 2);
 			if (planes != 1) throw std::runtime_error("number of planes must be 1");
-			int bits = readBytes(&data[28], 2);
-			if (bits != 24) throw std::runtime_error("only 24 bit images are supported");
-
 			int compression = readBytes(&data[30], 4);
 			if (compression != 0) throw std::runtime_error("only uncompressed images are supported");
 
-			//copy bytes to Image
-			int h = std::abs(height);
-			int stride = (siz - dataOffset) / h;
-			image = ImageBgr(h, w);
-
 			//when height is negative, rows are stored from top to bottom
-			const char* src = data.data() + dataOffset;
+			image = ImageBgr(h, w);
+			uchar* dest = image.typePtr->row(h - 1ull);
+			int destOffset = -image.stride();
 			if (height < 0) {
-				uchar* dest = image.typePtr->row(0);
+				dest = image.typePtr->row(0);
+				destOffset = image.stride();
+			}
+
+			int bits = readBytes(&data[28], 2);
+			int colorCount = readBytes(&data[46], 2);
+			if (colorCount == 0) colorCount = 1 << bits;
+
+			//copy bytes to Image
+			const uchar* src = data.data() + dataOffset;
+			if (bits == 1) {
+				std::vector<std::vector<uchar>> colorMap = {
+					{ data[54], data[55], data[56], data[57] },
+					{ data[58], data[59], data[60], data[61] }
+				};
+				if (customColorMap.size() > 0) {
+					colorMap = { customColorMap[0], customColorMap[1] };
+				}
+				for (int r = 0; r < h; r++) {
+					for (int c = 0; c < w; c++) {
+						int byteIndex = c / 8;
+						int bitIndex = 7 - c % 8;
+						int colorIndex = (src[byteIndex] >> bitIndex & 1);
+						std::copy_n(colorMap[colorIndex].data(), 3, dest + c * 3);
+					}
+					src += stride;
+					dest += destOffset;
+				}
+
+			} else if (bits == 24) {
 				for (int r = 0; r < h; r++) {
 					std::copy_n(src, 3ull * w, dest);
 					src += stride;
-					dest += image.stride();
+					dest += destOffset;
 				}
 
 			} else {
-				uchar* dest = image.typePtr->row(h - 1ull);
-				for (int r = 0; r < h; r++) {
-					std::copy_n(src, 3ull * w, dest);
-					src += stride;
-					dest -= image.stride();
-				}
+				throw std::runtime_error("unsupported bit depth");
 			}
 
 		} catch (const std::runtime_error& err) {
 			std::cerr << err.what() << std::endl;
 		}
-
 		return image;
+	}
+
+	ImageBgr ImageBgr::ImageBgr::readBmpFile(const std::string& filename) {
+
+		//read all bytes from file
+		std::ifstream is(filename, std::ios::binary);
+		std::vector<uchar> data((std::istreambuf_iterator<char>(is)), (std::istreambuf_iterator<char>()));
+		is.close();
+		return readBmpFile(data);
+	}
+
+	uint32_t ImageBgr::readBytes(const uchar* ptr, int byteCount) {
+		assert(byteCount <= 4 && "invalid count");
+		uint32_t out = 0;
+		for (int i = 0; i < byteCount; i++, ptr++) {
+			out |= uint8_t(*ptr) << i * 8;
+		}
+		return out;
 	}
 
 
@@ -394,6 +418,22 @@ namespace im {
 		ImageNV12(0, 0)
 	{}
 
+	Size ImageNV12::writeText(std::string_view text, int x, int y, TextAlign alignment, int sx, int sy, const Color& fg, const Color& bg) {
+		ImageYuv image(h(), w());
+		convertTo(image);
+		Size textSize = image.writeText(text, x, y, alignment, sx, sy, fg, bg);
+		image.convertTo(*this);
+		return textSize;
+	}
+
+	Size ImageNV12::writeText(std::string_view text, int x, int y, TextAlign alignment, int sx, int sy) {
+		return ImageBase<uchar>::writeText(text, x, y, alignment, sx, sy);
+	}
+
+	Size ImageNV12::writeText(std::string_view text, int x, int y, TextAlign alignment) {
+		return ImageBase<uchar>::writeText(text, x, y, alignment);
+	}
+
 
 	//-----------------------------------------------------------------------
 
@@ -410,7 +450,7 @@ namespace im {
 	}
 
 	ImageBGRA::ImageBGRA(int h, int w) :
-		ImageBGRA(h, w, util::alignValue(w * 4, 64))
+		ImageBGRA(h, w, util::alignValue(w * 4, 32))
 	{}
 
 	ImageBGRA::ImageBGRA() :
@@ -452,7 +492,7 @@ namespace im {
 	}
 
 	ImageRGBA::ImageRGBA(int h, int w) :
-		ImageRGBA(h, w, util::alignValue(w * 4, 64))
+		ImageRGBA(h, w, util::alignValue(w * 4, 32))
 	{}
 
 	ImageRGBA::ImageRGBA() :

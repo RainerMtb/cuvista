@@ -534,7 +534,7 @@ void OpenClFrame::getOutput(int64_t frameIndex, Image8& image) const {
 	}
 }
 
-bool OpenClFrame::getOutput(int64_t frameIndex, Image8& image, int cudaNv12stride, unsigned char* cudaNv12ptr) const {
+bool OpenClFrame::getOutput(int64_t frameIndex, Image8& image, int nv12stride, unsigned char* cudaNv12ptr) const {
 	try {
 		yuv_to_nv12(clData.kernels.yuv32f_to_nv12, clData.out[4], image.data(), clData, image.w(), image.h(), image.stride());
 		image.setIndex(frameIndex);

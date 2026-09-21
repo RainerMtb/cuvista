@@ -82,6 +82,8 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 			writerList.emplace_back(ff::createWriter(WriterType::FFMPEG, data, *reader));
 		else if (data.outputOption.group == OutputGroup::VIDEO_NVENC)
 			writerList.emplace_back(ff::createWriter(WriterType::CUDA, data, *reader));
+		else if (data.outputOption.group == OutputGroup::VIDEO_VULKAN)
+			writerList.emplace_back(ff::createWriter(WriterType::VULKAN, data, *reader));
 
 		//----------- add secondary Writers
 		if (!data.trajectoryFile.empty()) {

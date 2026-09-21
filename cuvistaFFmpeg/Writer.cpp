@@ -137,7 +137,7 @@ void AsfPipeWriter::open(OutputOption outputOption) {
 	//open ffmpeg
 	AVCodecID id = AV_CODEC_ID_FFVHUFF;
 	FFmpegFormatWriter::openFormat(id, fmt, 1);
-	FFmpegWriter::open({}, id, AV_PIX_FMT_YUV444P, mData.h, mData.w, mData.stride);
+	FFmpegWriter::open({}, id, AV_PIX_FMT_YUV444P, mData.h, mData.w);
 }
 
 //for ffmpeg 7
@@ -237,7 +237,7 @@ void OpticalFlowWriter::start(const std::string& sourceName, AVPixelFormat pixfm
 		sc->outputStreams.push_back(osc);
 	}
 
-	FFmpegWriter::open({}, AV_CODEC_ID_H264, pixfmt, mData.h, mData.w, mData.stride);
+	FFmpegWriter::open({}, AV_CODEC_ID_H264, pixfmt, mData.h, mData.w);
 
 	//setup scaler to accept RGB
 	sws_scaler_ctx = sws_getContext(mData.w, mData.h, AV_PIX_FMT_RGBA, mData.w, mData.h, pixfmt, SWS_BILINEAR, NULL, NULL, NULL);

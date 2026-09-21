@@ -34,6 +34,7 @@ enum class ReaderType {
 enum class WriterType {
 	FFMPEG,
 	CUDA,
+	VULKAN,
 	STACKED,
 	FLOW,
 	ASF_PIPE,

@@ -161,6 +161,6 @@ Finally run ```cuvistaCli/cuvista -info``` to check your setup
 - Visual Studio 2026
 - Nvidia Cuda 13.3.1
 - Nvidia Video Codec SDK 13.0.37
-- FFmpeg 8.1
+- FFmpeg 8.1.2
 - Qt 6.11.2
 - Cmake later than 3.28

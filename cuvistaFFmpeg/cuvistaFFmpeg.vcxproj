@@ -120,6 +120,7 @@ copy $(OutDir)cuvistaFFmpeg.dll $(SolutionDir)bin\$(Platform)\Deploy</Command>
     <ClCompile Include="FFmpegWriter.cpp" />
     <ClCompile Include="Reader.cpp" />
     <ClCompile Include="StackedWriter.cpp" />
+    <ClCompile Include="VulkanWriter.cpp" />
     <ClCompile Include="Writer.cpp" />
   </ItemGroup>
   <ItemGroup>

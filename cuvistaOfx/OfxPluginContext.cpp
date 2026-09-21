@@ -18,9 +18,9 @@
 
 #include "OfxPluginContext.hpp"
 #include "OfxUtil.hpp"
-#include "util.hpp"
 #include "ofxGuiInterface.hpp"
-
+#include "util.hpp"
+#include "ErrorLogger.hpp"
 
 using namespace ofx;
 
@@ -52,47 +52,57 @@ void PluginContext::render(OfxImageEffectHandle effect, OfxPropertySetHandle inA
 	int srcRowBytes = getInt(srcImg, kOfxImagePropRowBytes, 0);
 	main.propertySuite->propGetIntN(srcImg, kOfxImagePropBounds, 4, &srcBounds.x1);
 	main.propertySuite->propGetPointer(srcImg, kOfxImagePropData, 0, &srcPtr);
-	int h = srcBounds.y2 - srcBounds.y1;
-	int w = srcBounds.x2 - srcBounds.x1;
+	int srcH = srcBounds.y2 - srcBounds.y1;
+	int srcW = srcBounds.x2 - srcBounds.x1;
 	float* srcData = reinterpret_cast<float*>(srcPtr);
-	OfxImageFloat srcImage(h, w, srcRowBytes / sizeof(float), srcData);
+	OfxImageFloat srcImage(srcH, srcW, srcRowBytes / sizeof(float), srcData);
 	//std::string pixelDepth = propGetString(srcImg, kOfxImageEffectPropPixelDepth);
 
 	// write destination image
-	OfxRectI destBounds;
-	void* destPtr = nullptr;
-	int destRowBytes = getInt(destImg, kOfxImagePropRowBytes, 0);
-	main.propertySuite->propGetIntN(destImg, kOfxImagePropBounds, 4, &destBounds.x1);
-	main.propertySuite->propGetPointer(destImg, kOfxImagePropData, 0, &destPtr);
-	OfxImageFloat destImage(destBounds.y2 - destBounds.y1, destBounds.x2 - destBounds.x1, destRowBytes / sizeof(float), reinterpret_cast<float*>(destPtr));
+	if (dirtyFlag && h == srcH && w == srcW) {
+		OfxRectI destBounds;
+		void* destPtr = nullptr;
+		int destRowBytes = getInt(destImg, kOfxImagePropRowBytes, 0);
+		main.propertySuite->propGetIntN(destImg, kOfxImagePropBounds, 4, &destBounds.x1);
+		main.propertySuite->propGetPointer(destImg, kOfxImagePropData, 0, &destPtr);
+		int destH = destBounds.y2 - destBounds.y1;
+		int destW = destBounds.x2 - destBounds.x1;
+		OfxImageFloat destImage(destH, destW, destRowBytes / sizeof(float), reinterpret_cast<float*>(destPtr));
 
-	srcImage.copyTo(destImage);
-	destImage.gray();
+		if (h == destH && w == destW) {
+			//copy input to output
+			srcImage.copyTo(destImage);
+
+			//insert banner
+			int bannerOffset = int(time * 4) % w;
+			int bannerY = (h - banner.h()) / 2;
+			banner.copyTo(0, bannerOffset, banner.h(), w, destImage, bannerY, 0, 0.5f);
+		}
+	}
 
 	// release images
-	if (srcImg) main.imageEffectSuite->clipReleaseImage(srcImg);
 	if (destImg) main.imageEffectSuite->clipReleaseImage(destImg);
+	if (srcImg) main.imageEffectSuite->clipReleaseImage(srcImg);
 }
 
 
 //run stabilization on the clip
 void PluginContext::stabilize(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs) {
 	SptrGui gui = main.guiContext.gui;
+	OfxStatus status = kOfxStatOK;
+	
 	if (gui->checkNewWindow()) {
-		OfxStatus status = kOfxStatOK;
 		debugLogger().format("stabilize start on thread {}", threadId());
 		OfxPropertySetHandle clipProperties;
-		main.imageEffectSuite->clipGetPropertySet(srcClip, &clipProperties);
+		status = main.imageEffectSuite->clipGetPropertySet(srcClip, &clipProperties);
 	
 		double frameRange[2];
-		main.propertySuite->propGetDoubleN(clipProperties, kOfxImageEffectPropFrameRange, 2, frameRange);
-		OfxRectD rectStart;
-		status = main.imageEffectSuite->clipGetRegionOfDefinition(srcClip, frameRange[0], &rectStart);
-		OfxRectD rectEnd;
-		status = main.imageEffectSuite->clipGetRegionOfDefinition(srcClip, frameRange[0], &rectEnd);
-		this->w = (int) (rectStart.x2 - rectStart.x1);
-		this->h = (int) (rectStart.y2 - rectStart.y1);
-		debugLogger().format("clip frame size {}:{}, frame time {}:{}", w, h, frameRange[0], frameRange[1]);
+		status = main.propertySuite->propGetDoubleN(clipProperties, kOfxImageEffectPropFrameRange, 2, frameRange);
+		double frameRate = getDouble(clipProperties, kOfxImageEffectPropFrameRate);
+		double timelineStart = 0.0;
+		double timelineEnd = 0.0;
+		status = main.timelineSuite->getTimeBounds(effect, &timelineStart, &timelineEnd);
+		debugLogger().format("clip size {}:{}, clip time {}:{}, timeline {}:{}, framerate {:.3f}", w, h, frameRange[0], frameRange[1], timelineStart, timelineEnd, frameRate);
 	
 		int tempAccess = getInt(clipProperties, kOfxImageEffectPropTemporalClipAccess);
 		double par = getDouble(clipProperties, kOfxImagePropPixelAspectRatio);
@@ -103,43 +113,32 @@ void PluginContext::stabilize(OfxImageEffectHandle effect, OfxPropertySetHandle 
 		gui->init();
 		ImageRGBA inputImage(h, w);
 		auto func = [&] {
-			for (double time = frameRange[0]; time <= frameRange[1] && gui->isCancelled() == false; time += 1.0) {
+			for (double time = frameRange[0]; time <= frameRange[1] && gui->isCancelled() == false && errorLogger().hasNoError(); time += 1.0) {
 				//debugLogger().format("frame {}", time);
 	
-				try {
-					OfxPropertySetHandle srcImg = nullptr;
-					status = main.imageEffectSuite->clipGetImage(srcClip, time, NULL, &srcImg);
-					if (srcImg == nullptr || status != kOfxStatOK) throw OfxException("no image, " + status);
+				OfxPropertySetHandle srcImg = nullptr;
+				status = main.imageEffectSuite->clipGetImage(srcClip, time, NULL, &srcImg);
+				if (srcImg == nullptr || status != kOfxStatOK) throw OfxException("no image, " + status);
 
-					std::string pixelDepth = getString(srcImg, kOfxImageEffectPropPixelDepth);
-					std::string components = getString(srcImg, kOfxImageEffectPropComponents);
+				std::string pixelDepth = getString(srcImg, kOfxImageEffectPropPixelDepth);
+				std::string components = getString(srcImg, kOfxImageEffectPropComponents);
 
-					int srcRowBytes = getInt(srcImg, kOfxImagePropRowBytes, 0);
-					int srcBounds[4];
-					status = main.propertySuite->propGetIntN(srcImg, kOfxImagePropBounds, 4, srcBounds);
-					void* srcPtr;
-					status = main.propertySuite->propGetPointer(srcImg, kOfxImagePropData, 0, &srcPtr);
-					int h = srcBounds[3] - srcBounds[1];
-					int w = srcBounds[2] - srcBounds[0];
-					uint8_t* srcData = reinterpret_cast<uint8_t*>(srcPtr);
-					debugLogger().format("time {} image {}:{} stride {} depth {} comp {}", time, w, h, srcRowBytes, pixelDepth, components);
+				int srcRowBytes = getInt(srcImg, kOfxImagePropRowBytes, 0);
+				int srcBounds[4];
+				status = main.propertySuite->propGetIntN(srcImg, kOfxImagePropBounds, 4, srcBounds);
+				void* srcPtr;
+				status = main.propertySuite->propGetPointer(srcImg, kOfxImagePropData, 0, &srcPtr);
+				int h = srcBounds[3] - srcBounds[1];
+				int w = srcBounds[2] - srcBounds[0];
+				uint8_t* srcData = reinterpret_cast<uint8_t*>(srcPtr);
+				//debugLogger().format("time {} image {}:{} stride {} depth {} comp {}", time, w, h, srcRowBytes, pixelDepth, components);
 
-					OfxImageByte srcImage(h, w, srcRowBytes, srcData);
-					srcImage.copyTo(inputImage);
-					double progress = (time - frameRange[0]) / (frameRange[1] - frameRange[0]);
-					gui->updateProgress(progress, inputImage);
+				OfxImageByte srcImage(h, w, srcRowBytes, srcData);
+				srcImage.copyTo(inputImage);
+				double progress = (time - frameRange[0]) / (frameRange[1] - frameRange[0]);
+				gui->updateProgress(progress, inputImage);
 
-					main.imageEffectSuite->clipReleaseImage(srcImg);
-
-				} catch (const OfxException e) {
-					debugLogger().log(e.what());
-	
-				} catch (const std::exception e) {
-					debugLogger().log(e.what());
-	
-				} catch (...) {
-					debugLogger().log("unknown exception");
-				}
+				status = main.imageEffectSuite->clipReleaseImage(srcImg);
 			}
 			gui->close(); //send signal to break the event loop
 		};
@@ -147,7 +146,12 @@ void PluginContext::stabilize(OfxImageEffectHandle effect, OfxPropertySetHandle 
 		gui->openProgress(); //start the event loop in the gui, blocking call
 		thread.join();
 		gui->shutdown();
+
 		debugLogger().log("stabilize done");
+		if (errorLogger().hasError()) {
+			main.messageSuite->message(effect, kOfxMessageWarning, "", "Cuvista Error: %s", errorLogger().getErrorMessage().c_str());
+			errorLogger().clear();
+		}
 	}
 }
 

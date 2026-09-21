@@ -129,25 +129,26 @@ namespace im {
 				uchar* srcY = typePtr->row(rr);
 				uchar* srcUV = typePtr->row(dest->typePtr->h() + r);
 				ImagePixel<uchar> srcPix;
-				ImagePixel<R> destPix;
+				ImagePixel<R> destPix0 = dest->pixelAt(rr, 0);
+				ImagePixel<R> destPix1 = dest->pixelAt(rr + 1, 0);
 				for (size_t c = 0; c < w / 2; c++) {
 					size_t cc = c * 2;
 
 					srcPix = { srcY + cc, srcUV + cc, srcUV + cc + 1 };
-					destPix = dest->pixelAt(rr, cc);
-					srcPix.writeTo(ColorBase::YUV, dest->colorBase(), destPix);
+					srcPix.writeTo(ColorBase::YUV, dest->colorBase(), destPix0);
+					destPix0++;
 
 					srcPix = { srcY + cc + 1, srcUV + cc, srcUV + cc + 1 };
-					destPix = dest->pixelAt(rr, cc + 1);
-					srcPix.writeTo(ColorBase::YUV, dest->colorBase(), destPix);
+					srcPix.writeTo(ColorBase::YUV, dest->colorBase(), destPix0);
+					destPix0++;
 
 					srcPix = { srcY + typePtr->stride() + cc, srcUV + cc, srcUV + cc + 1};
-					destPix = dest->pixelAt(rr + 1, cc);
-					srcPix.writeTo(ColorBase::YUV, dest->colorBase(), destPix);
+					srcPix.writeTo(ColorBase::YUV, dest->colorBase(), destPix1);
+					destPix1++;
 
 					srcPix = { srcY + typePtr->stride() + cc + 1, srcUV + cc, srcUV + cc + 1};
-					destPix = dest->pixelAt(rr + 1, cc + 1);
-					srcPix.writeTo(ColorBase::YUV, dest->colorBase(), destPix);
+					srcPix.writeTo(ColorBase::YUV, dest->colorBase(), destPix1);
+					destPix1++;
 				}
 			}
 		}

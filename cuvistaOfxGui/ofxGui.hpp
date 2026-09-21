@@ -55,13 +55,15 @@ namespace ofx {
 		Q_OBJECT
 
 	public:
-		bool isDone = false;
 		bool cancelRequest = false;
 
 		GuiWindow(QWidget* parent, Qt::WindowFlags f);
 		~GuiWindow();
 
 		void closeEvent(QCloseEvent* event) override;
+
+	public slots:
+		void closing(bool isDone);
 	};
 
 
@@ -69,7 +71,7 @@ namespace ofx {
 		Q_OBJECT
 
 	signals:
-		void sigClose();
+		void sigClose(bool isDone);
 		void sigUpdateProgress(int value);
 		void sigUpdateImage(QImage image);
 		void sigUpdateInfo(const std::string& infoString);

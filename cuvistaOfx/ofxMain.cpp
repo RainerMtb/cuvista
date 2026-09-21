@@ -32,7 +32,7 @@
 namespace ofx {
 
 	bool MainContext::isLoaded() const {
-		return propertySuite && imageEffectSuite && parameterSuite;
+		return propertySuite && imageEffectSuite && parameterSuite && messageSuite && timelineSuite;
 	}
 
 	OfxPlugin plugin = {};
@@ -60,7 +60,7 @@ namespace ofx {
 
 	//mandatory OpenFX library function
 	LIBRARY_EXPORT OfxPlugin* OfxGetPlugin(int nth) {
-		debugLogger().format("get plugin #{}", nth);
+		debugLogger().format("get plugin #{} on thread {}", nth, threadId());
 		if (nth == 0) {
 			plugin = {
 				.pluginApi = kOfxImageEffectPluginApi,
@@ -96,6 +96,8 @@ namespace ofx {
 			main.propertySuite = (OfxPropertySuiteV1*) host->fetchSuite(host->host, kOfxPropertySuite, 1);
 			main.imageEffectSuite = (OfxImageEffectSuiteV1*) host->fetchSuite(host->host, kOfxImageEffectSuite, 1);
 			main.parameterSuite = (OfxParameterSuiteV1*) host->fetchSuite(host->host, kOfxParameterSuite, 1);
+			main.timelineSuite = (OfxTimeLineSuiteV1*) host->fetchSuite(host->host, kOfxTimeLineSuite, 1);
+			main.messageSuite = (OfxMessageSuiteV1*) host->fetchSuite(host->host, kOfxMessageSuite, 1);
 
 			//host info
 			main.hostName = getString(host->host, kOfxPropName);
@@ -114,6 +116,7 @@ namespace ofx {
 
 			} else {
 				status = kOfxStatFailed;
+				debugLogger().log("failed to load");
 			}
 
 		} else if (actionString == kOfxActionDescribe) { //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -191,6 +194,9 @@ namespace ofx {
 			main.imageEffectSuite->getParamSet(effect, &paramSet);
 			main.setupParameters(paramSet);
 
+			//load banner
+			main.mBannerElement = loadBannerElement();
+
 			pluginState = PluginState::DESCRIBED_IN_CONTEXT;
 			status = kOfxStatOK;
 
@@ -214,7 +220,13 @@ namespace ofx {
 			pluginIndex++;
 			pluginContextList.push_back(ctx);
 			main.propertySuite->propSetPointer(effectProps, kOfxPropInstanceData, 0, ctx);
-			debugLogger().format("-- action CreateInstance on thread {}, total instances = {}", threadId(), pluginContextList.size());
+
+			OfxRectD rectStart;
+			status = main.imageEffectSuite->clipGetRegionOfDefinition(ctx->srcClip, 0, &rectStart);
+			ctx->w = (int) (rectStart.x2 - rectStart.x1);
+			ctx->h = (int) (rectStart.y2 - rectStart.y1);
+			ctx->banner = loadBannerInstance(ctx->h, ctx->w, main.mBannerElement);
+			debugLogger().format("-- action CreateInstance on thread {}, total instances = {}, frame size {}:{}", threadId(), pluginContextList.size(), ctx->w, ctx->h);
 			status = kOfxStatOK;
 
 		} else if (actionString == kOfxActionBeginInstanceChanged) { 
@@ -233,6 +245,9 @@ namespace ofx {
 			status = kOfxStatOK;
 
 		} else if (actionString == kOfxActionEndInstanceChanged) { 
+			status = kOfxStatReplyDefault;
+
+		} else if (actionString == kOfxImageEffectActionGetClipPreferences) {
 			status = kOfxStatReplyDefault;
 
 		} else if (actionString == kOfxImageEffectActionGetFramesNeeded) { 

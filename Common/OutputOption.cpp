@@ -28,6 +28,10 @@ OutputOption OutputOption::NVENC_AV1 =      { 10, "NVENC",  "AV1", 63, 1, 55, Ou
 OutputOption OutputOption::NVENC_HEVC =     { 11, "NVENC", "HEVC", 51, 1, 45, OutputGroup::VIDEO_NVENC };
 OutputOption OutputOption::NVENC_H264 =     { 12, "NVENC", "H264", 51, 1, 55, OutputGroup::VIDEO_NVENC };
 
+OutputOption OutputOption::VULKAN_AV1 =     { 40, "VULKAN",  "AV1", 63, 1, 55, OutputGroup::VIDEO_VULKAN };
+OutputOption OutputOption::VULKAN_HEVC =    { 41, "VULKAN", "HEVC", 51, 1, 45, OutputGroup::VIDEO_VULKAN };
+OutputOption OutputOption::VULKAN_H264 =    { 42, "VULKAN", "H264", 51, 1, 55, OutputGroup::VIDEO_VULKAN };
+
 OutputOption OutputOption::VIDEO_STACK =    { 20, "FFMPEG", "H264", 51,  1, 55, OutputGroup::VIDEO_OTHER };
 OutputOption OutputOption::VIDEO_FLOW =     { 21, "FFMPEG", "H264", 51,  1, 55, OutputGroup::VIDEO_OTHER };
 OutputOption OutputOption::VIDEO_RESULTS =  { 22,    "RAW", "NV12",  0,  0,  0, OutputGroup::VIDEO_OTHER };
@@ -74,7 +78,7 @@ OutputOption OutputOption::find(std::string optionName) {
 }
 
 bool OutputOption::isVideoFile() const {
-	return group == OutputGroup::VIDEO_FFMPEG || group == OutputGroup::VIDEO_NVENC || group == OutputGroup::VIDEO_OTHER;
+	return group == OutputGroup::VIDEO_FFMPEG || group == OutputGroup::VIDEO_NVENC || group == OutputGroup::VIDEO_VULKAN || group == OutputGroup::VIDEO_OTHER;
 }
 
 bool OutputOption::isImageSequence() const {
@@ -86,12 +90,12 @@ bool OutputOption::hasQuality() const {
 }
 
 std::vector<OutputOption> OutputOption::videoOptions() {
-	return { FFMPEG_AV1, FFMPEG_HEVC, FFMPEG_H264, FFMPEG_FFV1, NVENC_AV1, NVENC_HEVC, NVENC_H264 };
+	return { FFMPEG_AV1, FFMPEG_HEVC, FFMPEG_H264, FFMPEG_FFV1, NVENC_AV1, NVENC_HEVC, NVENC_H264, VULKAN_AV1, VULKAN_HEVC, VULKAN_H264 };
 }
 
 std::vector<OutputOption> OutputOption::validOptions() {
 	return { 
-		FFMPEG_AV1, FFMPEG_HEVC, FFMPEG_H264, FFMPEG_FFV1, NVENC_AV1, NVENC_HEVC, NVENC_H264,
+		FFMPEG_AV1, FFMPEG_HEVC, FFMPEG_H264, FFMPEG_FFV1, NVENC_AV1, NVENC_HEVC, NVENC_H264, VULKAN_AV1, VULKAN_HEVC, VULKAN_H264,
 		VIDEO_STACK, VIDEO_FLOW, PIPE_RAW, PIPE_ASF, IMAGE_BMP, IMAGE_JPG, IMAGE_RESULTS, RAW_YUV444, RAW_NV12
 	};
 }

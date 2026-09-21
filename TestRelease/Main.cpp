@@ -249,7 +249,7 @@ static void testSpeed() {
 		"-device 0 -i d:/VideoTest/02.mp4 -o f:/videoOut.mp4 -y -frames 100",
 		"-device 1 -i d:/VideoTest/02.mp4 -o f:/videoOut.mp4 -y -frames 200",
 		"-device 2 -i d:/VideoTest/02.mp4 -o f:/videoOut.mp4 -y -frames 500",
-		"-device 3 -i d:/VideoTest/02.mp4 -o f:/videoOut.mp4 -y -frames 500"
+		"-device 3 -i d:/VideoTest/02.mp4 -o f:/videoOut.mp4 -y -frames 800"
 	};
 
 	std::cout << std::endl << "SPEED TEST:" << std::endl;

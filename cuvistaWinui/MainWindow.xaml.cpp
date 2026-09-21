@@ -218,6 +218,7 @@ namespace winrt::cuvistaWinui::implementation {
         comboAudioTrack().Items().Append(box_string("No Audio"));
         mAudioTrackMap.clear();
         inputPosition().Width(0.0);
+        inputVideoFraction = 0.0;
 
         try {
             mReader->close();
@@ -229,8 +230,10 @@ namespace winrt::cuvistaWinui::implementation {
 
             if (errorLogger().hasNoError()) {
                 mReader->read(mInput); //try to read again for second image
-                mInputBGRA = ImageXamlBGRA::create(imageInput(), mReader->h, mReader->w);
+                mInputBGRA = ImageXamlBGRA::create(imageInput(), mReader->h, mReader->w * mReader->parNum / mReader->parDen);
+                mStretcher = ImageStretcher(mInputBGRA, mReader->w);
                 mInput.convertTo(mInputBGRA);
+                mInputBGRA.stretch(mStretcher);
                 inputPosition().Width(1.0 / imageBackground().ActualWidth());
             }
 
@@ -431,7 +434,7 @@ namespace winrt::cuvistaWinui::implementation {
             mProgress = std::make_shared<PlayerProgress>(*this, *mExecutor);
 
             //player output video image
-            mProgressOutput = ImageXamlBGRA::create(imageVideoPlayer(), mReader->h, mReader->w);
+            mProgressOutput = ImageXamlBGRA::create(imageVideoPlayer(), mData.h, mData.wOut);
             mProgressOutput.loadImageScaledToFit(L"ms-appx:///Assets/signs-02.png");
 
         } else {
@@ -446,9 +449,9 @@ namespace winrt::cuvistaWinui::implementation {
             progressOutputGrid().Background(brush);
 
             //progress dialog images
-            mProgressInput = ImageXamlBGRA::create(imageProgressInput(), mReader->h, mReader->w);
+            mProgressInput = ImageXamlBGRA::create(imageProgressInput(), mData.h, mData.wOut);
             mProgressInput.loadImageScaledToFit(L"ms-appx:///Assets/signs-02.png");
-            mProgressOutput = ImageXamlBGRA::create(imageProgressOutput(), mReader->h, mReader->w);
+            mProgressOutput = ImageXamlBGRA::create(imageProgressOutput(), mData.h, mData.wOut);
             mProgressOutput.loadImageScaledToFit(L"ms-appx:///Assets/signs-02.png");
         }
         lblStatus().Text(L"stabilizing...");
@@ -505,6 +508,7 @@ namespace winrt::cuvistaWinui::implementation {
         if (mInputReady && mReader->seek(frac) && mReader->read(mInput)) {
             inputVideoFraction = frac;
             mInput.convertTo(mInputBGRA);
+            mInputBGRA.stretch(mStretcher);
             DispatcherQueue().TryEnqueue([&, frac] {
                 mInputBGRA.invalidate();
                 double w = imageBackground().ActualWidth() * frac;

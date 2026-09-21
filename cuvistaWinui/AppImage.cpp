@@ -67,7 +67,8 @@ winrt::fire_and_forget ImageXamlBGRA::loadImageScaledToFit(winrt::hstring file) 
     std::fill(data(), data() + sizeInBytes(), 0);
 
     //copy pixel data to WriteableBitmap
-    unsigned char* dest = data() + (h() - s) * w() * 2 + (w() - s) * 2;
+    int pixelOffset = (h() - s) * w() / 2 + (w() - s) / 2;
+    unsigned char* dest = data() + pixelOffset * 4;
     for (int i = 0; i < s; i++) {
         std::copy_n(src, 4 * s, dest);
         dest += 4 * w();

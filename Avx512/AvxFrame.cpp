@@ -200,7 +200,7 @@ void AvxFrame::getOutput(int64_t frameIndex, Image8& image) const {
 	image.setIndex(frameIndex);
 }
 
-bool AvxFrame::getOutput(int64_t frameIndex, Image8& image, int cudaNv12stride, unsigned char* cudaNv12ptr) const {
+bool AvxFrame::getOutput(int64_t frameIndex, Image8& image, int nv12stride, unsigned char* cudaNv12ptr) const {
 	writeNV12(image);
 	return true;
 }

@@ -55,4 +55,7 @@ public:
 
 	//number of threads
 	size_t size() const override;
+
+	//index of tread
+	size_t currentThreadIndex() const override;
 };

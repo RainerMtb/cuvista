@@ -76,15 +76,20 @@ GuiWindow::GuiWindow(QWidget* parent, Qt::WindowFlags f) :
 GuiWindow::~GuiWindow() {}
 
 void GuiWindow::closeEvent(QCloseEvent* event) {
-	// clicking close will set cancelRequest
-	// allow closing only when really done
-	if (isDone) {
+	if (cancelRequest) {
+		//allow closing only when really done
 		event->accept();
 
 	} else {
+		//clicking close will set cancelRequest
 		cancelRequest = true;
 		event->ignore();
 	}
+}
+
+void GuiWindow::closing(bool isDone) {
+	cancelRequest = true;
+	close();
 }
 
 
@@ -139,7 +144,7 @@ void OfxGuiQt::openProgress() {
 	layout->addWidget(btnCancel);
 	window->setLayout(layout);
 
-	QObject::connect(this, &OfxGuiQt::sigClose, window, &QWidget::close, Qt::QueuedConnection);
+	QObject::connect(this, &OfxGuiQt::sigClose, window, &GuiWindow::closing, Qt::QueuedConnection);
 	QObject::connect(this, &OfxGuiQt::sigUpdateProgress, progress, &QProgressBar::setValue, Qt::QueuedConnection);
 	QObject::connect(this, &OfxGuiQt::sigUpdateImage, imageLabel, &ImageLabel::setImage);
 	QObject::connect(btnCancel, &QPushButton::clicked, this, &OfxGuiQt::cancel);
@@ -209,8 +214,8 @@ void OfxGuiQt::openInfo(const std::string& infoString, const std::string& hostNa
 	}
 	textBox->setMinimumWidth(boxWidth + 40);
 
-	window->isDone = true;
-	connect(btnClose, &QPushButton::clicked, window, &QWidget::close);
+	window->cancelRequest = true;
+	connect(btnClose, &QPushButton::clicked, window, &GuiWindow::closing);
 
 	auto updateFcn = [&] (const std::string& infoString) {
 		QString qstr = textBox->toPlainText() + QString::fromStdString(infoString);
@@ -232,8 +237,7 @@ void OfxGuiQt::updateInfo(const std::string& infoString) {
 }
 
 void OfxGuiQt::close() {
-	window->isDone = true;
-	sigClose();
+	sigClose(true);
 }
 
 //must be called on the application thread
@@ -243,7 +247,7 @@ void OfxGuiQt::shutdown() {
 }
 
 bool OfxGuiQt::isCancelled() {
-	return window->cancelRequest;
+	return window && window->cancelRequest;
 }
 
 OfxGuiQt::~OfxGuiQt() {

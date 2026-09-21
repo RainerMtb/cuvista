@@ -61,6 +61,13 @@ size_t ThreadPool::size() const {
 	return mThreads.size();
 }
 
+size_t ThreadPool::currentThreadIndex() const {
+	size_t i = 0;
+	auto id = std::this_thread::get_id();
+	while (i < mThreads.size() && mThreads[i].get_id() != id) i++;
+	return i;
+}
+
 int ThreadPool::activeWorkers() const {
 	return std::accumulate(mActive.cbegin(), mActive.cend(), 0);
 }

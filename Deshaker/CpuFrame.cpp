@@ -361,7 +361,7 @@ void CpuFrame::getOutput(int64_t frameIndex, Image8& image) const {
 	image.index = frameIndex;
 }
 
-bool CpuFrame::getOutput(int64_t frameIndex, Image8& image, int cudaNv12stride, unsigned char* cudaNv12ptr) const {
+bool CpuFrame::getOutput(int64_t frameIndex, Image8& image, int nv12stride, unsigned char* cudaNv12ptr) const {
 	assert(frameIndex == mOutput.index && "invalid frame index");
 	mOutput.convertTo(image, mPool);
 	return true;

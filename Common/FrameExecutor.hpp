@@ -65,7 +65,7 @@ public:
 	//prepare data for encoding on cpu
 	virtual void getOutput(int64_t frameIndex, Image8& image) const = 0;
 	//prepare data for encoding on cuda
-	virtual bool getOutput(int64_t frameIndex, Image8& image, int cudaNv12stride, unsigned char* cudaNv12ptr) const = 0;
+	virtual bool getOutput(int64_t frameIndex, Image8& image, int nv12stride, unsigned char* cudaNv12ptr) const = 0;
 	//get transformed image as Mat<float> for debugging
 	virtual Mat<float> getTransformedOutput() const = 0;
 	//get image pyramid as Mat<float> for debugging

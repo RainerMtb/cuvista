@@ -44,17 +44,21 @@ namespace im {
 	template <class T> class ImageY : public ImageBase<T> {
 
 	public:
+		ImageY(int h, int w, int stride, T maxValue, T* data) {
+			this->storePtr = std::make_shared<ImageStore<T>>(h, w, stride, 1, h * stride, YAxisDir::DOWN, std::vector<int>{ 0 }, maxValue, data);
+			this->typePtr = std::make_shared<ImageTypePlanar<T>>(this->storePtr);
+			this->colorPtr = std::make_shared<ImageColorYuv<T>>(this->typePtr);
+		}
+
 		ImageY(int h, int w, int stride, T maxValue) {
 			this->storePtr = std::make_shared<ImageStore<T>>(h, w, stride, 1, h * stride, YAxisDir::DOWN, std::vector<int>{ 0 }, maxValue);
 			this->typePtr = std::make_shared<ImageTypePlanar<T>>(this->storePtr);
 			this->colorPtr = std::make_shared<ImageColorYuv<T>>(this->typePtr);
 		}
 
-		ImageY(int h, int w, int stride, T maxValue, T* data) {
-			this->storePtr = std::make_shared<ImageStore<T>>(h, w, stride, 1, h * stride, YAxisDir::DOWN, std::vector<int>{ 0 }, maxValue, data);
-			this->typePtr = std::make_shared<ImageTypePlanar<T>>(this->storePtr);
-			this->colorPtr = std::make_shared<ImageColorYuv<T>>(this->typePtr);
-		}
+		ImageY(int h, int w, T maxValue) :
+			ImageY<T>(h, w, util::alignValue(w, 32), maxValue)
+		{}
 
 		ImageY() :
 			ImageY<T>(0, 0, 0, 0)
@@ -83,6 +87,7 @@ namespace im {
 
 		virtual void stretch(const ImageStretcher& stretcher, ThreadPoolBase& pool = defaultPool);
 	};
+
 
 	class Image8yuv : public Image8 {};
 
@@ -141,12 +146,19 @@ namespace im {
 		ImageNV12();
 
 		constexpr ImageType imageType() const override { return ImageType::NV12; }
+
+		Size writeText(std::string_view text, int x, int y, TextAlign alignment, int sx, int sy, const Color& fg, const Color& bg) override;
+		Size writeText(std::string_view text, int x, int y, TextAlign alignment, int sx, int sy) override;
+		Size writeText(std::string_view text, int x, int y, TextAlign alignment) override;
 	};
 
 
 	class Image8bgr : public Image8 {};
 
 	class ImageBgr : public Image8bgr {
+
+	private:
+		static uint32_t readBytes(const uchar* ptr, int byteCount);
 
 	public:
 		ImageBgr(int h, int w);
@@ -155,6 +167,7 @@ namespace im {
 		constexpr ImageType imageType() const override { return ImageType::BGR; }
 
 		static ImageBgr readBmpFile(const std::string& filename);
+		static ImageBgr readBmpFile(std::span<uchar> data, std::span<std::vector<uchar>> customColorMap = {});
 
 		virtual void saveBmpColor(const std::string& filename) const override;
 	};

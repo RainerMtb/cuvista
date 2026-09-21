@@ -43,3 +43,8 @@ void ThreadPoolBase::workAndWait(FuncPool sharedJob, size_t iterStart, size_t it
 size_t ThreadPoolBase::size() const {
 	return 1;
 }
+
+//index of thread in the pool
+size_t ThreadPoolBase::currentThreadIndex() const {
+	return 0;
+}

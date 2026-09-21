@@ -68,6 +68,10 @@ MovieWriter* createWriter(WriterType writerType, MainData& data, MovieReader& re
         return new CudaFFmpegWriter(data, reader);
         break;
 
+    case WriterType::VULKAN:
+        return new VulkanFFmpegWriter(data, reader);
+        break;
+
     case WriterType::STACKED:
         return new StackedWriter(data, reader);
         break;
