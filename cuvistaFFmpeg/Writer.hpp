@@ -241,11 +241,15 @@ protected:
 	AVBufferRef* hwframes_ctx = nullptr;
 	AVHWFramesContext* avhw_frames_ctx = nullptr;
 	AVFrame* hw_frame = nullptr;
+	std::vector<AVPixelFormat> vulkanSwFormats;
 
 public:
 	VulkanFFmpegWriter(MainData& data, MovieReader& reader);
 	~VulkanFFmpegWriter() override;
 
+	static bool probe(OutputOption outputOption);
+
+	void openEncoder(OutputOption outputOption);
 	void open(OutputOption outputOption) override;
 	void writeOutput(const FrameExecutor& executor) override;
 };

@@ -23,6 +23,7 @@
 #include <list>
 #include <mutex>
 #include <format>
+#include <iostream>
 
 enum class ErrorSource {
 	FFMPEG,
@@ -78,6 +79,8 @@ public:
 
 	void clearErrors(ErrorSource source);
 };
+
+inline std::shared_ptr<ErrorLogger> errorLoggerInstance = std::make_shared<ErrorLogger>();
 
 ErrorLogger& errorLogger();
 

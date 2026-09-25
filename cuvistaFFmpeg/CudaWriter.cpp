@@ -63,7 +63,7 @@ void CudaFFmpegWriter::open(OutputOption outputOption, const DeviceInfoCuda* dic
     FFmpegFormatWriter::openFormat(codecId, mData.fileOut, 4);
 
     //setup nvenc class
-    nvenc->createEncoder(mReader.w, mReader.h, mReader.fpsNum, mReader.fpsDen, gopSize, mData.selectedCrf, guid);
+    nvenc->createEncoder(mReader.w, mReader.h, mReader.fpsNum, mReader.fpsDen, mReader.parNum, mReader.parDen, gopSize, mData.selectedCrf, guid);
 
     //setup codec parameters for ffmpeg format output
     std::span<uint8_t> extraData = nvenc->getExtraData();

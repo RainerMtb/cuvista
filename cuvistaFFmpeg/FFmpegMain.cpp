@@ -58,39 +58,40 @@ MovieReader* createReader(ReaderType readerType) {
     return nullptr;
 }
 
-MovieWriter* createWriter(WriterType writerType, MainData& data, MovieReader& reader) {
-    switch (writerType) {
-    case WriterType::FFMPEG:
-        return new FFmpegWriter(data, reader);
-        break;
-
-    case WriterType::CUDA:
-        return new CudaFFmpegWriter(data, reader);
-        break;
-
-    case WriterType::VULKAN:
-        return new VulkanFFmpegWriter(data, reader);
-        break;
-
-    case WriterType::STACKED:
+//create and return a writer instance
+MovieWriter* createWriter(OutputOption option, MainData& data, MovieReader& reader) {
+    if (option == OutputOption::VIDEO_STACK)
         return new StackedWriter(data, reader);
-        break;
-
-    case WriterType::FLOW:
+    else if (option == OutputOption::VIDEO_FLOW)
         return new OpticalFlowWriter(data, reader);
-        break;
-
-    case WriterType::ASF_PIPE:
+    else if (option == OutputOption::PIPE_ASF)
         return new AsfPipeWriter(data, reader);
-        break;
-
-    case WriterType::JPEG_IMAGE:
+    else if (option == OutputOption::IMAGE_JPG)
         return new JpegImageWriter(data, reader);
-        break;
-    }
-    return nullptr;
+    else if (option.group == OutputGroup::VIDEO_FFMPEG)
+        return new FFmpegWriter(data, reader);
+    else if (option.group == OutputGroup::VIDEO_NVENC)
+        return new CudaFFmpegWriter(data, reader);
+    else if (option.group == OutputGroup::VIDEO_VULKAN)
+        return new VulkanFFmpegWriter(data, reader);
+    else 
+        return nullptr;
 }
 
+//check writer capability
+bool probeWriter(OutputOption option) {
+    if (option.group == OutputGroup::VIDEO_VULKAN)
+        return VulkanFFmpegWriter::probe(option);
+    else
+        return false;
+}
+
+//set global symbols
+void init(std::shared_ptr<ErrorLogger> errorLoggerInstance) {
+    ::errorLoggerInstance = errorLoggerInstance;
+}
+
+//convert ffmpeg error number to message
 std::string av_make_error(int errnum, const char* msg, const std::string& str) {
     std::string info = msg + str;
     if (info.size() > 0) info += ": ";
@@ -120,11 +121,13 @@ void ffmpeg_log(void* avclass, int level, const char* fmt, va_list args) {
             *ptr = '\0';
             ptr--;
         }
-        errorLogger().logFFmpeg(level, ffmpeg_logbuf);
 
-        //set error message for fatal log
+        //set error message
         if (level <= AV_LOG_FATAL) {
             errorLogger().logError(ffmpeg_logbuf, ErrorSource::FFMPEG);
+
+        } else {
+            errorLogger().logFFmpeg(level, ffmpeg_logbuf);
         }
     }
 };

@@ -156,7 +156,7 @@ void NvEncoder::probeSupportedCodecs(DeviceInfoCuda& deviceInfoCuda) {
 }
 
 
-void NvEncoder::createEncoder(int w, int h, int fpsNum, int fpsDen, uint32_t gopLen, uint8_t crf, GUID guid) {
+void NvEncoder::createEncoder(int w, int h, int fpsNum, int fpsDen, int parNum, int parDen, uint32_t gopLen, uint8_t crf, GUID guid) {
 	this->h = h;
 	this->w = w;
 	init();
@@ -227,6 +227,8 @@ void NvEncoder::createEncoder(int w, int h, int fpsNum, int fpsDen, uint32_t gop
 	initParams.presetGUID = presetGuid;
 	initParams.encodeWidth = w;
 	initParams.encodeHeight = h;
+	initParams.darHeight = h;
+	initParams.darWidth = w * parNum / parDen;
 	initParams.frameRateNum = fpsNum;
 	initParams.frameRateDen = fpsDen;
 	initParams.enablePTD = 1;

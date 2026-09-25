@@ -386,17 +386,19 @@ namespace winrt::cuvistaWinui::implementation {
             //select writer
             OutputOption imageType = mOutputImageTypeMap.at(comboImageType().SelectedValue().as<hstring>());
             if (chkStack().IsChecked().Value())
-                mWriter = std::shared_ptr<MovieWriter>(ff::createWriter(WriterType::STACKED, mData, *mReader));
+                mWriter = std::shared_ptr<MovieWriter>(ff::createWriter(OutputOption::VIDEO_STACK, mData, *mReader));
             else if (chkSequence().IsChecked().Value() && imageType == OutputOption::IMAGE_BMP)
                 mWriter = std::make_shared<BmpImageWriter>(mData, *mReader);
             else if (chkSequence().IsChecked().Value() && imageType == OutputOption::IMAGE_JPG)
-                mWriter = std::shared_ptr<MovieWriter>(ff::createWriter(WriterType::JPEG_IMAGE, mData, *mReader));
+                mWriter = std::shared_ptr<MovieWriter>(ff::createWriter(OutputOption::IMAGE_JPG, mData, *mReader));
             else if (chkPlayer().IsChecked().Value())
                 mWriter = std::make_shared<PlayerWriter>(*this, *mExecutor, mData, *mReader);
             else if (chkEncode().IsChecked().Value() && mData.outputOption.group == OutputGroup::VIDEO_NVENC)
-                mWriter = std::shared_ptr<MovieWriter>(ff::createWriter(WriterType::CUDA, mData, *mReader));
+                mWriter = std::shared_ptr<MovieWriter>(ff::createWriter(mData.outputOption, mData, *mReader));
             else if (chkEncode().IsChecked().Value() && mData.outputOption.group == OutputGroup::VIDEO_FFMPEG)
-                mWriter = std::shared_ptr<MovieWriter>(ff::createWriter(WriterType::FFMPEG, mData, *mReader));
+                mWriter = std::shared_ptr<MovieWriter>(ff::createWriter(mData.outputOption, mData, *mReader));
+            else if (chkEncode().IsChecked().Value() && mData.outputOption.group == OutputGroup::VIDEO_VULKAN)
+                mWriter = std::shared_ptr<MovieWriter>(ff::createWriter(mData.outputOption, mData, *mReader));
             else
                 co_return;
 

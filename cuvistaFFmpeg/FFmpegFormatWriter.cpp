@@ -458,7 +458,7 @@ void FFmpegFormatWriter::writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsI
     //STEP 2: convert to output timebase
     //rescale packet from input timebase to output timebase
     av_packet_rescale_ts(pkt, rBase, videoStream->time_base);
-    std::printf("stream=%d ptsIdx=%zd dtsIdx=%zd pts=%zd dts=%zd duration=%zd\n", pkt->stream_index, ptsIdx, dtsIdx, pkt->pts, pkt->dts, pkt->duration);
+    //std::printf("stream=%d ptsIdx=%zd dtsIdx=%zd pts=%zd dts=%zd duration=%zd\n", pkt->stream_index, ptsIdx, dtsIdx, pkt->pts, pkt->dts, pkt->duration);
 
     writeSecondaryPackets(terminate);
     //static std::ofstream testFile("f:/test.h265", std::ios::binary);

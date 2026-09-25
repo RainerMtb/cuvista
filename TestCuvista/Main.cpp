@@ -38,10 +38,10 @@ int main() {
 		/*10*/ "-i d:/videoTest/15.ts -o f:/videoOut.mp4 -y -device 0 -frames 150 -log tcp://10.0.0.1:5555",
 		/*11*/ "-i //READYNAS/Videos/Misc/AudioTestWettenDass.ts -o f:/videoOut.mkv -y -frames 400 -bgmode color -zoom -5",
 		/*12*/ "-i //READYNAS/Videos/Misc/AudioTestWettenDass.ts -o f:/im%02d.bmp -y -frames 10 -bgmode color -zoom -5 -device 1",
-		/*13*/ "-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -copyframes -y -enc vulkan:hevc -progress 0",
+		/*13*/ "-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -copyframes -y -enc vulkan:av1",
 	};
 	
-	int idx = 13;
+	int idx = 0;
 	std::string argsLine = argsLines[idx];
 	std::cout << "------- TestCuvista -------" << std::endl;
 	std::cout << "------- params: " << argsLine << std::endl << std::endl;

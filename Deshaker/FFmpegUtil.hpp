@@ -26,21 +26,6 @@
 #include <memory>
 
 
-enum class ReaderType {
-	FFMPEG,
-	MEMORY,
-};
-
-enum class WriterType {
-	FFMPEG,
-	CUDA,
-	VULKAN,
-	STACKED,
-	FLOW,
-	ASF_PIPE,
-	JPEG_IMAGE,
-};
-
 struct FFmpegVersions {
 	unsigned int avutil, avcodec, avformat, swscale, swresample;
 

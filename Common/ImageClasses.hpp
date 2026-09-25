@@ -168,6 +168,7 @@ namespace im {
 
 		static ImageBgr readBmpFile(const std::string& filename);
 		static ImageBgr readBmpFile(std::span<uchar> data, std::span<std::vector<uchar>> customColorMap = {});
+		static ImageBgr loadTestImage();
 
 		virtual void saveBmpColor(const std::string& filename) const override;
 	};

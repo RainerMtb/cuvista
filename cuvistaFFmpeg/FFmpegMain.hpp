@@ -34,6 +34,7 @@ extern "C" {
 #include <memory>
 #include <mutex>
 
+#include "OutputOption.hpp"
 #include "FFmpegUtil.hpp"
 #include "ErrorLogger.hpp"
 
@@ -120,4 +121,8 @@ LIBRARY_EXPORT const FFmpegVersions* versionsRuntime();
 
 //library functions to get classes
 LIBRARY_EXPORT MovieReader* createReader(ReaderType readerType);
-LIBRARY_EXPORT MovieWriter* createWriter(WriterType writerType, MainData& data, MovieReader& reader);
+LIBRARY_EXPORT MovieWriter* createWriter(OutputOption option, MainData& data, MovieReader& reader);
+
+//library functions
+LIBRARY_EXPORT bool probeWriter(OutputOption option);
+LIBRARY_EXPORT void init(std::shared_ptr<ErrorLogger> errorLoggerInstance);

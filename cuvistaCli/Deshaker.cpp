@@ -59,31 +59,32 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 		data.validate(*reader);
 
 		//----------- create appropriate MovieWriter
+		OutputOption option = data.outputOption;
 		std::vector<std::shared_ptr<MovieWriter>> writerList;
-		if (data.outputOption == OutputOption::VIDEO_STACK)
-			writerList.emplace_back(ff::createWriter(WriterType::STACKED, data, *reader));
-		else if (data.outputOption == OutputOption::VIDEO_FLOW)
-			writerList.emplace_back(ff::createWriter(WriterType::FLOW, data, *reader));
-		else if (data.outputOption == OutputOption::PIPE_RAW)
+		if (option == OutputOption::VIDEO_STACK)
+			writerList.emplace_back(ff::createWriter(option, data, *reader));
+		else if (option == OutputOption::VIDEO_FLOW)
+			writerList.emplace_back(ff::createWriter(option, data, *reader));
+		else if (option == OutputOption::PIPE_RAW)
 			writerList.push_back(std::make_shared<RawPipeWriter>(data, *reader));
-		else if (data.outputOption == OutputOption::PIPE_ASF)
-			writerList.emplace_back(ff::createWriter(WriterType::ASF_PIPE, data, *reader));
-		else if (data.outputOption == OutputOption::IMAGE_BMP)
+		else if (option == OutputOption::PIPE_ASF)
+			writerList.emplace_back(ff::createWriter(option, data, *reader));
+		else if (option == OutputOption::IMAGE_BMP)
 			writerList.push_back(std::make_shared<BmpImageWriter>(data, *reader));
-		else if (data.outputOption == OutputOption::IMAGE_JPG)
-			writerList.emplace_back(ff::createWriter(WriterType::JPEG_IMAGE, data, *reader));
-		else if (data.outputOption == OutputOption::RAW_YUV444)
+		else if (option == OutputOption::IMAGE_JPG)
+			writerList.emplace_back(ff::createWriter(option, data, *reader));
+		else if (option == OutputOption::RAW_YUV444)
 			writerList.push_back(std::make_shared<RawYuvWriter>(data, *reader));
-		else if (data.outputOption == OutputOption::RAW_NV12)
+		else if (option == OutputOption::RAW_NV12)
 			writerList.push_back(std::make_shared<RawNv12Writer>(data, *reader));
-		else if (data.outputOption == OutputOption::OPTION_NONE)
+		else if (option == OutputOption::OPTION_NONE)
 			writerList.push_back(std::make_shared<NullWriter>(data, *reader));
-		else if (data.outputOption.group == OutputGroup::VIDEO_FFMPEG)
-			writerList.emplace_back(ff::createWriter(WriterType::FFMPEG, data, *reader));
-		else if (data.outputOption.group == OutputGroup::VIDEO_NVENC)
-			writerList.emplace_back(ff::createWriter(WriterType::CUDA, data, *reader));
-		else if (data.outputOption.group == OutputGroup::VIDEO_VULKAN)
-			writerList.emplace_back(ff::createWriter(WriterType::VULKAN, data, *reader));
+		else if (option.group == OutputGroup::VIDEO_FFMPEG)
+			writerList.emplace_back(ff::createWriter(option, data, *reader));
+		else if (option.group == OutputGroup::VIDEO_NVENC)
+			writerList.emplace_back(ff::createWriter(option, data, *reader));
+		else if (option.group == OutputGroup::VIDEO_VULKAN)
+			writerList.emplace_back(ff::createWriter(option, data, *reader));
 
 		//----------- add secondary Writers
 		if (!data.trajectoryFile.empty()) {
@@ -132,7 +133,7 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 		return { 1, debugLogger().str() };
 
 	} catch (const AVException& e) {
-		printError(std::cerr, std::string("error: ") + e.what());
+		printError(std::cerr, e.what());
 		errorLogger().printErrors(std::cerr);
 		return { 2, debugLogger().str() };
 
@@ -143,6 +144,7 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 
 	} catch (...) {
 		printError(std::cerr, "unknown error in cuvista");
+		errorLogger().printErrors(std::cerr);
 		return { 4, debugLogger().str() };
 	}
 

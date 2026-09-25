@@ -106,6 +106,7 @@ public:
 	std::vector<DeviceInfoBase*> deviceList;
 	std::vector<DeviceInfoOpenCl> deviceInfoOpenCl;
 	std::vector<DeviceInfoCuda> deviceInfoCuda;
+	DeviceInfoVulkan deviceInfoVulkan;
 	DeviceInfoCpu deviceInfoCpu;
 	DeviceInfoAvx deviceInfoAvx;
 	bool deviceRequested = false;

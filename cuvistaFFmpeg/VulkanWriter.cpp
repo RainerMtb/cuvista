@@ -24,14 +24,14 @@ VulkanFFmpegWriter::VulkanFFmpegWriter(MainData& data, MovieReader& reader) :
 	FFmpegWriter(data, reader, 0)
 {}
 
-void VulkanFFmpegWriter::open(OutputOption outputOption) {
-	//allocate nv12 image
-	outputNV12 = ImageNV12(mData.h, mData.w);
+bool VulkanFFmpegWriter::probe(OutputOption outputOption) {
+	auto noopLogger = [] (void* avclass, int level, const char* fmt, va_list args) {};
+	av_log_set_callback(noopLogger);
 
-	//open format
-	AVCodecID codecID = optionToCodecIdMap[outputOption];
-	FFmpegFormatWriter::openFormat(codecID, mData.fileOut, 1);
+	return true;
+}
 
+void VulkanFFmpegWriter::openEncoder(OutputOption outputOption) {
 	//find cpu encoder
 	std::map<OutputOption, std::string> optionToCodecMap = {
 		{ OutputOption::VULKAN_AV1, "av1_vulkan"},
@@ -58,7 +58,7 @@ void VulkanFFmpegWriter::open(OutputOption outputOption) {
 	codec_ctx->sample_aspect_ratio = { mReader.parNum, mReader.parDen };
 	codec_ctx->gop_size = gopSize;
 	codec_ctx->flags |= AV_CODEC_FLAG_QSCALE;
-	av_opt_set(codec_ctx->priv_data, "qp", "22", 0);
+	av_opt_set(codec_ctx->priv_data, "qp", std::to_string(mData.selectedCrf).c_str(), 0);
 	//codec_ctx->has_b_frames = 1;
 	//codec_ctx->max_b_frames = 4;
 	//codec_ctx->bit_rate = 5'000'000;
@@ -82,13 +82,10 @@ void VulkanFFmpegWriter::open(OutputOption outputOption) {
 	if (constraints == nullptr)
 		throw AVException("Could not get device constraints");
 
-	std::vector<AVPixelFormat> vulkanSwFormats;
 	const AVPixelFormat* ptr = constraints->valid_sw_formats;
-	while (*ptr != AV_PIX_FMT_NONE) {
+	for (const AVPixelFormat* ptr = constraints->valid_sw_formats; *ptr != AV_PIX_FMT_NONE; ptr++) {
 		vulkanSwFormats.push_back(*ptr);
-		ptr++;
 	}
-
 	av_hwframe_constraints_free(&constraints);
 
 	//allocate hardwware frame context
@@ -98,12 +95,11 @@ void VulkanFFmpegWriter::open(OutputOption outputOption) {
 	avhw_frames_ctx->sw_format = AV_PIX_FMT_NV12;
 	avhw_frames_ctx->width = codec_ctx->width;
 	avhw_frames_ctx->height = codec_ctx->height;
-	avhw_frames_ctx->initial_pool_size = 20;
 
 	result = av_hwframe_ctx_init(hwframes_ctx);
 	if (result < 0)
 		throw AVException(av_make_error(result, "Could not initialize hardware frames context"));
-	
+
 	codec_ctx->hw_frames_ctx = av_buffer_ref(hwframes_ctx);
 	av_buffer_unref(&hwframes_ctx);
 
@@ -111,6 +107,18 @@ void VulkanFFmpegWriter::open(OutputOption outputOption) {
 	result = avcodec_open2(codec_ctx, codec, NULL);
 	if (result < 0)
 		throw AVException(av_make_error(result, "Error opening codec"));
+}
+
+void VulkanFFmpegWriter::open(OutputOption outputOption) {
+	//open format
+	AVCodecID codecID = optionToCodecIdMap[outputOption];
+	FFmpegFormatWriter::openFormat(codecID, mData.fileOut, 1);
+
+	//open vulkan encoder
+	openEncoder(outputOption);
+
+	//allocate nv12 image
+	outputNV12 = ImageNV12(mData.h, mData.w);
 
 	//allocate av_frame in NV12 format
 	av_frame = av_frame_alloc();
@@ -132,6 +140,7 @@ void VulkanFFmpegWriter::open(OutputOption outputOption) {
 	hw_frame->height = codec_ctx->height;
 
 	//open format
+	int result = 0;
 	result = avcodec_parameters_from_context(videoStream->codecpar, codec_ctx);
 	if (result < 0)
 		throw AVException(av_make_error(result, "Error setting codec parameters"));
@@ -153,7 +162,7 @@ void VulkanFFmpegWriter::open(OutputOption outputOption) {
 
 void VulkanFFmpegWriter::writeOutput(const FrameExecutor& executor) {
 	executor.getOutput(frameIndex, outputNV12, outputNV12.stride(), nullptr);
-	outputNV12.writeText(std::to_string(frameIndex), 10, 10, im::TextAlign::TOP_LEFT);
+	//outputNV12.writeText(std::to_string(frameIndex), 10, 10, im::TextAlign::TOP_LEFT);
 
 	int result = 0;
 	result = av_hwframe_get_buffer(codec_ctx->hw_frames_ctx, hw_frame, 0);
@@ -185,7 +194,13 @@ void VulkanFFmpegWriter::writeOutput(const FrameExecutor& executor) {
 }
 
 VulkanFFmpegWriter::~VulkanFFmpegWriter() {
-	av_buffer_unref(&hwframes_ctx);
-	av_buffer_unref(&hw_ctx);
-	av_frame_free(&hw_frame);
+	if (hwframes_ctx) {
+		av_buffer_unref(&hwframes_ctx);
+	}
+	if (hw_ctx) {
+		av_buffer_unref(&hw_ctx);
+	}
+	if (hw_frame) {
+		av_frame_free(&hw_frame);
+	}
 }

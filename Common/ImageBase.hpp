@@ -115,8 +115,13 @@ namespace im {
 		}
 
 		//set color values for area pixel
-		virtual void setColor(size_t row, size_t col, size_t h, size_t w, const Color& color) {
+		virtual void fill(size_t row, size_t col, size_t h, size_t w, const Color& color) {
 			colorPtr->setColor(row, col, h, w, color);
+		}
+
+		//set color values for area pixel
+		virtual void fillCentered(size_t rowCenter, size_t colCenter, size_t h, size_t w, const Color& color) {
+			colorPtr->setColor(rowCenter - h / 2, colCenter - w / 2, h, w, color);
 		}
 
 		//write text into image

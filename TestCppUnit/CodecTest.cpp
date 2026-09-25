@@ -55,7 +55,7 @@ private:
 		//set up cuda encoder
 		uint8_t crf = 10;
 		NvEncoder nvenc(0);
-		nvenc.createEncoder(w, h, 10, 1, 5, crf, NV_ENC_CODEC_HEVC_GUID);
+		nvenc.createEncoder(w, h, 10, 1, 5, 1, 1, crf, NV_ENC_CODEC_HEVC_GUID);
 
 		ImageYuv inputFrame(h, w, nvenc.mCudaPitch);
 		inputFrame.setColor(0, y);

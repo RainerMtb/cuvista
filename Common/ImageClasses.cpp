@@ -204,6 +204,35 @@ namespace im {
 		return out;
 	}
 
+	ImageBgr ImageBgr::loadTestImage() {
+		ImageBgr im(1080, 1920);
+		for (int i = 0; i < 10; i++) {
+			int gray = i * 255 / 10;
+			Color c = Color::rgb(gray, gray, gray);
+			im.fill(i * 108ull, 0, 108, 200, c);
+			im.fill(1080 - 108 - i * 108ull, 1720, 108, 200, c);
+		}
+
+		im.drawCircle(960, 540, 450, Color::LIGHT_GRAY, true);
+		im.drawCircle(960, 540, 250, Color::WHITE, true);
+
+		im.fill(0, 200, 360, 200, Color::RED);
+		im.writeText(" R ", 300, 180, TextAlign::MIDDLE_CENTER);
+		im.fill(360, 200, 360, 200, Color::GREEN);
+		im.writeText(" G ", 300, 540, TextAlign::MIDDLE_CENTER);
+		im.fill(720, 200, 360, 200, Color::BLUE);
+		im.writeText(" B ", 300, 900, TextAlign::MIDDLE_CENTER);
+
+		im.fill(0, 1520, 360, 200, Color::CYAN);
+		im.writeText(" C ", 1620, 180, TextAlign::MIDDLE_CENTER);
+		im.fill(360, 1520, 360, 200, Color::MAGENTA);
+		im.writeText(" M ", 1620, 540, TextAlign::MIDDLE_CENTER);
+		im.fill(720, 1520, 360, 200, Color::YELLOW);
+		im.writeText(" Y ", 1620, 900, TextAlign::MIDDLE_CENTER);
+
+		return im;
+	}
+
 
 	//-----------------------------------------------------------------------
 
@@ -427,11 +456,11 @@ namespace im {
 	}
 
 	Size ImageNV12::writeText(std::string_view text, int x, int y, TextAlign alignment, int sx, int sy) {
-		return ImageBase<uchar>::writeText(text, x, y, alignment, sx, sy);
+		return writeText(text, x, y, alignment, sx, sy);
 	}
 
 	Size ImageNV12::writeText(std::string_view text, int x, int y, TextAlign alignment) {
-		return ImageBase<uchar>::writeText(text, x, y, alignment);
+		return writeText(text, x, y, alignment);
 	}
 
 

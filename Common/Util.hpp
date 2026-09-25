@@ -22,6 +22,7 @@
 #include <chrono>
 #include <string>
 #include <span>
+#include <vector>
 #include <cassert>
 
 #include "ImageInterface.hpp"
@@ -206,6 +207,12 @@ namespace util {
     //print content of collection to string
     template <class T> std::string collectionToString(std::vector<T> items) {
         return collectionToString(items, items.size());
+    }
+
+    template <class T> std::vector<T> concatLists(std::initializer_list<std::span<T>> lists) {
+        std::vector<T> out;
+        for (auto sp : lists) std::copy(sp.begin(), sp.end(), std::back_inserter(out));
+        return out;
     }
 
     //------------------------------------

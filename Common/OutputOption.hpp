@@ -21,6 +21,11 @@
 #include <vector>
 #include <string>
 
+enum class ReaderType {
+	FFMPEG,
+	MEMORY,
+};
+
 enum class OutputGroup {
 	VIDEO_NVENC,
 	VIDEO_FFMPEG,

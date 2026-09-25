@@ -53,6 +53,7 @@ add_library(cuvistaFFmpeg SHARED
     FFmpegWriter.cpp
     FFmpegFormatWriter.cpp
     StackedWriter.cpp
+    VulkanWriter.cpp
 )
 
 if (CMAKE_SYSTEM_NAME MATCHES Windows)

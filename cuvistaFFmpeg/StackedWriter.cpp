@@ -63,7 +63,7 @@ void StackedWriter::writeOutput(const FrameExecutor& executor) {
 		out += mOutputFrame.stride();
 		dest += combinedFrame.stride();
 	}
-	combinedFrame.setColor(0, combinedFrame.w() * 99ull / 200, combinedFrame.h(), combinedFrame.w() * 1ull / 100, mData.backgroundColor);
+	combinedFrame.fill(0, combinedFrame.w() * 99ull / 200, combinedFrame.h(), combinedFrame.w() * 1ull / 100, mData.backgroundColor);
 	
 	combinedFrame.index = frameIndex;
 	FFmpegWriter::write(bufferIndex);

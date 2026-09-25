@@ -24,6 +24,8 @@
 //---------- loading ffmpeg dynamically ---------------------------
 //-----------------------------------------------------------------
 
+void (*init)(std::shared_ptr<ErrorLogger> errorLoggerInstance);
+
 #if defined(_WIN64)
 
 #include <Windows.h>
@@ -48,6 +50,9 @@ namespace ff {
             loadFunction(ffmpegLib, "versionsRuntime", versionsRuntime);
             loadFunction(ffmpegLib, "createReader", createReader);
             loadFunction(ffmpegLib, "createWriter", createWriter);
+            loadFunction(ffmpegLib, "probeWriter", probeWriter);
+            loadFunction(ffmpegLib, "init", init);
+            init(errorLoggerInstance);
 
         } catch (const std::exception& e) {
             errorLogger().logError(e.what(), ErrorSource::FFMPEG);
@@ -99,6 +104,9 @@ namespace ff {
             loadFunction(ffmpegLib, "versionsRuntime", versionsRuntime);
             loadFunction(ffmpegLib, "createReader", createReader);
             loadFunction(ffmpegLib, "createWriter", createWriter);
+            loadFunction(ffmpegLib, "probeWriter", probeWriter);
+            loadFunction(ffmpegLib, "init", init);
+            init(errorLoggerInstance);
 
         } catch (const std::exception& e) {
             errorLogger().logError(e.what(), ErrorSource::FFMPEG);

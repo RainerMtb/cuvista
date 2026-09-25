@@ -72,6 +72,19 @@ public:
 	friend std::ostream& operator << (std::ostream& os, const DeviceInfoOpenCl& info);
 };
 
+//Vulkan, only for video encoding
+class DeviceInfoVulkan : public DeviceInfoBase {
+public:
+	DeviceInfoVulkan();
+
+	DeviceType getType() const override;
+	std::string getName() const override;
+	std::string getNameShort() const override;
+	std::shared_ptr<FrameExecutor> create(MainData& data, MovieFrame& frame) override;
+
+	std::vector<OutputOption> probeEncoders();
+};
+
 struct cudaDeviceProp;
 class NvEncoder;
 

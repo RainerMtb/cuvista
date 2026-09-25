@@ -51,6 +51,7 @@
     <IntDir>$(SolutionDir)bin_inter\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
     <PublicIncludeDirectories>
     </PublicIncludeDirectories>
+    <SourcePath>$(VC_SourcePath);$(CUDA_PATH)\include;</SourcePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>

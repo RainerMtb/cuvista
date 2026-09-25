@@ -188,6 +188,7 @@ namespace im {
 		void setColor(size_t row, size_t col, size_t h, size_t w, const Color& color) {
 			LocalColor<T> local = getLocalColor(color);
 			for (size_t r = row; r < row + h; r++) {
+				ImagePixel<T> pixel = pixelAt(r, col);
 				for (size_t c = col; c < col + w; c++) {
 					for (size_t i = 0; i < typePtr->planes(); i++) {
 						this->typePtr->at(i, r, c) = local.colorData[i];

@@ -38,6 +38,4 @@ struct DeshakerResult {
 	std::vector<TrajectoryItem> trajectory;
 };
 
-std::ostream& printError(std::ostream& os, const std::string& msg1);
-
 DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console, std::shared_ptr<MovieWriter> externalWriter);

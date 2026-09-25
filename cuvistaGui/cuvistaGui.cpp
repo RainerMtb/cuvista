@@ -114,7 +114,7 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
             ui.comboEncoding->addItem(qs, qv);
         }
     };
-    //initialize encoder with first device
+    //initialize encoder list with first device
     fcnEncoding(0);
     //set encoding options when device changes
     connect(ui.comboDevice, &QComboBox::currentIndexChanged, this, fcnEncoding);
@@ -467,17 +467,19 @@ void cuvistaGui::stabilize() {
 
         //select writer
         if (ui.chkStack->isChecked())
-            mWriter = std::shared_ptr<MovieWriter>(ff::createWriter(WriterType::STACKED, mData, *mReader));
+            mWriter = std::shared_ptr<MovieWriter>(ff::createWriter(OutputOption::VIDEO_STACK, mData, *mReader));
         else if (ui.chkSequence->isChecked() && ui.comboImageType->currentData().value<OutputOption>() == OutputOption::IMAGE_BMP)
             mWriter = std::make_shared<BmpImageWriter>(mData, *mReader);
         else if (ui.chkSequence->isChecked() && ui.comboImageType->currentData().value<OutputOption>() == OutputOption::IMAGE_JPG)
-            mWriter = std::shared_ptr<MovieWriter>(ff::createWriter(WriterType::JPEG_IMAGE, mData, *mReader));
+            mWriter = std::shared_ptr<MovieWriter>(ff::createWriter(OutputOption::IMAGE_JPG, mData, *mReader));
         else if (ui.chkPlayer->isChecked())
             mWriter = std::make_shared<PlayerWriter>(mData, *mReader, mPlayerWindow, mWorkingImage, audioStreamIndex);
         else if (ui.chkEncode->isChecked() && mData.outputOption.group == OutputGroup::VIDEO_NVENC)
-            mWriter = std::shared_ptr<MovieWriter>(ff::createWriter(WriterType::CUDA, mData, *mReader));
+            mWriter = std::shared_ptr<MovieWriter>(ff::createWriter(mData.outputOption, mData, *mReader));
         else if (ui.chkEncode->isChecked() && mData.outputOption.group == OutputGroup::VIDEO_FFMPEG)
-            mWriter = std::shared_ptr<MovieWriter>(ff::createWriter(WriterType::FFMPEG, mData, *mReader));
+            mWriter = std::shared_ptr<MovieWriter>(ff::createWriter(mData.outputOption, mData, *mReader));
+        else if (ui.chkEncode->isChecked() && mData.outputOption.group == OutputGroup::VIDEO_VULKAN)
+            mWriter = std::shared_ptr<MovieWriter>(ff::createWriter(mData.outputOption, mData, *mReader));
         else
             return;
 

@@ -31,5 +31,7 @@ namespace ff {
 	inline const FFmpegVersions* (*versionsRuntime)();
 
 	inline MovieReader* (*createReader)(ReaderType readerType);
-	inline MovieWriter* (*createWriter)(WriterType writerType, MainData& data, MovieReader& reader);
+	inline MovieWriter* (*createWriter)(OutputOption option, MainData& data, MovieReader& reader);
+
+	inline bool (*probeWriter)(OutputOption option);
 }

@@ -380,6 +380,9 @@ void MainData::collectDeviceInfo() {
 		OutputOption::FFMPEG_FFV1
 	};
 
+	//vulkan encoders
+	std::vector<OutputOption> vulkanEncoders = deviceInfoVulkan.probeEncoders();
+
 	//nvenc available encoders taken from first cuda device
 	std::vector<OutputOption> nvencEncoders = {};
 	if (deviceInfoCuda.size() > 0) {
@@ -387,25 +390,24 @@ void MainData::collectDeviceInfo() {
 	}
 
 	//CPU device
-	deviceInfoCpu.videoEncodingOptions = cpuEncoders;
-	std::copy(nvencEncoders.begin(), nvencEncoders.end(), std::back_inserter(deviceInfoCpu.videoEncodingOptions));
+	deviceInfoCpu.videoEncodingOptions = util::concatLists<OutputOption>({ cpuEncoders, vulkanEncoders, nvencEncoders });
 	deviceList.push_back(&deviceInfoCpu);
 
 	//check for Avx512
 	if (useAvx512 && hasAvx512()) {
-		deviceInfoAvx.videoEncodingOptions = deviceInfoCpu.videoEncodingOptions;
+		deviceInfoAvx.videoEncodingOptions = util::concatLists<OutputOption>({ cpuEncoders, vulkanEncoders, nvencEncoders });
 		deviceList.push_back(&deviceInfoAvx);
 	}
 	
 	///OpenCL devices
 	for (DeviceInfoOpenCl& dev : deviceInfoOpenCl) {
-		dev.videoEncodingOptions = deviceInfoCpu.videoEncodingOptions;
+		dev.videoEncodingOptions = util::concatLists<OutputOption>({ cpuEncoders, vulkanEncoders, nvencEncoders });
 		deviceList.push_back(&dev);
 	}
 
 	//Cuda devices
 	for (DeviceInfoCuda& dev : deviceInfoCuda) {
-		std::copy(cpuEncoders.begin(), cpuEncoders.end(), std::back_inserter(dev.videoEncodingOptions));
+		dev.videoEncodingOptions = util::concatLists<OutputOption>({ dev.videoEncodingOptions, cpuEncoders });
 		deviceList.push_back(&dev);
 	}
 }

@@ -35,7 +35,7 @@ using namespace im;
 void FFmpegReader::open(const std::string& source) {
     mSource = source;
 
-    //av_log_set_level(AV_LOG_ERROR);
+    //av_log_set_level(AV_LOG_FATAL);
     av_log_set_callback(ffmpeg_log);
 
     // Allocate format context

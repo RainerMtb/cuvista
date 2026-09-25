@@ -230,6 +230,38 @@ std::string DeviceInfoCuda::nvencDriverToString() {
 }
 
 
+// Vulkan Info, only for video encoding ----------------------------
+
+DeviceInfoVulkan::DeviceInfoVulkan() :
+	DeviceInfoBase(0)
+{}
+
+DeviceType DeviceInfoVulkan::getType() const {
+	return DeviceType::UNKNOWN;
+}
+
+std::string DeviceInfoVulkan::getName() const {
+	return "Vulkan encoder";
+}
+
+std::string DeviceInfoVulkan::getNameShort() const {
+	return "Vulkan encoder";
+}
+
+std::shared_ptr<FrameExecutor> DeviceInfoVulkan::create(MainData& data, MovieFrame& frame) {
+	return std::make_shared<DummyFrame>(data, *this, frame, frame.mPool);
+}
+
+std::vector<OutputOption> DeviceInfoVulkan::probeEncoders() {
+	std::vector<OutputOption> optionsList = { OutputOption::VULKAN_AV1, OutputOption::VULKAN_HEVC, OutputOption::VULKAN_H264 };
+	std::vector<OutputOption> optionsValid;
+	for (OutputOption op : optionsList) {
+		if (ff::probeWriter(op)) optionsValid.push_back(op);
+	}
+	return optionsValid;
+}
+
+
 //Null Device -----------------------------------
 
 DeviceInfoNull::DeviceInfoNull() :
