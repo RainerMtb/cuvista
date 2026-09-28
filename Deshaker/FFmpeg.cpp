@@ -50,7 +50,7 @@ namespace ff {
             loadFunction(ffmpegLib, "versionsRuntime", versionsRuntime);
             loadFunction(ffmpegLib, "createReader", createReader);
             loadFunction(ffmpegLib, "createWriter", createWriter);
-            loadFunction(ffmpegLib, "probeWriter", probeWriter);
+            loadFunction(ffmpegLib, "probeEncoders", probeEncoders);
             loadFunction(ffmpegLib, "init", init);
             init(errorLoggerInstance);
 
@@ -65,18 +65,18 @@ namespace ff {
     }
 
     int freeFFmpegLibrary() {
-        int retval = 0;
+        int errorCode = 0;
         try {
-            retval = FreeLibrary(ffmpegLib); //returns non-zero on success
-            if (retval != 0) {
-                retval = GetLastError();
+            int retval = FreeLibrary(ffmpegLib); //returns non-zero on success
+            if (retval == 0) {
+                errorCode = GetLastError();
             }
 
         } catch (...) {
-            retval = 1;
+            errorCode = 1;
         }
 
-        return retval;
+        return errorCode;
     }
 }
 
@@ -104,7 +104,7 @@ namespace ff {
             loadFunction(ffmpegLib, "versionsRuntime", versionsRuntime);
             loadFunction(ffmpegLib, "createReader", createReader);
             loadFunction(ffmpegLib, "createWriter", createWriter);
-            loadFunction(ffmpegLib, "probeWriter", probeWriter);
+            loadFunction(ffmpegLib, "probeEncoders", probeEncoders);
             loadFunction(ffmpegLib, "init", init);
             init(errorLoggerInstance);
 

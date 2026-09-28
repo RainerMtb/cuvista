@@ -162,6 +162,7 @@ namespace winrt::cuvistaWinui::implementation {
         sliderCpuThreads().Value(3.0 * threads / 4);
         sliderCudaThreads().Value(defaultParam.cudaThreads);
 
+        //dynamically load ffmpeg
         int err = ff::loadFFmpegLibrary();
         if (err != 0) {
             co_await showErrorDialogAsync("Error Loading FFmpeg", errorLogger().getErrorMessage());
@@ -172,9 +173,10 @@ namespace winrt::cuvistaWinui::implementation {
         mData.console = &mData.nullStream;
         mData.printHeader = false;
         mData.printSummary = false;
-        mData.deviceInfoCuda = mData.probeCuda();
-        mData.deviceInfoOpenCl = mData.probeOpenCl();
+        mData.probeCuda();
+        mData.probeOpenCl();
         mData.collectDeviceInfo();
+        mData.collectEncoders();
 
         //available devices
         int siz = (int) mData.deviceList.size();

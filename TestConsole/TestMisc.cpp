@@ -88,7 +88,7 @@ void similarTransform() {
 
 void readAndWriteOneFrame() {
 	MainData data;
-	data.deviceInfoCuda = data.probeCuda();
+	data.probeCuda();
 	data.collectDeviceInfo();
 	{
 		NullReader reader;
@@ -129,16 +129,6 @@ void readAndWriteOneFrame() {
 		writer.getOutputFrame().saveBmpColor(fileOut);
 	}
 	std::cout << errorLogger().getErrorMessage() << std::endl;
-}
-
-void checkVersions() {
-	std::cout << "check cuda devices" << std::endl;
-	try {
-		MainData data;
-		data.deviceInfoCuda = data.probeCuda();
-		data.deviceInfoOpenCl = data.probeOpenCl();
-		data.showDeviceInfo();
-	} catch (CancelException ignore) {}
 }
 
 void draw(const std::string& filename) {

@@ -69,7 +69,7 @@
       <AdditionalDependencies>Ole32.lib;Shell32.lib;ws2_32.lib;Avx2.lib;Avx512.lib;Common.lib;cpu_features.lib;OpenCL.lib;Matrix.lib;Deshaker.lib;CudaStuff.lib;cudart_static.lib;cuda.lib;nvencodeapi.lib;</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(SolutionDir)lib\$(Platform);$(SolutionDir)bin\$(Platform)\$(Configuration);$(CUDA_PATH)\lib\$(Platform);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>msvcrt.lib; libcmt.lib</IgnoreSpecificDefaultLibraries>
-      <DelayLoadDLLs>nvEncodeAPI64.dll;OpenCL.dll</DelayLoadDLLs>
+      <DelayLoadDLLs>OpenCL.dll</DelayLoadDLLs>
     </Link>
     <Manifest>
       <EnableSegmentHeap>true</EnableSegmentHeap>
@@ -98,7 +98,7 @@ copy $(OutputPath)cuvistaOfx.dll $(OFX_PLUGIN_PATH)\cuvista.ofx.bundle\Contents\
       <AdditionalDependencies>Ole32.lib;Shell32.lib;ws2_32.lib;Avx2.lib;Avx512.lib;Common.lib;cpu_features.lib;OpenCL.lib;Matrix.lib;Deshaker.lib;CudaStuff.lib;cudart_static.lib;cuda.lib;nvencodeapi.lib;</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(SolutionDir)lib\$(Platform);$(SolutionDir)bin\$(Platform)\$(Configuration);$(CUDA_PATH)\lib\$(Platform);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>libcmt.lib</IgnoreSpecificDefaultLibraries>
-      <DelayLoadDLLs>nvEncodeAPI64.dll;OpenCL.dll</DelayLoadDLLs>
+      <DelayLoadDLLs>OpenCL.dll</DelayLoadDLLs>
     </Link>
     <Manifest>
       <EnableSegmentHeap>true</EnableSegmentHeap>

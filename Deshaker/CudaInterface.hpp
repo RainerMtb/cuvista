@@ -24,6 +24,7 @@
 //dummy code to replace cuda stuff
 #include "MovieFrame.hpp"
 #include "Mat.hpp"
+#include "OutputOption.hpp"
 
 struct NvPacket {};
 
@@ -48,7 +49,7 @@ class NvEncoder {
 public:
 	NvEncoder(int cudaIndex) {}
 	void probeEncoding(uint32_t* nvencVersionApi, uint32_t* nvencVersionDriver) {}
-	void probeSupportedCodecs(DeviceInfoCuda& deviceInfoCuda) {}
+	std::vector<OutputOption> probeSupportedCodecs() { return {}; }
 };
 
 class CudaExecutor : public FrameExecutor {

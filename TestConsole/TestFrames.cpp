@@ -115,7 +115,7 @@ void compareFramesPlatforms() {
 		//Cuda
 		MainData data;
 		data.deviceRequested = true;
-		data.deviceInfoCuda = data.probeCuda();
+		data.probeCuda();
 		results[2] = runPyramid<CudaFrame>(data, 2);
 	}
 
@@ -123,7 +123,7 @@ void compareFramesPlatforms() {
 		//OpenCL
 		MainData data;
 		data.deviceRequested = true;
-		data.deviceInfoOpenCl = data.probeOpenCl();
+		data.probeOpenCl();
 		results[3] = runPyramid<OpenClFrame>(data, 2);
 	}
 	std::cout << std::endl;

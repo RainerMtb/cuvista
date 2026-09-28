@@ -21,6 +21,7 @@
 #include "FFmpegUtil.hpp"
 #include "MovieReader.hpp"
 #include "MovieWriter.hpp"
+#include "DeviceInfo.hpp"
 
 namespace ff {
 
@@ -33,5 +34,5 @@ namespace ff {
 	inline MovieReader* (*createReader)(ReaderType readerType);
 	inline MovieWriter* (*createWriter)(OutputOption option, MainData& data, MovieReader& reader);
 
-	inline bool (*probeWriter)(OutputOption option);
+	inline void (*probeEncoders)(DeviceInfoCpu& cpu, DeviceInfoCudaCollection& cuda, DeviceInfoVulkanCollection& vulkan);
 }

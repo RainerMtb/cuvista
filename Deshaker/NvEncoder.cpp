@@ -132,7 +132,7 @@ void NvEncoder::init() {
 }
 
 
-void NvEncoder::probeSupportedCodecs(DeviceInfoCuda& deviceInfoCuda) {
+std::vector<OutputOption> NvEncoder::probeSupportedCodecs() {
 	init();
 
 	//check available guid
@@ -144,22 +144,24 @@ void NvEncoder::probeSupportedCodecs(DeviceInfoCuda& deviceInfoCuda) {
 	handleResult(encFuncList.nvEncGetEncodeGUIDs(mEncoder, guids.data(), guidCount, &guidSupportCount), "cannot get guids");
 
 	//order codecs
+	std::vector<OutputOption> options;
 	if (std::find(guids.cbegin(), guids.cend(), NV_ENC_CODEC_AV1_GUID) != guids.cend())
-		deviceInfoCuda.videoEncodingOptions.push_back(OutputOption::NVENC_AV1);
+		options.push_back(OutputOption::NVENC_AV1);
 	if (std::find(guids.cbegin(), guids.cend(), NV_ENC_CODEC_HEVC_GUID) != guids.cend())
-		deviceInfoCuda.videoEncodingOptions.push_back(OutputOption::NVENC_HEVC);
+		options.push_back(OutputOption::NVENC_HEVC);
 	if (std::find(guids.cbegin(), guids.cend(), NV_ENC_CODEC_H264_GUID) != guids.cend())
-		deviceInfoCuda.videoEncodingOptions.push_back(OutputOption::NVENC_H264);
+		options.push_back(OutputOption::NVENC_H264);
 
 	encFuncList.nvEncDestroyEncoder(mEncoder);
 	mEncoder = nullptr;
+	return options;
 }
 
 
 void NvEncoder::createEncoder(int w, int h, int fpsNum, int fpsDen, int parNum, int parDen, uint32_t gopLen, uint8_t crf, GUID guid) {
+	init();
 	this->h = h;
 	this->w = w;
-	init();
 
 	//check support for given guid
 	uint32_t guidCount;

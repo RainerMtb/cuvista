@@ -21,6 +21,7 @@
 #include "MovieReader.hpp"
 #include "FFmpegMain.hpp"
 
+
 class FFmpegFormatReader : public MovieReader {
 
 protected:

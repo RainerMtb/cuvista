@@ -24,9 +24,9 @@
 #include <QCloseEvent>
 
 #include "version.hpp"
-#include "util.hpp"
 #include "ofxGui.hpp"
 #include "ImageClasses.hpp"
+#include "ErrorLogger.hpp"
 
 
 #if defined(_WIN64)
@@ -43,7 +43,8 @@ using namespace ofx;
 
 LIBRARY_EXPORT void loadGui(OfxGuiContext& guiContext) {
 	guiContext.gui = std::make_shared<OfxGuiQt>(guiContext);
-	guiContext.debugLogger->format("gui loaded");
+	util::debugLoggerPtr = guiContext.debugLogger;
+	debugLogger().format("gui loaded");
 }
 
 
@@ -101,7 +102,7 @@ OfxGuiQt::OfxGuiQt(OfxGuiContext& guiContext) :
 
 //must be called on the application thread
 void OfxGuiQt::init() {
-	guiContext.debugLogger->format("gui init");
+	debugLogger().format("gui init");
 
 	QApplication::setStyle("Fusion");
 	QString qs = QString::fromStdString(guiContext.pluginPath.string());
@@ -225,9 +226,9 @@ void OfxGuiQt::openInfo(const std::string& infoString, const std::string& hostNa
 	connect(this, &OfxGuiQt::sigUpdateInfo, this, updateFcn, Qt::QueuedConnection);
 
 	window->show();
-	//guiContext.debugLogger->format("gui loop starting");
+	//debugLogger().format("gui loop starting");
 	app->exec();
-	//guiContext.debugLogger->format("gui loop ending");
+	//debugLogger().format("gui loop ending");
 	delete window;
 	window = nullptr;
 }
@@ -242,7 +243,7 @@ void OfxGuiQt::close() {
 
 //must be called on the application thread
 void OfxGuiQt::shutdown() {
-	guiContext.debugLogger->format("gui shutdown");
+	debugLogger().format("gui shutdown");
 	delete app;
 }
 
@@ -251,5 +252,5 @@ bool OfxGuiQt::isCancelled() {
 }
 
 OfxGuiQt::~OfxGuiQt() {
-	guiContext.debugLogger->format("gui destruct on thread {}", threadId());
+	debugLogger().format("gui destruct on thread {}", threadId());
 }

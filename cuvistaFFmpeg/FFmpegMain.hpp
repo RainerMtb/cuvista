@@ -37,6 +37,7 @@ extern "C" {
 #include "OutputOption.hpp"
 #include "FFmpegUtil.hpp"
 #include "ErrorLogger.hpp"
+#include "DeviceInfo.hpp"
 
 
 class SidePacket {
@@ -105,6 +106,7 @@ void ffmpeg_log_error(int errnum, const char* msg, ErrorSource source);
 void ffmpeg_log(void* avclass, int level, const char* fmt, va_list args);
 
 
+//dynamic library handling -----------------------
 class MovieReader;
 class MovieWriter;
 class MainData;
@@ -124,5 +126,5 @@ LIBRARY_EXPORT MovieReader* createReader(ReaderType readerType);
 LIBRARY_EXPORT MovieWriter* createWriter(OutputOption option, MainData& data, MovieReader& reader);
 
 //library functions
-LIBRARY_EXPORT bool probeWriter(OutputOption option);
+LIBRARY_EXPORT void probeEncoders(DeviceInfoCpu& cpu, DeviceInfoCudaCollection& cuda, DeviceInfoVulkanCollection& vulkan);
 LIBRARY_EXPORT void init(std::shared_ptr<ErrorLogger> errorLoggerInstance);

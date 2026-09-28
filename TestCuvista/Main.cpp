@@ -26,9 +26,9 @@ int main() {
 
 	std::vector<std::string> argsLines = {
 		/*0*/ "-info",
-		/*1*/ "-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -bgmode color -y -enc ffmpeg:hevc -frames 4 -progress 0",
+		/*1*/ "-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -bgmode color -y",
 		/*2*/ "-device 1 -i d:/VideoTest/02short.mp4 -o null -mode 2",
-		/*3*/ "-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -bgmode color -y -zoom -8 -device 0 -enc nvenc:h264",
+		/*3*/ "-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -bgmode color -y -zoom -8 -device 2 -enc nvenc:h264",
 		/*4*/ "-i D:/VideoTest/x3/VID.mp4 -o f:/videoOut.mp4 -y -zoom 5 -radius 0.3",
 		/*5*/ "-device 2 -i f:/pic/input.mp4 -o f:/videoOut.mp4 -y",
 		/*6*/ "-device 3 -i D:/VideoTest/12.mp4 -o f:/videoOut.mp4 -y -frames 200",
@@ -41,7 +41,7 @@ int main() {
 		/*13*/ "-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -copyframes -y -enc vulkan:av1",
 	};
 	
-	int idx = 0;
+	int idx = 13;
 	std::string argsLine = argsLines[idx];
 	std::cout << "------- TestCuvista -------" << std::endl;
 	std::cout << "------- params: " << argsLine << std::endl << std::endl;

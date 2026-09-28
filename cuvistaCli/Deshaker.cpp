@@ -48,9 +48,10 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 		int retval = ff::loadFFmpegLibrary();
 		if (retval != 0) throw AVException("error loading ffmpeg");
 
-		data.deviceInfoOpenCl = data.probeOpenCl();
-		data.deviceInfoCuda = data.probeCuda();
+		data.probeOpenCl();
+		data.probeCuda();
 		data.collectDeviceInfo();
+		data.collectEncoders();
 		data.probeInput(argsInput);
 
 		//create MovieReader

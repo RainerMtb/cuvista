@@ -22,7 +22,6 @@
 #include "FFmpegMain.hpp"
 #include "ThreadPool.hpp"
 #include "ImageClasses.hpp"
-#include "DeviceInfo.hpp"
 
 #include <map>
 #include <vector>
@@ -206,6 +205,7 @@ public:
 //--------------- cuda writer -----------------------------------------------------
 
 struct NvPacket;
+struct CudaDevice;
 class NvEncoder;
 
 class CudaFFmpegWriter : public FFmpegFormatWriter {
@@ -216,7 +216,7 @@ protected:
 	ImageNV12 outputNV12;
 	int nv12stride = 0;
 
-	void open(OutputOption outputOption, const DeviceInfoCuda* dic);
+	void open(OutputOption outputOption, const CudaDevice* dev);
 	void writePacketToFile(const NvPacket& nvpkt, bool terminate);
 	void writePacketsToFile(std::list<NvPacket> nvpkts, bool terminate);
 	void encodeFrame(int64_t frameIndex);
@@ -236,6 +236,11 @@ public:
 class VulkanFFmpegWriter : public FFmpegWriter {
 
 protected:
+	std::map<OutputOption, std::string> optionToCodecMap = {
+		{ OutputOption::VULKAN_AV1, "av1_vulkan"},
+		{ OutputOption::VULKAN_HEVC, "hevc_vulkan"},
+		{ OutputOption::VULKAN_H264, "h264_vulkan"}
+	};
 	ImageNV12 outputNV12;
 	AVBufferRef* hw_ctx = nullptr;
 	AVBufferRef* hwframes_ctx = nullptr;
@@ -247,7 +252,7 @@ public:
 	VulkanFFmpegWriter(MainData& data, MovieReader& reader);
 	~VulkanFFmpegWriter() override;
 
-	static bool probe(OutputOption outputOption);
+	static std::vector<OutputOption> probeEncoders();
 
 	void openEncoder(OutputOption outputOption);
 	void open(OutputOption outputOption) override;

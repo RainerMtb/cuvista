@@ -369,46 +369,37 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 }
 
 void MainData::collectDeviceInfo() {
-	//sort cuda devices by compute
-	std::sort(deviceInfoCuda.begin(), deviceInfoCuda.end());
-
-	//ffmpeg available encoders
-	std::vector<OutputOption> cpuEncoders = {
-		OutputOption::FFMPEG_H264,
-		OutputOption::FFMPEG_HEVC,
-		OutputOption::FFMPEG_AV1,
-		OutputOption::FFMPEG_FFV1
-	};
-
-	//vulkan encoders
-	std::vector<OutputOption> vulkanEncoders = deviceInfoVulkan.probeEncoders();
-
-	//nvenc available encoders taken from first cuda device
-	std::vector<OutputOption> nvencEncoders = {};
-	if (deviceInfoCuda.size() > 0) {
-		nvencEncoders = deviceInfoCuda.front().videoEncodingOptions;
-	}
-
 	//CPU device
-	deviceInfoCpu.videoEncodingOptions = util::concatLists<OutputOption>({ cpuEncoders, vulkanEncoders, nvencEncoders });
 	deviceList.push_back(&deviceInfoCpu);
 
 	//check for Avx512
 	if (useAvx512 && hasAvx512()) {
-		deviceInfoAvx.videoEncodingOptions = util::concatLists<OutputOption>({ cpuEncoders, vulkanEncoders, nvencEncoders });
 		deviceList.push_back(&deviceInfoAvx);
 	}
 	
 	///OpenCL devices
-	for (DeviceInfoOpenCl& dev : deviceInfoOpenCl) {
-		dev.videoEncodingOptions = util::concatLists<OutputOption>({ cpuEncoders, vulkanEncoders, nvencEncoders });
+	for (OpenClDevice& dev : deviceInfoOpenCl.devices) {
 		deviceList.push_back(&dev);
 	}
 
 	//Cuda devices
-	for (DeviceInfoCuda& dev : deviceInfoCuda) {
-		dev.videoEncodingOptions = util::concatLists<OutputOption>({ dev.videoEncodingOptions, cpuEncoders });
+	for (CudaDevice& dev : deviceInfoCuda.devices) {
 		deviceList.push_back(&dev);
+	}
+}
+
+void MainData::collectEncoders() {
+	ff::probeEncoders(deviceInfoCpu, deviceInfoCuda, deviceInfoVulkan);
+
+	deviceInfoCpu.videoEncodingOptions = util::concatLists<OutputOption>({ deviceInfoCpu.encoders, deviceInfoVulkan.encoders, deviceInfoCuda.encoders });
+	deviceInfoAvx.videoEncodingOptions = util::concatLists<OutputOption>({ deviceInfoCpu.encoders, deviceInfoVulkan.encoders, deviceInfoCuda.encoders });
+
+	for (OpenClDevice& dev : deviceInfoOpenCl.devices) {
+		dev.videoEncodingOptions = util::concatLists<OutputOption>({ deviceInfoCpu.encoders, deviceInfoVulkan.encoders, deviceInfoCuda.encoders });
+	}
+
+	for (CudaDevice& dev : deviceInfoCuda.devices) {
+		dev.videoEncodingOptions = util::concatLists<OutputOption>({ dev.encoders, deviceInfoCpu.encoders });
 	}
 }
 
@@ -580,14 +571,6 @@ void MainData::showBasicInfo() const {
 	*console << "use -h to get full help" << std::endl;
 }
 
-//show info about system
-void MainData::showDeviceInfo() const {
-	showDeviceInfo(*console);
-	showFFmpegInfo(*console);
-	showEncodingInfo(*console);
-	throw SilentQuitException();
-}
-
 //output info about system to stream
 std::ostream& MainData::showDeviceInfo(std::ostream& os) const {
 	//display all devices
@@ -599,39 +582,39 @@ std::ostream& MainData::showDeviceInfo(std::ostream& os) const {
 	//display nvidia info
 	os << std::endl;
 	os << "Nvidia/Cuda System Details:" << std::endl;
-	if (DeviceInfoCuda::nvidiaDriverVersion.size() > 0) {
-		os << "Nvidia Driver: " << DeviceInfoCuda::nvidiaDriverVersion << std::endl;
+	if (deviceInfoCuda.nvidiaDriverVersion.size() > 0) {
+		os << "Nvidia Driver: " << deviceInfoCuda.nvidiaDriverVersion << std::endl;
 	} else {
 		os << "Nvidia driver not found" << std::endl;
 	}
-	if (DeviceInfoCuda::warning.empty() == false) {
-		os << "warning: " << DeviceInfoCuda::warning << std::endl;
+	if (deviceInfoCuda.nvidiaDriverWarning.empty() == false) {
+		os << "warning: " << deviceInfoCuda.nvidiaDriverWarning << std::endl;
 	}
 
 	//display cuda info
-	if (deviceInfoCuda.size() > 0) {
-		os << "Cuda Runtime:  " << DeviceInfoCuda::runtimeToString() << std::endl;
-		os << "Cuda Driver:   " << DeviceInfoCuda::driverToString() << std::endl;
-		os << "Nvenc Api:     " << DeviceInfoCuda::nvencApiToString() << std::endl;
-		os << "Nvenc Driver:  " << DeviceInfoCuda::nvencDriverToString() << std::endl;
+	if (deviceInfoCuda.devices.size() > 0) {
+		os << "Cuda Runtime:  " << deviceInfoCuda.runtimeToString() << std::endl;
+		os << "Cuda Driver:   " << deviceInfoCuda.driverToString() << std::endl;
+		os << "Nvenc Api:     " << deviceInfoCuda.nvencApiToString() << std::endl;
+		os << "Nvenc Driver:  " << deviceInfoCuda.nvencDriverToString() << std::endl;
 	}
 	os << std::endl;
 
-	os << "Number of Cuda devices found: " << deviceInfoCuda.size() << std::endl;
-	for (auto& info : deviceInfoCuda) {
+	os << "Number of Cuda devices found: " << deviceInfoCuda.devices.size() << std::endl;
+	for (auto& dev : deviceInfoCuda.devices) {
 		os << "Cuda Device:" << std::endl;
-		os << info;
+		os << dev;
 	}
 	os << std::endl;
 
 	//display OpenCL info
-	os << "Number of OpenCL devices found: " << deviceInfoOpenCl.size();
-	if (DeviceInfoOpenCl::warning.empty() == false) {
-		os << ", " << DeviceInfoOpenCl::warning;
+	os << "Number of OpenCL devices found: " << deviceInfoOpenCl.devices.size();
+	if (deviceInfoOpenCl.driverWarning.empty() == false) {
+		os << ", " << deviceInfoOpenCl.driverWarning;
 	}
 	os << std::endl;
 
-	for (const DeviceInfoOpenCl& info : deviceInfoOpenCl) {
+	for (const OpenClDevice& info : deviceInfoOpenCl.devices) {
 		os << "OpenCL Device:" << std::endl;
 		os << info;
 	}
@@ -652,7 +635,7 @@ std::ostream& MainData::showFFmpegInfo(std::ostream& os) const {
 }
 
 //show video encoding options
-std::ostream& MainData::showEncodingInfo(std::ostream& os) const {
+std::ostream& MainData::showEncodingInfo(std::ostream& os) {
 	//available encoding options
 	os << "Available Video Encoding Options:" << std::endl;
 	std::vector<OutputOption> videoOptions = deviceInfoCpu.videoEncodingOptions;
@@ -709,12 +692,12 @@ bool MainData::Parameters::nextArg(std::string&& param, std::string& nextParam) 
 	return ok;
 }
 
-std::vector<DeviceInfoCuda> MainData::probeCuda() {
-	return DeviceInfoCuda::probeCuda();
+void MainData::probeCuda() {
+	deviceInfoCuda.probeCuda();
 }
 
-std::vector<DeviceInfoOpenCl> MainData::probeOpenCl() {
-	return cl::probeRuntime();
+void MainData::probeOpenCl() {
+	cl::probeRuntime(deviceInfoOpenCl);
 }
 
 std::string MainData::getCpuName() const {

@@ -28,6 +28,7 @@
 #include "MovieWriter.hpp"
 #include "ProgressDisplay.hpp"
 #include "FrameExecutor.hpp"
+#include "FFmpegUtil.hpp"
 
 
 //player window

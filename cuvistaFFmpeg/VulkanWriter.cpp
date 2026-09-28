@@ -20,24 +20,25 @@
 #include "Reader.hpp"
 #include "MainData.hpp"
 
+
 VulkanFFmpegWriter::VulkanFFmpegWriter(MainData& data, MovieReader& reader) :
 	FFmpegWriter(data, reader, 0)
 {}
 
-bool VulkanFFmpegWriter::probe(OutputOption outputOption) {
+std::vector<OutputOption> VulkanFFmpegWriter::probeEncoders() {
 	auto noopLogger = [] (void* avclass, int level, const char* fmt, va_list args) {};
 	av_log_set_callback(noopLogger);
 
-	return true;
+	MainData data;
+	return {
+		OutputOption::VULKAN_H264,
+		OutputOption::VULKAN_HEVC,
+		OutputOption::VULKAN_AV1
+	};
 }
 
 void VulkanFFmpegWriter::openEncoder(OutputOption outputOption) {
 	//find cpu encoder
-	std::map<OutputOption, std::string> optionToCodecMap = {
-		{ OutputOption::VULKAN_AV1, "av1_vulkan"},
-		{ OutputOption::VULKAN_HEVC, "hevc_vulkan"},
-		{ OutputOption::VULKAN_H264, "h264_vulkan"}
-	};
 	std::string codecName = optionToCodecMap.at(outputOption);
 	const AVCodec* codec = avcodec_find_encoder_by_name(codecName.c_str());
 	if (!codec) {

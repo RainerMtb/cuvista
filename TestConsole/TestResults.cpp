@@ -29,7 +29,7 @@ void testVideo1() {
 	data.fileIn = inFile;
 	data.deviceRequested = true;
 	data.mode = 1;
-	std::vector<DeviceInfoCuda> cudaDevices = data.probeCuda();
+	data.probeCuda();
 	data.collectDeviceInfo();
 	ff::loadFFmpegLibrary();
 	auto reader = ff::createReader(ReaderType::FFMPEG);
@@ -39,7 +39,7 @@ void testVideo1() {
 	int maxFrames = 200;
 	RawMemoryStoreWriter writer(maxFrames);
 	std::shared_ptr<MovieFrame> frame = std::make_shared<MovieFrameConsecutive>(data, *reader, writer);
-	std::shared_ptr<FrameExecutor> executor = std::make_shared<CudaFrame>(data, cudaDevices[0], *frame, frame->mPool);
+	std::shared_ptr<FrameExecutor> executor = std::make_shared<CudaFrame>(data, data.deviceInfoCuda.devices[0], *frame, frame->mPool);
 	executor->init();
 	frame->runLoop(executor);
 
@@ -79,7 +79,7 @@ void testLuma2() {
 	MainData data;
 	data.deviceRequested = true;
 	data.mode = 1;
-	std::vector<DeviceInfoCuda> cudaDevices = data.probeCuda();
+	data.probeCuda();
 	data.collectDeviceInfo();
 	NullReader reader;
 	reader.w = 1920;
@@ -88,7 +88,7 @@ void testLuma2() {
 	data.validate(reader);
 	NullWriter writer(data, reader);
 	MovieFrameConsecutive frame(data, reader, writer);
-	CudaFrame executor(data, cudaDevices[0], frame, frame.mPool);
+	CudaFrame executor(data, data.deviceInfoCuda.devices[0], frame, frame.mPool);
 
 	executor.init();
 	ImageYuv src = ImageYuv::readBmpFile("D:/VideoTest/06b.30.bmp");

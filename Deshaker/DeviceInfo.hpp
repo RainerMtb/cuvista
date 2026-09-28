@@ -25,6 +25,8 @@
 //CpuFrame
 class DeviceInfoCpu : public DeviceInfoBase {
 public:
+	std::vector<OutputOption> encoders;
+
 	DeviceInfoCpu();
 
 	DeviceType getType() const override;
@@ -32,6 +34,7 @@ public:
 	std::string getNameShort() const override;
 	std::shared_ptr<FrameExecutor> create(MainData& data, MovieFrame& frame) override;
 };
+
 
 //AvxFrame
 class DeviceInfoAvx : public DeviceInfoBase {
@@ -48,11 +51,11 @@ public:
 	bool hasAvx2() const;
 };
 
+
 namespace cl { class Device; }
 
 //OpenClFrame
-class DeviceInfoOpenCl : public DeviceInfoBase {
-public:
+struct OpenClDevice : public DeviceInfoBase {
 	std::shared_ptr<cl::Device> device;
 	int versionDevice = 0;
 	int versionC = 0;
@@ -60,66 +63,78 @@ public:
 	std::vector<std::string> extensions;
 	std::string platformVersion;
 
-	inline static std::string warning = "";
-
-	DeviceInfoOpenCl(int64_t maxPixel);
+	OpenClDevice(int64_t maxPixel);
 
 	DeviceType getType() const override;
 	std::string getName() const override;
 	std::string getNameShort() const override;
 	std::shared_ptr<FrameExecutor> create(MainData& data, MovieFrame& frame) override;
 
-	friend std::ostream& operator << (std::ostream& os, const DeviceInfoOpenCl& info);
+	friend std::ostream& operator << (std::ostream& os, const OpenClDevice& info);
 };
+
+class DeviceInfoOpenCl {
+
+public:
+	std::vector<OpenClDevice> devices;
+	std::string driverWarning = "";
+};
+
 
 //Vulkan, only for video encoding
-class DeviceInfoVulkan : public DeviceInfoBase {
+class DeviceInfoVulkanCollection : public DeviceInfoBase {
 public:
-	DeviceInfoVulkan();
+	std::vector<OutputOption> encoders;
+
+	DeviceInfoVulkanCollection();
 
 	DeviceType getType() const override;
 	std::string getName() const override;
 	std::string getNameShort() const override;
 	std::shared_ptr<FrameExecutor> create(MainData& data, MovieFrame& frame) override;
 
-	std::vector<OutputOption> probeEncoders();
 };
 
-struct cudaDeviceProp;
-class NvEncoder;
 
 //Cuda
-class DeviceInfoCuda : public DeviceInfoCudaBase {
+struct CudaDevice : public DeviceInfoCudaBase {
+	std::vector<OutputOption> encoders;
+	int cudaIndex;
 
-private:
-	inline static int cudaRuntimeVersion = 0;
-	inline static int cudaDriverVersion = 0;
-	inline static uint32_t nvencVersionApi = 0;
-	inline static uint32_t nvencVersionDriver = 0;
-
-public:
-	std::shared_ptr<NvEncoder> nvenc;
-
-	inline static std::string nvidiaDriverVersion = "";
-	inline static std::string warning = "";
-
-	DeviceInfoCuda(int64_t maxPixel);
-
-	static std::vector<DeviceInfoCuda> probeCuda();
-	static std::string runtimeToString();
-	static std::string driverToString();
-	static std::string nvencApiToString();
-	static std::string nvencDriverToString();
+	CudaDevice(int64_t maxPixel);
 
 	DeviceType getType() const override;
 	std::string getName() const override;
 	std::string getNameShort() const override;
 	std::shared_ptr<FrameExecutor> create(MainData& data, MovieFrame& frame) override;
 
-	friend std::ostream& operator << (std::ostream& os, const DeviceInfoCuda& info);
+	bool operator < (const CudaDevice& other) const;
 
-	bool operator < (const DeviceInfoCuda& other) const;
+	friend std::ostream& operator << (std::ostream& os, const CudaDevice& info);
 };
+
+class DeviceInfoCudaCollection {
+
+private:
+	int mCudaRuntimeVersion = 0;
+	int mCudaDriverVersion = 0;
+
+public:
+	std::vector<CudaDevice> devices;
+	std::vector<OutputOption> encoders;
+	std::string nvidiaDriverVersion = "";
+	std::string nvidiaDriverWarning = "";
+	uint32_t nvencVersionApi = 0;
+	uint32_t nvencVersionDriver = 0;
+	int encodingDeviceIndex = 0;
+
+	void probeCuda();
+	std::string runtimeToString() const;
+	std::string driverToString() const;
+	std::string nvencApiToString() const;
+	std::string nvencDriverToString() const;
+};
+
 
 //Null Device
 class DeviceInfoNull : public DeviceInfoBase {

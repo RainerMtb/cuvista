@@ -40,9 +40,7 @@ OpenClFrame::OpenClFrame(CoreData& data, DeviceInfoBase& deviceInfo, MovieFrame&
 	FrameExecutor(data, deviceInfo, frame, pool) {}
 
 //check available devices
-std::vector<DeviceInfoOpenCl> cl::probeRuntime() {
-	std::vector<DeviceInfoOpenCl> out;
-
+void cl::probeRuntime(DeviceInfoOpenCl& info) {
 	try {
 		cl_uint n;
 		std::vector<Platform> platforms;
@@ -125,7 +123,7 @@ std::vector<DeviceInfoOpenCl> cl::probeRuntime() {
 				//std::vector<cl_name_version> extensions = dev.getInfo<CL_DEVICE_EXTENSIONS_WITH_VERSION>(); //Missing before version 3.0.
 
 				//we have a valid device
-				DeviceInfoOpenCl devInfo(maxPixel);
+				OpenClDevice devInfo(maxPixel);
 				devInfo.device = std::make_shared<Device>(dev);
 				devInfo.versionDevice = versionDevice;
 				devInfo.versionC = versionC;
@@ -133,24 +131,22 @@ std::vector<DeviceInfoOpenCl> cl::probeRuntime() {
 				devInfo.extensions = extensions;
 				devInfo.platformVersion = platform.getInfo<CL_PLATFORM_VERSION>();
 
-				out.push_back(devInfo);
+				info.devices.push_back(devInfo);
 			}
 		}
 
 	} catch (const Error& err) {
-		DeviceInfoOpenCl::warning = std::format("OpenCL probe error: {}", err.what());
+		info.driverWarning = std::format("OpenCL probe error: {}", err.what());
 
 	} catch (...) {
-		DeviceInfoOpenCl::warning = "unknown error loading Open CL";
+		info.driverWarning = "unknown error loading Open CL";
 	}
-
-	return out;
 }
 
 //set up device to use
 void OpenClFrame::init() {
 	assert(mDeviceInfo.getType() == DeviceType::OPEN_CL && "device type must be OpenCL here");
-	const DeviceInfoOpenCl* devInfo = static_cast<const DeviceInfoOpenCl*>(&mDeviceInfo);
+	const OpenClDevice* devInfo = static_cast<const OpenClDevice*>(&mDeviceInfo);
 
 	try {
 		clData.context = Context(*devInfo->device);

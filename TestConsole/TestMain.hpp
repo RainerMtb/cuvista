@@ -40,7 +40,6 @@ void matPerf();
 void iteratorTest();
 void similarTransform();
 void readAndWriteOneFrame();
-void checkVersions();
 void draw(const std::string& filename);
 
 void cudaInvSimple();

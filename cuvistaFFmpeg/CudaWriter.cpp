@@ -19,7 +19,6 @@
 #include "CudaInterface.hpp"
 #include "Writer.hpp"
 #include "Reader.hpp"
-#include "DeviceInfo.hpp"
 #include "ErrorLogger.hpp"
 #include "MainData.hpp"
 
@@ -34,7 +33,7 @@ void CudaFFmpegWriter::writePacketsToFile(std::list<NvPacket> nvpkts, bool termi
 void CudaFFmpegWriter::encodeFrame(int64_t frameIndex) {}
 
 void CudaFFmpegWriter::open(OutputOption outputOption) {}
-void CudaFFmpegWriter::open(OutputOption outputOption, const DeviceInfoCuda* dic) {}
+void CudaFFmpegWriter::open(OutputOption outputOption, const CudaDevice* dev) {}
 void CudaFFmpegWriter::writeOutput(const FrameExecutor& executor) {}
 bool CudaFFmpegWriter::flush() { return false; }
 
@@ -47,7 +46,7 @@ CudaFFmpegWriter::CudaFFmpegWriter(MainData& data, MovieReader& reader) :
 {}
 
 //open cuda encoder
-void CudaFFmpegWriter::open(OutputOption outputOption, const DeviceInfoCuda* dic) {
+void CudaFFmpegWriter::open(OutputOption outputOption, const CudaDevice* dev) {
     //select codec
     std::map<OutputOption, GUID> optionToGuidMap = {
         { OutputOption::NVENC_H264, NV_ENC_CODEC_H264_GUID },
@@ -55,14 +54,13 @@ void CudaFFmpegWriter::open(OutputOption outputOption, const DeviceInfoCuda* dic
         { OutputOption::NVENC_AV1, NV_ENC_CODEC_AV1_GUID },
     };
 
-    GUID guid = optionToGuidMap[outputOption];
-    nvenc = dic->nvenc;
-
     //open ffmpeg output format
     AVCodecID codecId = optionToCodecIdMap[outputOption];
     FFmpegFormatWriter::openFormat(codecId, mData.fileOut, 4);
 
     //setup nvenc class
+    GUID guid = optionToGuidMap[outputOption];
+    nvenc = std::make_shared<NvEncoder>(dev->cudaIndex);
     nvenc->createEncoder(mReader.w, mReader.h, mReader.fpsNum, mReader.fpsDen, mReader.parNum, mReader.parDen, gopSize, mData.selectedCrf, guid);
 
     //setup codec parameters for ffmpeg format output
@@ -93,16 +91,16 @@ void CudaFFmpegWriter::open(OutputOption outputOption, const DeviceInfoCuda* dic
 }
 
 void CudaFFmpegWriter::open(OutputOption outputOption) {
-    const DeviceInfoBase* dev = mData.deviceList[mData.deviceSelected];
-    const DeviceInfoCuda* dic;
-    if (dev->getType() == DeviceType::CUDA) {
-        dic = static_cast<const DeviceInfoCuda*>(dev);
-        open(outputOption, dic);
+    const DeviceInfoBase* dib = mData.deviceList[mData.deviceSelected];
+    const CudaDevice* dev;
+    if (dib->getType() == DeviceType::CUDA) {
+        dev = static_cast<const CudaDevice*>(dib);
+        open(outputOption, dev);
         nv12stride = nvenc->mCudaPitch;
 
     } else {
-        dic = &mData.deviceInfoCuda[mData.cudaEncodingDeviceIndex];
-        open(outputOption, dic);
+        dev = &mData.deviceInfoCuda.devices[mData.deviceInfoCuda.encodingDeviceIndex];
+        open(outputOption, dev);
         nv12stride = nvenc->mCudaPitch;
         outputNV12 = ImageNV12(mReader.h, mReader.w, nv12stride);
     }

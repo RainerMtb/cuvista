@@ -24,7 +24,6 @@
 #include "DummyFrame.hpp"
 #include "MainData.hpp"
 #include "MovieFrame.hpp"
-#include "CudaInterface.hpp"
 #include "NvidiaDriver.hpp"
 
 #include <thread>
@@ -101,29 +100,29 @@ bool DeviceInfoAvx::hasAvx2() const {
 
 //OPENCL Info -----------------------------------
 
-DeviceInfoOpenCl::DeviceInfoOpenCl(int64_t maxPixel) :
+OpenClDevice::OpenClDevice(int64_t maxPixel) :
 	DeviceInfoBase(maxPixel) 
 {}
 
-DeviceType DeviceInfoOpenCl::getType() const {
+DeviceType OpenClDevice::getType() const {
 	return DeviceType::OPEN_CL;
 }
 
-std::string DeviceInfoOpenCl::getName() const {
+std::string OpenClDevice::getName() const {
 	std::string name = device->getInfo<CL_DEVICE_NAME>();
 	std::string vendor = device->getInfo<CL_DEVICE_VENDOR>();
 	return std::format("OpenCL, {}, {}", name, vendor);
 }
 
-std::string DeviceInfoOpenCl::getNameShort() const {
+std::string OpenClDevice::getNameShort() const {
 	return "OpenCL";
 }
 
-std::shared_ptr<FrameExecutor> DeviceInfoOpenCl::create(MainData& data, MovieFrame& frame) {
+std::shared_ptr<FrameExecutor> OpenClDevice::create(MainData& data, MovieFrame& frame) {
 	return std::make_shared<OpenClFrame>(data, *this, frame, frame.mPool);
 }
 
-std::ostream& operator << (std::ostream& os, const DeviceInfoOpenCl& info) {
+std::ostream& operator << (std::ostream& os, const OpenClDevice& info) {
 	auto w = info.device->getInfo<CL_DEVICE_IMAGE2D_MAX_WIDTH>();
 	auto h = info.device->getInfo<CL_DEVICE_IMAGE2D_MAX_HEIGHT>();
 	os << "Device Vendor:        " << info.device->getInfo<CL_DEVICE_VENDOR>() << std::endl;
@@ -138,7 +137,15 @@ std::ostream& operator << (std::ostream& os, const DeviceInfoOpenCl& info) {
 	return os;
 }
 
-std::ostream& operator << (std::ostream& os, const DeviceInfoCuda& info) {
+
+// Cuda Info -----------------------------------
+
+CudaDevice::CudaDevice(int64_t maxPixel) :
+	DeviceInfoCudaBase(maxPixel),
+	cudaIndex { 0 }
+{}
+
+std::ostream& operator << (std::ostream& os, const CudaDevice& info) {
 	os << "Device Name:          " << info.props->name << std::endl;
 	os << "Compute Version:      " << info.props->major << "." << info.props->minor << std::endl;
 	os << "Total Global Memory:  " << info.props->totalGlobalMem / 1024 / 1024 << " Mb" << std::endl;
@@ -149,116 +156,87 @@ std::ostream& operator << (std::ostream& os, const DeviceInfoCuda& info) {
 	return os;
 }
 
-
-// Cuda Info -----------------------------------
-
-DeviceInfoCuda::DeviceInfoCuda(int64_t maxPixel) :
-	DeviceInfoCudaBase(maxPixel) 
-{}
-
-DeviceType DeviceInfoCuda::getType() const {
+DeviceType CudaDevice::getType() const {
 	return DeviceType::CUDA;
 }
 
-std::string DeviceInfoCuda::getName() const {
+std::string CudaDevice::getName() const {
 	return std::format("Cuda, {}, Compute {}.{}", props->name, props->major, props->minor);
 }
 
-bool DeviceInfoCuda::operator < (const DeviceInfoCuda& other) const {
+bool CudaDevice::operator < (const CudaDevice& other) const {
 	return props->major == other.props->major ? props->minor < other.props->minor : props->major < other.props->major;
 }
 
-std::vector<DeviceInfoCuda> DeviceInfoCuda::probeCuda() {
-	std::vector<DeviceInfoCuda> out;
-
-	//check Nvidia Driver
-	NvidiaDriverInfo driverInfo = probeNvidiaDriver();
-	nvidiaDriverVersion = driverInfo.version;
-	warning = driverInfo.warning;
-
-	//check present cuda devices
-	CudaProbeResult res = cudaProbeRuntime();
-	cudaDriverVersion = res.driverVersion;
-	cudaRuntimeVersion = res.runtimeVersion;
-
-	for (int i = 0; i < res.props.size(); i++) {
-		cudaDeviceProp& prop = res.props[i];
-
-		//create device info struct
-		DeviceInfoCuda cuda(prop.sharedMemPerBlock / sizeof(float));
-		cuda.props = std::make_shared<cudaDeviceProp>(prop);
-		cuda.cudaIndex = i;
-
-		//check encoder
-		cuda.nvenc = std::make_shared<NvEncoder>(i);
-		cuda.nvenc->probeEncoding(&nvencVersionApi, &nvencVersionDriver);
-
-		if (nvencVersionDriver >= nvencVersionApi) {
-			//check supported codecs
-			cuda.nvenc->probeSupportedCodecs(cuda);
-		}
-
-		out.push_back(cuda);
-	}
-
-	return out;
-}
-
-std::string DeviceInfoCuda::getNameShort() const {
+std::string CudaDevice::getNameShort() const {
 	return "Cuda";
 }
 
-std::shared_ptr<FrameExecutor> DeviceInfoCuda::create(MainData& data, MovieFrame& frame) {
+std::shared_ptr<FrameExecutor> CudaDevice::create(MainData& data, MovieFrame& frame) {
 	return std::make_shared<CudaFrame>(data, *this, frame, frame.mPool);
 }
 
+void DeviceInfoCudaCollection::probeCuda() {
+	//check Nvidia Driver
+	NvidiaDriverInfo driverInfo = probeNvidiaDriver();
+	nvidiaDriverVersion = driverInfo.version;
+	nvidiaDriverWarning = driverInfo.warning;
 
-std::string DeviceInfoCuda::runtimeToString() {
-	return std::to_string(cudaRuntimeVersion / 1000) + "." + std::to_string(cudaRuntimeVersion % 1000 / 10);
+	//check software
+	CudaProbeResult res = cudaProbeRuntime();
+	mCudaDriverVersion = res.driverVersion;
+	mCudaRuntimeVersion = res.runtimeVersion;
+
+	//check available cuda devices
+	for (int i = 0; i < res.props.size(); i++) {
+		cudaDeviceProp p = res.props[i];
+		CudaDevice cuda(p.sharedMemPerBlock / sizeof(float));
+		cuda.props = std::make_shared<cudaDeviceProp>(p);
+		cuda.cudaIndex = i;
+		devices.push_back(cuda);
+	}
+
+	//sort cuda devices by compute
+	std::sort(devices.begin(), devices.end());
 }
 
-std::string DeviceInfoCuda::driverToString() {
-	return std::to_string(cudaDriverVersion / 1000) + "." + std::to_string(cudaDriverVersion % 1000 / 10);
+std::string DeviceInfoCudaCollection::runtimeToString() const {
+	return std::to_string(mCudaRuntimeVersion / 1000) + "." + std::to_string(mCudaRuntimeVersion % 1000 / 10);
 }
 
-std::string DeviceInfoCuda::nvencApiToString() {
+std::string DeviceInfoCudaCollection::driverToString() const {
+	return std::to_string(mCudaDriverVersion / 1000) + "." + std::to_string(mCudaDriverVersion % 1000 / 10);
+}
+
+std::string DeviceInfoCudaCollection::nvencApiToString() const {
 	return std::to_string(nvencVersionApi / 1000) + "." + std::to_string(nvencVersionApi % 1000 / 10);
 }
 
-std::string DeviceInfoCuda::nvencDriverToString() {
+std::string DeviceInfoCudaCollection::nvencDriverToString() const {
 	return std::to_string(nvencVersionDriver / 1000) + "." + std::to_string(nvencVersionDriver % 1000 / 10);
 }
 
 
 // Vulkan Info, only for video encoding ----------------------------
 
-DeviceInfoVulkan::DeviceInfoVulkan() :
+DeviceInfoVulkanCollection::DeviceInfoVulkanCollection() :
 	DeviceInfoBase(0)
 {}
 
-DeviceType DeviceInfoVulkan::getType() const {
+DeviceType DeviceInfoVulkanCollection::getType() const {
 	return DeviceType::UNKNOWN;
 }
 
-std::string DeviceInfoVulkan::getName() const {
+std::string DeviceInfoVulkanCollection::getName() const {
 	return "Vulkan encoder";
 }
 
-std::string DeviceInfoVulkan::getNameShort() const {
+std::string DeviceInfoVulkanCollection::getNameShort() const {
 	return "Vulkan encoder";
 }
 
-std::shared_ptr<FrameExecutor> DeviceInfoVulkan::create(MainData& data, MovieFrame& frame) {
+std::shared_ptr<FrameExecutor> DeviceInfoVulkanCollection::create(MainData& data, MovieFrame& frame) {
 	return std::make_shared<DummyFrame>(data, *this, frame, frame.mPool);
-}
-
-std::vector<OutputOption> DeviceInfoVulkan::probeEncoders() {
-	std::vector<OutputOption> optionsList = { OutputOption::VULKAN_AV1, OutputOption::VULKAN_HEVC, OutputOption::VULKAN_H264 };
-	std::vector<OutputOption> optionsValid;
-	for (OutputOption op : optionsList) {
-		if (ff::probeWriter(op)) optionsValid.push_back(op);
-	}
-	return optionsValid;
 }
 
 

@@ -41,6 +41,9 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     QMainWindow(parent) 
 {
     //debugLogger().open("tcp://10.0.0.1:5555");
+    ui.setupUi(this);
+
+    //dynamically load ffmpeg
     int err = ff::loadFFmpegLibrary();
     if (err != 0) {
         QString msg = QString::fromStdString(errorLogger().getErrorMessage());
@@ -49,7 +52,6 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     }
 
     mReader = std::shared_ptr<MovieReader>(ff::createReader(ReaderType::FFMPEG));
-    ui.setupUi(this);
     mPlayerWindow = new PlayerWindow(this);
     mProgressWindow = new ProgressWindow(this);
     mMovieDir = QStandardPaths::locate(QStandardPaths::MoviesLocation, QString(), QStandardPaths::LocateDirectory);
@@ -61,9 +63,10 @@ cuvistaGui::cuvistaGui(QWidget *parent) :
     mData.console = &mData.nullStream;
     mData.printHeader = false;
     mData.printSummary = false;
-    mData.deviceInfoCuda = mData.probeCuda();
-    mData.deviceInfoOpenCl = mData.probeOpenCl();
+    mData.probeCuda();
+    mData.probeOpenCl();
     mData.collectDeviceInfo();
+    mData.collectEncoders();
 
     mInputImagePlaceholder.fill(Qt::transparent);
     ui.imageInput->setImage(mInputImagePlaceholder);

@@ -19,7 +19,6 @@
 #pragma once
 
 #include "Stats.hpp"
-#include "FFmpegUtil.hpp"
 #include "OutputOption.hpp"
 #include "FrameExecutor.hpp"
 

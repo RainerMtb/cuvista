@@ -104,14 +104,13 @@ public:
 	
 	int mode = 0;
 	std::vector<DeviceInfoBase*> deviceList;
-	std::vector<DeviceInfoOpenCl> deviceInfoOpenCl;
-	std::vector<DeviceInfoCuda> deviceInfoCuda;
-	DeviceInfoVulkan deviceInfoVulkan;
+	DeviceInfoOpenCl deviceInfoOpenCl;
+	DeviceInfoCudaCollection deviceInfoCuda;
+	DeviceInfoVulkanCollection deviceInfoVulkan;
 	DeviceInfoCpu deviceInfoCpu;
 	DeviceInfoAvx deviceInfoAvx;
 	bool deviceRequested = false;
 	size_t deviceSelected = 0;
-	int cudaEncodingDeviceIndex = 0;
 	std::optional<int> cpuThreadsRequired = std::nullopt;
 
 	std::shared_ptr<SamplerBase<PointContext>> sampler = std::make_shared<UrbgSampler<PointContext, PseudoRandomSource>>();
@@ -155,21 +154,21 @@ public:
 
 	void probeInput(std::vector<std::string> args);
 
-	std::vector<DeviceInfoCuda> probeCuda();
+	void probeCuda();
 
-	std::vector<DeviceInfoOpenCl> probeOpenCl();
+	void probeOpenCl();
 
 	void collectDeviceInfo();
 
-	void validate(const MovieReader& reader);
+	void collectEncoders();
 
-	void showDeviceInfo() const;
+	void validate(const MovieReader& reader);
 
 	std::ostream& showDeviceInfo(std::ostream& os) const;
 
 	std::ostream& showFFmpegInfo(std::ostream& os) const;
 
-	std::ostream& showEncodingInfo(std::ostream& os) const;
+	std::ostream& showEncodingInfo(std::ostream& os);
 
 	void showBasicInfo() const;
 

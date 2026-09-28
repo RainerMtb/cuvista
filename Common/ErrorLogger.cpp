@@ -69,6 +69,7 @@ void ErrorLogger::logFFmpeg(int logLevel, std::string msg) {
 }
 
 void ErrorLogger::printErrors(std::ostream& os) {
+	//list of recorded errors
 	std::vector<ErrorEntry> errorList = errorLogger().getErrors();
 	if (errorList.size() > 0) {
 		printError(os, "ERROR STACK:");
@@ -77,31 +78,28 @@ void ErrorLogger::printErrors(std::ostream& os) {
 		}
 	}
 
+	//list of recorded ffmpeg logs
 	std::vector<FFmpegLog> ffmpegErrors;
-	for (auto iter = ffmpegLog.begin(); iter != ffmpegLog.end(); ) {
+	std::vector<FFmpegLog> ffmpegLogs;
+	for (auto iter = ffmpegLog.crbegin(); iter != ffmpegLog.crend(); iter++) {
 		if (iter->logLevel <= 16) {
 			ffmpegErrors.push_back(*iter);
-			iter = ffmpegLog.erase(iter);
 
 		} else {
-			iter++;
+			ffmpegLogs.push_back(*iter);
 		}
 	}
 	if (ffmpegErrors.size() > 0) {
 		printError(os, "FFMPEG ERRORS:");
-		auto iter = ffmpegErrors.crbegin();
-		for (int i = 0; iter != ffmpegErrors.crend(); i++) {
-			printError(os, std::format("[{}] {}", i, iter->msg));
-			iter++;
+		for (int i = 0; i < ffmpegErrors.size(); i++) {
+			printError(os, std::format("[{}] {}", i, ffmpegErrors[i].msg));
 		}
 	}
 
-	if (errorList.size() > 0 || ffmpegErrors.size() > 0 && ffmpegLog.size() > 0) {
+	if ((errorList.size() > 0 || ffmpegErrors.size() > 0) && ffmpegLogs.size() > 0) {
 		printError(os, "LOGS:");
-		auto iter = ffmpegLog.crbegin();
-		for (int i = 0; i < 50 && iter != ffmpegLog.crend(); i++) {
-			printError(os, std::format("[{}] {}", i, iter->msg));
-			iter++;
+		for (int i = 0; i < ffmpegLogs.size(); i++) {
+			printError(os, std::format("[{}] {}", i, ffmpegLogs[i].msg));
 		}
 	}
 }

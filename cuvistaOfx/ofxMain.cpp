@@ -169,8 +169,8 @@ namespace ofx {
 				return kOfxStatFailed;
 			}
 
-			main.mData.deviceInfoOpenCl = main.mData.probeOpenCl();
-			main.mData.deviceInfoCuda = main.mData.probeCuda();
+			main.mData.probeOpenCl();
+			main.mData.probeCuda();
 			main.mData.collectDeviceInfo();
 
 			OfxPropertySetHandle props;

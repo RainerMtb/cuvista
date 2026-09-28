@@ -125,6 +125,11 @@ static void testMain() {
 	run("-i d:/VideoTest/02short.mp4 -o d:/videoTest/out/nvenc01.mp4 -device 1 -enc nvenc:h264 -noheader -progress 0");
 	run("-i d:/VideoTest/02short.mp4 -o d:/videoTest/out/nvenc02.mp4 -device 2 -enc nvenc:hevc -noheader -progress 0");
 
+	std::cout << "--- Encode Vulkan ---" << std::endl;
+	run("-i d:/VideoTest/02short.mp4 -o d:/videoTest/out/vulkan00.mp4 -device 0 -enc nvenc:hevc -noheader -progress 0");
+	run("-i d:/VideoTest/02short.mp4 -o d:/videoTest/out/vulkan01.mp4 -device 1 -enc nvenc:h264 -noheader -progress 0");
+	run("-i d:/VideoTest/02short.mp4 -o d:/videoTest/out/vulkan02.mp4 -device 2 -enc nvenc:hevc -noheader -progress 0");
+
 	std::cout << "--- Encoding to Cpu ---" << std::endl;
 	run("-enc ffmpeg:av1 -i d:/VideoTest/02short.mp4 -o d:/videoTest/out/enc_av1.mp4 -noheader -progress 0");
 	run("-enc ffmpeg:hevc -i d:/VideoTest/02short.mp4 -o d:/videoTest/out/enc_hevc.mp4 -noheader -progress 0");

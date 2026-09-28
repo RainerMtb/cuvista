@@ -19,6 +19,8 @@
 #include "FFmpegMain.hpp"
 #include "Reader.hpp"
 #include "Writer.hpp"
+#include "CudaInterface.hpp"
+#include <set>
 
 static constexpr FFmpegVersions ffmpeg_build_versions = {
     .avutil = LIBAVUTIL_VERSION_INT,
@@ -79,11 +81,36 @@ MovieWriter* createWriter(OutputOption option, MainData& data, MovieReader& read
 }
 
 //check writer capability
-bool probeWriter(OutputOption option) {
-    if (option.group == OutputGroup::VIDEO_VULKAN)
-        return VulkanFFmpegWriter::probe(option);
-    else
-        return false;
+void probeEncoders(DeviceInfoCpu& cpu, DeviceInfoCudaCollection& cuda, DeviceInfoVulkanCollection& vulkan) {
+    //ffmpeg
+    std::set<OutputOption> s;
+    void* codecState = nullptr; //start with null
+    const AVCodec* codec = av_codec_iterate(&codecState);
+    while (codec) {
+        if (codec->id == AV_CODEC_ID_H264) s.insert(OutputOption::FFMPEG_H264);
+        if (codec->id == AV_CODEC_ID_HEVC) s.insert(OutputOption::FFMPEG_HEVC);
+        if (codec->id == AV_CODEC_ID_AV1) s.insert(OutputOption::FFMPEG_AV1);
+        if (codec->id == AV_CODEC_ID_FFV1) s.insert(OutputOption::FFMPEG_FFV1);
+        codec = av_codec_iterate(&codecState);
+    }
+    cpu.encoders = std::vector<OutputOption>(s.begin(), s.end());
+
+    //cuda
+    for (int i = 0; i < cuda.devices.size(); i++) {
+        NvEncoder nvenc(i);
+        nvenc.probeEncoding(&cuda.nvencVersionApi, &cuda.nvencVersionDriver);
+
+        if (cuda.nvencVersionDriver >= cuda.nvencVersionApi) {
+            //check supported codecs
+            cuda.devices[i].encoders = nvenc.probeSupportedCodecs();
+        }
+    }
+    if (cuda.devices.size() > 0) {
+        cuda.encoders = cuda.devices[0].encoders;
+    }
+
+    //vulkan
+    vulkan.encoders = VulkanFFmpegWriter::probeEncoders();
 }
 
 //set global symbols

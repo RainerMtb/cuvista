@@ -188,7 +188,7 @@
       <AdditionalLibraryDirectories>$(SolutionDir)lib\$(Platform);$(SolutionDir)bin\$(Platform)\$(Configuration);$(CUDA_PATH)\lib\$(Platform);$(FFMPEG_PATH)\lib</AdditionalLibraryDirectories>
       <AdditionalDependencies>Avx2.lib;Avx512.lib;Common.lib;cpu_features.lib;OpenCl.lib;CudaStuff.lib;Matrix.lib;Deshaker.lib;cudart_static.lib;nvencodeapi.lib;cuda.lib;Ole32.lib;ws2_32.lib;Shell32.lib</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>libcmt.lib; msvcrt.lib; libcmtd.lib</IgnoreSpecificDefaultLibraries>
-      <DelayLoadDLLs>OpenCL.dll;nvEncodeAPI64.dll</DelayLoadDLLs>
+      <DelayLoadDLLs>OpenCL.dll</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -211,7 +211,7 @@
       <AdditionalLibraryDirectories>$(SolutionDir)lib\$(Platform);$(SolutionDir)bin\$(Platform)\$(Configuration);$(CUDA_PATH)\lib\$(Platform);$(FFMPEG_PATH)\lib</AdditionalLibraryDirectories>
       <AdditionalDependencies>Avx2.lib;Avx512.lib;Common.lib;cpu_features.lib;OpenCl.lib;CudaStuff.lib;Matrix.lib;Deshaker.lib;cudart_static.lib;nvencodeapi.lib;cuda.lib;Ole32.lib;ws2_32.lib;Shell32.lib</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>libcmt.lib</IgnoreSpecificDefaultLibraries>
-      <DelayLoadDLLs>OpenCL.dll;nvEncodeAPI64.dll</DelayLoadDLLs>
+      <DelayLoadDLLs>OpenCL.dll</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -27,6 +27,7 @@
 
 #include "AVException.hpp"
 #include "nvEncodeAPI.h"
+#include "OutputOption.hpp"
 
 #undef min
 #undef max
@@ -72,7 +73,7 @@ public:
 
 	void init();
 	void probeEncoding(uint32_t* nvencVersionApi, uint32_t* nvencVersionDriver);
-	void probeSupportedCodecs(DeviceInfoCuda& deviceInfoCuda);
+	std::vector<OutputOption> probeSupportedCodecs();
 	void createEncoder(int w, int h, int fpsNum, int fpsDen, int parNum, int parDen, uint32_t gopLen, uint8_t crf, GUID guid);
 	std::span<uint8_t> getExtraData();
 	void destroyEncoder();
