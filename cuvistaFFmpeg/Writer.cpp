@@ -21,6 +21,7 @@
 
 #include "Writer.hpp"
 #include "MovieFrame.hpp"
+#include "AVException.hpp"
 
 
  //-----------------------------------------------------------------------------------

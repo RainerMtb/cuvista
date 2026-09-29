@@ -30,6 +30,9 @@
 #include "AppUtil.hpp"
 #include "ErrorLogger.hpp"
 #include "MovieWriterClasses.hpp"
+#include "Version.hpp"
+#include "AVException.hpp"
+#include "Selftest.hpp"
 
 
 using namespace winrt;

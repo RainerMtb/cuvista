@@ -189,7 +189,7 @@ void DeviceInfoCudaCollection::probeCuda() {
 
 	//check available cuda devices
 	for (int i = 0; i < res.props.size(); i++) {
-		cudaDeviceProp p = res.props[i];
+		cudaDeviceProp& p = res.props[i];
 		CudaDevice cuda(p.sharedMemPerBlock / sizeof(float));
 		cuda.props = std::make_shared<cudaDeviceProp>(p);
 		cuda.cudaIndex = i;

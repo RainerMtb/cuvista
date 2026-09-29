@@ -19,25 +19,14 @@
 #include "Writer.hpp"
 #include "Reader.hpp"
 #include "MainData.hpp"
+#include "AVException.hpp"
 
 
 VulkanFFmpegWriter::VulkanFFmpegWriter(MainData& data, MovieReader& reader) :
 	FFmpegWriter(data, reader, 0)
 {}
 
-std::vector<OutputOption> VulkanFFmpegWriter::probeEncoders() {
-	auto noopLogger = [] (void* avclass, int level, const char* fmt, va_list args) {};
-	av_log_set_callback(noopLogger);
-
-	MainData data;
-	return {
-		OutputOption::VULKAN_H264,
-		OutputOption::VULKAN_HEVC,
-		OutputOption::VULKAN_AV1
-	};
-}
-
-void VulkanFFmpegWriter::openEncoder(OutputOption outputOption) {
+void VulkanFFmpegWriter::openEncoder(OutputOption outputOption, bool globalHeader, int w, int h, int crf) {
 	//find cpu encoder
 	std::string codecName = optionToCodecMap.at(outputOption);
 	const AVCodec* codec = avcodec_find_encoder_by_name(codecName.c_str());
@@ -51,20 +40,20 @@ void VulkanFFmpegWriter::openEncoder(OutputOption outputOption) {
 		throw AVException("Could not allocate encoder context");
 
 	codec_ctx->codec_type = AVMEDIA_TYPE_VIDEO;
-	codec_ctx->width = mData.w;
-	codec_ctx->height = mData.h;
+	codec_ctx->width = w;
+	codec_ctx->height = h;
 	codec_ctx->pix_fmt = AV_PIX_FMT_VULKAN;
 	codec_ctx->framerate = { mReader.fpsNum, mReader.fpsDen };
 	codec_ctx->time_base = { mReader.fpsDen, mReader.fpsNum };
 	codec_ctx->sample_aspect_ratio = { mReader.parNum, mReader.parDen };
 	codec_ctx->gop_size = gopSize;
 	codec_ctx->flags |= AV_CODEC_FLAG_QSCALE;
-	av_opt_set(codec_ctx->priv_data, "qp", std::to_string(mData.selectedCrf).c_str(), 0);
+	av_opt_set(codec_ctx->priv_data, "qp", std::to_string(crf).c_str(), 0);
 	//codec_ctx->has_b_frames = 1;
 	//codec_ctx->max_b_frames = 4;
 	//codec_ctx->bit_rate = 5'000'000;
 
-	if (fmt_ctx->oformat->flags & AVFMT_GLOBALHEADER)
+	if (globalHeader)
 		codec_ctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
 
 	//allocate hardware context
@@ -84,9 +73,7 @@ void VulkanFFmpegWriter::openEncoder(OutputOption outputOption) {
 		throw AVException("Could not get device constraints");
 
 	const AVPixelFormat* ptr = constraints->valid_sw_formats;
-	for (const AVPixelFormat* ptr = constraints->valid_sw_formats; *ptr != AV_PIX_FMT_NONE; ptr++) {
-		vulkanSwFormats.push_back(*ptr);
-	}
+	for (const AVPixelFormat* ptr = constraints->valid_sw_formats; *ptr != AV_PIX_FMT_NONE; ptr++) vulkanSwFormats.push_back(*ptr);
 	av_hwframe_constraints_free(&constraints);
 
 	//allocate hardwware frame context
@@ -108,6 +95,10 @@ void VulkanFFmpegWriter::openEncoder(OutputOption outputOption) {
 	result = avcodec_open2(codec_ctx, codec, NULL);
 	if (result < 0)
 		throw AVException(av_make_error(result, "Error opening codec"));
+}
+
+void VulkanFFmpegWriter::openEncoder(OutputOption outputOption) {
+	openEncoder(outputOption, fmt_ctx->oformat->flags & AVFMT_GLOBALHEADER, mData.w, mData.h, mData.selectedCrf);
 }
 
 void VulkanFFmpegWriter::open(OutputOption outputOption) {

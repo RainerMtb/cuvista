@@ -24,6 +24,7 @@
 
 #include "Eula.h"
 #include "MainData.hpp"
+#include "Version.hpp"
 
 Eula::Eula() : 
     QMainWindow(nullptr) 

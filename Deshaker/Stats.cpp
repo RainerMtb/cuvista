@@ -17,6 +17,7 @@
  */
 
 #include "Stats.hpp"
+#include "util.hpp"
 
 double ReaderStats::fps() const {
     return 1.0 * fpsNum / fpsDen;
@@ -24,4 +25,8 @@ double ReaderStats::fps() const {
 
 double ReaderStats::par() const {
     return 1.0 * parNum / parDen;
+}
+
+int ReaderStats::wOut() const {
+    return (parNum == 0 || parDen == 0) ? w : util::alignValue(w * parNum / parDen, 2);
 }

@@ -126,5 +126,5 @@ LIBRARY_EXPORT MovieReader* createReader(ReaderType readerType);
 LIBRARY_EXPORT MovieWriter* createWriter(OutputOption option, MainData& data, MovieReader& reader);
 
 //library functions
-LIBRARY_EXPORT void probeEncoders(DeviceInfoCpu& cpu, DeviceInfoCudaCollection& cuda, DeviceInfoVulkanCollection& vulkan);
+LIBRARY_EXPORT void probeEncoders(MainData& data);
 LIBRARY_EXPORT void init(std::shared_ptr<ErrorLogger> errorLoggerInstance);

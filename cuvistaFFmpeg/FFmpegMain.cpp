@@ -16,11 +16,12 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
+#include <set>
+#include "MainData.hpp"
 #include "FFmpegMain.hpp"
 #include "Reader.hpp"
 #include "Writer.hpp"
 #include "CudaInterface.hpp"
-#include <set>
 
 static constexpr FFmpegVersions ffmpeg_build_versions = {
     .avutil = LIBAVUTIL_VERSION_INT,
@@ -81,36 +82,61 @@ MovieWriter* createWriter(OutputOption option, MainData& data, MovieReader& read
 }
 
 //check writer capability
-void probeEncoders(DeviceInfoCpu& cpu, DeviceInfoCudaCollection& cuda, DeviceInfoVulkanCollection& vulkan) {
-    //ffmpeg
-    std::set<OutputOption> s;
-    void* codecState = nullptr; //start with null
-    const AVCodec* codec = av_codec_iterate(&codecState);
-    while (codec) {
-        if (codec->id == AV_CODEC_ID_H264) s.insert(OutputOption::FFMPEG_H264);
-        if (codec->id == AV_CODEC_ID_HEVC) s.insert(OutputOption::FFMPEG_HEVC);
-        if (codec->id == AV_CODEC_ID_AV1) s.insert(OutputOption::FFMPEG_AV1);
-        if (codec->id == AV_CODEC_ID_FFV1) s.insert(OutputOption::FFMPEG_FFV1);
-        codec = av_codec_iterate(&codecState);
+void probeEncoders(MainData& data) {
+    //check ffmpeg encoders
+    {
+        std::set<OutputOption> s;
+        void* codecState = nullptr; //start with null
+        const AVCodec* codec = av_codec_iterate(&codecState);
+        while (codec) {
+            if (codec->id == AV_CODEC_ID_H264) s.insert(OutputOption::FFMPEG_H264);
+            if (codec->id == AV_CODEC_ID_HEVC) s.insert(OutputOption::FFMPEG_HEVC);
+            if (codec->id == AV_CODEC_ID_AV1) s.insert(OutputOption::FFMPEG_AV1);
+            if (codec->id == AV_CODEC_ID_FFV1) s.insert(OutputOption::FFMPEG_FFV1);
+            codec = av_codec_iterate(&codecState);
+        }
+        data.deviceInfoCpu.encoders = std::vector<OutputOption>(s.crbegin(), s.crend());
     }
-    cpu.encoders = std::vector<OutputOption>(s.begin(), s.end());
 
-    //cuda
-    for (int i = 0; i < cuda.devices.size(); i++) {
-        NvEncoder nvenc(i);
-        nvenc.probeEncoding(&cuda.nvencVersionApi, &cuda.nvencVersionDriver);
+    //check cuda encoders
+    {
+        DeviceInfoCudaCollection& cuda = data.deviceInfoCuda;
+        for (int i = 0; i < cuda.devices.size(); i++) {
+            NvEncoder nvenc(i);
+            nvenc.probeEncoding(&cuda.nvencVersionApi, &cuda.nvencVersionDriver);
 
-        if (cuda.nvencVersionDriver >= cuda.nvencVersionApi) {
-            //check supported codecs
-            cuda.devices[i].encoders = nvenc.probeSupportedCodecs();
+            if (cuda.nvencVersionDriver >= cuda.nvencVersionApi) {
+                //check supported codecs
+                cuda.devices[i].encoders = nvenc.probeSupportedCodecs();
+            }
+        }
+        if (cuda.devices.size() > 0) {
+            cuda.encoders = cuda.devices[0].encoders;
         }
     }
-    if (cuda.devices.size() > 0) {
-        cuda.encoders = cuda.devices[0].encoders;
-    }
 
-    //vulkan
-    vulkan.encoders = VulkanFFmpegWriter::probeEncoders();
+    //check vulkan encoders
+    {
+        DeviceInfoVulkanCollection& vulkan = data.deviceInfoVulkan;
+        NoOpReader reader;
+        reader.fpsNum = 25;
+        reader.fpsDen = 1;
+        reader.parNum = 1;
+        reader.parDen = 1;
+        auto noopLogger = [] (void* avclass, int level, const char* fmt, va_list args) {};
+        av_log_set_callback(noopLogger);
+        std::vector<OutputOption> vulkanOptions = { OutputOption::VULKAN_AV1, OutputOption::VULKAN_HEVC, OutputOption::VULKAN_H264 };
+        for (OutputOption op : vulkanOptions) {
+            try {
+                VulkanFFmpegWriter writer(data, reader);
+                writer.openEncoder(op, false, 640, 480, 20);
+                vulkan.encoders.push_back(op);
+
+            } catch (AVException e) {
+
+            } catch (...) {}
+        }
+    }
 }
 
 //set global symbols

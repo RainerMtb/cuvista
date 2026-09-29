@@ -18,13 +18,8 @@
 
 #pragma once
 
-#include "Mat.hpp"
-#include "AVException.hpp"
-#include "FFmpegUtil.hpp"
 #include "RandomSource.hpp"
-#include "SelfTest.hpp"
 #include "Util.hpp"
-#include "Version.hpp"
 #include "CoreData.hpp"
 #include "DeviceInfo.hpp"
 

@@ -176,7 +176,6 @@ void ProgressGui::update(const ProgressInfo& progress, bool force) {
             mainWindow.mProgressOutput.invalidate();
         });
     }
-    mainWindow.mProgressOutput.saveBmpColor("f:/test.bmp");
 }
 
 

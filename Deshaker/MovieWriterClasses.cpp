@@ -18,6 +18,7 @@
 
 #include "MovieWriterClasses.hpp"
 #include "MovieFrame.hpp"
+#include "AVException.hpp"
 #include "ErrorLogger.hpp"
 #include <filesystem>
 

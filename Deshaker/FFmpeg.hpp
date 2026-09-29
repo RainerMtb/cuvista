@@ -34,5 +34,5 @@ namespace ff {
 	inline MovieReader* (*createReader)(ReaderType readerType);
 	inline MovieWriter* (*createWriter)(OutputOption option, MainData& data, MovieReader& reader);
 
-	inline void (*probeEncoders)(DeviceInfoCpu& cpu, DeviceInfoCudaCollection& cuda, DeviceInfoVulkanCollection& vulkan);
+	inline void (*probeEncoders)(MainData& data);
 }

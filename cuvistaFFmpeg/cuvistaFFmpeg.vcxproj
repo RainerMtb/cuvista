@@ -70,7 +70,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <IgnoreSpecificDefaultLibraries>libcmt.lib; msvcrt.lib; libcmtd.lib</IgnoreSpecificDefaultLibraries>
       <AdditionalLibraryDirectories>$(SolutionDir)lib\$(Platform);$(SolutionDir)bin\$(Platform)\$(Configuration);$(CUDA_PATH)\lib\$(Platform);$(FFMPEG_PATH)\lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>Shell32.lib;Ole32.lib;cpu_features.lib;Matrix.lib;Avx512.lib;Avx2.lib;OpenCl.lib;CudaStuff.lib;cudart_static.lib;Common.lib;Deshaker.lib;cuda.lib;nvencodeapi.lib;avformat.lib;avcodec.lib;avdevice.lib;avutil.lib;swresample.lib;swscale.lib</AdditionalDependencies>
+      <AdditionalDependencies>Common.lib;Deshaker.lib;cuda.lib;nvencodeapi.lib;avformat.lib;avcodec.lib;avdevice.lib;avutil.lib;swresample.lib;swscale.lib</AdditionalDependencies>
       <DelayLoadDLLs>nvEncodeAPI64.dll</DelayLoadDLLs>
     </Link>
     <Manifest>
@@ -94,7 +94,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <IgnoreSpecificDefaultLibraries>libcmt.lib</IgnoreSpecificDefaultLibraries>
       <AdditionalLibraryDirectories>$(SolutionDir)lib\$(Platform);$(SolutionDir)bin\$(Platform)\$(Configuration);$(CUDA_PATH)\lib\$(Platform);$(FFMPEG_PATH)\lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>Shell32.lib;Ole32.lib;cpu_features.lib;Matrix.lib;Avx512.lib;Avx2.lib;OpenCl.lib;CudaStuff.lib;cudart_static.lib;Common.lib;Deshaker.lib;cuda.lib;nvencodeapi.lib;avformat.lib;avcodec.lib;avdevice.lib;avutil.lib;swresample.lib;swscale.lib</AdditionalDependencies>
+      <AdditionalDependencies>Common.lib;Deshaker.lib;cuda.lib;nvencodeapi.lib;avformat.lib;avcodec.lib;avdevice.lib;avutil.lib;swresample.lib;swscale.lib</AdditionalDependencies>
       <DelayLoadDLLs>nvEncodeAPI64.dll</DelayLoadDLLs>
     </Link>
     <Manifest>

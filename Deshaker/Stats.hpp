@@ -38,6 +38,7 @@ public:
 
 	double fps() const;
 	double par() const;
+	int wOut() const;
 };
 
 

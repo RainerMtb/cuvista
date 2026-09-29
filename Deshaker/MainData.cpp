@@ -17,6 +17,8 @@
  */
 
 #include "MainData.hpp"
+#include "Version.hpp"
+#include "AVException.hpp"
 #include "DeviceInfo.hpp"
 #include "DeshakerHelpText.hpp"
 #include "SystemStuff.hpp"
@@ -389,7 +391,7 @@ void MainData::collectDeviceInfo() {
 }
 
 void MainData::collectEncoders() {
-	ff::probeEncoders(deviceInfoCpu, deviceInfoCuda, deviceInfoVulkan);
+	ff::probeEncoders(*this);
 
 	deviceInfoCpu.videoEncodingOptions = util::concatLists<OutputOption>({ deviceInfoCpu.encoders, deviceInfoVulkan.encoders, deviceInfoCuda.encoders });
 	deviceInfoAvx.videoEncodingOptions = util::concatLists<OutputOption>({ deviceInfoCpu.encoders, deviceInfoVulkan.encoders, deviceInfoCuda.encoders });
@@ -415,8 +417,8 @@ void MainData::validate(const MovieReader& reader) {
 	//pixel aspect ratio
 	this->parNum = reader.parNum;
 	this->parDen = reader.parDen;
-	this->wOut = (reader.parNum == 0 || reader.parDen == 0) ? reader.w : reader.w * reader.parNum / reader.parDen;
-	if (wOut < w)
+	this->wOut = reader.wOut();
+	if (reader.wOut() < w)
 		throw AVException("pixel aspect ratio must be greater or equal 1.0");
 	
 	this->stride = util::alignValue(w, 64);
@@ -663,6 +665,27 @@ std::string MainData::str_toupper(const std::string& s) const {
 	return out;
 }
 
+void MainData::probeCuda() {
+	deviceInfoCuda.probeCuda();
+}
+
+void MainData::probeOpenCl() {
+	cl::probeRuntime(deviceInfoOpenCl);
+}
+
+std::string MainData::getCpuName() const {
+	return deviceInfoCpu.getName();
+}
+
+bool MainData::hasAvx512() const {
+	return deviceInfoAvx.hasAvx512();
+}
+
+bool MainData::hasAvx2() const {
+	return deviceInfoAvx.hasAvx2();
+}
+
+
 //-------------------------------
 //   INPUT PARAMETERS
 //-------------------------------
@@ -690,24 +713,4 @@ bool MainData::Parameters::nextArg(std::string&& param, std::string& nextParam) 
 		index += 2;
 	}
 	return ok;
-}
-
-void MainData::probeCuda() {
-	deviceInfoCuda.probeCuda();
-}
-
-void MainData::probeOpenCl() {
-	cl::probeRuntime(deviceInfoOpenCl);
-}
-
-std::string MainData::getCpuName() const {
-	return deviceInfoCpu.getName();
-}
-
-bool MainData::hasAvx512() const {
-	return deviceInfoAvx.hasAvx512();
-}
-
-bool MainData::hasAvx2() const {
-	return deviceInfoAvx.hasAvx2();
 }

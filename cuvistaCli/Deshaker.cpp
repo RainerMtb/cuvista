@@ -22,6 +22,7 @@
 #include "ErrorLogger.hpp"
 #include "MovieFrame.hpp"
 #include "ProgressDisplayConsole.hpp"
+#include "AVException.hpp"
 
 DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console, std::shared_ptr<MovieWriter> externalWriter) {
 	enableAnsiSupport();

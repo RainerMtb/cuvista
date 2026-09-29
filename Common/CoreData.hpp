@@ -61,7 +61,7 @@ struct CoreData {
 	int h = 0;                     //frame height
 	int parNum = 0;                //pixel aspect ratio numerator
 	int parDen = 1;                //pixel aspect ratio denominator
-	int wOut = 0;                    //frame with stretched to square pixels
+	int wOut = 0;                  //frame with stretched to square pixels
 	int ir = defaultParam.ir;      //integration window, radius around point to integrate
 	int iw = 7;                    //integration window, 2 * ir + 1
 	int ixCount = -1;              //number of results

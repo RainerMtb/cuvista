@@ -32,6 +32,8 @@
 #include "progress.h"
 #include "MovieWriterClasses.hpp"
 #include "ErrorLogger.hpp"
+#include "Version.hpp"
+#include "AVException.hpp"
 
 template <class... Args> QString qformat(std::format_string<Args...> fmt, Args&&... args) {
     return QString::fromStdString(std::format(fmt, std::forward<Args>(args)...));
@@ -302,7 +304,7 @@ void cuvistaGui::setInputFile(const QString& inputPath) {
             ui.inputPosition->setValue(2.0 / mReader->frameCount);
 
             //set up converter to BGR for display in UI
-            mInputBGR = ImageBgr(mReader->h, mReader->w * mReader->parNum / mReader->parDen);
+            mInputBGR = ImageBgr(mReader->h, mReader->wOut());
             mStretcher = ImageStretcher(mInputBGR, mReader->w);
             //wrap QImage around existing data
             mInputImage = QImage(mInputBGR.data(), mInputBGR.w(), mInputBGR.h(), mInputBGR.strideInBytes(), QImage::Format_BGR888);

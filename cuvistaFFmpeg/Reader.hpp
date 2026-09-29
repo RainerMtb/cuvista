@@ -83,3 +83,11 @@ public:
 
 	void open(std::span<unsigned char> movieData) override;
 };
+
+
+//reader that does nothing
+class NoOpReader : public MovieReader {
+public:
+	void open(const std::string& source) override {}
+	bool read(im::Image8& inputFrame) override { return false; }
+};

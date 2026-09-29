@@ -252,8 +252,7 @@ public:
 	VulkanFFmpegWriter(MainData& data, MovieReader& reader);
 	~VulkanFFmpegWriter() override;
 
-	static std::vector<OutputOption> probeEncoders();
-
+	void openEncoder(OutputOption outputOption, bool globalHeader, int w, int h, int crf);
 	void openEncoder(OutputOption outputOption);
 	void open(OutputOption outputOption) override;
 	void writeOutput(const FrameExecutor& executor) override;
