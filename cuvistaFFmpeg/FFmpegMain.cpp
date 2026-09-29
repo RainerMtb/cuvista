@@ -95,7 +95,10 @@ void probeEncoders(MainData& data) {
             if (codec->id == AV_CODEC_ID_FFV1) s.insert(OutputOption::FFMPEG_FFV1);
             codec = av_codec_iterate(&codecState);
         }
-        data.deviceInfoCpu.encoders = std::vector<OutputOption>(s.crbegin(), s.crend());
+        if (s.contains(OutputOption::FFMPEG_H264)) data.deviceInfoCpu.encoders.push_back(OutputOption::FFMPEG_H264);
+        if (s.contains(OutputOption::FFMPEG_HEVC)) data.deviceInfoCpu.encoders.push_back(OutputOption::FFMPEG_HEVC);
+        if (s.contains(OutputOption::FFMPEG_AV1)) data.deviceInfoCpu.encoders.push_back(OutputOption::FFMPEG_AV1);
+        if (s.contains(OutputOption::FFMPEG_FFV1)) data.deviceInfoCpu.encoders.push_back(OutputOption::FFMPEG_FFV1);
     }
 
     //check cuda encoders

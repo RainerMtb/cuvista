@@ -41,7 +41,7 @@ int main() {
 		/*13*/ "-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -copyframes -y -enc vulkan:av1",
 	};
 	
-	int idx = 0;
+	int idx = 5;
 	std::string argsLine = argsLines[idx];
 	std::cout << "------- TestCuvista -------" << std::endl;
 	std::cout << "------- params: " << argsLine << std::endl << std::endl;
