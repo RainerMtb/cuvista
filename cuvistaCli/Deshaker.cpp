@@ -47,7 +47,12 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 
 	try {
 		int retval = ff::loadFFmpegLibrary();
-		if (retval != 0) throw AVException("error loading ffmpeg");
+		if (retval != 0) {
+			throw AVException("error loading ffmpeg");
+		}
+		if (*ff::versionsCompiled() != *ff::versionsRuntime()) {
+			errorLogger().logWarning("different versions of ffmpeg are used at compiletime and runtime");
+		}
 
 		data.probeOpenCl();
 		data.probeCuda();
@@ -136,17 +141,17 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 
 	} catch (const AVException& e) {
 		printError(std::cerr, e.what());
-		errorLogger().printErrors(std::cerr);
+		errorLogger().printErrors(std::cerr, data.showVerbose);
 		return { 2, debugLogger().str() };
 
 	} catch (const std::invalid_argument& e) {
 		printError(std::cerr, std::string("invalid value: ") + e.what());
-		errorLogger().printErrors(std::cerr);
+		errorLogger().printErrors(std::cerr, data.showVerbose);
 		return { 3, debugLogger().str() };
 
 	} catch (...) {
 		printError(std::cerr, "unknown error in cuvista");
-		errorLogger().printErrors(std::cerr);
+		errorLogger().printErrors(std::cerr, data.showVerbose);
 		return { 4, debugLogger().str() };
 	}
 
@@ -172,7 +177,7 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 	// --------------------------------------------------------------
 
 	//final console messages
-	errorLogger().printErrors(std::cerr);
+	errorLogger().printErrors(std::cerr, data.showVerbose);
 
 	//collect state info
 	DeshakerResult result;

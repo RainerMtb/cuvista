@@ -128,6 +128,9 @@ misc options:
 -quiet          same as '-progress 0 -noheader -nosummary'
                 do not produce any output except error messages
 -version        display version identifier
+-verbose        may show various messages and informations,
+                may be helpful when tracing issues
+-noverbose      deactivate verbose output (default setting)
 
 advanced computation parameters:
 -levels         number of pyramid levels, between 1 and 6

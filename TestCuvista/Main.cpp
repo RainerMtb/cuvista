@@ -26,10 +26,10 @@ int main() {
 
 	std::vector<std::string> argsLines = {
 		/*0*/ "-info",
-		/*1*/ "-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -bgmode color -y",
+		/*1*/ "-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -bgmode color -y -verbose",
 		/*2*/ "-device 1 -i d:/VideoTest/02short.mp4 -o null -mode 2",
-		/*3*/ "-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -bgmode color -y -zoom -8 -device 2 -enc nvenc:h264",
-		/*4*/ "-i D:/VideoTest/x3/VID.mp4 -o f:/videoOut.mp4 -y -zoom 5 -radius 0.3",
+		/*3*/ "-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -bgmode color -y -zoom -8 -device 2 -enc nvenc:h264 -verbose",
+		/*4*/ "-i d:/VideoTest/02.mp4 -o f:/videoOut.mp4 -y -verbose -device 2",
 		/*5*/ "-device 2 -i f:/pic/input.mp4 -o f:/videoOut.mp4 -y",
 		/*6*/ "-device 3 -i D:/VideoTest/12.mp4 -o f:/videoOut.mp4 -y -frames 200",
 		/*7*/ "-device 3 -i D:/VideoTest/02short.mp4 -o f:/videoOut.mp4 -y -stack 60:60",
@@ -39,9 +39,11 @@ int main() {
 		/*11*/ "-i //READYNAS/Videos/Misc/AudioTestWettenDass.ts -o f:/videoOut.mkv -y -frames 400 -bgmode color -zoom -5",
 		/*12*/ "-i //READYNAS/Videos/Misc/AudioTestWettenDass.ts -o f:/im%02d.bmp -y -frames 10 -bgmode color -zoom -5 -device 1",
 		/*13*/ "-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -copyframes -y -enc vulkan:av1",
+		/*14*/ "-i //READYNAS/Videos/Misc/AudioTestWettenDass.ts -o f:/videoOut.mp4 -y -device 2",
+		/*15*/ "-i //READYNAS/Videos/Misc/syncTest.ts -o f:/videoOut.mp4 -y -device 2 -enc nvenc:hevc -verbose",
 	};
 	
-	int idx = 5;
+	int idx = 15;
 	std::string argsLine = argsLines[idx];
 	std::cout << "------- TestCuvista -------" << std::endl;
 	std::cout << "------- params: " << argsLine << std::endl << std::endl;
@@ -52,8 +54,8 @@ int main() {
 	std::cout << std::endl << "------- Log -------" << std::endl;
 	std::cout << result.log << std::endl;
 
-	std::cout << std::endl << "---- FFmpeg Log ---" << std::endl;
-	auto logs = errorLogger().getLogs();
-	for (auto log : logs) std::cout << "[" << log.indexTotal << "] " << log.msg;
+//	std::cout << std::endl << "---- FFmpeg Log ---" << std::endl;
+//	auto logs = errorLogger().getLogs();
+//	for (auto log : logs) std::cout << "[" << log.index << "] " << log.msg << std::endl;
 	std::cout << std::endl;
 }

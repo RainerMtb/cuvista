@@ -193,7 +193,7 @@ void PlayerWriter::writeOutput(const FrameExecutor& executor) {
     if (mAudioStreamIndex != -1 && mAudioSink != nullptr && mAudioIODevice != nullptr) {
         std::shared_ptr<OutputStreamContextBase> posc = mOutputStreams[mAudioStreamIndex];
         double videoPts = t1.value_or(0.0) / 1000.0;
-        std::list<DecodedAudioPacket> audioPakets = posc->getAudioData(videoPts + 0.25);
+        std::list<DecodedAudioPacket> audioPakets = posc->getAudioData(videoPts + 0.2);
         for (auto pkt : audioPakets) {
             qint64 written = mAudioIODevice->write(reinterpret_cast<char*>(pkt.audioData.data()), pkt.audioData.size());
         }

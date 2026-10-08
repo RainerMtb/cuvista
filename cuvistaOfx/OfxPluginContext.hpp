@@ -38,6 +38,9 @@ namespace ofx {
 
 	class PluginContext {
 
+	private:
+		std::string contextInfo(OfxImageEffectHandle effect);
+
 	public:
 		int pluginIndex = 0;
 		bool dirtyFlag = true;

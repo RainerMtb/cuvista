@@ -91,13 +91,14 @@ void probeEncoders(MainData& data) {
         while (codec) {
             if (codec->id == AV_CODEC_ID_H264) s.insert(OutputOption::FFMPEG_H264);
             if (codec->id == AV_CODEC_ID_HEVC) s.insert(OutputOption::FFMPEG_HEVC);
-            if (codec->id == AV_CODEC_ID_AV1) s.insert(OutputOption::FFMPEG_AV1);
+            if (codec->id == AV_CODEC_ID_AV1)  s.insert(OutputOption::FFMPEG_AV1);
             if (codec->id == AV_CODEC_ID_FFV1) s.insert(OutputOption::FFMPEG_FFV1);
             codec = av_codec_iterate(&codecState);
         }
+        //order available encoders
         if (s.contains(OutputOption::FFMPEG_H264)) data.deviceInfoCpu.encoders.push_back(OutputOption::FFMPEG_H264);
         if (s.contains(OutputOption::FFMPEG_HEVC)) data.deviceInfoCpu.encoders.push_back(OutputOption::FFMPEG_HEVC);
-        if (s.contains(OutputOption::FFMPEG_AV1)) data.deviceInfoCpu.encoders.push_back(OutputOption::FFMPEG_AV1);
+        if (s.contains(OutputOption::FFMPEG_AV1))  data.deviceInfoCpu.encoders.push_back(OutputOption::FFMPEG_AV1);
         if (s.contains(OutputOption::FFMPEG_FFV1)) data.deviceInfoCpu.encoders.push_back(OutputOption::FFMPEG_FFV1);
     }
 
@@ -161,7 +162,7 @@ void ffmpeg_log_error(int errnum, const char* msg, ErrorSource source) {
 }
 
 void ffmpeg_log(void* avclass, int level, const char* fmt, va_list args) {
-    if (level <= AV_LOG_INFO) {
+    if (level <= AV_LOG_VERBOSE) {
         //collect ffmpeg log
         const size_t ffmpeg_bufsiz = 256;
         char ffmpeg_logbuf[ffmpeg_bufsiz];

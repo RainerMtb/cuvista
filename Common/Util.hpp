@@ -156,19 +156,6 @@ namespace util {
     //id for current thread as string
     std::string threadId();
 
-    //concat given strings by using delimiters
-    std::string concatStrings(std::span<std::string_view> strings, std::string_view delimiter, std::string_view prefix, std::string_view suffix);
-
-    std::string concatStrings(std::span<std::string_view> strings);
-
-    std::vector<std::string> splitString(std::string_view str, std::string_view delimiter);
-
-    //millis to a string hh:mm:ss.sss
-    std::string millisToTimeString(int64_t millis);
-
-    //convert a number of bytes into more readable values, bytes / kb / Mb
-    std::string byteSizeToString(int64_t bytes);
-
     //set timer start time
     void tickStart();
 
@@ -183,6 +170,21 @@ namespace util {
 
     //decode base64 string to bytes
     std::vector<unsigned char> base64_decode(const std::string& base64string);
+
+    //split string into separate strings by delimiter
+    std::vector<std::string> splitString(std::string_view str, std::string_view delimiter);
+
+    //millis to a string hh:mm:ss.sss
+    std::string millisToTimeString(int64_t millis);
+
+    //convert a number of bytes into more readable values, bytes / kb / Mb
+    std::string byteSizeToString(int64_t bytes);
+
+    //concat given strings by using delimiters
+    std::string concatStrings(std::span<std::string_view> strings, std::string_view delimiter, std::string_view prefix, std::string_view suffix);
+
+    //concat given strings by using delimiters
+    std::string concatStrings(std::span<std::string_view> strings);
 
     //print content of collection to string
     template <class T> std::string collectionToString(std::vector<T> items, size_t maxItems, std::string delim = ", ") {

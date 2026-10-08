@@ -38,7 +38,7 @@ namespace ofx {
 		virtual bool checkNewWindow() = 0;
 
 		//must be called on the application thread, show info and tests
-		virtual void openInfo(const std::string& infoString, const std::string& hostName, const std::string& hostVersion) = 0;
+		virtual void openInfo(const std::string& infoString) = 0;
 
 		//send signal to append a text line to the info box
 		virtual void updateInfo(const std::string& infoString) = 0;

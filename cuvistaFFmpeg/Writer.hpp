@@ -93,7 +93,7 @@ protected:
 	void openFormat(AVCodecID codecId, AVFormatContext* ctx, int queueSize);
 	AVStream* createNewStream(AVFormatContext* fmt_ctx, AVStream* inStream);
 
-	void writeSecondaryPackets(bool terminate);
+	void writeSecondaryPackets(bool terminate, int64_t videoStartTime, int64_t videoTimeBaseNum, int64_t videoTimeBaseDen);
 	int writePacket(AVPacket* pkt);
 	void writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsIdx, bool terminate);
 	void transcodeAudio(AVPacket* pkt, OutputStreamContext& osc, bool terminate);

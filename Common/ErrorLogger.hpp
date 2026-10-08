@@ -51,6 +51,7 @@ class ErrorLogger {
 	std::mutex mMutex;
 	std::list<ErrorEntry> errorList;
 	std::list<FFmpegLog> ffmpegLog;
+	std::list<std::string> warnings;
 
 public:
 	bool hasNoError();
@@ -60,6 +61,10 @@ public:
 	void logError(const std::string& msg, ErrorSource source = ErrorSource::OTHER);
 
 	void logError(const char* title, const char* msg, ErrorSource source = ErrorSource::OTHER);
+
+	void logFFmpeg(int logLevel, const std::string& msg);
+
+	void logWarning(const std::string& msg);
 
 	template <class... Args> void format(ErrorSource source, std::format_string<Args...> fmt, Args&&... args) {
 		logError(std::format(fmt, std::forward<Args>(args)...), source);
@@ -71,9 +76,7 @@ public:
 
 	std::string getErrorMessage();
 
-	void logFFmpeg(int logLevel, std::string msg);
-
-	void printErrors(std::ostream& os);
+	void printErrors(std::ostream& os, bool showVerbose);
 
 	void clear();
 
@@ -85,3 +88,5 @@ inline std::shared_ptr<ErrorLogger> errorLoggerInstance = std::make_shared<Error
 ErrorLogger& errorLogger();
 
 std::ostream& printError(std::ostream& os, const std::string& msg);
+
+std::ostream& printWarning(std::ostream& os, const std::string& msg);

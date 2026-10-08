@@ -166,7 +166,7 @@ void OfxGuiQt::updateProgress(double progress, const Image8& image) {
 }
 
 //must be called on the application thread
-void OfxGuiQt::openInfo(const std::string& infoString, const std::string& hostName, const std::string& hostVersion) {
+void OfxGuiQt::openInfo(const std::string& infoString) {
 	int boxHeight = 250;
 	int boxWidth = 450;
 
@@ -175,12 +175,11 @@ void OfxGuiQt::openInfo(const std::string& infoString, const std::string& hostNa
 	std::string strEmail = "cuvista@a1.net";
 	std::string strGitHub = "https://github.com/RainerMtb/cuvista";
 	QString headerText = qformat(
-		"CUVISTA - Cuda Video Stabilizer, Version {}<br>"
-		"Cuvista OpenFX Plugin, Host: {}, Api Version: {}<br>"
+		"CUVISTA - Cuda Video Stabilizer - OpenFX Plugin, Version {}<br>"
 		"Copyright (c) 2026 Rainer Bitschi <a href='mailto:{}'>{}</a> <a href='{}'>{}</a><br>"
 		"License GNU GPLv3+: GNU GPL version 3 or later<br>"
 		"Gui compiled with Qt version {}, running on version {}",
-		CUVISTA_VERSION, hostName, hostVersion, strEmail, strEmail, strGitHub, strGitHub, QT_VERSION_STR, qVersion());
+		CUVISTA_VERSION, strEmail, strEmail, strGitHub, strGitHub, QT_VERSION_STR, qVersion());
 
 	QLabel* header = new QLabel(window);
 	header->setText(headerText);

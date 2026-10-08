@@ -124,6 +124,7 @@ public:
 	bool runTransformDbScan = true;
 	bool useAvx512 = true;
 	bool useAvx2 = true;
+	bool showVerbose = false;
 
 	std::string fileIn;					//input file path
 	std::string fileOut;				//output file path

@@ -130,9 +130,6 @@
     <ClInclude Include="MovieReaderClasses.hpp">
       <Filter>Reader</Filter>
     </ClInclude>
-    <ClInclude Include="DeshakerHelpText.hpp">
-      <Filter>Util</Filter>
-    </ClInclude>
     <ClInclude Include="AVException.hpp">
       <Filter>Util</Filter>
     </ClInclude>
@@ -234,6 +231,9 @@
     </ClInclude>
     <ClInclude Include="MovieWriter.hpp">
       <Filter>FFmpeg</Filter>
+    </ClInclude>
+    <ClInclude Include="DeshakerHelpText.hpp">
+      <Filter>Main</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

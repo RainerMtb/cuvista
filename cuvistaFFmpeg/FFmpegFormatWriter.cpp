@@ -61,7 +61,7 @@ void FFmpegFormatWriter::openFormat(AVCodecID codecId, AVFormatContext* ctx, int
             osc->handling = StreamHandling::STREAM_STABILIZE;
 
         } else {
-            int codecSupported = avformat_query_codec(fmt_ctx->oformat, sc->inputStream->codecpar->codec_id, FF_COMPLIANCE_NORMAL);
+            int codecSupported = avformat_query_codec(fmt_ctx->oformat, sc->inputStream->codecpar->codec_id, FF_COMPLIANCE_STRICT);
             //codecSupported = false; //force transcode for debugging <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
             if (codecSupported == 1) {
                 osc->handling = StreamHandling::STREAM_COPY;
@@ -348,7 +348,7 @@ void FFmpegFormatWriter::transcodeAudio(AVPacket* pkt, OutputStreamContext& osc,
 
 //process secondary streams
 //write packets from other streams that were read before this video frame
-void FFmpegFormatWriter::writeSecondaryPackets(bool terminate) {
+void FFmpegFormatWriter::writeSecondaryPackets(bool terminate, int64_t videoStartTime, int64_t videoTimeBaseNum, int64_t videoTimeBaseDen) {
     for (std::shared_ptr<OutputStreamContext> posc : outputStreams) {
         std::unique_lock<std::mutex> lock(posc->mMutexSidePackets);
         for (auto it = posc->sidePackets.begin(); it != posc->sidePackets.end(); ) {
@@ -363,7 +363,8 @@ void FFmpegFormatWriter::writeSecondaryPackets(bool terminate) {
                     //skip rogue packets that do not fit the duration interval
                     if (spkt->pts >= posc->ptsWritten + spkt->duration) {
                         posc->ptsWritten = spkt->pts;
-                        int64_t ts = spkt->pts - posc->inputStream->start_time;
+                        //int64_t ts = spkt->pts - posc->inputStream->start_time;
+                        int64_t ts = spkt->pts - videoStartTime * videoTimeBaseDen * timeBaseInput.num / videoTimeBaseNum / timeBaseInput.den;
                         spkt->pts = av_rescale_delta(timeBaseInput, ts, timeBaseInput, (int) spkt->duration, &posc->lastPts, timeBaseOutput);
                         spkt->dts = spkt->pts;
                         spkt->duration = 0;
@@ -394,7 +395,7 @@ int FFmpegFormatWriter::writePacket(AVPacket* pkt) {
     int idx = pkt->stream_index;
     auto& osc = outputStreams[idx];
 
-    //std::printf("stream=%d pts=%zd dts=%zd duration=%zd\n", pkt->stream_index, pkt->pts, pkt->dts, pkt->duration);
+    //if (idx == 0) std::printf("stream=%d pts=%zd dts=%zd duration=%zd\n", pkt->stream_index, pkt->pts, pkt->dts, pkt->duration);
     //std::cout << std::format("stream {} pts {:.4f} sec", pkt->stream_index, 1.0 * pkt->pts * osc->outputStream->time_base.num / osc->outputStream->time_base.den) << std::endl;
     int result = av_interleaved_write_frame(fmt_ctx, pkt); //write_frame also does unref packet
     if (result == 0) {
@@ -430,7 +431,7 @@ void FFmpegFormatWriter::writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsI
         auto vpcIter = std::find_if(mReader.mVideoPacketList.cbegin(), mReader.mVideoPacketList.cend(), compareFunc);
         //store
         if (vpcIter == mReader.mVideoPacketList.cend()) {
-            errorLogger().logError("error finding video packet #" + std::to_string(ptsIdx), ErrorSource::WRITER);
+            errorLogger().logError("could not find video packet #" + std::to_string(ptsIdx), ErrorSource::WRITER);
             return;
         }
         vpc = *vpcIter;
@@ -447,10 +448,13 @@ void FFmpegFormatWriter::writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsI
     pkt->duration = vpc.duration;
 
     //change timing values for invalid frames
-    if (pkt->dts < dtsWritten) {
-        pkt->dts = dtsWritten + 1;
+    if (pkt->dts <= dtsWritten) {
+        int64_t dtsNew = dtsWritten + 1;
+        errorLogger().logWarning(std::format("output frame {} change dts from {} to {}", frameIndex.load(), pkt->dts, dtsNew));
+        pkt->dts = dtsNew;
     }
     if (pkt->pts < pkt->dts) {
+        errorLogger().logWarning(std::format("output frame {} set pts from {} to {}", frameIndex.load(), pkt->pts, pkt->dts));
         pkt->pts = pkt->dts;
     }
     dtsWritten = pkt->dts;
@@ -459,8 +463,8 @@ void FFmpegFormatWriter::writePacket(AVPacket* pkt, int64_t ptsIdx, int64_t dtsI
     //rescale packet from input timebase to output timebase
     av_packet_rescale_ts(pkt, rBase, videoStream->time_base);
     //std::printf("stream=%d ptsIdx=%zd dtsIdx=%zd pts=%zd dts=%zd duration=%zd\n", pkt->stream_index, ptsIdx, dtsIdx, pkt->pts, pkt->dts, pkt->duration);
-
-    writeSecondaryPackets(terminate);
+    
+    writeSecondaryPackets(terminate, mReader.videoStartTime, mReader.timeBaseNum, mReader.timeBaseDen);
     //static std::ofstream testFile("f:/test.h265", std::ios::binary);
     //testFile.write(reinterpret_cast<char*>(videoPacket->data), videoPacket->size);
 

@@ -193,6 +193,19 @@ void FFmpegFormatReader::openInput(AVFormatContext* fmt, const std::string& sour
     parNum = av_codec_ctx->sample_aspect_ratio.num;
     parDen = av_codec_ctx->sample_aspect_ratio.den;
     sourceName = source;
+    switch (av_codec_ctx->field_order) {
+    case AV_FIELD_PROGRESSIVE:
+        fieldOrder = FieldOrder::PROGRESSIVE;
+        break;
+    case AV_FIELD_BT:
+    case AV_FIELD_TT:
+        fieldOrder = FieldOrder::TOP;
+        break;
+    case AV_FIELD_BB:
+    case AV_FIELD_TB:
+        fieldOrder = FieldOrder::BOTTOM;
+        break;
+    }
 
     //find the best number for frame count
     if (av_stream->nb_frames > 0) {
@@ -392,6 +405,9 @@ bool FFmpegReader::read(Image8& inputFrame) {
 
         //store parameters for writer
         int64_t timestamp = av_frame->best_effort_timestamp - av_stream->start_time;
+        if (av_frame->pts == AV_NOPTS_VALUE) {
+            av_frame->pts = av_frame->best_effort_timestamp;
+        }
         std::unique_lock<std::mutex> lock(mVideoPacketMutex);
         mVideoPacketList.emplace_back(frameIndex, av_frame->pts, av_frame->pkt_dts, av_frame->duration, timestamp);
         //std::printf("frameIndex=%zd pts=%zd dts=%zd duration=%zd timestamp=%zd\n", frameIndex, av_frame->pts, av_frame->pkt_dts, av_frame->duration, av_frame->best_effort_timestamp);
@@ -401,6 +417,7 @@ bool FFmpegReader::read(Image8& inputFrame) {
         auto it = mVideoPacketList.end();
         it--;
         while (it != mVideoPacketList.begin() && it->pts < std::prev(it)->pts) {
+            errorLogger().logWarning(std::format("input frame {} swapping pts {} and {}", frameIndex, it->pts, std::prev(it)->pts));
             std::swap(it->pts, std::prev(it)->pts);
             it--;
         }

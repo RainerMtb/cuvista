@@ -17,7 +17,7 @@
  */
 
 #include "Stats.hpp"
-#include "util.hpp"
+#include "Util.hpp"
 
 double ReaderStats::fps() const {
     return 1.0 * fpsNum / fpsDen;
@@ -29,4 +29,21 @@ double ReaderStats::par() const {
 
 int ReaderStats::wOut() const {
     return (parNum == 0 || parDen == 0) ? w : util::alignValue(w * parNum / parDen, 2);
+}
+
+std::string ReaderStats::fieldOrderString() const {
+    switch (fieldOrder) {
+    case FieldOrder::PROGRESSIVE: 
+        return "progressive"; 
+        break;
+    case FieldOrder::TOP: 
+        return "top"; 
+        break;
+    case FieldOrder::BOTTOM: 
+        return "bottom"; 
+        break;
+    default: 
+        return "unknown";
+        break;
+    }
 }

@@ -19,7 +19,14 @@
 #pragma once
 
 #include <atomic>
-#include <string_view>
+#include <string>
+
+enum class FieldOrder {
+	PROGRESSIVE,
+	TOP,
+	BOTTOM,
+	UNKNOWN,
+};
 
 class ReaderStats {
 public:
@@ -27,7 +34,7 @@ public:
 	int fpsNum = -1, fpsDen = -1;
 	int timeBaseNum = -1, timeBaseDen = -1;
 	int parNum = 0, parDen = 1;
-	std::string_view sourceName;
+	std::string sourceName;
 
 	int64_t frameIndex = -1;
 	int64_t frameCount = -1;
@@ -35,10 +42,12 @@ public:
 	int videoStreamIndex = -1;
 	bool endOfInput = false;
 	bool startOfInput = true;
+	FieldOrder fieldOrder = FieldOrder::UNKNOWN;
 
 	double fps() const;
 	double par() const;
 	int wOut() const;
+	std::string fieldOrderString() const;
 };
 
 

@@ -24,6 +24,11 @@ std::ostream& printError(std::ostream& os, const std::string& msg) {
 	return os << "\x1B[1;31m" << msg << "\x1B[0m" << std::endl;
 }
 
+std::ostream& printWarning(std::ostream& os, const std::string& msg) {
+	//print in yellow ansi formatting
+	return os << "\x1B[1;33m" << msg << "\x1B[0m" << std::endl;
+}
+
 ErrorLogger& errorLogger() {
 	return *errorLoggerInstance;
 }
@@ -62,19 +67,34 @@ std::string ErrorLogger::getErrorMessage() {
 	return errorList.empty() ? "no error" : errorList.front().msg;
 }
 
-void ErrorLogger::logFFmpeg(int logLevel, std::string msg) {
+void ErrorLogger::logFFmpeg(int logLevel, const std::string& msg) {
 	ffmpegLog.emplace_back(std::chrono::system_clock::now(), FFmpegLog::indexTotal, logLevel, msg);
 	FFmpegLog::indexTotal++;
 	while (ffmpegLog.size() > 5000) ffmpegLog.pop_front();
 }
 
-void ErrorLogger::printErrors(std::ostream& os) {
+void ErrorLogger::logWarning(const std::string& msg) {
+	std::lock_guard<std::mutex> lock(mMutex);
+	warnings.push_back(msg);
+}
+
+void ErrorLogger::printErrors(std::ostream& os, bool showVerbose) {
 	//list of recorded errors
 	std::vector<ErrorEntry> errorList = errorLogger().getErrors();
 	if (errorList.size() > 0) {
 		printError(os, "ERROR STACK:");
 		for (int i = 0; i < errorList.size(); i++) {
 			printError(os, std::format("[{}] {}", i, errorList[i].msg));
+		}
+	}
+
+	//list of other warnings
+	if (showVerbose && warnings.size() > 0) {
+		printWarning(os, "\n");
+		printWarning(os, "WARNINGS:");
+		int i = 0;
+		for (const std::string& msg : warnings) {
+			printWarning(os, std::format("[{}] {}", i++, msg));
 		}
 	}
 
@@ -89,17 +109,19 @@ void ErrorLogger::printErrors(std::ostream& os) {
 			ffmpegLogs.push_back(*iter);
 		}
 	}
-	if (ffmpegErrors.size() > 0) {
+	if (showVerbose && ffmpegErrors.size() > 0) {
+		printError(os, "\n");
 		printError(os, "FFMPEG ERRORS:");
 		for (int i = 0; i < ffmpegErrors.size(); i++) {
 			printError(os, std::format("[{}] {}", i, ffmpegErrors[i].msg));
 		}
 	}
 
-	if ((errorList.size() > 0 || ffmpegErrors.size() > 0) && ffmpegLogs.size() > 0) {
-		printError(os, "LOGS:");
+	if (showVerbose && ffmpegLogs.size() > 0) {
+		printWarning(os, "\n");
+		printWarning(os, "FFMPEG LOGS:");
 		for (int i = 0; i < ffmpegLogs.size(); i++) {
-			printError(os, std::format("[{}] {}", i, ffmpegLogs[i].msg));
+			printWarning(os, std::format("[{}] {}", i, ffmpegLogs[i].msg));
 		}
 	}
 }

@@ -323,6 +323,12 @@ void MainData::probeInput(std::vector<std::string> argsInput) {
 		} else if (args.nextArg("log", next)) {
 			util::DebugLogger::open(next);
 
+		} else if (args.nextArg("verbose")) {
+			showVerbose = true;
+
+		} else if (args.nextArg("noverbose")) {
+			showVerbose = false;
+
 		} else if (args.nextArg("noavx512")) {
 			useAvx512 = false;
 
@@ -397,7 +403,7 @@ void MainData::collectEncoders() {
 	deviceInfoAvx.videoEncodingOptions = util::concatLists<OutputOption>({ deviceInfoCpu.encoders, deviceInfoVulkan.encoders, deviceInfoCuda.encoders });
 
 	for (OpenClDevice& dev : deviceInfoOpenCl.devices) {
-		dev.videoEncodingOptions = util::concatLists<OutputOption>({ deviceInfoCpu.encoders, deviceInfoVulkan.encoders, deviceInfoCuda.encoders });
+		dev.videoEncodingOptions = util::concatLists<OutputOption>({ deviceInfoVulkan.encoders, deviceInfoCuda.encoders, deviceInfoCpu.encoders });
 	}
 
 	for (CudaDevice& dev : deviceInfoCuda.devices) {
@@ -518,11 +524,6 @@ void MainData::validate(const MovieReader& reader) {
 	if (zoomMin < defaultParam.zoomMinRange || zoomMin > defaultParam.zoomMaxRange) throw AVException("invalid zoom values");
 	if (zoomMax < defaultParam.zoomMinRange || zoomMax > defaultParam.zoomMaxRange) throw AVException("invalid zoom values");
 	if (cudaThreads > 32) throw AVException("invalid cuda threads parameter: " + std::to_string(cudaThreads));
-
-	//check ffmpeg versions
-	//if (ffmpeg_check_versions() == false) {
-	//	throw AVException("different version of ffmpeg was used at buildtime");
-	//}
 }
 
 //show info about input and output
@@ -557,6 +558,7 @@ void MainData::showIntro(const std::string& deviceName, const MovieReader& reade
 
 	//video info
 	*console << "VIDEO w=" << w << ", h=" << h
+		<< ", fields=" << reader.fieldOrderString()
 		<< ", frames=" << (reader.frameCount < 1 ? "unknown" : std::to_string(reader.frameCount))
 		<< ", fps=" << std::format("{:.3f}", reader.fps()) << " (" << reader.fpsNum << ":" << reader.fpsDen << ")"
 		<< ", par=" << std::format("{:.3f}", reader.par()) << " (" << reader.parNum << ":" << reader.parDen << ")"
@@ -667,10 +669,16 @@ std::string MainData::str_toupper(const std::string& s) const {
 
 void MainData::probeCuda() {
 	deviceInfoCuda.probeCuda();
+	if (deviceInfoCuda.nvidiaDriverWarning.size() > 0) {
+		errorLogger().logWarning(deviceInfoCuda.nvidiaDriverWarning);
+	}
 }
 
 void MainData::probeOpenCl() {
 	cl::probeRuntime(deviceInfoOpenCl);
+	if (deviceInfoOpenCl.driverWarning.size() > 0) {
+		errorLogger().logWarning(deviceInfoOpenCl.driverWarning);
+	}
 }
 
 std::string MainData::getCpuName() const {

@@ -99,7 +99,7 @@ namespace ofx {
 		bool checkNewWindow() override;
 		void shutdown() override;
 
-		void openInfo(const std::string& infoString, const std::string& hostName, const std::string& hostVersion) override;
+		void openInfo(const std::string& infoString) override;
 		void updateInfo(const std::string& infoString) override;
 
 		void openProgress() override;

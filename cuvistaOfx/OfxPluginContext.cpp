@@ -156,6 +156,24 @@ void PluginContext::stabilize(OfxImageEffectHandle effect, OfxPropertySetHandle 
 }
 
 
+std::string PluginContext::contextInfo(OfxImageEffectHandle effect) {
+	double frameRange[2];
+	double timelineStart = 0.0;
+	double timelineEnd = 0.0;
+	OfxStatus status;
+
+	OfxPropertySetHandle clipProperties;
+	status = main.imageEffectSuite->clipGetPropertySet(srcClip, &clipProperties);
+	status = main.propertySuite->propGetDoubleN(clipProperties, kOfxImageEffectPropFrameRange, 2, frameRange);
+	double frameRate = getDouble(clipProperties, kOfxImageEffectPropFrameRate);
+	status = main.timelineSuite->getTimeBounds(effect, &timelineStart, &timelineEnd);
+
+	return std::format("Plugin Host: {}, Api Version {}\n\nCurrent Clip:\nFrame Size: {} x {}, Frames: {}, Frame Rate: {:.3f}\nCurrent Timeline from {} to {}\n\n",
+		main.hostName, main.hostApiVersion, w, h, frameRange[1] - frameRange[0], frameRate, timelineStart, timelineEnd
+	);
+}
+
+
 void PluginContext::showInfo(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs) {
 	SptrGui gui = main.guiContext.gui;
 	if (gui->checkNewWindow()) {
@@ -163,9 +181,10 @@ void PluginContext::showInfo(OfxImageEffectHandle effect, OfxPropertySetHandle i
 
 		std::stringstream ssInfo;
 		main.mData.showDeviceInfo(ssInfo);
+		std::string strInfo = contextInfo(effect) + ssInfo.str();
 
 		gui->init();
-		gui->openInfo(ssInfo.str(), main.hostName, main.hostApiVersion);
+		gui->openInfo(strInfo);
 		gui->shutdown();
 		debugLogger().log("info done");
 	}
