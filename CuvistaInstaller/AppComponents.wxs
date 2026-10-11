@@ -92,14 +92,8 @@
 				<File Source="$(DeployDir)\generic\qtuiotouchplugin.dll" />
 			</Component>
 			
-			<Component Subdirectory="iconengines">
-				<File Source="$(DeployDir)\iconengines\qsvgicon.dll" />
-			</Component>
 			<Component Subdirectory="imageformats">
 				<File Source="$(DeployDir)\imageformats\qgif.dll" />
-			</Component>
-			<Component Subdirectory="imageformats">
-				<File Source="$(DeployDir)\imageformats\qicns.dll" />
 			</Component>
 			<Component Subdirectory="imageformats">
 				<File Source="$(DeployDir)\imageformats\qico.dll" />
@@ -109,18 +103,6 @@
 			</Component>
 			<Component Subdirectory="imageformats">
 				<File Source="$(DeployDir)\imageformats\qsvg.dll" />
-			</Component>
-			<Component Subdirectory="imageformats">
-				<File Source="$(DeployDir)\imageformats\qtga.dll" />
-			</Component>
-			<Component Subdirectory="imageformats">
-				<File Source="$(DeployDir)\imageformats\qtiff.dll" />
-			</Component>
-			<Component Subdirectory="imageformats">
-				<File Source="$(DeployDir)\imageformats\qwbmp.dll" />
-			</Component>
-			<Component Subdirectory="imageformats">
-				<File Source="$(DeployDir)\imageformats\qwebp.dll" />
 			</Component>
 			
 			<Component Subdirectory="multimedia">

@@ -40,14 +40,13 @@ void SimpleYuvWriter::write(ImageVuyx& image) {
 // Writer Collection
 //-----------------------------------------------------------------------------------
 
-MovieWriterCollection::MovieWriterCollection(MainData& data, MovieReader& reader, std::vector<std::shared_ptr<MovieWriter>> writers) :
-	NullWriter(data, reader),
-	writers { writers },
-	hasFrames(writers.size())
-{
-	if (writers.empty()) {
-		throw AVException("no output was specified");
-	}
+MovieWriterCollection::MovieWriterCollection(MainData& data, MovieReader& reader) :
+	NullWriter(data, reader)
+{}
+
+void MovieWriterCollection::setWriters(std::vector<std::shared_ptr<MovieWriter>> writers) {
+	this->writers = writers;
+	hasFrames.resize(writers.size());
 }
 
 void MovieWriterCollection::open(OutputOption outputOption) {
@@ -229,7 +228,7 @@ void BmpImageWriter::close() {
 
 RawNv12Writer::RawNv12Writer(MainData& data, MovieReader& reader) :
 	NullWriter(data, reader),
-	nv12(data.h, data.w, data.stride)
+	nv12(data.h, data.w, data.w)
 {}
 
 void RawNv12Writer::open(OutputOption outputOption) {
@@ -238,11 +237,7 @@ void RawNv12Writer::open(OutputOption outputOption) {
 
 void RawNv12Writer::writeOutput(const FrameExecutor& executor) {
 	executor.getOutput(frameIndex, nv12, 0, nullptr);
-
-	for (int r = 0; r < nv12.rows(); r++) {
-		uchar* ptr = nv12.row(r);
-		file.write(reinterpret_cast<const char*>(ptr), nv12.w());
-	}
+	file.write(reinterpret_cast<const char*>(nv12.data()), nv12.sizeInBytes());
 
 	this->outputBytesWritten += nv12.rows() * nv12.cols();
 	this->encodedBytesTotal.store(outputBytesWritten);
@@ -256,7 +251,7 @@ void RawNv12Writer::writeOutput(const FrameExecutor& executor) {
 
 RawYuvWriter::RawYuvWriter(MainData& data, MovieReader& reader) :
 	NullWriter(data, reader),
-	yuv(data.h, data.w, data.stride)
+	yuv(data.h, data.w, data.w)
 {}
 
 void RawYuvWriter::open(OutputOption outputOption) {
@@ -265,11 +260,7 @@ void RawYuvWriter::open(OutputOption outputOption) {
 
 void RawYuvWriter::writeOutput(const FrameExecutor& executor) {
 	executor.getOutput(frameIndex, yuv);
-
-	for (int r = 0; r < yuv.rows(); r++) {
-		uchar* ptr = yuv.row(r);
-		file.write(reinterpret_cast<const char*>(ptr), yuv.cols());
-	}
+	file.write(reinterpret_cast<const char*>(yuv.data()), yuv.sizeInBytes());
 
 	this->outputBytesWritten += yuv.rows() * yuv.cols();
 	this->encodedBytesTotal.store(outputBytesWritten);

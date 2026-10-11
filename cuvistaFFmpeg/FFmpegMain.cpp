@@ -21,6 +21,7 @@
 #include "FFmpegMain.hpp"
 #include "Reader.hpp"
 #include "Writer.hpp"
+#include "AVException.hpp"
 #include "CudaInterface.hpp"
 
 static constexpr FFmpegVersions ffmpeg_build_versions = {

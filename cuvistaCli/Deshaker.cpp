@@ -39,145 +39,151 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 	data.console = console;
 	DeviceInfoNull deviceNull;
 
-	std::unique_ptr<MovieReader> reader;
-	std::unique_ptr<MovieWriterCollection> writer;
+	std::unique_ptr<MovieReader> reader = std::make_unique<NullReader>();
+	std::unique_ptr<MovieWriterCollection> writer = std::make_unique<MovieWriterCollection>(data, *reader);
 	std::shared_ptr<ProgressDisplay> progress;
 	std::shared_ptr<FrameExecutor> executor;
 	std::shared_ptr<MovieFrame> frame;
 
-	try {
-		int retval = ff::loadFFmpegLibrary();
-		if (retval != 0) {
-			throw AVException("error loading ffmpeg");
-		}
-		if (*ff::versionsCompiled() != *ff::versionsRuntime()) {
-			errorLogger().logWarning("different versions of ffmpeg are used at compiletime and runtime");
-		}
+	 try {
+	 	int retval = ff::loadFFmpegLibrary();
+	 	if (retval != 0) {
+	 		throw AVException("error loading ffmpeg");
+	 	}
+	 	const FFmpegVersions* v1 = ff::versionsCompiled();
+	 	const FFmpegVersions* v2 = ff::versionsRuntime();
+	 	if (*v1 != *v2) {
+	 		errorLogger().logWarning("different versions of ffmpeg are used at compiletime and runtime");
+	 	}
 
-		data.probeOpenCl();
-		data.probeCuda();
-		data.collectDeviceInfo();
-		data.collectEncoders();
-		data.probeInput(argsInput);
+	 	data.probeOpenCl();
+	 	data.probeCuda();
+	 	data.collectDeviceInfo();
+	 	data.collectEncoders();
+	 	data.probeInput(argsInput);
 
-		//create MovieReader
-		reader = std::unique_ptr<MovieReader>(ff::createReader(ReaderType::FFMPEG));
-		reader->open(data.fileIn);
-		data.validate(*reader);
+	 	//create MovieReader
+	 	reader = std::unique_ptr<MovieReader>(ff::createReader(ReaderType::FFMPEG));
+	 	reader->open(data.fileIn);
+	 	data.validate(*reader);
 
-		//----------- create appropriate MovieWriter
-		OutputOption option = data.outputOption;
-		std::vector<std::shared_ptr<MovieWriter>> writerList;
-		if (option == OutputOption::VIDEO_STACK)
-			writerList.emplace_back(ff::createWriter(option, data, *reader));
-		else if (option == OutputOption::VIDEO_FLOW)
-			writerList.emplace_back(ff::createWriter(option, data, *reader));
-		else if (option == OutputOption::PIPE_RAW)
-			writerList.push_back(std::make_shared<RawPipeWriter>(data, *reader));
-		else if (option == OutputOption::PIPE_ASF)
-			writerList.emplace_back(ff::createWriter(option, data, *reader));
-		else if (option == OutputOption::IMAGE_BMP)
-			writerList.push_back(std::make_shared<BmpImageWriter>(data, *reader));
-		else if (option == OutputOption::IMAGE_JPG)
-			writerList.emplace_back(ff::createWriter(option, data, *reader));
-		else if (option == OutputOption::RAW_YUV444)
-			writerList.push_back(std::make_shared<RawYuvWriter>(data, *reader));
-		else if (option == OutputOption::RAW_NV12)
-			writerList.push_back(std::make_shared<RawNv12Writer>(data, *reader));
-		else if (option == OutputOption::OPTION_NONE)
-			writerList.push_back(std::make_shared<NullWriter>(data, *reader));
-		else if (option.group == OutputGroup::VIDEO_FFMPEG)
-			writerList.emplace_back(ff::createWriter(option, data, *reader));
-		else if (option.group == OutputGroup::VIDEO_NVENC)
-			writerList.emplace_back(ff::createWriter(option, data, *reader));
-		else if (option.group == OutputGroup::VIDEO_VULKAN)
-			writerList.emplace_back(ff::createWriter(option, data, *reader));
+	 	//----------- create appropriate MovieWriter
+	 	OutputOption option = data.outputOption;
+	 	std::vector<std::shared_ptr<MovieWriter>> writerList;
+	 	if (option == OutputOption::VIDEO_STACK)
+	 		writerList.emplace_back(ff::createWriter(option, data, *reader));
+	 	else if (option == OutputOption::VIDEO_FLOW)
+	 		writerList.emplace_back(ff::createWriter(option, data, *reader));
+	 	else if (option == OutputOption::PIPE_RAW)
+	 		writerList.push_back(std::make_shared<RawPipeWriter>(data, *reader));
+	 	else if (option == OutputOption::PIPE_ASF)
+	 		writerList.emplace_back(ff::createWriter(option, data, *reader));
+	 	else if (option == OutputOption::IMAGE_BMP)
+	 		writerList.push_back(std::make_shared<BmpImageWriter>(data, *reader));
+	 	else if (option == OutputOption::IMAGE_JPG)
+	 		writerList.emplace_back(ff::createWriter(option, data, *reader));
+	 	else if (option == OutputOption::RAW_YUV444)
+	 		writerList.push_back(std::make_shared<RawYuvWriter>(data, *reader));
+	 	else if (option == OutputOption::RAW_NV12)
+	 		writerList.push_back(std::make_shared<RawNv12Writer>(data, *reader));
+	 	else if (option == OutputOption::OPTION_NONE)
+	 		writerList.push_back(std::make_shared<NullWriter>(data, *reader));
+	 	else if (option.group == OutputGroup::VIDEO_FFMPEG)
+	 		writerList.emplace_back(ff::createWriter(option, data, *reader));
+	 	else if (option.group == OutputGroup::VIDEO_NVENC)
+	 		writerList.emplace_back(ff::createWriter(option, data, *reader));
+	 	else if (option.group == OutputGroup::VIDEO_VULKAN)
+	 		writerList.emplace_back(ff::createWriter(option, data, *reader));
 
-		//----------- add secondary Writers
-		if (!data.trajectoryFile.empty()) {
-			writerList.push_back(std::make_shared<TransformsWriter>(data));
-		}
-		if (!data.resultsFile.empty()) {
-			writerList.push_back(std::make_unique<ResultDetailsWriter>(data));
-		}
-		if (data.outputOption == OutputOption::IMAGE_RESULTS) {
-			writerList.push_back(std::make_shared<ResultImageWriter>(data, *reader));
-		}
-		if (data.outputOption == OutputOption::VIDEO_RESULTS) {
-			writerList.push_back(std::make_shared<ResultVideoWriter>(data, *reader));
-		}
-		if (externalWriter) {
-			writerList.push_back(externalWriter);
-		}
+	 	//----------- add secondary Writers
+	 	if (!data.trajectoryFile.empty()) {
+	 		writerList.push_back(std::make_shared<TransformsWriter>(data));
+	 	}
+	 	if (!data.resultsFile.empty()) {
+	 		writerList.push_back(std::make_unique<ResultDetailsWriter>(data));
+	 	}
+	 	if (data.outputOption == OutputOption::IMAGE_RESULTS) {
+	 		writerList.push_back(std::make_shared<ResultImageWriter>(data, *reader));
+	 	}
+	 	if (data.outputOption == OutputOption::VIDEO_RESULTS) {
+	 		writerList.push_back(std::make_shared<ResultVideoWriter>(data, *reader));
+	 	}
+	 	if (externalWriter) {
+	 		writerList.push_back(externalWriter);
+	 	}
 
-		//open writer collection
-		writer = std::make_unique<MovieWriterCollection>(data, *reader, writerList);
-		writer->open(data.outputOption);
-
-		//----------- create Frame Handler for selected loop
-		if (data.mode == 0) {
-			frame = std::make_shared<MovieFrameCombined>(data, *reader, *writer);
-
-		} else {
-			frame = std::make_shared<MovieFrameConsecutive>(data, *reader, *writer);
+		if (writerList.empty()) {
+			throw AVException("no output was specified");
 		}
 
-		//----------- create Frame Executor Class
-		if (data.dummyFrame) {
-			executor = deviceNull.create(data, *frame);
+	 	//open writer collection
+	 	writer->setWriters(writerList);
+	 	writer->open(data.outputOption);
 
-		} else {
-			DeviceInfoBase* dib = data.deviceList[data.deviceSelected];
-			executor = dib->create(data, *frame);
-		}
-		executor->init();
+	 	//----------- create Frame Handler for selected loop
+	 	if (data.mode == 0) {
+	 		frame = std::make_shared<MovieFrameCombined>(data, *reader, *writer);
 
-	} catch (const SilentQuitException&) {
-		return { 10, debugLogger().str() };
+	 	} else {
+	 		frame = std::make_shared<MovieFrameConsecutive>(data, *reader, *writer);
+	 	}
 
-	} catch (const CancelException& e) {
-		printError(std::cerr, e.what());
-		return { 1, debugLogger().str() };
+	 	//----------- create Frame Executor Class
+	 	if (data.dummyFrame) {
+	 		executor = deviceNull.create(data, *frame);
 
-	} catch (const AVException& e) {
-		printError(std::cerr, e.what());
-		errorLogger().printErrors(std::cerr, data.showVerbose);
-		return { 2, debugLogger().str() };
+	 	} else {
+	 		DeviceInfoBase* dib = data.deviceList[data.deviceSelected];
+	 		executor = dib->create(data, *frame);
+	 	}
+	 	executor->init();
 
-	} catch (const std::invalid_argument& e) {
-		printError(std::cerr, std::string("invalid value: ") + e.what());
-		errorLogger().printErrors(std::cerr, data.showVerbose);
-		return { 3, debugLogger().str() };
+	 } catch (const SilentQuitException&) {
+	 	return { 10, debugLogger().str() };
 
-	} catch (...) {
-		printError(std::cerr, "unknown error in cuvista");
-		errorLogger().printErrors(std::cerr, data.showVerbose);
-		return { 4, debugLogger().str() };
-	}
+	 } catch (const CancelException& e) {
+	 	printError(std::cerr, e.what());
+	 	return { 1, debugLogger().str() };
 
-	//setup progress output
-	if (data.progressType == ProgressType::MULTILINE) progress = std::make_shared<ProgressDisplayMultiLine>(data.console);
-	else if (data.progressType == ProgressType::REWRITE_LINE) progress = std::make_shared<ProgressDisplayRewriteLine>(data.console);
-	else if (data.progressType == ProgressType::NEW_LINE) progress = std::make_shared<ProgressDisplayNewLine>(data.console);
-	else if (data.progressType == ProgressType::GRAPH) progress = std::make_shared<ProgressDisplayGraph>(data.console);
-	else progress = std::make_shared<ProgressDisplayNone>();
+	 } catch (const AVException& e) {
+	 	printError(std::cerr, e.what());
+	 	errorLogger().printErrors(std::cerr, data.showVerbose);
+	 	return { 2, debugLogger().str() };
 
-	// --------------------------------------------------------------
-	// --------------- main loop start ------------------------------
-	// --------------------------------------------------------------
-	data.timeStart();
-	UserInputConsole inputHandler(*data.console);
+	 } catch (const std::invalid_argument& e) {
+	 	printError(std::cerr, std::string("invalid value: ") + e.what());
+	 	errorLogger().printErrors(std::cerr, data.showVerbose);
+	 	return { 3, debugLogger().str() };
 
-	if (errorLogger().hasNoError()) {
-		frame->runLoop(*progress, inputHandler, executor);
-	}
+	 } catch (...) {
+	 	printError(std::cerr, "unknown error in cuvista");
+	 	errorLogger().printErrors(std::cerr, data.showVerbose);
+	 	return { 4, debugLogger().str() };
+	 }
 
-	// --------------------------------------------------------------
-	// --------------- main loop end --------------------------------
-	// --------------------------------------------------------------
+	 //setup progress output
+	 if (data.progressType == ProgressType::MULTILINE) progress = std::make_shared<ProgressDisplayMultiLine>(data.console);
+	 else if (data.progressType == ProgressType::REWRITE_LINE) progress = std::make_shared<ProgressDisplayRewriteLine>(data.console);
+	 else if (data.progressType == ProgressType::NEW_LINE) progress = std::make_shared<ProgressDisplayNewLine>(data.console);
+	 else if (data.progressType == ProgressType::GRAPH) progress = std::make_shared<ProgressDisplayGraph>(data.console);
+	 else progress = std::make_shared<ProgressDisplayNone>();
 
-	//final console messages
-	errorLogger().printErrors(std::cerr, data.showVerbose);
+	 // --------------------------------------------------------------
+	 // --------------- main loop start ------------------------------
+	 // --------------------------------------------------------------
+	 data.timeStart();
+	 UserInputConsole inputHandler(*data.console);
+
+	 if (errorLogger().hasNoError()) {
+	 	frame->runLoop(*progress, inputHandler, executor);
+	 }
+
+	 // --------------------------------------------------------------
+	 // --------------- main loop end --------------------------------
+	 // --------------------------------------------------------------
+
+	 //final console messages
+	 errorLogger().printErrors(std::cerr, data.showVerbose);
 
 	//collect state info
 	DeshakerResult result;

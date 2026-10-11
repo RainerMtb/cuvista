@@ -368,9 +368,6 @@ void cuvistaGui::seek(double frac) {
         updateInputImage();
         ui.inputPosition->setValue(frac * 100.0);
     }
-
-    //seeking may cause ffmpeg decoding error messages, ignore
-    errorLogger().clearErrors(ErrorSource::FFMPEG);
 }
 
 void cuvistaGui::updateInputImage() {

@@ -35,17 +35,17 @@ ErrorLogger& errorLogger() {
 
 bool ErrorLogger::hasNoError() {
 	std::lock_guard<std::mutex> lock(mMutex);
-	return errorList.empty();
+	return mErrorList.empty();
 }
 
 bool ErrorLogger::hasError() {
 	std::lock_guard<std::mutex> lock(mMutex);
-	return errorList.size() > 0;
+	return mErrorList.size() > 0;
 }
 
 void ErrorLogger::logError(const std::string& msg, ErrorSource source) {
 	std::lock_guard<std::mutex> lock(mMutex);
-	errorList.emplace_back(std::chrono::system_clock::now(), msg, source);
+	mErrorList.emplace_back(std::chrono::system_clock::now(), msg, source);
 }
 
 void ErrorLogger::logError(const char* title, const char* msg, ErrorSource source) {
@@ -54,28 +54,29 @@ void ErrorLogger::logError(const char* title, const char* msg, ErrorSource sourc
 
 std::vector<ErrorEntry> ErrorLogger::getErrors() {
 	std::lock_guard<std::mutex> lock(mMutex);
-	return std::vector<ErrorEntry>(errorList.cbegin(), errorList.cend());
+	return std::vector<ErrorEntry>(mErrorList.cbegin(), mErrorList.cend());
 }
 
 std::vector<FFmpegLog> ErrorLogger::getLogs() {
 	std::lock_guard<std::mutex> lock(mMutex);
-	return std::vector<FFmpegLog>(ffmpegLog.cbegin(), ffmpegLog.cend());
+	return std::vector<FFmpegLog>(mFFmpegLog.cbegin(), mFFmpegLog.cend());
 }
 
 std::string ErrorLogger::getErrorMessage() {
 	std::lock_guard<std::mutex> lock(mMutex);
-	return errorList.empty() ? "no error" : errorList.front().msg;
+	return mErrorList.empty() ? "no error" : mErrorList.front().msg;
 }
 
 void ErrorLogger::logFFmpeg(int logLevel, const std::string& msg) {
-	ffmpegLog.emplace_back(std::chrono::system_clock::now(), FFmpegLog::indexTotal, logLevel, msg);
+	std::lock_guard<std::mutex> lock(mMutex);
+	mFFmpegLog.emplace_back(std::chrono::system_clock::now(), FFmpegLog::indexTotal, logLevel, msg);
 	FFmpegLog::indexTotal++;
-	while (ffmpegLog.size() > 5000) ffmpegLog.pop_front();
+	while (mFFmpegLog.size() > 5000) mFFmpegLog.pop_front();
 }
 
 void ErrorLogger::logWarning(const std::string& msg) {
 	std::lock_guard<std::mutex> lock(mMutex);
-	warnings.push_back(msg);
+	mWarnings.push_back(msg);
 }
 
 void ErrorLogger::printErrors(std::ostream& os, bool showVerbose) {
@@ -89,11 +90,11 @@ void ErrorLogger::printErrors(std::ostream& os, bool showVerbose) {
 	}
 
 	//list of other warnings
-	if (showVerbose && warnings.size() > 0) {
+	if (showVerbose && mWarnings.size() > 0) {
 		printWarning(os, "\n");
 		printWarning(os, "WARNINGS:");
 		int i = 0;
-		for (const std::string& msg : warnings) {
+		for (const std::string& msg : mWarnings) {
 			printWarning(os, std::format("[{}] {}", i++, msg));
 		}
 	}
@@ -101,7 +102,7 @@ void ErrorLogger::printErrors(std::ostream& os, bool showVerbose) {
 	//list of recorded ffmpeg logs
 	std::vector<FFmpegLog> ffmpegErrors;
 	std::vector<FFmpegLog> ffmpegLogs;
-	for (auto iter = ffmpegLog.crbegin(); iter != ffmpegLog.crend(); iter++) {
+	for (auto iter = mFFmpegLog.crbegin(); iter != mFFmpegLog.crend(); iter++) {
 		if (iter->logLevel <= 16) {
 			ffmpegErrors.push_back(*iter);
 
@@ -128,11 +129,7 @@ void ErrorLogger::printErrors(std::ostream& os, bool showVerbose) {
 
 void ErrorLogger::clear() {
 	std::lock_guard<std::mutex> lock(mMutex);
-	errorList.clear();
-	ffmpegLog.clear();
-}
-
-void ErrorLogger::clearErrors(ErrorSource source) {
-	std::lock_guard<std::mutex> lock(mMutex);
-	std::erase_if(errorList, [&] (const ErrorEntry& entry) { return entry.source == source; });
+	mErrorList.clear();
+	mFFmpegLog.clear();
+	mWarnings.clear();
 }

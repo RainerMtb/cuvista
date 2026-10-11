@@ -480,7 +480,7 @@
           <property name="sizeHint" stdset="0">
            <size>
             <width>20</width>
-            <height>40</height>
+            <height>20</height>
            </size>
           </property>
          </spacer>
@@ -747,13 +747,6 @@
              </size>
             </property>
            </spacer>
-          </item>
-          <item>
-           <widget class="QLabel" name="label_26">
-            <property name="text">
-             <string>(process just a portion of the input)</string>
-            </property>
-           </widget>
           </item>
          </layout>
         </item>
@@ -1056,13 +1049,6 @@
             </property>
            </spacer>
           </item>
-          <item>
-           <widget class="QLabel" name="label_25">
-            <property name="text">
-             <string>(higher quality - larger size)</string>
-            </property>
-           </widget>
-          </item>
          </layout>
         </item>
         <item row="0" column="2">
@@ -1160,17 +1146,13 @@
             </property>
            </spacer>
           </item>
-          <item>
-           <widget class="QLabel" name="label_23">
-            <property name="text">
-             <string>(overwrite files without further notice)</string>
-            </property>
-           </widget>
-          </item>
          </layout>
         </item>
         <item row="5" column="1">
          <widget class="QLabel" name="label_19">
+          <property name="toolTip">
+           <string>Select between higher quality and large output file or lower quality and smaller file size</string>
+          </property>
           <property name="text">
            <string>Encoder Quality</string>
           </property>
@@ -1192,7 +1174,7 @@
         <item row="6" column="1">
          <widget class="QCheckBox" name="chkFrameLimit">
           <property name="toolTip">
-           <string>stop output when reaching given frame count</string>
+           <string>Stop producing output when reaching given frame count</string>
           </property>
           <property name="text">
            <string>Limit Output</string>
@@ -1208,7 +1190,7 @@
            </size>
           </property>
           <property name="toolTip">
-           <string>assume permission to overwrite output file</string>
+           <string>Overwrite output file without asking</string>
           </property>
           <property name="text">
            <string>Always Overwrite</string>
@@ -1246,6 +1228,28 @@
           <property name="spacing">
            <number>12</number>
           </property>
+          <item>
+           <widget class="QLabel" name="infoLevels">
+            <property name="maximumSize">
+             <size>
+              <width>16</width>
+              <height>16</height>
+             </size>
+            </property>
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:700;&quot;&gt;Number of Pyramid Levels to produce&lt;/span&gt;&lt;/p&gt;&lt;p&gt;For stabilization a pyramid of smaller and smaller images is produced. More Levels take longer to compute. &lt;/p&gt;&lt;p&gt;More Levels may improve stabilization quality if the input video is of sufficient high resolution to begin with.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="pixmap">
+             <pixmap resource="cuvistaGui.qrc">:/cuvistaGui/res/12_info_icon.png</pixmap>
+            </property>
+            <property name="scaledContents">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
           <item>
            <widget class="QSlider" name="sliderLevels">
             <property name="maximumSize">
@@ -1294,13 +1298,6 @@
             </property>
            </spacer>
           </item>
-          <item>
-           <widget class="QLabel" name="label_27">
-            <property name="text">
-             <string>(algorithm parameter)</string>
-            </property>
-           </widget>
-          </item>
          </layout>
         </item>
         <item row="6" column="1">
@@ -1309,7 +1306,35 @@
            <number>12</number>
           </property>
           <item>
+           <widget class="QLabel" name="infoDbScan">
+            <property name="maximumSize">
+             <size>
+              <width>16</width>
+              <height>16</height>
+             </size>
+            </property>
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:700;&quot;&gt;Enable DB Scan&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Perform an algorithm which works better to find very intense movements between frames. This can identify movie cuts and similar hard transitions. &lt;/p&gt;&lt;p&gt;If your input video is known to have only smooth transitions you may disable this extra work for better performance and output quality.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="pixmap">
+             <pixmap resource="cuvistaGui.qrc">:/cuvistaGui/res/12_info_icon.png</pixmap>
+            </property>
+            <property name="scaledContents">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QCheckBox" name="chkDbScan">
+            <property name="toolTip">
+             <string>xxxxx</string>
+            </property>
+            <property name="toolTipDuration">
+             <number>0</number>
+            </property>
             <property name="text">
              <string/>
             </property>
@@ -1331,13 +1356,6 @@
             </property>
            </spacer>
           </item>
-          <item>
-           <widget class="QLabel" name="label_31">
-            <property name="text">
-             <string>(algorithm and performance parameter)</string>
-            </property>
-           </widget>
-          </item>
          </layout>
         </item>
         <item row="4" column="0">
@@ -1356,7 +1374,7 @@
            </size>
           </property>
           <property name="text">
-           <string>changing parameters may affect results and performance in unpredictable ways, there may actually be no significant effect</string>
+           <string>changing parameters may affect results and performance in unpredictable ways</string>
           </property>
           <property name="wordWrap">
            <bool>true</bool>
@@ -1368,6 +1386,28 @@
           <property name="spacing">
            <number>12</number>
           </property>
+          <item>
+           <widget class="QLabel" name="infoIr">
+            <property name="maximumSize">
+             <size>
+              <width>16</width>
+              <height>16</height>
+             </size>
+            </property>
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:700;&quot;&gt;Integration Radius&lt;/span&gt;&lt;/p&gt;&lt;p&gt;The size of the image patch used to find matching pairs with, expressed as the radius. &lt;/p&gt;&lt;p&gt;Very large values take more time to compute.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="pixmap">
+             <pixmap resource="cuvistaGui.qrc">:/cuvistaGui/res/12_info_icon.png</pixmap>
+            </property>
+            <property name="scaledContents">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
           <item>
            <widget class="QSlider" name="sliderIr">
             <property name="maximumSize">
@@ -1413,13 +1453,6 @@
             </property>
            </spacer>
           </item>
-          <item>
-           <widget class="QLabel" name="label_24">
-            <property name="text">
-             <string>(algorithm parameter)</string>
-            </property>
-           </widget>
-          </item>
          </layout>
         </item>
         <item row="4" column="1">
@@ -1428,12 +1461,40 @@
            <number>12</number>
           </property>
           <item>
+           <widget class="QLabel" name="infoCpuThreads">
+            <property name="maximumSize">
+             <size>
+              <width>16</width>
+              <height>16</height>
+             </size>
+            </property>
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:700;&quot;&gt;Number of Cpu Threads for Stabilization&lt;/span&gt;&lt;/p&gt;&lt;p&gt;The number of cpu threads the stabilization process will use. &lt;/p&gt;&lt;p&gt;There is usually no point in selecting the maximum possible value as there is other work to do as well besides those core computations.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="pixmap">
+             <pixmap resource="cuvistaGui.qrc">:/cuvistaGui/res/12_info_icon.png</pixmap>
+            </property>
+            <property name="scaledContents">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QSlider" name="sliderCpuThreads">
             <property name="maximumSize">
              <size>
               <width>100</width>
               <height>16777215</height>
              </size>
+            </property>
+            <property name="toolTip">
+             <string>xxxx</string>
+            </property>
+            <property name="toolTipDuration">
+             <number>0</number>
             </property>
             <property name="minimum">
              <number>1</number>
@@ -1472,13 +1533,6 @@
             </property>
            </spacer>
           </item>
-          <item>
-           <widget class="QLabel" name="label_32">
-            <property name="text">
-             <string>(performance parameter)</string>
-            </property>
-           </widget>
-          </item>
          </layout>
         </item>
         <item row="5" column="0">
@@ -1510,7 +1564,7 @@
           <property name="sizeHint" stdset="0">
            <size>
             <width>20</width>
-            <height>40</height>
+            <height>20</height>
            </size>
           </property>
          </spacer>
@@ -1528,12 +1582,40 @@
            <number>12</number>
           </property>
           <item>
+           <widget class="QLabel" name="infoCudaThreads">
+            <property name="maximumSize">
+             <size>
+              <width>16</width>
+              <height>16</height>
+             </size>
+            </property>
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:700;&quot;&gt;Cuda Threads&lt;/span&gt;&lt;/p&gt;&lt;p&gt;A value for the number of cuda threads used to build cuda blocks to perform various tasks. Relevant when cuda is used for stabilization. &lt;/p&gt;&lt;p&gt;Maximum value for this parameter does not necessarily mean more performance overall.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="pixmap">
+             <pixmap resource="cuvistaGui.qrc">:/cuvistaGui/res/12_info_icon.png</pixmap>
+            </property>
+            <property name="scaledContents">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QSlider" name="sliderCudaThreads">
             <property name="maximumSize">
              <size>
               <width>100</width>
               <height>16777215</height>
              </size>
+            </property>
+            <property name="toolTip">
+             <string>xxx</string>
+            </property>
+            <property name="toolTipDuration">
+             <number>0</number>
             </property>
             <property name="minimum">
              <number>1</number>
@@ -1583,13 +1665,6 @@
              </size>
             </property>
            </spacer>
-          </item>
-          <item>
-           <widget class="QLabel" name="label_33">
-            <property name="text">
-             <string>(performance parameter)</string>
-            </property>
-           </widget>
           </item>
          </layout>
         </item>
@@ -1811,7 +1886,7 @@
  </resources>
  <connections/>
  <buttongroups>
-  <buttongroup name="buttonGroupOutput"/>
   <buttongroup name="buttonGroupBackground"/>
+  <buttongroup name="buttonGroupOutput"/>
  </buttongroups>
 </ui>

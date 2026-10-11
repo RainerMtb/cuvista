@@ -235,7 +235,7 @@ namespace winrt::cuvistaWinui::implementation {
 
             if (errorLogger().hasNoError()) {
                 mReader->read(mInput); //try to read again for second image
-                mInputBGRA = ImageXamlBGRA::create(imageInput(), mReader->h, mReader->w * mReader->parNum / mReader->parDen);
+                mInputBGRA = ImageXamlBGRA::create(imageInput(), mReader->h, mReader->wOut());
                 mStretcher = ImageStretcher(mInputBGRA, mReader->w);
                 mInput.convertTo(mInputBGRA);
                 mInputBGRA.stretch(mStretcher);
@@ -486,6 +486,12 @@ namespace winrt::cuvistaWinui::implementation {
         double secs = mData.timeElapsedSeconds();
         double fps = mWriter->frameIndex / secs;
         std::string fileSize = util::byteSizeToString(mWriter->encodedBytesTotal);
+
+        //always destruct writer before frame
+        mWriter.reset();
+        mExecutor.reset();
+        mFrame.reset();
+        mProgress.reset();
 
         if (result == LoopResult::LOOP_ERROR) {
             std::string str = errorLogger().getErrorMessage();
@@ -780,6 +786,26 @@ namespace winrt::cuvistaWinui::implementation {
             chkPlayer().IsEnabled(false);
             chkPlayer().IsChecked(false);
         }
+    }
+
+    void MainWindow::infoLevelsClick(const IInspectable& sender, const Input::TappedRoutedEventArgs& args) {
+        infoLevelsTip().IsOpen(true);
+    }
+
+    void MainWindow::infoIrClick(const IInspectable& sender, const Input::TappedRoutedEventArgs& args) {
+        infoIrTip().IsOpen(true);
+    }
+
+    void MainWindow::infoCpuThreadsClick(const IInspectable& sender, const Input::TappedRoutedEventArgs& args) {
+        infoCpuThreadsTip().IsOpen(true);
+    }
+
+    void MainWindow::infoCudaThreadsClick(const IInspectable& sender, const Input::TappedRoutedEventArgs& args) {
+        infoCudaThreadsTip().IsOpen(true);
+    }
+
+    void MainWindow::infoDbScanClick(const IInspectable& sender, const Input::TappedRoutedEventArgs& args) {
+        infoDbScanTip().IsOpen(true);
     }
 
 

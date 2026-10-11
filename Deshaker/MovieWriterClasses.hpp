@@ -34,7 +34,7 @@ private:
 	void updateStats();
 
 public:
-	MovieWriterCollection(MainData& data, MovieReader& reader, std::vector<std::shared_ptr<MovieWriter>> writers);
+	MovieWriterCollection(MainData& data, MovieReader& reader);
 
 	void open(OutputOption outputOption) override;
 	void start() override;
@@ -42,6 +42,8 @@ public:
 	void writeOutput(const FrameExecutor& executor) override;
 	bool flush() override;
 	void close() override;
+
+	void setWriters(std::vector<std::shared_ptr<MovieWriter>> writers);
 };
 
 

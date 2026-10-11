@@ -49,9 +49,9 @@ struct FFmpegLog {
 
 class ErrorLogger {
 	std::mutex mMutex;
-	std::list<ErrorEntry> errorList;
-	std::list<FFmpegLog> ffmpegLog;
-	std::list<std::string> warnings;
+	std::list<ErrorEntry> mErrorList;
+	std::list<FFmpegLog> mFFmpegLog;
+	std::list<std::string> mWarnings;
 
 public:
 	bool hasNoError();
@@ -79,8 +79,6 @@ public:
 	void printErrors(std::ostream& os, bool showVerbose);
 
 	void clear();
-
-	void clearErrors(ErrorSource source);
 };
 
 inline std::shared_ptr<ErrorLogger> errorLoggerInstance = std::make_shared<ErrorLogger>();

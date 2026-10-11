@@ -131,6 +131,8 @@ misc options:
 -verbose        may show various messages and informations,
                 may be helpful when tracing issues
 -noverbose      deactivate verbose output (default setting)
+-noavx2         disable Avx2 function calls - may avoid crashes
+-noavx512       disable Avx512 function calls - may avoid crashes
 
 advanced computation parameters:
 -levels         number of pyramid levels, between 1 and 6

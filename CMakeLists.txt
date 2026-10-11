@@ -48,13 +48,11 @@ endif()
 # include cuda libraries for current platform
 if (BUILD_CUDA MATCHES 1 AND CMAKE_SYSTEM_NAME MATCHES Linux)
     list(APPEND CORE_LIBS
-        nvcuvid
         nvidia-encode
     )
 endif()
 if (BUILD_CUDA MATCHES 1 AND CMAKE_SYSTEM_NAME MATCHES Windows)
     list(APPEND CORE_LIBS
-        nvcuvid
         nvencodeapi
     )
 endif()
@@ -130,16 +128,16 @@ if (CMAKE_CXX_COMPILER_ID MATCHES MSVC)
 endif()
 
 if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
-    target_compile_options(Common PRIVATE -O1 -ffp-contract=off)
-    target_compile_options(Matrix PRIVATE -O1 -ffp-contract=off)
-    target_compile_options(Avx2 PRIVATE -O1 -ffp-contract=off -mavx2 -mfma)
-    target_compile_options(Avx512 PRIVATE -O1 -ffp-contract=off -mavx512f -mavx512vl -mavx512bw -mavx512dq -mavx512vbmi2 -mavx512vbmi)
-    target_compile_options(Deshaker PRIVATE -O1 -ffp-contract=off -D BUILD_CUDA=${BUILD_CUDA} -Wno-deprecated-declarations)
-    target_compile_options(cuvistaFFmpeg PRIVATE -O1 -ffp-contract=off -D BUILD_CUDA=${BUILD_CUDA})
-    target_compile_options(cuvista PRIVATE -O1 -ffp-contract=off)
+    target_compile_options(Common PRIVATE -O -ffp-contract=off)
+    target_compile_options(Matrix PRIVATE -O -ffp-contract=off)
+    target_compile_options(Avx2 PRIVATE -O -ffp-contract=off -mavx2 -mfma -mstackrealign)
+    target_compile_options(Avx512 PRIVATE -O -ffp-contract=off -mavx512f -mavx512vl -mavx512bw -mavx512dq -mavx512vbmi2 -mavx512vbmi -mstackrealign)
+    target_compile_options(Deshaker PRIVATE -O -ffp-contract=off -D BUILD_CUDA=${BUILD_CUDA} -Wno-deprecated-declarations)
+    target_compile_options(cuvistaFFmpeg PRIVATE -O -ffp-contract=off -D BUILD_CUDA=${BUILD_CUDA})
+    target_compile_options(cuvista PRIVATE -O -ffp-contract=off)
     
     if (TARGET cuvistaGui)
-        target_compile_options(cuvistaGui PRIVATE -ffp-contract=off)
+        target_compile_options(cuvistaGui PRIVATE -O -ffp-contract=off)
     endif()
 endif()
 

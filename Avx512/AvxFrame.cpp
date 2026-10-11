@@ -832,7 +832,8 @@ void AvxFrame::writeNV12(Image8& dest) const {
 			
 			//combine u and v
 			__m256i uv0 = _mm512_castsi512_si256(_mm512_add_epi32(epi0, epi1));
-			__m256i uv1 = _mm256_permute2f128_si256(uv0, uv0, mask8(1, 0, 0, 0, 1, 0, 0, 0));
+			constexpr int mask = mask8(1, 0, 0, 0, 1, 0, 0, 0);
+			__m256i uv1 = _mm256_permute2f128_si256(uv0, uv0, mask);
 			__m256i uv = _mm256_hadd_epi32(uv0, uv1);
 			uv = _mm256_srli_epi32(uv, 2);
 			_mm256_mask_cvtusepi32_storeu_epi8(dest.row(mData.h + r / 2) + c, 0xF, uv);
@@ -869,6 +870,10 @@ void AvxFrame::yuvToRgba(const ImageYuv& yuv, Image8& dest) const {
 void AvxFrame::vuyxToRgba(const AvxMatf& vuyx, Image8& dest) const {
 	assert(dest.colorBase() == ColorBase::RGB && "invalid color format");
 	auto func = [&] (FuncIndex workIndex) {
+		constexpr int mask2222 = mask8(2, 2, 2, 2);
+		constexpr int mask1111 = mask8(1, 1, 1, 1);
+		constexpr int mask0000 = mask8(0, 0, 0, 0);
+
 		//order of rgb colors
 		auto vidx = dest.colorIndex();
 		V16f fu = { mFactorU[vidx[0]], mFactorU[vidx[1]], mFactorU[vidx[2]], mFactorU[vidx[3]] };
@@ -880,15 +885,15 @@ void AvxFrame::vuyxToRgba(const AvxMatf& vuyx, Image8& dest) const {
 			uchar* destPtr = dest.row(r);
 			for (int c = 0; c < width - 16; c += 16) {
 				V16f vuyx4 = srcPtr + c;
-				V16f y = _mm512_permute_ps(vuyx4, mask8(2, 2, 2, 2));
-				V16f u = _mm512_permute_ps(vuyx4, mask8(1, 1, 1, 1));
-				V16f v = _mm512_permute_ps(vuyx4, mask8(0, 0, 0, 0));
+				V16f y = _mm512_permute_ps(vuyx4, mask2222);
+				V16f u = _mm512_permute_ps(vuyx4, mask1111);
+				V16f v = _mm512_permute_ps(vuyx4, mask0000);
 				V16f::yuvToRgbaPacked(y * f, u * f, v * f, destPtr + c, fu, fv);
 			}
 			V16f vuyx4 = srcPtr + width - 16;
-			V16f y = _mm512_permute_ps(vuyx4, mask8(2, 2, 2, 2));
-			V16f u = _mm512_permute_ps(vuyx4, mask8(1, 1, 1, 1));
-			V16f v = _mm512_permute_ps(vuyx4, mask8(0, 0, 0, 0));
+			V16f y = _mm512_permute_ps(vuyx4, mask2222);
+			V16f u = _mm512_permute_ps(vuyx4, mask1111);
+			V16f v = _mm512_permute_ps(vuyx4, mask0000);
 			V16f::yuvToRgbaPacked(y * f, u * f, v * f, destPtr + width - 16, fu, fv);
 		}
 	};

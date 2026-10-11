@@ -121,6 +121,12 @@ namespace winrt::cuvistaWinui::implementation {
         void sliderVolumeChanged(const IInspectable& sender, const Controls::Primitives::RangeBaseValueChangedEventArgs& args);
         void imageGridResize(const IInspectable& sender, const SizeChangedEventArgs& args);
 
+        void infoLevelsClick(const IInspectable& sender, const Input::TappedRoutedEventArgs& args);
+        void infoIrClick(const IInspectable& sender, const Input::TappedRoutedEventArgs& args);
+        void infoCpuThreadsClick(const IInspectable& sender, const Input::TappedRoutedEventArgs& args);
+        void infoCudaThreadsClick(const IInspectable& sender, const Input::TappedRoutedEventArgs& args);
+        void infoDbScanClick(const IInspectable& sender, const Input::TappedRoutedEventArgs& args);
+
     private:
         Windows::UI::Color mBackgroundColor;
         Windows::Storage::ApplicationDataContainer mLocalSettings = Windows::Storage::ApplicationData::Current().LocalSettings();

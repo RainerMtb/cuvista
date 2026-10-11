@@ -29,8 +29,10 @@
 struct FFmpegVersions {
 	unsigned int avutil, avcodec, avformat, swscale, swresample;
 
-	auto operator <=> (const FFmpegVersions& v) const = default;
+	bool operator < (const FFmpegVersions& v) const;
+	bool operator == (const FFmpegVersions& v) const;
 	friend std::ostream& operator << (std::ostream& os, const FFmpegVersions& v);
+
 	std::string toString(unsigned int val) const;
 };
 

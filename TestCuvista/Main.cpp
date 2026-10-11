@@ -26,10 +26,10 @@ int main() {
 
 	std::vector<std::string> argsLines = {
 		/*0*/ "-info",
-		/*1*/ "-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -bgmode color -y -verbose",
-		/*2*/ "-device 1 -i d:/VideoTest/02short.mp4 -o null -mode 2",
+		/*1*/ "-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -bgmode color -y -verbose -mode 4",
+		/*2*/ "-device 1 -i d:/VideoTest/02short.mp4 -o d:/videoTest/out/raw02.nv12 -y",
 		/*3*/ "-i d:/VideoTest/example.mp4 -o f:/videoOut.mp4 -bgmode color -y -zoom -8 -device 2 -enc nvenc:h264 -verbose",
-		/*4*/ "-i d:/VideoTest/02.mp4 -o f:/videoOut.mp4 -y -verbose -device 2",
+		/*4*/ "-i d:/VideoTest/02.mp4 -o f:/videoOut.mp4 -y -device 2 -enc ffmpeg:h264",
 		/*5*/ "-device 2 -i f:/pic/input.mp4 -o f:/videoOut.mp4 -y",
 		/*6*/ "-device 3 -i D:/VideoTest/12.mp4 -o f:/videoOut.mp4 -y -frames 200",
 		/*7*/ "-device 3 -i D:/VideoTest/02short.mp4 -o f:/videoOut.mp4 -y -stack 60:60",
@@ -43,7 +43,7 @@ int main() {
 		/*15*/ "-i //READYNAS/Videos/Misc/syncTest.ts -o f:/videoOut.mp4 -y -device 2 -enc nvenc:hevc -verbose",
 	};
 	
-	int idx = 15;
+	int idx = 3;
 	std::string argsLine = argsLines[idx];
 	std::cout << "------- TestCuvista -------" << std::endl;
 	std::cout << "------- params: " << argsLine << std::endl << std::endl;

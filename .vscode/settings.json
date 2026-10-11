@@ -2,9 +2,10 @@
     "cmake.configureOnOpen": false,
     
     "cmake.configureSettings": {
-        "CMAKE_PREFIX_PATH": "C:/Daten/Qt/6.11.0/mingw_64",
+        "CMAKE_PREFIX_PATH": "C:/Daten/Qt/6.12.0/mingw_64",
         "FFMPEG_PATH": "d:/util/film/ffmpeg",
-        "BUILD_GUI": "1",
+        "BUILD_GUI": "0",
+        "BUILD_CUDA": "0",
     },
 
     "cmake.debugConfig": {

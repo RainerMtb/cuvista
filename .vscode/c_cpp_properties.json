@@ -16,7 +16,7 @@
                 "${workspaceFolder}/cpu_features/include",
                 "${workspaceFolder}/Matrix",
                 "/usr/local/cuda/include",
-                "~/Qt/6.11.2/gcc_64/include/**"
+                "~/Qt/6.12.0/gcc_64/include/**"
             ],
             "defines": [],
             "cStandard": "c17",
@@ -40,12 +40,12 @@
                 "${workspaceFolder}/cpu_features/include",
                 "${FFMPEG_PATH}/include",
                 "${CUDA_PATH}/include",
-                "C:/Daten/Qt/6.11.2/mingw_64/include"
+                "C:/Daten/Qt/6.12.0/mingw_64/include"
             ],
             "defines": [],
             "cStandard": "c17",
             "cppStandard": "c++20",
-            "compilerPath": "C:/Daten/gcc-15.2.0-msvcrt/mingw64/bin/g++"
+            "compilerPath": "C:/Daten/gcc-16.2.0-ucrt/mingw64/bin/g++"
         }
     ],
     "version": 4

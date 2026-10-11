@@ -358,49 +358,73 @@
                         Padding="12">
 
                         <TextBlock Grid.Row="0" Grid.ColumnSpan="2" VerticalAlignment="Center" TextWrapping="WrapWholeWords"
-                                   Text="changing parameters may affect results and performance in unpredictable ways, there may actually be no significant effect"
+                                   Text="changing parameters may affect results and performance in unpredictable ways"
                                    />
 
                         <TextBlock Grid.Row="1" Text="Pyramid Levels" VerticalAlignment="Center"/>
                         <Grid Grid.Row="1" Grid.Column="1" ColumnSpacing="16" ColumnDefinitions="auto, auto, *">
-                            <Slider x:Name="sliderLevels" Minimum="1" Maximum="6" Width="120" TickPlacement="TopLeft" 
-                                    TickFrequency="1" IsThumbToolTipEnabled="False"></Slider>
-                            <TextBlock Grid.Column="1" Text="{Binding ElementName=sliderLevels, Path=Value}" VerticalAlignment="Center"/>
-                            <TextBlock Grid.Column="2" Text="(algorithm parameter)" VerticalAlignment="Center" TextAlignment="Right"/>
+                            <Image x:Name="infoLevelsIcon" Width="20"  Stretch="Uniform" Source="/Assets/12_info_icon.png" Tapped="infoLevelsClick"/>
+                            <Slider Grid.Column="1" x:Name="sliderLevels" Minimum="1" Maximum="6" Width="120" TickPlacement="TopLeft" TickFrequency="1" IsThumbToolTipEnabled="False"/>
+                            <TextBlock Grid.Column="2" Text="{Binding ElementName=sliderLevels, Path=Value}" VerticalAlignment="Center"/>
                         </Grid>
-                        
+
                         <TextBlock Grid.Row="2" Text="Integration Radius" VerticalAlignment="Center"/>
                         <Grid Grid.Row="2" Grid.Column="1" ColumnSpacing="16" ColumnDefinitions="auto, auto, *">
-                            <Slider x:Name="sliderIr" Minimum="1" Maximum="3" Width="120" TickPlacement="TopLeft" 
-                                    TickFrequency="1" IsThumbToolTipEnabled="False"></Slider>
-                            <TextBlock Grid.Column="1" Text="{Binding ElementName=sliderIr, Path=Value}" VerticalAlignment="Center" />
-                            <TextBlock Grid.Column="2" Text="(algorithm parameter)" VerticalAlignment="Center" TextAlignment="Right"/>
+                            <Image Width="20" x:Name="infoIrIcon" Stretch="Uniform" Source="/Assets/12_info_icon.png" Tapped="infoIrClick"/>
+                            <Slider Grid.Column="1" x:Name="sliderIr" Minimum="1" Maximum="3" Width="120" TickPlacement="TopLeft" TickFrequency="1" IsThumbToolTipEnabled="False"/>
+                            <TextBlock Grid.Column="2" Text="{Binding ElementName=sliderIr, Path=Value}" VerticalAlignment="Center" />
                         </Grid>
                         
                         <TextBlock Grid.Row="3" Text="Cpu Threads" VerticalAlignment="Center"/>
                         <Grid Grid.Row="3" Grid.Column="1" ColumnSpacing="16" ColumnDefinitions="auto, auto, *">
-                            <Slider x:Name="sliderCpuThreads" Minimum="1" Maximum="1" Width="120" TickPlacement="TopLeft" 
-                                    TickFrequency="4" IsThumbToolTipEnabled="False"></Slider>
-                            <TextBlock Grid.Column="1" Text="{Binding ElementName=sliderCpuThreads, Path=Value}" VerticalAlignment="Center"/>
-                            <TextBlock Grid.Column="2" Text="(performance parameter)" VerticalAlignment="Center" TextAlignment="Right"/>
+                            <Image Width="20" x:Name="infoCpuThreadsIcon" Stretch="Uniform" Source="/Assets/12_info_icon.png" Tapped="infoCpuThreadsClick"/>
+                            <Slider Grid.Column="1" x:Name="sliderCpuThreads" Minimum="1" Maximum="1" Width="120" TickPlacement="TopLeft" TickFrequency="4" IsThumbToolTipEnabled="False"/>
+                            <TextBlock Grid.Column="2" Text="{Binding ElementName=sliderCpuThreads, Path=Value}" VerticalAlignment="Center"/>
                         </Grid>
                         
                         <TextBlock Grid.Row="4" Text="Cuda Threads" VerticalAlignment="Center"/>
                         <Grid Grid.Row="4" Grid.Column="1" ColumnSpacing="16" ColumnDefinitions="auto, auto, *">
-                            <Slider x:Name="sliderCudaThreads" Minimum="4" Maximum="32" Width="120" TickPlacement="TopLeft" 
+                            <Image Width="20" x:Name="infoCudaThreadsIcon" Stretch="Uniform" Source="/Assets/12_info_icon.png" Tapped="infoCudaThreadsClick"/>
+                            <Slider Grid.Column="1" x:Name="sliderCudaThreads" Minimum="4" Maximum="32" Width="120" TickPlacement="TopLeft" 
                                     TickFrequency="4" IsThumbToolTipEnabled="False" SnapsTo="Ticks"></Slider>
-                            <TextBlock Grid.Column="1" Text="{Binding ElementName=sliderCudaThreads, Path=Value}" VerticalAlignment="Center"/>
-                            <TextBlock Grid.Column="2" Text="(performance parameter)" VerticalAlignment="Center" TextAlignment="Right"/>
+                            <TextBlock Grid.Column="2" Text="{Binding ElementName=sliderCudaThreads, Path=Value}" VerticalAlignment="Center"/>
                         </Grid>
                         
                         <TextBlock Grid.Row="5" Text="Enable DbScan" VerticalAlignment="Center"/>
                         <Grid Grid.Row="5" Grid.Column="1" ColumnSpacing="16" ColumnDefinitions="auto, *">
-                            <CheckBox x:Name="chkDbScan" VerticalAlignment="Center" IsChecked="True"/>
-                            <TextBlock Grid.Column="1" Text="(algorithm and performance parameter)" VerticalAlignment="Center" TextAlignment="Right"/>
+                            <Image Width="20" x:Name="infoDbScanIcon" Stretch="Uniform" Source="/Assets/12_info_icon.png" Tapped="infoDbScanClick"/>
+                            <CheckBox Grid.Column="1" x:Name="chkDbScan" VerticalAlignment="Center" IsChecked="True"/>
                         </Grid>
-                    </Grid>
 
-                </TabViewItem>
+                        <TeachingTip x:Name="infoLevelsTip" 
+                                Title="Number of Pyramid Levels to produce" 
+                                Subtitle="For stabilization a pyramid of smaller and smaller images is produced. More Levels take longer to compute. More Levels may improve stabilization quality if the input video is of sufficient high resolution to begin with." 
+                                Target="{x:Bind infoLevelsIcon}" IsLightDismissEnabled="True" ShouldConstrainToRootBounds="False">
+                        </TeachingTip>
+                        <TeachingTip x:Name="infoIrTip" 
+                                Title="Integration Radius" 
+                                Subtitle="The size of the image patch used to find matching pairs with, expressed as the radius. Very large values take more time to compute." 
+                                Target="{x:Bind infoIrIcon}" IsLightDismissEnabled="True" ShouldConstrainToRootBounds="False">
+                        </TeachingTip>
+                        <TeachingTip x:Name="infoCpuThreadsTip" 
+                            Title="Number of Cpu Threads for Stabilization" 
+                            Subtitle="The number of cpu threads the stabilization process will use. There is usually no point in selecting the maximum possible value as there is other work to do as well besides those core computations." 
+                            Target="{x:Bind infoCpuThreadsIcon}" IsLightDismissEnabled="True" ShouldConstrainToRootBounds="False">
+                        </TeachingTip>
+                        <TeachingTip x:Name="infoCudaThreadsTip" 
+                            Title="Cuda Threads" 
+                            Subtitle="A value for the number of cuda threads used to build cuda blocks to perform various tasks. Relevant when cuda is used for stabilization. Maximum value for this parameter does not necessarily mean more performance overall." 
+                            Target="{x:Bind infoCudaThreadsIcon}" IsLightDismissEnabled="True" ShouldConstrainToRootBounds="False">
+                        </TeachingTip>
+                        <TeachingTip x:Name="infoDbScanTip" 
+                            Title="Enable DB Scan" 
+                            Subtitle="Perform an algorithm which works better to find very intense movements between frames. This can identify movie cuts and similar hard transitions. If your input video is known to have only smooth transitions you may disable this extra work for better performance and output quality." 
+                            Target="{x:Bind infoDbScanIcon}" IsLightDismissEnabled="True" ShouldConstrainToRootBounds="False">
+                        </TeachingTip>
+
+                        </Grid>
+
+                    </TabViewItem>
             </TabView.TabItems>
         </TabView>
 

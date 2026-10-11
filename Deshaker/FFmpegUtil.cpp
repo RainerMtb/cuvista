@@ -25,6 +25,14 @@ std::string FFmpegVersions::toString(unsigned int val) const {
     return std::format("{}.{}.{}", (val >> 16) & 0xFF, (val >> 8) & 0xFF, val & 0xFF);
 }
 
+bool FFmpegVersions::operator < (const FFmpegVersions& v) const {
+    return std::tie(avutil, avcodec, avformat, swscale, swresample) < std::tie(v.avutil, v.avcodec, v.avformat, v.swscale, v.swresample);
+}
+
+bool FFmpegVersions::operator == (const FFmpegVersions& v) const {
+    return std::tie(avutil, avcodec, avformat, swscale, swresample) == std::tie(v.avutil, v.avcodec, v.avformat, v.swscale, v.swresample);
+}
+
 std::ostream& operator << (std::ostream& os, const FFmpegVersions& v) {
     os << "FFMPEG Versions:" << std::endl;
     os << "libavutil:     " << v.toString(v.avutil) << std::endl;

@@ -679,6 +679,6 @@ CudaExecutor::~CudaExecutor() {
 	}
 
 	//do not reset device while nvenc is still active
-	//handleStatus(cudaDeviceReset(), "error @shutdown #90", errorList);
+	//handleStatus(cudaDeviceReset(), "error @shutdown #90");
 	handleStatus(cudaGetLastError(), "error @shutdown #50");
 }

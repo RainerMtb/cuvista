@@ -1,6 +1,7 @@
 <RCC>
   <qresource prefix="/cuvistaGui">
     <file>res/10_arrow.png</file>
+    <file>res/12_info_icon.png</file>
     <file>res/cuvista_black.png</file>
     <file>res/06_pause-solid.png</file>
     <file>res/07_rotate-left-solid.png</file>
