@@ -139,34 +139,39 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 	 	executor->init();
 
 	 } catch (const SilentQuitException&) {
-	 	return { 10, debugLogger().str() };
+	 	return { 10 };
 
 	 } catch (const CancelException& e) {
 	 	printError(std::cerr, e.what());
-	 	return { 1, debugLogger().str() };
+	 	return { 1 };
 
 	 } catch (const AVException& e) {
 	 	printError(std::cerr, e.what());
 	 	errorLogger().printErrors(std::cerr, data.showVerbose);
-	 	return { 2, debugLogger().str() };
+	 	return { 2 };
 
 	 } catch (const std::invalid_argument& e) {
 	 	printError(std::cerr, std::string("invalid value: ") + e.what());
 	 	errorLogger().printErrors(std::cerr, data.showVerbose);
-	 	return { 3, debugLogger().str() };
+	 	return { 3 };
 
 	 } catch (...) {
 	 	printError(std::cerr, "unknown error in cuvista");
 	 	errorLogger().printErrors(std::cerr, data.showVerbose);
-	 	return { 4, debugLogger().str() };
+	 	return { 4 };
 	 }
 
 	 //setup progress output
-	 if (data.progressType == ProgressType::MULTILINE) progress = std::make_shared<ProgressDisplayMultiLine>(data.console);
-	 else if (data.progressType == ProgressType::REWRITE_LINE) progress = std::make_shared<ProgressDisplayRewriteLine>(data.console);
-	 else if (data.progressType == ProgressType::NEW_LINE) progress = std::make_shared<ProgressDisplayNewLine>(data.console);
-	 else if (data.progressType == ProgressType::GRAPH) progress = std::make_shared<ProgressDisplayGraph>(data.console);
-	 else progress = std::make_shared<ProgressDisplayNone>();
+	 if (data.progressType == ProgressType::MULTILINE) 
+		 progress = std::make_shared<ProgressDisplayMultiLine>(data.console);
+	 else if (data.progressType == ProgressType::REWRITE_LINE) 
+		 progress = std::make_shared<ProgressDisplayRewriteLine>(data.console);
+	 else if (data.progressType == ProgressType::NEW_LINE) 
+		 progress = std::make_shared<ProgressDisplayNewLine>(data.console);
+	 else if (data.progressType == ProgressType::GRAPH) 
+		 progress = std::make_shared<ProgressDisplayGraph>(data.console);
+	 else 
+		 progress = std::make_shared<ProgressDisplayNone>();
 
 	 // --------------------------------------------------------------
 	 // --------------- main loop start ------------------------------
@@ -196,7 +201,6 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 	result.trajectory = frame->mTrajectory.getTrajectory();
 	result.executorName = executor->mDeviceInfo.getName();
 	result.executorNameShort = executor->mDeviceInfo.getNameShort();
-	result.log = debugLogger().str();
 
 	//destruct writer before frame
 	writer.reset();

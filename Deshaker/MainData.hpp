@@ -161,6 +161,7 @@ public:
 	void validate(const MovieReader& reader);
 
 	std::ostream& showDeviceInfo(std::ostream& os) const;
+	std::string showDeviceInfo() const;
 
 	std::ostream& showFFmpegInfo(std::ostream& os) const;
 

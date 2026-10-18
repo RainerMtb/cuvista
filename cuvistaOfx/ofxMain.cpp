@@ -17,11 +17,9 @@
  */
 
 #include "ofxMain.hpp"
+#include "ofxPluginContext.hpp"
 #include "Version.hpp"
 #include "util.hpp"
-#include "ErrorLogger.hpp"
-#include "OfxPluginContext.hpp"
-#include <fstream>
 
 #if defined(_WIN64)
 #define LIBRARY_EXPORT extern "C" __declspec(dllexport)
@@ -31,15 +29,17 @@
 
 namespace ofx {
 
-	bool MainContext::isLoaded() const {
-		return propertySuite && imageEffectSuite && parameterSuite && messageSuite && timelineSuite;
-	}
-
 	OfxPlugin plugin = {};
-	const OfxHost* host = nullptr;
 
-	int pluginIndex = 0;
-	PluginState pluginState = PluginState::UNKNOWN;
+	void openLogger() {
+		const size_t siz = 256;
+		char buf[siz];
+		size_t len = 0;
+		getenv_s(&len, buf, siz, "CUVISTA_LOG");
+		if (len > 0 && buf) {
+			debugLogger().open(buf);
+		}
+	}
 
 	//forward declare functions
 	void setHostFcn(OfxHost* host);
@@ -47,14 +47,14 @@ namespace ofx {
 
 	//mandatory OpenFX library function
 	LIBRARY_EXPORT OfxStatus OfxSetHost(const OfxHost* host) {
-		ofx::host = host;
+		main.host = host;
 		return kOfxStatOK;
 	}
 
 	//mandatory OpenFX library function
 	LIBRARY_EXPORT int OfxGetNumberOfPlugins() {
-		debugLogger().open("tcp://10.0.0.1:5555");
-		debugLogger().log("get number of plugins");
+		openLogger();
+		debugLogger().format("get number of plugins on thread {}", threadId());
 		return 1;
 	}
 
@@ -78,231 +78,13 @@ namespace ofx {
 		}
 	}
 
+	//host function callback
 	void setHostFcn(OfxHost* host) {
-		debugLogger().open("tcp://10.0.0.1:5555"); //must reopen the logger, host resets the library ???
+		openLogger();
 		debugLogger().format("set host on thread {}", threadId());
-		ofx::host = host;
-		pluginState = PluginState::STARTED;
+		main.host = host;
+		main.pluginState = PluginState::STARTED;
 	}
-
-	OfxStatus mainEntryFcn(const char* action, const void* handle, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs) {
-		//debugLogger().format("-- action {} --", action);
-		OfxImageEffectHandle effect = (OfxImageEffectHandle) handle;
-		std::string actionString = action;
-		OfxStatus status = kOfxStatReplyDefault;
-
-		if (actionString == kOfxActionLoad) { //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-			//load plugin, fetch and store suites
-			main.propertySuite = (OfxPropertySuiteV1*) host->fetchSuite(host->host, kOfxPropertySuite, 1);
-			main.imageEffectSuite = (OfxImageEffectSuiteV1*) host->fetchSuite(host->host, kOfxImageEffectSuite, 1);
-			main.parameterSuite = (OfxParameterSuiteV1*) host->fetchSuite(host->host, kOfxParameterSuite, 1);
-			main.timelineSuite = (OfxTimeLineSuiteV1*) host->fetchSuite(host->host, kOfxTimeLineSuite, 1);
-			main.messageSuite = (OfxMessageSuiteV1*) host->fetchSuite(host->host, kOfxMessageSuite, 1);
-
-			//host info
-			main.hostName = getString(host->host, kOfxPropName);
-			int dim = 0;
-			main.propertySuite->propGetDimension(host->host, kOfxPropAPIVersion, &dim);
-			main.hostApiVersion = std::to_string(getInt(host->host, kOfxPropAPIVersion, 0));
-			for (int i = 1; i < dim; i++) {
-				main.hostApiVersion += ".";
-				main.hostApiVersion += std::to_string(getInt(host->host, kOfxPropAPIVersion, i));
-			}
-
-			if (main.isLoaded()) {
-				pluginState = PluginState::LOADED;
-				status = kOfxStatOK;
-				debugLogger().format("-- action Load on thread {}, plugin loaded, Host Name = {}, Api Version = {}", threadId(), main.hostName, main.hostApiVersion);
-
-			} else {
-				status = kOfxStatFailed;
-				debugLogger().log("failed to load");
-			}
-
-		} else if (actionString == kOfxActionDescribe) { //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-			//describe plugin to host, set global parameters for all clips
-			if (pluginState != PluginState::LOADED) {
-				errorLogger().logError("plugin must be loaded here", ErrorSource::OFX);
-				debugLogger().log("plugin must be loaded here");
-				status = kOfxStatFailed;
-			}
-
-			//OfxPropertySetHandle effectProps;
-			OfxPropertySetHandle effectProps;
-			main.imageEffectSuite->getPropertySet(effect, &effectProps);
-			main.guiContext.pluginPath = std::filesystem::path(getString(effectProps, kOfxPluginPropFilePath)) / "Contents" / "Resources";
-			main.guiContext.debugLogger = debugLoggerPtr;
-			main.guiLoadLibrary(main.guiContext);
-			if (!main.guiContext.gui) {
-				errorLogger().logError("cannot load gui");
-				debugLogger().log("cannot load gui");
-			}
-
-			main.imageEffectSuite->getPropertySet(effect, &effectProps);
-			main.propertySuite->propSetString(effectProps, kOfxPropLabel, 0, "Cuvista");
-			main.propertySuite->propSetString(effectProps, kOfxImageEffectPluginPropGrouping, 0, "Cuvista - Cuda Video Stabilizer");
-			
-			main.propertySuite->propSetString(effectProps, kOfxImageEffectPropSupportedContexts, 0, kOfxImageEffectContextFilter);
-			//setting pixel depths seems to be ignored by host anyway, always sends float?????
-			main.propertySuite->propSetString(effectProps, kOfxImageEffectPropSupportedPixelDepths, 0, kOfxBitDepthByte);
-			main.propertySuite->propSetString(effectProps, kOfxImageEffectPropSupportedPixelDepths, 1, kOfxBitDepthShort);
-			main.propertySuite->propSetString(effectProps, kOfxImageEffectPropSupportedPixelDepths, 2, kOfxBitDepthFloat); //values can be outside [0..1]
-			
-			main.propertySuite->propSetInt(effectProps, kOfxImageEffectPropTemporalClipAccess, 0, 1);
-			main.propertySuite->propSetString(effectProps, kOfxImageEffectPluginRenderThreadSafety, 0, kOfxImageEffectRenderInstanceSafe);
-			main.propertySuite->propSetInt(effectProps, kOfxImageEffectPluginPropHostFrameThreading, 0, 0); //work on one complete frame
-
-			pluginState = PluginState::DESCRIBED;
-			status = kOfxStatOK;
-
-		} else if (actionString == kOfxImageEffectActionDescribeInContext) { //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-			//describe plugin to host, set parameters for specific context
-			if (pluginState != PluginState::DESCRIBED) {
-				errorLogger().logError("plugin must be described here", ErrorSource::OFX);
-				debugLogger().log("plugin must be described here");
-				return kOfxStatErrFatal;
-			}
-			std::string str = getString(inArgs, kOfxImageEffectPropContext);
-			if (str != kOfxImageEffectContextFilter) {
-				errorLogger().format(ErrorSource::OFX, "unsupported context {}", str);
-				debugLogger().format("unsupported context {}", str);
-				return kOfxStatFailed;
-			}
-
-			main.mData.probeOpenCl();
-			main.mData.probeCuda();
-			main.mData.collectDeviceInfo();
-
-			OfxPropertySetHandle props;
-			// define the mandated single source clip
-			main.imageEffectSuite->clipDefine(effect, kOfxImageEffectSimpleSourceClipName, &props);
-			// set the component types we can handle on our main input
-			main.propertySuite->propSetString(props, kOfxImageEffectPropSupportedComponents, 0, kOfxImageComponentRGBA);
-			//propertySuite->propSetString(props, kOfxImageEffectPropSupportedComponents, 1, kOfxImageComponentAlpha);
-			//propertySuite->propSetString(props, kOfxImageEffectPropSupportedComponents, 2, kOfxImageComponentRGB);
-			// request temporal access
-			main.propertySuite->propSetInt(props, kOfxImageEffectPropTemporalClipAccess, 0, 1);
-
-			main.imageEffectSuite->clipDefine(effect, kOfxImageEffectOutputClipName, &props);
-			// set the component types we can handle on out output
-			main.propertySuite->propSetString(props, kOfxImageEffectPropSupportedComponents, 0, kOfxImageComponentRGBA);
-			//propertySuite->propSetString(props, kOfxImageEffectPropSupportedComponents, 1, kOfxImageComponentAlpha);
-			//propertySuite->propSetString(props, kOfxImageEffectPropSupportedComponents, 2, kOfxImageComponentRGB);
-
-			//setup parameters
-			OfxParamSetHandle paramSet;
-			main.imageEffectSuite->getParamSet(effect, &paramSet);
-			main.setupParameters(paramSet);
-
-			//load banner
-			main.mBannerElement = loadBannerElement();
-
-			pluginState = PluginState::DESCRIBED_IN_CONTEXT;
-			status = kOfxStatOK;
-
-		} else if (actionString == kOfxActionCreateInstance) { //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-			//init plugin instance, multiple instances are active at a time
-			//here we do not get the correct number of frames in a clip
-			OfxPropertySetHandle effectProps;
-			main.imageEffectSuite->getPropertySet(effect, &effectProps);
-
-			PluginContext* ctx = new PluginContext();
-			OfxPropertySetHandle clipProperties;
-			main.imageEffectSuite->clipGetHandle(effect, kOfxImageEffectSimpleSourceClipName, &ctx->srcClip, &clipProperties);
-			main.imageEffectSuite->clipGetHandle(effect, kOfxImageEffectOutputClipName, &ctx->destClip, &clipProperties);
-
-			OfxParamSetHandle paramSet;
-			main.imageEffectSuite->getParamSet(effect, &paramSet);
-			main.parameterSuite->paramGetHandle(paramSet, "radius", &ctx->paramRadius, 0);
-			main.parameterSuite->paramGetHandle(paramSet, "zoom", &ctx->paramZoomMin, 0);
-
-			ctx->pluginIndex = pluginIndex;
-			pluginIndex++;
-			pluginContextList.push_back(ctx);
-			main.propertySuite->propSetPointer(effectProps, kOfxPropInstanceData, 0, ctx);
-
-			OfxRectD rectStart;
-			status = main.imageEffectSuite->clipGetRegionOfDefinition(ctx->srcClip, 0, &rectStart);
-			ctx->w = (int) (rectStart.x2 - rectStart.x1);
-			ctx->h = (int) (rectStart.y2 - rectStart.y1);
-			ctx->banner = loadBannerInstance(ctx->h, ctx->w, main.mBannerElement);
-			debugLogger().format("-- action CreateInstance on thread {}, total instances = {}, frame size {}:{}", threadId(), pluginContextList.size(), ctx->w, ctx->h);
-			status = kOfxStatOK;
-
-		} else if (actionString == kOfxActionBeginInstanceChanged) { 
-			status = kOfxStatReplyDefault;
-
-		} else if (actionString == kOfxActionInstanceChanged) { 
-			//handle button push
-			if (getString(inArgs, kOfxPropName) == "stabilize" && getString(inArgs, kOfxPropChangeReason) == kOfxChangeUserEdited) {
-				PluginContext* ctx = getPluginContext(effect);
-				ctx->stabilize(effect, inArgs, outArgs);
-
-			} else if (getString(inArgs, kOfxPropName) == "info" && getString(inArgs, kOfxPropChangeReason) == kOfxChangeUserEdited) {
-				PluginContext* ctx = getPluginContext(effect);
-				ctx->showInfo(effect, inArgs, outArgs);
-			}
-			status = kOfxStatOK;
-
-		} else if (actionString == kOfxActionEndInstanceChanged) { 
-			status = kOfxStatReplyDefault;
-
-		} else if (actionString == kOfxImageEffectActionGetClipPreferences) {
-			status = kOfxStatReplyDefault;
-
-		} else if (actionString == kOfxImageEffectActionGetFramesNeeded) { 
-			PluginContext* ctx = getPluginContext(effect);
-			double time = getDouble(inArgs, kOfxPropTime);
-			main.propertySuite->propSetDouble(outArgs, kOfxImageEffectPropFrameRange, 0, time);
-			main.propertySuite->propSetDouble(outArgs, kOfxImageEffectPropFrameRange, 1, time);
-			debugLogger().format("frames needed {}:{}", time, time);
-			status = kOfxStatOK;
-
-		} else if (actionString == kOfxImageEffectActionGetRegionsOfInterest) {
-			status = kOfxStatReplyDefault;
-
-		} else if (actionString == kOfxImageEffectActionBeginSequenceRender) {
-			status = kOfxStatReplyDefault;
-
-		} else if (actionString == kOfxImageEffectActionRender) { //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-			PluginContext* ctx = getPluginContext(effect);
-			ctx->render(effect, inArgs, outArgs);
-			status = kOfxStatOK;
-
-		} else if (actionString == kOfxImageEffectActionEndSequenceRender) {
-			status = kOfxStatReplyDefault;
-
-		} else if (actionString == kOfxActionDestroyInstance) { //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-			//destroy plugin instance
-			PluginContext* ctx = getPluginContext(effect);
-			pluginContextList.remove(ctx);
-			delete ctx;
-			debugLogger().format("action DestroyInstance, total instances = {}", pluginContextList.size());
-			status = kOfxStatOK;
-
-		} else if (actionString == kOfxActionUnload) {
-			//unload plugin
-			if (pluginContextList.size() != 0) {
-				errorLogger().logError("unloading while there are still effenct instances!");
-				debugLogger().log("unloading while there are still effenct instances!");
-			}
-			main.guiFreeLibrary(main.guiContext);
-			pluginState = PluginState::UNLOADED;
-			status = kOfxStatOK;
-			debugLogger().log("plugin unloaded, good bye");
-
-		} else {
-			debugLogger().format(">> action unhandled {} ##", action);
-		}
-
-		return status;
-	}
-
-	std::string getString(OfxPropertySetHandle handle, const char* id, int index) { return main.getString(handle, id, index); }
-
-	double getDouble(OfxPropertySetHandle handle, const char* id, int index) { return main.getDouble(handle, id, index); }
-
-	int getInt(OfxPropertySetHandle handle, const char* id, int index) { return main.getInt(handle, id, index); }
 
 	//get the user context
 	PluginContext* getPluginContext(OfxImageEffectHandle effect) {
@@ -311,5 +93,87 @@ namespace ofx {
 		main.imageEffectSuite->getPropertySet(effect, &effectProps);
 		main.propertySuite->propGetPointer(effectProps, kOfxPropInstanceData, 0, (void**) &ctx);
 		return ctx;
+	}
+
+	//main function called by host
+	OfxStatus mainEntryFcn(const char* action, const void* handle, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs) {
+		//debugLogger().format("-- action {} --", action);
+		OfxImageEffectHandle effect = (OfxImageEffectHandle) handle;
+		std::string actionString = action;
+
+		if (actionString == kOfxActionLoad) {
+			return main.actionLoad(effect);
+
+		} else if (actionString == kOfxActionDescribe) {
+			return main.actionDescribe(effect);
+
+		} else if (actionString == kOfxImageEffectActionDescribeInContext) {
+			return main.actionDescribeInContext(effect, inArgs, outArgs);
+
+		} else if (actionString == kOfxActionCreateInstance) {
+			return main.actionCreateInstance(effect, inArgs, outArgs);
+
+		} else if (actionString == kOfxActionEndInstanceChanged) { 
+			return kOfxStatReplyDefault;
+
+		} else if (actionString == kOfxImageEffectActionGetClipPreferences) {
+			PluginContext* ctx = getPluginContext(effect);
+			return ctx->getClipPreferences(effect, inArgs, outArgs);
+
+		} else if (actionString == kOfxImageEffectActionGetFramesNeeded) { 
+			double time = main.getDouble(inArgs, kOfxPropTime);
+			main.propertySuite->propSetDouble(outArgs, kOfxImageEffectPropFrameRange, 0, time);
+			main.propertySuite->propSetDouble(outArgs, kOfxImageEffectPropFrameRange, 1, time);
+			//debugLogger().format("frames needed {}:{}", time, time);
+			return kOfxStatOK;
+
+		} else if (actionString == kOfxImageEffectActionGetRegionsOfInterest) {
+			return kOfxStatReplyDefault;
+
+		} else if (actionString == kOfxImageEffectActionBeginSequenceRender) {
+			return kOfxStatReplyDefault;
+
+		} else if (actionString == kOfxImageEffectActionRender) {
+			PluginContext* ctx = getPluginContext(effect);
+			return ctx->render(effect, inArgs, outArgs);
+
+		} else if (actionString == kOfxImageEffectActionEndSequenceRender) {
+			return kOfxStatReplyDefault;
+
+		} else if (actionString == kOfxActionBeginInstanceChanged) {
+			return kOfxStatReplyDefault;
+
+		} else if (actionString == kOfxActionInstanceChanged) {
+			debugLogger().format("-- action InstanceChanged on thread {}", threadId());
+			std::string name = main.getString(inArgs, kOfxPropName);
+			std::string reason = main.getString(inArgs, kOfxPropChangeReason);
+
+			//handle button clicks
+			if (name == "stabilize" && reason == kOfxChangeUserEdited) {
+				PluginContext* ctx = getPluginContext(effect);
+				return ctx->stabilize(effect, inArgs, outArgs);
+
+			} else if (name == "info" && reason == kOfxChangeUserEdited) {
+				PluginContext* ctx = getPluginContext(effect);
+				ctx->showInfo(effect, inArgs, outArgs);
+				return kOfxStatOK;
+			}
+			return kOfxStatReplyDefault;
+
+		} else if (actionString == kOfxActionDestroyInstance) {
+			//destroy plugin instance
+			PluginContext* ctx = getPluginContext(effect);
+			pluginContextList.remove(ctx);
+			delete ctx;
+			debugLogger().format("-- action DestroyInstance, total instances = {}", pluginContextList.size());
+			return kOfxStatOK;
+
+		} else if (actionString == kOfxActionUnload) {
+			return main.actionUnload();
+
+		} else {
+			debugLogger().format(">> action unhandled {} ##", action);
+			return kOfxStatReplyDefault;
+		}
 	}
 }

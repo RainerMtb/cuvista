@@ -17,11 +17,11 @@
  */
 
 
-#include "OfxUtil.hpp"
+#include "ofxMain.hpp"
+#include "ofxUtil.hpp"
 #include "ofxBanner.hpp"
 #include "ErrorLogger.hpp"
 #include "ImageClasses.hpp"
-#include "ofxMain.hpp"
 
 namespace ofx {
 
@@ -64,8 +64,9 @@ namespace ofx {
 	}
 
 	void OfxImageFloat::copyTo(int y, int x, int h, int w, ImageBase<float>& dest, int destY, int destX, float alpha, ThreadPoolBase& pool) const {
-		if (imageType() != dest.imageType()) 
+		if (imageType() != dest.imageType()) {
 			ImageBase<float>::copyTo(y, x, h, w, dest, destY, destX, alpha, pool);
+		}
 
 		assert(x + w <= this->w() && destY + h <= dest.h() && y + h <= this->h() && destX + w <= dest.w() && "invalid parameters for copy");
 		for (int r = 0; r < h; r++) {
@@ -83,8 +84,9 @@ namespace ofx {
 	}
 
 	void  OfxImageFloat::copyTo(int y, int x, int h, int w, ImageBase<float>& dest, int destY, int destX) const {
-		if (imageType() != dest.imageType())
+		if (imageType() != dest.imageType()) {
 			ImageBase<float>::copyTo(y, x, h, w, dest, destY, destX);
+		}
 
 		assert(x + w <= this->w() && destY + h <= dest.h() && y + h <= this->h() && destX + w <= dest.w() && "invalid parameters for copy");
 		for (int r = 0; r < h; r++) {
@@ -138,10 +140,13 @@ namespace ofx {
 
 	//----------------------------------------------------------------------------
 
-	void handleStatus(OfxStatus status, const std::string& message) {
+	void handleStatus(OfxStatus status, const std::string& message, std::source_location location) {
 		if (status != kOfxStatOK) {
-			std::string str = main.ofxStatsMap.at(status) + ", " + message;
-			errorLogger().logError(str, ErrorSource::OFX);
+			std::string str = std::format(
+				"error: {}, source: {}({}:{}) {}", main.ofxStatsMap.at(status), location.file_name(), location.line(), location.column(), message
+			);
+
+			throw OfxException(str);
 		}
 	}
 

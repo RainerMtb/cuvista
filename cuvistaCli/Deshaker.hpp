@@ -23,8 +23,6 @@
 
 struct DeshakerResult {
 	int statusCode = 0;
-	std::string log;
-
 	int64_t frameCount = 0;
 	int64_t framesRead = 0;
 	int64_t framesWritten = 0;

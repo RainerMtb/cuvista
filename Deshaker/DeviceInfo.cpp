@@ -100,6 +100,10 @@ bool DeviceInfoAvx::hasAvx2() const {
 
 //OPENCL Info -----------------------------------
 
+void DeviceInfoOpenCl::probeOpenCl() {
+	cl::probeRuntime(*this);
+}
+
 OpenClDevice::OpenClDevice(int64_t maxPixel) :
 	DeviceInfoBase(maxPixel) 
 {}

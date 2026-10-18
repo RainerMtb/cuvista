@@ -22,13 +22,15 @@
 #include "DeviceInfo.hpp"
 #include "DeshakerHelpText.hpp"
 #include "SystemStuff.hpp"
-#include "clMain.hpp"
 #include "SelfTest.hpp"
+#include "RandomSource.hpp"
+#include "ErrorLogger.hpp"
 
 #include <algorithm>
 #include <regex>
 #include <vector>
 #include <filesystem>
+#include <random>
 
 
 //test or ask for file writing
@@ -626,6 +628,12 @@ std::ostream& MainData::showDeviceInfo(std::ostream& os) const {
 	return os;
 }
 
+std::string MainData::showDeviceInfo() const {
+	std::stringstream ss;
+	showDeviceInfo(ss);
+	return ss.str();
+}
+
 std::ostream& MainData::showFFmpegInfo(std::ostream& os) const {
 	//display ffmpeg versions
 	FFmpegVersions versionsCompiled = *ff::versionsCompiled();
@@ -675,7 +683,7 @@ void MainData::probeCuda() {
 }
 
 void MainData::probeOpenCl() {
-	cl::probeRuntime(deviceInfoOpenCl);
+	deviceInfoOpenCl.probeOpenCl();
 	if (deviceInfoOpenCl.driverWarning.size() > 0) {
 		errorLogger().logWarning(deviceInfoOpenCl.driverWarning);
 	}

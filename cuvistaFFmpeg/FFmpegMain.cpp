@@ -16,7 +16,6 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
-#include <set>
 #include "MainData.hpp"
 #include "FFmpegMain.hpp"
 #include "Reader.hpp"
@@ -86,21 +85,20 @@ MovieWriter* createWriter(OutputOption option, MainData& data, MovieReader& read
 void probeEncoders(MainData& data) {
     //check ffmpeg encoders
     {
-        std::set<OutputOption> s;
-        void* codecState = nullptr; //start with null
-        const AVCodec* codec = av_codec_iterate(&codecState);
-        while (codec) {
-            if (codec->id == AV_CODEC_ID_H264) s.insert(OutputOption::FFMPEG_H264);
-            if (codec->id == AV_CODEC_ID_HEVC) s.insert(OutputOption::FFMPEG_HEVC);
-            if (codec->id == AV_CODEC_ID_AV1)  s.insert(OutputOption::FFMPEG_AV1);
-            if (codec->id == AV_CODEC_ID_FFV1) s.insert(OutputOption::FFMPEG_FFV1);
-            codec = av_codec_iterate(&codecState);
-        }
-        //order available encoders
-        if (s.contains(OutputOption::FFMPEG_H264)) data.deviceInfoCpu.encoders.push_back(OutputOption::FFMPEG_H264);
-        if (s.contains(OutputOption::FFMPEG_HEVC)) data.deviceInfoCpu.encoders.push_back(OutputOption::FFMPEG_HEVC);
-        if (s.contains(OutputOption::FFMPEG_AV1))  data.deviceInfoCpu.encoders.push_back(OutputOption::FFMPEG_AV1);
-        if (s.contains(OutputOption::FFMPEG_FFV1)) data.deviceInfoCpu.encoders.push_back(OutputOption::FFMPEG_FFV1);
+        auto checkCodec = [&] (AVCodecID id, OutputOption option) {
+            void* codecState = nullptr; //start with null
+            for (const AVCodec* codec = av_codec_iterate(&codecState); codec; codec = av_codec_iterate(&codecState)) {
+                if (codec->id == id) {
+                    data.deviceInfoCpu.encoders.push_back(option);
+                    break;
+                }
+            }
+        };
+
+        checkCodec(AV_CODEC_ID_H264, OutputOption::FFMPEG_H264);
+        checkCodec(AV_CODEC_ID_HEVC, OutputOption::FFMPEG_HEVC);
+        checkCodec(AV_CODEC_ID_AV1, OutputOption::FFMPEG_AV1);
+        checkCodec(AV_CODEC_ID_FFV1, OutputOption::FFMPEG_FFV1);
     }
 
     //check cuda encoders

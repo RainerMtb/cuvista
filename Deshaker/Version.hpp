@@ -30,6 +30,6 @@ struct CuvistaVersion {
 	bool operator < (const CuvistaVersion& other);
 };
 
-inline CuvistaVersion cuvistaVersion = { 1, 10, 0 };
+inline CuvistaVersion cuvistaVersion = { 1, 11, 0 };
 
 inline std::string CUVISTA_VERSION = std::format("{}.{}.{}", cuvistaVersion.major, cuvistaVersion.minor, cuvistaVersion.patch);

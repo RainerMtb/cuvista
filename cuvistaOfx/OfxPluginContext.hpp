@@ -18,8 +18,9 @@
 
 #pragma once
 
-#include "ofxMain.hpp"
 #include "ofxGuiInterface.hpp"
+#include "ofxUtil.hpp"
+#include "MainData.hpp"
 
 namespace ofx {
 
@@ -41,6 +42,10 @@ namespace ofx {
 	private:
 		std::string contextInfo(OfxImageEffectHandle effect);
 
+		std::string getString(OfxPropertySetHandle handle, const char* id, int index = 0);
+		double getDouble(OfxPropertySetHandle handle, const char* id, int index = 0);
+		int getInt(OfxPropertySetHandle handle, const char* id, int index = 0);
+
 	public:
 		int pluginIndex = 0;
 		bool dirtyFlag = true;
@@ -51,13 +56,14 @@ namespace ofx {
 		OfxParamHandle paramZoomMin = nullptr;
 		OfxParamHandle paramZoomDynamic = nullptr;
 		OfxParamHandle paramZoomMax = nullptr;
-
-		int h = 0;
-		int w = 0;
 		OfxImageFloat banner;
+		int clipH;
+		int clipW;
 
-		void render(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs);
-		void stabilize(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs);
+		OfxImageFloat getBanner(int h, int w);
+		OfxStatus getClipPreferences(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs);
+		OfxStatus render(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs);
+		OfxStatus stabilize(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs);
 		void showInfo(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs);
 	};
 }

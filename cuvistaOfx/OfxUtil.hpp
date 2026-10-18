@@ -26,6 +26,7 @@ extern "C" {
 }
 
 #include "ImageClasses.hpp"
+#include <source_location>
 
 namespace ofx {
 
@@ -72,7 +73,7 @@ namespace ofx {
 	};
 
 
-	void handleStatus(OfxStatus status, const std::string& message);
+	void handleStatus(OfxStatus status, const std::string& message = "", std::source_location location = std::source_location::current());
 
 	OfxImageFloat loadBannerElement();
 	OfxImageFloat loadBannerInstance(int targetHeight, int targetWidth, const OfxImageFloat& element);

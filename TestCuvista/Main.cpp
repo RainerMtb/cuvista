@@ -43,7 +43,7 @@ int main() {
 		/*15*/ "-i //READYNAS/Videos/Misc/syncTest.ts -o f:/videoOut.mp4 -y -device 2 -enc nvenc:hevc -verbose",
 	};
 	
-	int idx = 3;
+	int idx = 0;
 	std::string argsLine = argsLines[idx];
 	std::cout << "------- TestCuvista -------" << std::endl;
 	std::cout << "------- params: " << argsLine << std::endl << std::endl;
@@ -52,7 +52,7 @@ int main() {
 	DeshakerResult result = deshake(args, &std::cout, {});
 
 	std::cout << std::endl << "------- Log -------" << std::endl;
-	std::cout << result.log << std::endl;
+	std::cout << debugLogger().str() << std::endl;
 
 //	std::cout << std::endl << "---- FFmpeg Log ---" << std::endl;
 //	auto logs = errorLogger().getLogs();

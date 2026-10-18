@@ -44,7 +44,6 @@ using namespace ofx;
 LIBRARY_EXPORT void loadGui(OfxGuiContext& guiContext) {
 	guiContext.gui = std::make_shared<OfxGuiQt>(guiContext);
 	util::debugLoggerPtr = guiContext.debugLogger;
-	debugLogger().format("gui loaded");
 }
 
 

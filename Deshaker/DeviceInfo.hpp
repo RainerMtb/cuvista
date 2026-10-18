@@ -78,6 +78,7 @@ class DeviceInfoOpenCl {
 public:
 	std::vector<OpenClDevice> devices;
 	std::string driverWarning = "";
+	void probeOpenCl();
 };
 
 

@@ -21,7 +21,6 @@
 #include "clHeaders.hpp"
 #include "clFunctions.hpp"
 #include "CoreData.hpp"
-#include "DeviceInfoBase.hpp"
 #include "Mat.hpp"
 #include "DeviceInfo.hpp"
 #include "FrameExecutor.hpp"
