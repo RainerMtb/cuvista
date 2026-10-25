@@ -18,7 +18,7 @@
 
 #include "CpuFrame.hpp"
 #include "MovieFrame.hpp"
-#include "SubMat.hpp"
+#include "Mat.hpp"
 
 //constructor
 CpuFrame::CpuFrame(MainData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool) :
@@ -47,6 +47,7 @@ void CpuFrame::init() {
 
 	//init storage for previous output frame to background colors
 	mPrevOut = Matf4::values(mData.h, mData.w, mData.bgcol4);
+	mBackground = Matf4::values(mData.h, mData.w, mData.bgcol4);
 	
 	//buffer for output and pyramid creation
 	mFilterBuffer1 = Matf::allocate(mData.h, mData.w);
@@ -56,7 +57,7 @@ void CpuFrame::init() {
 	mFilterBuffer4 = Matf4::allocate(mData.h, mData.w);
 	mFilterResult4 = Matf4::allocate(mData.h, mData.w);
 
-	mOutput = ImageVuyxFloat(mData.h, mData.w, mData.stride4);
+	mOutput = ImageFloat4(mData.h, mData.w, mData.stride4);
 }
 
 //return storage of next input frame
@@ -116,8 +117,8 @@ void CpuFrame::createPyramid(int64_t frameIndex, std::span<int> hist, AffineData
 
 	} else {
 		//filter first level of pyramid
-		mFilterBuffer1.filter1D(filterKernelY, Matf::Direction::HORIZONTAL, mFilterBuffer2, mPool);
-		mFilterBuffer2.filter1D(filterKernelY, Matf::Direction::VERTICAL, y0, mPool);
+		mFilterBuffer1.filter1D(filterKernelY, Direction::HORIZONTAL, mFilterBuffer2, mPool);
+		mFilterBuffer2.filter1D(filterKernelY, Direction::VERTICAL, y0, mPool);
 	}
 
 	createPyramidLevels(pyr);
@@ -196,7 +197,7 @@ void CpuFrame::computeTerminate(int64_t frameIndex, std::span<PointResult> resul
 
 				for (; z >= mData.zMin && result >= PointResultType::RUNNING; z--) {
 					Matf& Y = pyr1.mY[z];
-					SubMat<float> im = SubMat<float>::from(Y, 0ll + ym - ir, 0ll + xm - ir, iw, iw);
+					StridedMat<float> im = StridedMat<float>::from(Y, 0ll + ym - ir, 0ll + xm - ir, iw, iw);
 
 					//affine transform
 					for (int r = 0; r < iw; r++) {
@@ -312,10 +313,11 @@ void CpuFrame::outputData(int64_t frameIndex, AffineDataFloat trf) {
 	size_t yuvidx = frameIndex % mInput.size();
 	const ImageYuv& input = mInput[yuvidx];
 	constexpr float f = 1.0f / 255.0f;
-	auto funcConvert = [&] (size_t r, size_t c) -> FloatVuyx { 
+	auto funcConvert = [&] (size_t r, size_t c) -> Float4 { 
 		return { input.at(2, r, c) * f, input.at(1, r, c) * f, input.at(0, r, c) * f, 1.0f };
 	};
 	mFilterBuffer4.setValues(funcConvert, mPool);
+	Matf4& bgframe = (mData.bgmode == BackgroundMode::COLOR) ? mBackground : mPrevOut;
 
 	//apply transform
 	auto funcWarpBack = [&] (size_t r) {
@@ -324,33 +326,31 @@ void CpuFrame::outputData(int64_t frameIndex, AffineDataFloat trf) {
 			float y0 = float(r);
 			float x = std::fmaf(x0, trf.m00, std::fmaf(y0, trf.m01, trf.m02));
 			float y = std::fmaf(x0, trf.m10, std::fmaf(y0, trf.m11, trf.m12));
-			FloatVuyx bg = (mData.bgmode == BackgroundMode::COLOR ? mData.bgcol4 : mPrevOut.at(r, c));
-			FloatVuyx result = mFilterBuffer4.interp2(x, y).value_or(bg);
+			Float4 bg = bgframe.at(r, c);
+			Float4 result = mFilterBuffer4.interp2(x, y).value_or(bg);
 			//if (z == 0 && r == 228 && c == 1082) std::printf("\ncpu %16.12f\n", y);
 			mBuffer4.at(r, c) = result;
-			mPrevOut.at(r, c) = result;
 		}
 	};
+	//forward to thread pool for iteration
 	mPool.addAndWait(funcWarpBack, 0, mData.h);
 
 	//unsharp masking
-	mBuffer4.filter1D(filterKernel4, Matf4::Direction::HORIZONTAL, mFilterBuffer4, mPool);
-	mFilterBuffer4.filter1D(filterKernel4, Matf4::Direction::VERTICAL, mFilterResult4, mPool);
+	mBuffer4.filter1D(filterKernel4, Direction::HORIZONTAL, mFilterBuffer4, mPool);
+	mFilterBuffer4.filter1D(filterKernel4, Direction::VERTICAL, mFilterResult4, mPool);
 
 	//write output
 	auto funcOutput = [&] (size_t r) {
 		for (size_t c = 0; c < mData.w; c++) {
-			FloatVuyx vuyx = mBuffer4.at(r, c) + (mBuffer4.at(r, c) - mFilterResult4.at(r, c)) * mData.unsharp4;
-			mOutput.at(0, r, c) = std::clamp(vuyx.v, 0.0f, 1.0f);
-			mOutput.at(1, r, c) = std::clamp(vuyx.u, 0.0f, 1.0f);
-			mOutput.at(2, r, c) = std::clamp(vuyx.y, 0.0f, 1.0f);
-			mOutput.at(3, r, c) = std::clamp(vuyx.x, 0.0f, 1.0f);
+			Float4 pixel = mBuffer4.at(r, c) + (mBuffer4.at(r, c) - mFilterResult4.at(r, c)) * mData.unsharp4;
+			mOutput.setPixel(r, c, pixel.clamp(0.0f, 1.0f));
 			//if (z==0 && r==1049 && c==842) std::printf("cpu %.14f %d\n", val * 255, mOutput.at(z, r, c));
 		}
 	};
-	//forward to thread pool for iteration there
+	//forward to thread pool for iteration
 	mPool.addAndWait(funcOutput, 0, mData.h);
 
+	std::copy_n(mBuffer4.data(), mBuffer4.numel(), mPrevOut.data());
 	mOutput.index = frameIndex;
 }
 

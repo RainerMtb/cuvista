@@ -136,6 +136,11 @@ void Trajectory::reset() {
 	mCurrentSum.a = 0.0;
 }
 
+void Trajectory::clear() {
+	mTrajectory.clear();
+	reset();
+}
+
 void Trajectory::reserve(int64_t siz) {
 	mTrajectory.reserve(siz);
 }
@@ -202,20 +207,29 @@ void Trajectory::computeSmoothZoom(const MainData& data, int64_t frameIndex) {
 	mCurrentZoom = ti.zoom = std::clamp(mCurrentZoom + gradient, data.zoomMin, data.zoomMax);
 }
 
-//build AffineTransform from trajectory
-const AffineTransform& Trajectory::getTransform(const MainData& data, int64_t frameIndex) {
-	TrajectoryItem& ti = mTrajectory[frameIndex];
-
-	//get transform to apply to image
+//build AffineTransform from trajectory, compute transform for image
+const AffineTransform& Trajectory::getTransform(int h, int w, TrajectoryItem& ti, double zoom, int64_t frameIndex) {
 	mCurrentTransform.reset()
-		.addTranslation(data.w / 2.0, data.h / 2.0)          //translate to origin
+		.addTranslation(w / 2.0, h / 2.0)                  //translate to origin
 		.addRotation(ti.smoothed.a)                        //rotation
-		.addZoom(ti.zoom)                                    //zoom as set in trajectory
-		.addTranslation(ti.smoothed.u, ti.smoothed.v)    //computed translation to stabilize
-		.addTranslation(data.w / -2.0, data.h / -2.0)        //translate back to center
+		.addZoom(zoom)                                     //additional zoom
+		.addTranslation(ti.smoothed.u, ti.smoothed.v)      //computed translation to stabilize
+		.addTranslation(w / -2.0, h / -2.0)                //translate back to center
 		;
 	mCurrentTransform.frameIndex = frameIndex;
 	return mCurrentTransform;
+}
+
+//build AffineTransform from trajectory
+const AffineTransform& Trajectory::getTransform(const MainData& data, int64_t frameIndex, double zoom) {
+	TrajectoryItem& ti = mTrajectory[frameIndex];
+	return getTransform(data.h, data.w, ti, zoom, frameIndex);
+}
+
+//build AffineTransform from trajectory
+const AffineTransform& Trajectory::getTransform(const MainData& data, int64_t frameIndex) {
+	TrajectoryItem& ti = mTrajectory[frameIndex];
+	return getTransform(data.h, data.w, ti, ti.zoom, frameIndex);
 }
 
 void Trajectory::readTransforms(std::map<int64_t, TransformValues> transformsMap) {

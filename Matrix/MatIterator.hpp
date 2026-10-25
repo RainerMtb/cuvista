@@ -18,14 +18,29 @@
 
 #pragma once
 
-//Iterator through elements of a Mat
+#include "CoreMat.hpp"
 
+//Iterator through elements of a Mat
 template <class T> class MatIterator {
 
-protected:
-	T* ptr;
+private:
 	size_t i;
-	std::function<size_t(size_t)> indexFunc;
+	Direction dir;
+	CoreMat<T>* mat;
+
+	T* index(size_t i) {
+		size_t r = 0;
+		size_t c = 0;
+		if (dir == Direction::HORIZONTAL) {
+			r = i / mat->cols();
+			c = i % mat->cols();
+
+		} else {
+			r = i % mat->rows();
+			c = i / mat->rows();
+		}
+		return mat->addr(r, c);
+	}
 
 public:
 	using iterator_category = std::random_access_iterator_tag;
@@ -34,25 +49,27 @@ public:
 	using pointer           = T*;
 	using reference         = T&;
 
-	MatIterator(T* ptr, size_t i, std::function<size_t(size_t)> indexFunc) : 
-		ptr { ptr }, 
+	MatIterator(size_t i, Direction dir, CoreMat<T>* mat) :
 		i { i }, 
-		indexFunc { indexFunc } 
+		dir { dir },
+		mat { mat } 
 	{}
 
-	MatIterator() : MatIterator(nullptr, 0, nullptr) {}
+	MatIterator() :
+		MatIterator<T>(0, Direction::HORIZONTAL, nullptr)
+	{}
 
-	T& operator * () { return *(ptr + indexFunc(i)); }
+	T& operator * () { return *index(i); }
 
-	T& operator [] (size_t ii) { return *(ptr + indexFunc(ii)); }
+	T& operator [] (size_t ii) { return *index(ii); }
 
-	T* operator -> () { return ptr + indexFunc(i); }
+	T* operator -> () { return index(i); }
 
-	bool operator != (const MatIterator& other) const { return ptr + i != other.ptr + other.i; }
+	bool operator != (const MatIterator& other) { return i != other.i; }
 
-	bool operator == (const MatIterator& other) const { return ptr + i == other.ptr + other.i; }
+	bool operator == (const MatIterator& other) { return i == other.i; }
 
-	bool operator <=> (const MatIterator& other) const { return other.ptr + other.i - ptr - i; }
+	bool operator < (const MatIterator& other) { return i < other.i; }
 
 	MatIterator& operator ++ () { i++; return *this; }
 
@@ -63,4 +80,67 @@ public:
 	MatIterator operator -- (int) { MatIterator temp = *this; i--; return temp; }
 
 	difference_type operator - (const MatIterator& other) const { return i - other.i; }
+};
+
+
+//Iterator through elements of a const Mat
+template <class T> class ConstMatIterator {
+
+private:
+	size_t i;
+	Direction dir;
+	const CoreMat<T>* mat;
+
+	const T* index(size_t i) const {
+		size_t r = 0;
+		size_t c = 0;
+		if (dir == Direction::HORIZONTAL) {
+			r = i / mat->cols();
+			c = i % mat->cols();
+
+		} else {
+			r = i % mat->rows();
+			c = i / mat->rows();
+		}
+		return mat->addr(r, c);
+	}
+
+public:
+	using iterator_category = std::random_access_iterator_tag;
+	using difference_type   = std::ptrdiff_t;
+	using value_type        = T;
+	using pointer           = T*;
+	using reference         = T&;
+
+	ConstMatIterator(size_t i, Direction dir, const CoreMat<T>* mat) :
+		i { i }, 
+		dir { dir },
+		mat { mat } 
+	{}
+
+	ConstMatIterator() :
+		ConstMatIterator<T>(0, Direction::HORIZONTAL, nullptr)
+	{}
+
+	const T& operator * () const { return *index(i); }
+
+	const T& operator [] (size_t ii) const { return *index(ii); }
+
+	const T* operator -> () const { return index(i); }
+
+	bool operator != (const ConstMatIterator& other) { return i != other.i; }
+
+	bool operator == (const ConstMatIterator& other) {  return i == other.i; }
+
+	bool operator < (const ConstMatIterator& other) { return i < other.i; }
+
+	ConstMatIterator& operator ++ () { i++; return *this; }
+
+	ConstMatIterator operator ++ (int) { ConstMatIterator temp = *this; i++; return temp; }
+
+	ConstMatIterator& operator -- () { i--; return *this; }
+
+	ConstMatIterator operator -- (int) { ConstMatIterator temp = *this; i--; return temp; }
+
+	difference_type operator - (const ConstMatIterator& other) const { return i - other.i; }
 };

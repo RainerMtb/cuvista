@@ -19,8 +19,7 @@
 #include "pch.h"
 #include "CppUnitTest.h"
 #include "Utils.hpp"
-#include "AffineTransform.hpp"
-#include "SubMat.hpp"
+#include "Mat.hpp"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
@@ -41,7 +40,7 @@ public:
 		Assert::AreEqual(result, a.timesTransposed());
 
 		Matd b = Matd::fromRowData(5, 5, {2, 2, 2, 2, 2, -2, 1, 2, 3, -2, -2, 4, 5, 6, -2, -2, 7, 8, 9, -2, 2, 2, 2, 2, 2});
-		SubMat<double> sb = SubMat<double>::from(b, 1, 1, 3, 3);
+		StridedMat<double> sb = StridedMat<double>::from(b, 1, 1, 3, 3);
 		Assert::AreEqual(result, sb.times(sb.trans()));
 		Assert::AreEqual(result, sb.timesTransposed());
 	}
@@ -161,16 +160,12 @@ public:
 	TEST_METHOD(subMat) {
 		Matd a = Matd::eye(7);
 		Matd sm = a.subMat(1, 2, 4, 3);
-		SubMat<double> sms = SubMat<double>::from(a, 1, 2, 4, 3);
+		StridedMat<double> sms = StridedMat<double>::from(a, 1, 2, 4, 3);
 		Assert::IsTrue(sms == sm, L"subMat not equal");
 		Assert::AreEqual(4ull, sm.rows());
 		Assert::AreEqual(3ull, sm.cols());
 		Assert::AreEqual(4ull, sms.rows());
 		Assert::AreEqual(3ull, sms.cols());
-		Assert::IsTrue(a.isShared(sms));
-		Assert::IsTrue(sms.isShared(a));
-		Assert::IsFalse(sm.isShared(a));
-		Assert::IsFalse(sm.isShared(sms));
 
 		sms.setValues(10);
 		Assert::AreEqual(10.0, a.at(1, 2));
@@ -178,7 +173,7 @@ public:
 
 		sms.setValues([] (size_t r, size_t c) {return r * 2.0 + c * 4.0 + 2.0; });
 
-		SubMat<double> sub2 = SubMat<double>::from(sms, 1, 0, 2, 1);
+		StridedMat<double> sub2 = StridedMat<double>::from(sms, 1, 0, 2, 1);
 		sub2.set(1, 0, 100);
 		Assert::AreEqual(4.0, a.at(2, 2));
 		Assert::AreEqual(100.0, a.at(3, 2));

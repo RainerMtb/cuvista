@@ -93,8 +93,6 @@ public:
 
 	double dY() const;
 
-	double arrayValue(int idx) const;
-
 	std::array<double, 6> toArray() const;
 
 	Mat<double> toMat() const;

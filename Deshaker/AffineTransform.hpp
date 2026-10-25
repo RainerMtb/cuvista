@@ -28,8 +28,8 @@
 class AffineTransform : public Affine2D {
 
 protected:
-	Mat A = Mat<double>::zeros(6, 6);
-	Mat b = Mat<double>::zeros(6, 1);
+	Matd A = Matd::zeros(6, 6);
+	Matd b = Matd::zeros(6, 1);
 
 	AffineTransform(int64_t frameIndex, double m00, double m01, double m02, double m10, double m11, double m12) :
 		Affine2D(m00, m01, m02, m10, m11, m12),

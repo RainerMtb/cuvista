@@ -42,24 +42,46 @@ struct Quartet {
 	float operator [] (size_t idx) const;
 };
 
-struct FloatVuyx {
-	float v, u, y, x;
+struct Float4 {
+	float f0, f1, f2, f3;
 
-	FloatVuyx(float v, float u, float y, float x) : v { v }, u { u }, y { y }, x { x } {}
-	FloatVuyx(float f) : FloatVuyx(f, f, f, f) {}
-	FloatVuyx() : FloatVuyx(0, 0, 0, 0) {}
-	FloatVuyx(const Quartet& other);
+	Float4(float f0, float f1, float f2, float f3) : f0 { f0 }, f1 { f1 }, f2 { f2 }, f3 { f3 } {}
+	Float4(float f) : Float4(f, f, f, f) {}
+	Float4() : Float4(0, 0, 0, 0) {}
+	Float4(const Quartet& other);
 
 	float operator [] (size_t idx) const;
-	friend FloatVuyx operator + (const FloatVuyx& a, const FloatVuyx& b);
-	friend FloatVuyx operator - (const FloatVuyx& a, const FloatVuyx& b);
-	friend FloatVuyx operator * (const FloatVuyx& a, const FloatVuyx& b);
-	friend FloatVuyx operator * (float f, const FloatVuyx& a);
-	friend FloatVuyx operator / (const FloatVuyx& a, const FloatVuyx& b);
-	friend FloatVuyx operator / (float f, const FloatVuyx& a);
+	friend Float4 operator + (const Float4& a, const Float4& b);
+	friend Float4 operator - (const Float4& a, const Float4& b);
+	friend Float4 operator * (const Float4& a, const Float4& b);
+	friend Float4 operator * (float f, const Float4& a);
+	friend Float4 operator / (const Float4& a, const Float4& b);
+	friend Float4 operator / (float f, const Float4& a);
+
+	Float4 clamp(float lo, float hi) const;
+};
+
+struct Double4 {
+	double d0, d1, d2, d3;
+
+	Double4(double d0, double d1, double d2, double d3) : d0 { d0 }, d1 { d1 }, d2 { d2 }, d3 { d3 } {}
+	Double4(double d) : Double4(d, d, d, d) {}
+	Double4() : Double4(0, 0, 0, 0) {}
+
+	double operator [] (size_t idx) const;
+	friend Double4 operator + (const Double4& a, const Double4& b);
+	friend Double4 operator - (const Double4& a, const Double4& b);
+	friend Double4 operator * (const Double4& a, const Double4& b);
+	friend Double4 operator * (float f, const Double4& a);
+	friend Double4 operator / (const Double4& a, const Double4& b);
+	friend Double4 operator / (float f, const Double4& a);
+
+	Double4 clamp(double lo, double hi) const;
 };
 
 namespace std {
 
-	FloatVuyx fma(const FloatVuyx& x, const FloatVuyx& y, const FloatVuyx& z);
+	Float4 fma(const Float4& x, const Float4& y, const Float4& z);
+
+	Double4 fma(const Double4& x, const Double4& y, const Double4& z);
 }

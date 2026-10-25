@@ -21,25 +21,25 @@
 #include "Mat.hpp"
 
 //specialization of mat for use with avx
-template <class T> class AvxMat : protected CoreMat<T> {
+template <class T> class AvxMat : protected Mat<T> {
 public:
 	int64_t frameIndex = -1;
 
-	AvxMat() : CoreMat<T>() {}
-	AvxMat(int h, int w) : CoreMat<T>(h, w) {}
-	AvxMat(int h, int w, T value) : CoreMat<T>(h, w, value) {}
+	AvxMat() : Mat<T>() {}
+	AvxMat(int h, int w) : Mat<T>(h, w) {}
+	AvxMat(int h, int w, T value) : Mat<T>(h, w, value) {}
 
-	int w() const { return int(CoreMat<T>::w); }
-	int h() const { return int(CoreMat<T>::h); }
+	int w() const { return int(Mat<T>::w); }
+	int h() const { return int(Mat<T>::h); }
 
-	T& at(int row, int col) { return CoreMat<T>::at(row, col); }
-	const T& at(int row, int col) const { return CoreMat<T>::at(row, col); }
+	T& at(int row, int col) { return Mat<T>::at(row, col); }
+	const T& at(int row, int col) const { return Mat<T>::at(row, col); }
 
-	T* addr(size_t row, size_t col) { return CoreMat<T>::addr(row, col); }
-	const T* addr(size_t row, size_t col) const { return CoreMat<T>::addr(row, col); }
+	T* addr(size_t row, size_t col) { return Mat<T>::addr(row, col); }
+	const T* addr(size_t row, size_t col) const { return Mat<T>::addr(row, col); }
 
-	T* data() { return CoreMat<T>::data(); }
-	const T* data() const { return CoreMat<T>::data(); }
+	T* data() { return Mat<T>::data(); }
+	const T* data() const { return Mat<T>::data(); }
 
 	T* row(int r) { return addr(r, 0); }
 	const T* row(int r) const { return addr(r, 0); }

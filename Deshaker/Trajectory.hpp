@@ -113,6 +113,12 @@ public:
 	void computeSmoothZoom(const MainData& data, int64_t frameIndex);
 
 	//get computed transform
+	const AffineTransform& getTransform(int h, int w, TrajectoryItem& ti, double zoom, int64_t frameIndex);
+
+	//get computed transform
+	const AffineTransform& getTransform(const MainData& data, int64_t frameIndex, double zoom);
+
+	//get computed transform
 	const AffineTransform& getTransform(const MainData& data, int64_t frameIndex);
 
 	//load transforms from list into trajectory
@@ -123,6 +129,9 @@ public:
 
 	//reset for iteration
 	void reset();
+
+	//delete and reset
+	void clear();
 
 	//reserve trajectory size
 	void reserve(int64_t siz);

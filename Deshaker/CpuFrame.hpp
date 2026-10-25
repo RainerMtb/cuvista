@@ -25,9 +25,9 @@
 //---------- CPU FRAME ------------------------------------------------
 //---------------------------------------------------------------------
 
-class CpuFrame : public FrameExecutor {
+using Matf4 = Mat<Float4>;
 
-	using Matf4 = Mat<FloatVuyx>;
+class CpuFrame : public FrameExecutor {
 
 public:
 	CpuFrame(MainData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool);
@@ -49,7 +49,7 @@ public:
 private:
 	std::vector<float> filterKernelY = { 0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f };
 
-	std::vector<FloatVuyx> filterKernel4 = {
+	std::vector<Float4> filterKernel4 = {
 		{ 0.0f,  0.0f,  0.0625f, 0.0f },
 		{ 0.25f, 0.25f, 0.25f,   0.0f },
 		{ 0.5f,  0.5f,  0.375f,  0.0f },
@@ -76,13 +76,15 @@ private:
 
 	//buffers the last output frame, to be used to blend background of next frame
 	Matf4 mPrevOut;
+	//background filled frame
+	Matf4 mBackground;
 
 	//buffer for generating output from input yuv and transformation
 	Matf mFilterBuffer1, mFilterBuffer2;
 	Matf4 mBuffer4, mFilterBuffer4, mFilterResult4;
 
 	//final output
-	ImageVuyxFloat mOutput;
+	ImageFloat4 mOutput;
 
 	void createPyramidLevels(CpuPyramid& pyr);
 };

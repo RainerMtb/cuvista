@@ -236,25 +236,32 @@ namespace im {
 
 	//-----------------------------------------------------------------------
 
-	ImageVuyxFloat::ImageVuyxFloat(int h, int w, int stride, float* data) {
+	ImageFloat4::ImageFloat4(int h, int w, int stride, float* data) {
 		storePtr = std::make_shared<ImageStore<float>>(h, w, stride, 4, h * stride, YAxisDir::DOWN, std::vector<int>{ 2, 1, 0, 3 }, 1.0f, data);
 		typePtr = std::make_shared<ImageTypePacked<float>>(storePtr);
 		colorPtr = std::make_shared<ImageColorYuv<float>>(typePtr);
 	}
 
-	ImageVuyxFloat::ImageVuyxFloat(int h, int w, int stride) {
+	ImageFloat4::ImageFloat4(int h, int w, int stride) {
 		storePtr = std::make_shared<ImageStore<float>>(h, w, stride, 4, h * stride, YAxisDir::DOWN, std::vector<int>{ 2, 1, 0, 3 }, 1.0f);
 		typePtr = std::make_shared<ImageTypePacked<float>>(storePtr);
 		colorPtr = std::make_shared<ImageColorYuv<float>>(typePtr);
 	}
 
-	ImageVuyxFloat::ImageVuyxFloat(int h, int w) :
-		ImageVuyxFloat(h, w, w * 4) 
+	ImageFloat4::ImageFloat4(int h, int w) :
+		ImageFloat4(h, w, w * 4)
 	{}
 
-	ImageVuyxFloat::ImageVuyxFloat() :
-		ImageVuyxFloat(0, 0)
+	ImageFloat4::ImageFloat4() :
+		ImageFloat4(0, 0)
 	{}
+
+	void ImageFloat4::setPixel(int r, int c, Float4 pixel) {
+		at(0, r, c) = pixel.f0;
+		at(1, r, c) = pixel.f1;
+		at(2, r, c) = pixel.f2;
+		at(3, r, c) = pixel.f3;
+	}
 
 
 	//-----------------------------------------------------------------------

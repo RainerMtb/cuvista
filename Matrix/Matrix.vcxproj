@@ -23,7 +23,6 @@
     <ClInclude Include="OutputLine.hpp" />
     <ClInclude Include="QRDecompositor.hpp" />
     <ClInclude Include="QRDecompositorUD.hpp" />
-    <ClInclude Include="SubMat.hpp" />
     <ClInclude Include="SVDecompositor.hpp" />
   </ItemGroup>
   <ItemGroup>
@@ -46,7 +45,7 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
     <PlatformToolset>v145</PlatformToolset>
-    <MSVCPreviewEnabled>true</MSVCPreviewEnabled>
+    <MSVCPreviewEnabled>false</MSVCPreviewEnabled>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
@@ -54,7 +53,7 @@
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
     <PlatformToolset>v145</PlatformToolset>
-    <MSVCPreviewEnabled>true</MSVCPreviewEnabled>
+    <MSVCPreviewEnabled>false</MSVCPreviewEnabled>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">

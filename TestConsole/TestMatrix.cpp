@@ -17,7 +17,7 @@
  */
 
 #include "TestMain.hpp"
-#include "SubMat.hpp"
+#include "Mat.hpp"
 
 void compareInv() {
 	Mat slist = Matd::fromBinaryFile("d:/VideoTest/s.mat");
@@ -71,7 +71,7 @@ void matTest() {
 	std::cout << std::endl;
 
 	std::cout << "output by column: ";
-	std::copy(md.begin(Matd::Direction::VERTICAL), md.end(Matd::Direction::VERTICAL), std::ostream_iterator<double>(std::cout, ", "));
+	std::copy(md.begin(Direction::VERTICAL), md.end(Direction::VERTICAL), std::ostream_iterator<double>(std::cout, ", "));
 	std::cout << std::endl;
 
 	Matd out = Mat<double>::fromRowData(4, 3, {
@@ -88,9 +88,9 @@ void matTest() {
 	Matd c1 = Matd::rand(2, 3).toConsole("c1");
 	Matd c2 = Matd::fromRow({ 15, 15, -15 }).toConsole("c2");
 	Matd c3 = Matd::hilb(3).toConsole("c3");
-	Matd m = Matd::concat(Matd::Direction::VERTICAL, { c1, c2, c3 });
+	Matd m = Matd::concat(Direction::VERTICAL, { c1, c2, c3 });
 	m.toConsole("vertcat");
-	m.subMat(1, 1, 2, 2).toConsole("subMat");
+	m.subMat(1, 1, 2, 2).toConsole("subMat [1, 1]");
 
 	Matd h1 = Matd::fromRowData(2, 1, { 3, 5 });
 	Matd h2 = Matd::values(2, 2, -3.6);
@@ -101,13 +101,9 @@ void matTest() {
 	(Matd::values(4, 4, 1.0) + 2 * Matd::eye(4) * -3.567).toConsole("diag -6,134");
 
 	Matd h = Matd::hilb(3).repeat(2, 3).toConsole("hilb repeat");
-	Matd hs = h.subMat(2, 3, 2, 5).toConsole("hilb subMat");
-	std::cout << "is shared (no): " << h.isShared(hs) << " and " << hs.isShared(h) << std::endl;
-
-	SubMat<double> hss = SubMat<double>::from(h, 2, 3, 2, 5);
-	hss.toConsole("subMatShared");
-	std::cout << "sub == subshared (yes): " << (hs == hss) << std::endl;
-	std::cout << "is shared (yes): " << h.isShared(hss) << " and " << hss.isShared(h) << std::endl;
+	Matd hs = h.subMat(2, 3, 2, 5).toConsole("hilb subMat [2, 3]");
+	StridedMat<double> hss = StridedMat<double>::from(h, 2, 3, 2, 5);
+	hss.toConsole("hilb subMatShared [2, 3]");
 
 	Matd b = Matd::fromRow(2.0, -1.0, -4.0);
 	b.toConsole("b");
@@ -129,8 +125,15 @@ void matTest() {
 
 	//rand
 	Matd r = Matd::rand(4, 6);
-	r.toConsole("rand 1", 1);
-	r.toConsole("rand 8", 8);
+	r.toConsole("rand 1 place", 1);
+	r.toConsole("rand 8 places", 8);
+
+	Matd mm = Matd::fromRowData(3, 4, { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 });
+	mm.toConsole("1");
+	StridedMat<double> sm = StridedMat<double>::from(mm, 1, 1, 2, 3);
+	sm.toConsole("2");
+	StridedMat<double> smm = StridedMat<double>::from(sm, 1, 1, 1, 2);
+	smm.toConsole("3");
 }
 
 void qrdec() {
@@ -149,7 +152,7 @@ void qrdec() {
 void subMat() {
 	Matd A = Matd::fromRowData(3, 3, { 1, 2, 3, 4, 5, 6, 7, 8, 9 });
 	A.toConsole();
-	SubMat<double> ss = SubMat<double>::from(A, 1, 1, 2, 2);
+	StridedMat<double> ss = StridedMat<double>::from(A, 1, 1, 2, 2);
 	ss.toConsole("ss");
 	Matd s = A.subMat(1, 1, 2, 2);
 	s.toConsole("s");
@@ -160,7 +163,7 @@ void subMat() {
 
 void iteratorTest() {
 	Matd A = Matd::fromRowData(3, 3, { 1, 2, 3, 4, 5, 6, 7, 8, 9 });
-	SubMat<double> ss = SubMat<double>::from(A, 1, 1, 2, 2);
+	StridedMat<double> ss = StridedMat<double>::from(A, 1, 1, 2, 2);
 	ss.toConsole("ss");
 	Matd s = A.subMat(1, 1, 2, 2);
 
@@ -172,9 +175,9 @@ void iteratorTest() {
 	std::cout << std::endl;
 
 	std::cout << "iter cols: ";
-	for (auto it = s.begin(Matd::Direction::VERTICAL); it != s.end(Matd::Direction::VERTICAL); it++) std::cout << *it << ", ";
+	for (auto it = s.begin(Direction::VERTICAL); it != s.end(Direction::VERTICAL); it++) std::cout << *it << ", ";
 	std::cout << std::endl;
 	std::cout << "iter cols: ";
-	for (auto it = ss.begin(Matd::Direction::VERTICAL); it != ss.end(Matd::Direction::VERTICAL); it++) std::cout << *it << ", ";
+	for (auto it = ss.begin(Direction::VERTICAL); it != ss.end(Direction::VERTICAL); it++) std::cout << *it << ", ";
 	std::cout << std::endl;
 }

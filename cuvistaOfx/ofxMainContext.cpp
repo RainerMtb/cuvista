@@ -120,7 +120,7 @@ OfxStatus MainContext::actionLoad(OfxImageEffectHandle effect) {
 			//multiThreadSuite->multiThread(func, 4, nullptr);
 
 			debugLogger().format(
-				"-- action Load on thread {}, plugin loaded, Host Name = {}, Api Version = {}, Cpu Count = {}", 
+				"-- action Load on thread {}, Host Name = {}, Api Version = {}, Cpu Count = {}", 
 				threadId(), hostName, hostApiVersion, cpuCount
 			);
 			status = kOfxStatOK;

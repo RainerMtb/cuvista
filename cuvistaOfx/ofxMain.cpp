@@ -32,7 +32,7 @@ namespace ofx {
 	OfxPlugin plugin = {};
 
 	void openLogger() {
-		const size_t siz = 256;
+		const size_t siz = 512;
 		char buf[siz];
 		size_t len = 0;
 		getenv_s(&len, buf, siz, "CUVISTA_LOG");

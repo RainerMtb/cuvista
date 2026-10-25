@@ -19,14 +19,12 @@
 #pragma once
 
 #include <iostream>
-#include <iomanip>
 #include <fstream>
 #include <functional>
 #include <vector>
 #include <random>
 #include <sstream>
 #include <format>
-#include <numbers>
 #include <optional>
 #include <span>
 
@@ -41,6 +39,8 @@
 #include "OutputLine.hpp"
 #include "Util.hpp"
 #include "ImageClasses.hpp"
+#include "BaseData.hpp"
+
 
 //---------------------------------------------------------
 //------------------------ CLASS MATROW FOR [][] INDEXING
@@ -77,38 +77,41 @@ public:
 //------------------------ MAIN MATRIX CLASS
 //---------------------------------------------------------
 
-
 template <class T> class Mat : public CoreMat<T> {
 
+protected:
 	friend class MatRow<T>;
 
-public:
-	using CoreMat<T>::array;
-	using CoreMat<T>::rows;
-	using CoreMat<T>::cols;
-	using CoreMat<T>::at;
-	using CoreMat<T>::addr;
-
-	enum class Direction {
-		VERTICAL = 0,
-		HORIZONTAL = 1,
-	};
-
-protected:
 	//pretty print mat values
 	inline static int printDigits = 5;
 
 	//maximum width and height
-	static constexpr size_t MAX_DIM = 1 << 30;
-	static constexpr int MAX_DIGITS = 25;
+	inline static constexpr size_t MAX_DIM = 1 << 20;
+	inline static constexpr int MAX_DIGITS = 25;
 
-	//create mat using existing data array, sharing memory
-	Mat(T* array, size_t rows, size_t cols, bool ownData) : 
-		CoreMat<T>(array, rows, cols, ownData) {}
+	T* array;             //main data array
+	size_t h, w;          //dimensions of mat
+	bool ownData;         //object owns and therefore destructs data array
 
 	//create new mat, allocate data array
-	Mat(size_t rows, size_t cols) : 
-		Mat<T>(new T[rows * cols], rows, cols, true) {}
+	Mat(size_t rows, size_t cols) :
+		Mat<T>(new T[rows * cols], rows, cols, true)
+	{}
+
+	//create new mat filled with given value
+	Mat(size_t rows, size_t cols, T value) :
+		Mat<T>(rows, cols)
+	{
+		std::fill(array, array + rows * cols, value);
+	}
+
+	//create mat using existing data array, sharing memory
+	Mat(T* array, size_t rows, size_t cols, bool ownData) :
+		array { array },
+		h { rows },
+		w { cols },
+		ownData { ownData }
+	{}
 
 	//apply unary op
 	Mat<T> unaryOpSafe(const Mat<T>& other, std::function <T(size_t, size_t)> op) const {
@@ -122,6 +125,34 @@ protected:
 		else if (valuePositive > hi + valueNegative) out = hi;
 		else out = valuePositive - valueNegative;
 		return out;
+	}
+
+	//return height for index 0 or width for index 1
+	size_t dim(size_t dimIdx) const {
+		return dimIdx == 0 ? rows() : cols();
+	}
+
+	template <class R, class X = T> X interpFunc(size_t ix, size_t iy, R dx, R dy) const {
+		X f00 = at(iy, ix);
+		size_t x = dx != 0;
+		size_t y = dy != 0;
+		X f01 = at(iy, ix + x);
+		X f10 = at(iy + y, ix);
+		X f11 = at(iy + y, ix + x);
+		X result = ((1 - dx) * (1 - dy) * f00 + (1 - dx) * dy * f10 + dx * (1 - dy) * f01 + dx * dy * f11);
+		return result;
+	}
+
+	template <class R, class X = T> X interpFunc(R x, R y) const {
+		R flx = std::floor(x), fly = std::floor(y);
+		R dx = x - flx, dy = y - fly;
+		size_t ix = size_t(flx), iy = size_t(fly);
+		return interpFunc<R, X>(ix, iy, dx, dy);
+	}
+
+	template <class R, class X = T> std::optional<X> interpFunc(R x, R y, size_t x0, size_t y0, size_t w, size_t h) const {
+		if (x < x0 || x > x0 + w - 1 || y < y0 || y > y0 + h - 1) return std::nullopt;
+		return interpFunc<R, X>(x, y);
 	}
 
 	static Mat<T> concatFunc(Direction catDim, std::span<const Mat<T>*> span) {
@@ -151,12 +182,6 @@ protected:
 
 private:
 	constexpr static T eps() { return 0; }
-
-	//compute array index from interator index
-	virtual std::function<size_t(size_t)> indexFunc(Direction dir) const {
-		if (dir == Direction::HORIZONTAL) return [&] (size_t i) { return i; }; //iterator for row major order
-		else return [&] (size_t i) { return i % rows() * cols() + i / rows(); }; //iterate in column major order
-	}
 
 	//create output lines
 	std::vector<OutputLine> rowStrings(const std::string& title, int digits) const {
@@ -207,7 +232,7 @@ private:
 			lines[r].add(']');
 		}
 		//last row one more closing bracket
-		lines[rows() - 1ull].add(']');
+		lines.back().add(']');
 		return lines;
 	}
 
@@ -229,27 +254,136 @@ private:
 
 public:
 	//default constructor produces invalid mat
-	Mat() : 
-		Mat<T>(nullptr, 0, 0, true) {}
+	Mat() :
+		Mat<T>(nullptr, 0, 0, true)
+	{}
 
 	//implicit constructor for scalar Matrix
 	Mat(T val) : 
-		Mat<T>(new T[1] {val}, 1, 1, true) {}
-
-	//copy constructor from CoreMat
-	Mat(const CoreMat<T>& other) :
-		CoreMat<T>(other) {}
+		Mat<T>(new T[1] {val}, 1, 1, true) 
+	{}
 
 	//conversion from other Mat
-	template <class R> Mat(const CoreMat<R>& other) :
+	template <class R> Mat(const Mat<R>& other) :
 		Mat<T>(other.rows(), other.cols())
 	{
 		setValues([&] (size_t r, size_t c) { return (T) (other.at(r, c)); });
 	}
 
-	//move constructor from CoreMat
-	Mat(CoreMat<T>&& other) noexcept :
-		CoreMat<T>(other) {}
+	//copy constructor
+	Mat(const Mat<T>& other) :
+		Mat<T>(nullptr, other.h, other.w, true)
+	{
+		//std::cout << "!! 1 copy constructor" << std::endl;
+		using TT = std::remove_const_t<T>;
+		size_t numel = other.h * other.w;
+		TT* newArray = new TT[numel];
+		std::copy_n(other.array, numel, newArray);
+		array = newArray;
+	}
+
+	//move constructor
+	Mat(Mat<T>&& other) noexcept {
+		//std::cout << "!! 2 move constructor" << std::endl;
+		this->array = other.array;
+		this->h = other.h;
+		this->w = other.w;
+		this->ownData = other.ownData;
+
+		other.array = nullptr;
+		other.ownData = false;
+	}
+
+	//virtual destructor
+	virtual ~Mat() {
+		//std::cout << "!! destructor " << &array << " " << h << ", " << w << std::endl;
+		if (ownData) {
+			delete[] array;
+		}
+	}
+
+	//copy assignment
+	Mat<T>& operator = (const Mat<T>& other) {
+		//std::cout << "!! copy assignment" << std::endl;
+		if (this != &other) {
+			Mat<T> matCopy = other;
+			swap(*this, matCopy);
+		}
+		return *this;
+	}
+
+	//move assignment
+	Mat<T>& operator = (Mat<T>&& other) noexcept {
+		//std::cout << "!! move assignment" << std::endl;
+		if (this != &other) {
+			swap(*this, other);
+		}
+		return *this;
+	}
+
+	friend void swap(Mat<T>& a, Mat<T>& b) noexcept {
+		std::swap(a.array, b.array);
+		std::swap(a.w, b.w);
+		std::swap(a.h, b.h);
+		std::swap(a.ownData, b.ownData);
+	}
+
+	//return pointer to first element
+	virtual T* data() override {
+		return array;
+	}
+
+	//return pointer to first element
+	virtual const T* data() const override {
+		return array;
+	}
+
+	//return pointer to element without boundary check
+	virtual T* addr(size_t row, size_t col) override {
+		return array + row * w + col;
+	}
+
+	//return pointer to element without boundary check
+	virtual const T* addr(size_t row, size_t col) const override {
+		return array + row * w + col;
+	}
+
+	//reference to value at given position
+	T& at(size_t row, size_t col) {
+		assert(row < h && col < w && "mat access out of bounds");
+		return *addr(row, col);
+	}
+
+	//reference to value at given position
+	const T& at(size_t row, size_t col) const {
+		assert(row < h && col < w && "mat access out of bounds");
+		return *addr(row, col);
+	}
+
+	//extract first value
+	T scalar() const {
+		return at(0, 0);
+	}
+
+	//stride in bytes
+	virtual size_t stride() const override {
+		return w * sizeof(T);
+	}
+
+	//number of rows
+	virtual size_t rows() const override {
+		return h;
+	}
+
+	//number of columns
+	virtual size_t cols() const override {
+		return w;
+	}
+
+	//number of elements
+	size_t numel() const {
+		return cols() * rows();
+	}
 
 	//print precision
 	static int precision(int digits) {
@@ -263,12 +397,12 @@ public:
 	static int precision() {
 		return printDigits;
 	}
-
+	
 	//iterators
-	auto begin(Direction dir = Direction::HORIZONTAL)           { return MatIterator<T>(this->data(), 0, indexFunc(dir)); }
-	auto end(Direction dir = Direction::HORIZONTAL)	            { return MatIterator<T>(this->data(), rows() * cols(), indexFunc(dir)); }
-	auto cbegin(Direction dir = Direction::HORIZONTAL) const    { return MatIterator<const T>(this->data(), 0, indexFunc(dir)); }
-	auto cend(Direction dir = Direction::HORIZONTAL) const      { return MatIterator<const T>(this->data(), rows() * cols(), indexFunc(dir)); }
+	auto begin(Direction dir = Direction::HORIZONTAL)           { return MatIterator<T>(0, dir, this); }
+	auto end(Direction dir = Direction::HORIZONTAL)	            { return MatIterator<T>(numel(), dir, this); }
+	auto cbegin(Direction dir = Direction::HORIZONTAL) const    { return ConstMatIterator<T>(0, dir, this); }
+	auto cend(Direction dir = Direction::HORIZONTAL) const      { return ConstMatIterator<T>(numel(), dir, this); }
 
 	//---------------------------------------------------------
 	//------------------------ STATIC MAKERS
@@ -446,9 +580,6 @@ public:
 	//---------------------------------------------------------
 
 
-	//check if data array is shared between mats
-	bool isShared(const Mat<T>& other) const { return array == other.array; }
-
 	//value from mat or default value when out of bounds
 	const T& atOrElse(int row, int col, const T& defaultValue) const {
 		if (row >= 0 && col >= 0 && this->isValidIndex(row, col)) return at(row, col);
@@ -534,7 +665,7 @@ public:
 	//extract diagonal elements into column vector
 	Mat<T> diag() const {
 		size_t s = std::min(rows(), cols());
-		return Mat<double>::generate(s, 1, [&] (size_t r, size_t c) { return at(r, r); });
+		return Mat<T>::generate(s, 1, [&] (size_t r, size_t c) { return at(r, r); });
 	}
 
 	//calculate crc value
@@ -557,7 +688,7 @@ public:
 		return *this;
 	}
 
-	virtual Mat<T> toConsole(const std::string& title = "", int digits = -1) const {
+	virtual const Mat<T>& toConsole(const std::string& title = "", int digits = -1) const {
 		print(std::cout, title, digits);
 		return *this;
 	}
@@ -609,7 +740,7 @@ public:
 	void saveAsBMP(const std::string& filename, T maxValue) const {
 		int h = int(this->h);
 		int w = int(this->w);
-		im::ImageY<T>(h, w, w, this->array, maxValue).saveBmpPlanes(filename);
+		im::ImageY<T>(h, w, w, maxValue, this->array).saveBmpPlanes(filename);
 	}
 
 	//---------------------------------------------------------
@@ -680,7 +811,7 @@ public:
 
 	//set constant value to one entry of mat
 	void set(size_t row, size_t col, T value) {
-		assert(this->isValidIndex(row, col) && "index out of bounds");
+		assert(row < h && col < w && "mat access out of bounds");
 		at(row, col) = value;
 	}
 
@@ -752,12 +883,12 @@ public:
 
 	virtual MatRow<T> operator [] (size_t row) {
 		assert(row < rows() && "row index out of bounds");
-		return MatRow<T>(array + row * cols(), cols());
+		return MatRow<T>(addr(row, 0), cols());
 	}
 
 	virtual MatRow<const T> operator [] (size_t row) const {
 		assert(row < rows() && "row index out of bounds");
-		return MatRow<const T>(array + row * cols(), cols());
+		return MatRow<const T>(addr(row, 0), cols());
 	}
 
 	//math operations
@@ -784,6 +915,21 @@ public:
 		return generate(rows(), cols(), [&] (size_t r, size_t c) { return func(at(r, c)); });
 	}
 
+	//interpolate this mat at given point x and y, return optional, return nullopt when outside this mat
+	template <class R, class X = T> std::optional<X> interp2(R x, R y) const {
+		return interpFunc<R, X>(x, y, 0, 0, cols(), rows());
+	}
+
+	//interpolate this mat at given point x and y, clamp to boundaries
+	template <class R, class X = T> X  interp2clamped(R x, R y) const {
+		return interpFunc<R, X>(std::clamp(x, R(0ull), R(cols() - 1ull)), std::clamp(y, R(0ull), R(rows() - 1ull)));
+	}
+
+	//interpolate this mat at given points through index ix and iy and fractions dx and dy and dx*dy
+	template <class R, class X = T> X  interp2(size_t ix, size_t iy, R dx, R dy) const {
+		return interpFunc<R, X>(ix, iy, dx, dy);
+	}
+
 	Mat<T> filter(const Mat<T>& f, ThreadPoolBase& pool = defaultPool) const {
 		auto func = [&] (size_t r, size_t c) {
 			T sum = 0;
@@ -802,41 +948,46 @@ public:
 	}
 
 	//filter mat in one dimension
-	Mat<T>& filter1D(std::span<T> kernel, Direction dir, Mat<T>& dest, ThreadPoolBase& pool = defaultPool) {
+	Mat<T>& filter1D(std::span<T> kernel, Direction dir, Mat<T>& dest, ThreadPoolBase& pool = defaultPool) const {
 		//check matrix dimensions
-		assert(cols() == dest.cols() && rows() == dest.rows() && "dimension mismatch");
-		size_t ksiz = kernel.size();
+		assert(cols() == dest.cols() && rows() == dest.rows() && stride() == dest.stride() && "dimension mismatch");
+		size_t idx = 0;
+		size_t ks = kernel.size() / 2;
+		size_t n = dir == Direction::HORIZONTAL ? cols() : rows();
+		size_t offset = dir == Direction::HORIZONTAL ? 1 : stride();
+		std::vector<size_t> index(n + kernel.size() - 1);
+		for (; idx < ks; idx++)                  index[idx] = 0;
+		for (; idx < index.size() - ks; idx++)   index[idx] = idx - ks;
+		for (; idx < index.size(); idx++)        index[idx] = n - 1;
 
-		//delta values
-		size_t dy = 1 - size_t(dir), dx = 1 - dy;
-		size_t dx0 = dx * ksiz / 2, dy0 = dy * ksiz / 2;
-
-		//function to filter for one point
-		auto func = [&] (size_t r, size_t c) {
-			T sum = 0;
-
-			if (c < dx0 || r < dy0 || c > cols() - 1 - dx0 || r > rows() - 1 - dy0) {
-				//clamp to edges
-				for (int i = 0; i < ksiz; i++) {
-					size_t x = clampUnsigned(c + dx * i, dx0, 0ull, cols() - 1);
-					size_t y = clampUnsigned(r + dy * i, dy0, 0ull, rows() - 1);
-					sum = std::fma(at(y, x), kernel[i], sum);
+		if (dir == Direction::HORIZONTAL) {
+			auto func = [&] (size_t r) {
+				for (size_t c = 0; c < cols(); c++) {
+					T sum = 0;
+					for (size_t i = 0; i < kernel.size(); i++) {
+						T val = at(r, index[c + i]);
+						sum = std::fma(val, kernel[i], sum);
+					}
+					dest.at(r, c) = sum;
 				}
+			};
+			pool.addAndWait(func, 0, rows());
 
-			} else {
-				//main loop
-				for (int i = 0; i < ksiz; i++) {
-					size_t x = c + dx * i - dx0;
-					size_t y = r + dy * i - dy0;
-					sum = std::fma(at(y, x), kernel[i], sum);
+		} else if (dir == Direction::VERTICAL) {
+			auto func = [&] (size_t c) {
+				for (size_t r = 0; r < rows(); r++) {
+					T sum = 0;
+					for (size_t i = 0; i < kernel.size(); i++) {
+						T val = at(index[r + i], c);
+						sum = std::fma(val, kernel[i], sum);
+					}
+					dest.at(r, c) = sum;
 				}
-			}
+			};
+			pool.addAndWait(func, 0, cols());
+		}
 
-			return sum;
-		};
-
-		//apply function
-		return dest.setArea(func, pool);
+		return dest;
 	}
 
 	//evaluate this mat at points given by x and y mats respective, put results into dest
@@ -962,6 +1113,75 @@ public:
 template <class T> std::ostream& MatRow<T>::print(std::ostream& out) const {
 	return Mat<T>::fromArray(1, cols, rowptr, false).print(out);
 }
+
+
+//---------------------------------------------------------
+//------------------------ STRIDED MATRIX CLASS
+//---------------------------------------------------------
+
+template <class T> class StridedMat : public Mat<T> {
+
+private:
+	size_t strideInBytes;
+
+	StridedMat(T* array, size_t rows, size_t cols, size_t strideInBytes) :
+		Mat<T>(array, rows, cols, false),
+		strideInBytes { strideInBytes }
+	{}
+
+	StridedMat() :
+		StridedMat<T>(nullptr, 0, 0, 0)
+	{}
+
+	T* baseAddr(size_t row, size_t col) {
+		return Mat<T>::addr(row, col);
+	}
+
+	const T* baseAddr(size_t row, size_t col) const {
+		return Mat<T>::addr(row, col);
+	}
+
+public:
+	//delete copy constructor
+	StridedMat(const Mat<T>& other) = delete;
+
+	//delete move constructor
+	StridedMat(Mat<T> && other) noexcept = delete;
+
+	//construct in shared mat
+	static StridedMat<T> from(Mat<T>& mat, size_t r0, size_t c0, size_t rows, size_t cols) {
+		assert(r0 + rows <= mat.rows() && c0 + cols <= mat.cols() && "invalid mat parameters");
+		return StridedMat<T>(mat.addr(r0, c0), rows, cols, mat.cols() * sizeof(T));
+	}
+
+	//construct in shared mat
+	static StridedMat<T> from(StridedMat<T>& mat, size_t r0, size_t c0, size_t rows, size_t cols) {
+		assert(r0 + rows <= mat.rows() && c0 + cols <= mat.cols() && "invalid mat parameters");
+		return StridedMat<T>(mat.addr(r0, c0), rows, cols, mat.strideInBytes);
+	}
+
+	//construct in non owning memory
+	static StridedMat<T> fromData(T* array, size_t rows, size_t cols, size_t strideInBytes) {
+		return StridedMat<T>(array, rows, cols, strideInBytes);
+	}
+
+	//stride in bytes
+	virtual size_t stride() const override {
+		return strideInBytes;
+	}
+
+	//return pointer to element without boundary check
+	virtual T* addr(size_t row, size_t col) override {
+		assert(row < this->h && col < this->w && "mat access out of bounds");
+		return ((T*) ((std::byte*) (this->array) + row * strideInBytes)) + col;
+	}
+
+	//return pointer to element without boundary check
+	virtual const T* addr(size_t row, size_t col) const override {
+		assert(row < this->h && col < this->w && "mat access out of bounds");
+		return ((T*) ((std::byte*) (this->array) + row * strideInBytes)) + col;
+	}
+};
 
 
 using Matd = Mat<double>;

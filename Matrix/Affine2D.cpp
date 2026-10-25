@@ -16,6 +16,7 @@
  * along with this program.If not, see < http://www.gnu.org/licenses/>.
  */
 
+#include <numbers>
 #include "Affine2D.hpp"
 #include "CoreData.hpp"
 
@@ -26,7 +27,7 @@ Affine2D::Affine2D(double m00, double m01, double m02, double m10, double m11, d
 }
 
 Affine2D::Affine2D(Matd mat) :
-	Mat<double>(mat.array, mat.rows(), mat.cols(), true) {}
+	Mat<double>(mat) {}
 
 Affine2D::Affine2D() :
 		Affine2D(1, 0, 0, 0, 1, 0) {}
@@ -36,9 +37,9 @@ Affine2D Affine2D::identity() {
 }
 
 void Affine2D::setParam(double m00, double m01, double m02, double m10, double m11, double m12) {
-	array[0] = m00;   array[1] = m01;   array[2] = m02;
-	array[3] = m10;   array[4] = m11;   array[5] = m12;
-	array[6] = 0;     array[7] = 0;     array[8] = 1;
+	at(0, 0) = m00;   at(0, 1) = m01;   at(0, 2) = m02;
+	at(1, 0) = m10;   at(1, 1) = m11;   at(1, 2) = m12;
+	at(2, 0) = 0;     at(2, 1) = 0;     at(2, 2) = 1;
 }
 
 //set parameters directly
@@ -138,12 +139,8 @@ double Affine2D::dY() const {
 	return at(1, 2);
 }
 
-double Affine2D::arrayValue(int idx) const {
-	return array[idx];
-}
-
 std::array<double, 6> Affine2D::toArray() const {
-	return { array[0], array[1], array[2], array[3], array[4], array[5] };
+	return { at(0, 0), at(0, 1), at(0, 2), at(1, 0), at(1, 1), at(1, 2) };
 }
 
 Mat<double> Affine2D::toMat() const {
@@ -151,15 +148,15 @@ Mat<double> Affine2D::toMat() const {
 }
 
 Mat<double> Affine2D::toParamsMat() const {
-	return Mat<double>::fromRow({ array[0], array[1], array[2], array[3], array[4], array[5] });
+	return Mat<double>::fromRow({ at(0, 0), at(0, 1), at(0, 2), at(1, 0), at(1, 1), at(1, 2) });
 }
 
 Affine2D::operator AffineDataFloat() const {
-	return { float(array[0]), float(array[1]), float(array[2]), float(array[3]), float(array[4]), float(array[5]) };
+	return { float(at(0, 0)), float(at(0, 1)), float(at(0, 2)), float(at(1, 0)), float(at(1, 1)), float(at(1, 2)) };
 }
 
 Affine2D::operator AffineDataDouble() const {
-	return { array[0], array[1], array[2], array[3], array[4], array[5] };
+	return { at(0, 0), at(0, 1), at(0, 2), at(1, 0), at(1, 1), at(1, 2) };
 }
 
 std::string Affine2D::toString(const std::string& title, int digits) const {

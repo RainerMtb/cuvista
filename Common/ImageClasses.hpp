@@ -68,15 +68,17 @@ namespace im {
 	};
 
 
-	class ImageVuyxFloat : public ImageBase<float> {
+	class ImageFloat4 : public ImageBase<float> {
 
 	public:
-		ImageVuyxFloat(int h, int w, int stride, float* data);
-		ImageVuyxFloat(int h, int w, int stride);
-		ImageVuyxFloat(int h, int w);
-		ImageVuyxFloat();
+		ImageFloat4(int h, int w, int stride, float* data);
+		ImageFloat4(int h, int w, int stride);
+		ImageFloat4(int h, int w);
+		ImageFloat4();
 
 		constexpr ImageType imageType() const override { return ImageType::VUYX; }
+
+		void setPixel(int r, int c, Float4 pixel);
 	};
 
 

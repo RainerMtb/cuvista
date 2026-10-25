@@ -7,12 +7,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Affine2D.hpp" />
-    <ClInclude Include="CoreMat.hpp" />
     <ClInclude Include="Mat.hpp" />
     <ClInclude Include="MatIterator.hpp" />
     <ClInclude Include="MatInverter.hpp" />
     <ClInclude Include="OutputLine.hpp" />
-    <ClInclude Include="SubMat.hpp" />
     <ClInclude Include="CholeskyDecompositor.hpp">
       <Filter>Decomposition</Filter>
     </ClInclude>
@@ -32,6 +30,7 @@
       <Filter>Decomposition</Filter>
     </ClInclude>
     <ClInclude Include="AffineSolverDirect.hpp" />
+    <ClInclude Include="CoreMat.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Affine2D.cpp" />

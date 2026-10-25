@@ -21,6 +21,7 @@
 #include "AVException.hpp"
 #include "ErrorLogger.hpp"
 #include <filesystem>
+#include <numbers>
 
 
 SimpleYuvWriter::SimpleYuvWriter(const std::string& file) {

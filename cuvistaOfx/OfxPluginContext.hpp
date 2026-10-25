@@ -20,7 +20,7 @@
 
 #include "ofxGuiInterface.hpp"
 #include "ofxUtil.hpp"
-#include "MainData.hpp"
+#include "Trajectory.hpp"
 
 namespace ofx {
 
@@ -47,8 +47,13 @@ namespace ofx {
 		int getInt(OfxPropertySetHandle handle, const char* id, int index = 0);
 
 	public:
+		int mClipH;
+		int mClipW;
+		Trajectory mTrajectory;
+		bool mDirtyFlag = true;
+		OfxImageFloat mBanner;
+
 		int pluginIndex = 0;
-		bool dirtyFlag = true;
 		OfxImageClipHandle srcClip = nullptr;
 		OfxImageClipHandle destClip = nullptr;
 
@@ -56,9 +61,6 @@ namespace ofx {
 		OfxParamHandle paramZoomMin = nullptr;
 		OfxParamHandle paramZoomDynamic = nullptr;
 		OfxParamHandle paramZoomMax = nullptr;
-		OfxImageFloat banner;
-		int clipH;
-		int clipW;
 
 		OfxImageFloat getBanner(int h, int w);
 		OfxStatus getClipPreferences(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs);

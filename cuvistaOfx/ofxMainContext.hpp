@@ -23,6 +23,7 @@
 #include "ofxGuiInterface.hpp"
 #include "ofxUtil.hpp"
 #include "MainData.hpp"
+#include "ThreadPool.hpp"
 
 namespace ofx {
 
@@ -84,6 +85,7 @@ namespace ofx {
 
 		OfxImageFloat mBannerElement;
 		MainData mData;
+		ThreadPool mPool = ThreadPool(std::thread::hardware_concurrency() / 2);
 
 		bool guiLoadLibrary(OfxGuiContext& guiContext);
 		void guiFreeLibrary(OfxGuiContext& guiContext);

@@ -19,13 +19,15 @@
 #include "ofxPluginContext.hpp"
 #include "ofxMain.hpp"
 #include "ofxGuiInterface.hpp"
+
 #include "util.hpp"
 #include "ErrorLogger.hpp"
+#include "CpuFrame.hpp"
 
 using namespace ofx;
 
 //void PluginContext::init(int w, int h) {
-//	banner = loadBannerInstance(h, w, main.mBannerElement);
+//	mBanner = loadBannerInstance(h, w, main.mBannerElement);
 //	mData.w = w;
 //	mData.h = h;
 //	mData.deviceInfoCuda = main.deviceInfoCuda;
@@ -66,6 +68,22 @@ OfxImageFloat PluginContext::getBanner(int h, int w) {
 }
 
 
+//check and set clip parameters
+OfxStatus PluginContext::getClipPreferences(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs) {
+	OfxRectD rectStart;
+	main.imageEffectSuite->clipGetRegionOfDefinition(srcClip, 0, &rectStart);
+	mClipW = (int) (rectStart.x2 - rectStart.x1);
+	mClipH = (int) (rectStart.y2 - rectStart.y1);
+
+	OfxStatus status = kOfxStatOK;
+	OfxPropertySetHandle clipProperties;
+	main.imageEffectSuite->clipGetPropertySet(srcClip, &clipProperties);
+	main.propertySuite->propSetString(clipProperties, kOfxImageEffectPropSupportedPixelDepths, 2, kOfxBitDepthFloat);
+	main.propertySuite->propSetString(clipProperties, kOfxImageEffectPropSupportedComponents, 0, kOfxImageComponentRGBA);
+	return status;
+}
+
+
 //run stabilization on the clip
 OfxStatus PluginContext::stabilize(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs) {
 	SptrGui gui = main.guiContext.gui;
@@ -88,14 +106,17 @@ OfxStatus PluginContext::stabilize(OfxImageEffectHandle effect, OfxPropertySetHa
 		std::string components = getString(clipProperties, kOfxImageEffectPropComponents);
 
 		debugLogger().format(
-			"clip size {}:{}, frames {}:{}, timeline {}:{}, framerate {:.3f}, par {:.3f}, temp access {}", 
-			clipW, clipH, frameRange[0], frameRange[1], timelineStart, timelineEnd, frameRate, par, tempAccess
+			"clip dim {}:{}, frames {}:{}, timeline {}:{}, fps {:.3f}, par {:.3f}, temp {}, {}, {}", 
+			mClipW, mClipH, frameRange[0], frameRange[1], timelineStart, timelineEnd, frameRate, par, tempAccess, components, pixelDepth
 		);
 
 		gui->init();
-		ImageRGBA inputImage(clipH, clipW);
+		ImageRGBA inputImage(mClipH, mClipW);
+		mTrajectory.clear();
+		bool isCancel = false;
+
 		auto func = [&] {
-			for (double time = frameRange[0]; time <= frameRange[1] && gui->isCancelled() == false && errorLogger().hasNoError(); time += 1.0) {
+			for (double time = timelineStart; time <= timelineEnd && isCancel == false && errorLogger().hasNoError(); time += 1.0) {
 				//debugLogger().format("frame {}", time);
 
 				OfxPropertySetHandle srcImg = nullptr;
@@ -117,10 +138,14 @@ OfxStatus PluginContext::stabilize(OfxImageEffectHandle effect, OfxPropertySetHa
 
 				OfxImageByte srcImage(h, w, srcRowBytes, srcData);
 				srcImage.copyTo(inputImage);
-				double progress = (time - frameRange[0]) / (frameRange[1] - frameRange[0]);
+				double progress = (time - timelineStart) / (timelineEnd - timelineStart);
 				gui->updateProgress(progress, inputImage);
 
 				status = main.imageEffectSuite->clipReleaseImage(srcImg);
+				AffineTransform trf;
+				trf.addRotation(0.2).addTranslation(-40, 30);
+				mTrajectory.addTrajectoryTransform(trf);
+				isCancel = gui->isCancelled() || main.imageEffectSuite->abort(effect);
 			}
 			gui->close(); //send signal to break the event loop
 		};
@@ -129,28 +154,18 @@ OfxStatus PluginContext::stabilize(OfxImageEffectHandle effect, OfxPropertySetHa
 		thread.join();
 		gui->shutdown();
 
-		debugLogger().log("stabilize done");
 		if (errorLogger().hasError()) {
 			main.messageSuite->message(effect, kOfxMessageWarning, "", "Cuvista Error: %s", errorLogger().getErrorMessage().c_str());
 			errorLogger().clear();
+
+		} else if (isCancel) {
+			debugLogger().log("stabilize cancelled");
+
+		} else {
+			debugLogger().format("stabilize done, frames {}:{}", timelineStart, timelineEnd);
+			mDirtyFlag = false;
 		}
 	}
-	return status;
-}
-
-
-//check and set clip parameters
-OfxStatus PluginContext::getClipPreferences(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs) {
-	OfxRectD rectStart;
-	main.imageEffectSuite->clipGetRegionOfDefinition(srcClip, 0, &rectStart);
-	clipW = (int) (rectStart.x2 - rectStart.x1);
-	clipH = (int) (rectStart.y2 - rectStart.y1);
-
-	OfxStatus status = kOfxStatOK;
-	OfxPropertySetHandle clipProperties;
-	main.imageEffectSuite->clipGetPropertySet(srcClip, &clipProperties);
-	main.propertySuite->propSetString(clipProperties, kOfxImageEffectPropSupportedPixelDepths, 2, kOfxBitDepthFloat);
-	main.propertySuite->propSetString(clipProperties, kOfxImageEffectPropSupportedComponents, 0, kOfxImageComponentRGBA);
 	return status;
 }
 
@@ -207,16 +222,16 @@ OfxStatus PluginContext::render(OfxImageEffectHandle effect, OfxPropertySetHandl
 
 	// write destination image
 	if (srcW == destW && srcH == destH) {
-		if (dirtyFlag) {
+		if (mDirtyFlag) {
 			//copy input frame and inset banner
 
 			//create destination image
 			OfxImageFloat destImage(destH, destW, destRowBytes / sizeof(float), reinterpret_cast<float*>(destPtr));
 
 			//get banner
-			banner = getBanner(srcH, srcW);
+			mBanner = getBanner(srcH, srcW);
 			int bannerOffset = int(time * 4) % srcW;
-			int bannerY = (srcH - banner.h()) / 2;
+			int bannerY = (srcH - mBanner.h()) / 2;
 
 			//copy input to output
 			if (main.imageEffectSuite->abort(effect) == false) {
@@ -225,7 +240,7 @@ OfxStatus PluginContext::render(OfxImageEffectHandle effect, OfxPropertySetHandl
 
 			//insert banner
 			if (main.imageEffectSuite->abort(effect) == false) {
-				banner.copyTo(0, bannerOffset, banner.h(), srcW, destImage, bannerY, 0, 0.6f);
+				mBanner.copyTo(0, bannerOffset, mBanner.h(), srcW, destImage, bannerY, 0, 0.6f);
 			}
 
 		} else {
@@ -257,7 +272,7 @@ std::string PluginContext::contextInfo(OfxImageEffectHandle effect) {
 
 	std::string context = std::format(
 		"Plugin Host:\n{}, Api Version {}\n\nCurrent Clip:\nFrame Size: {} x {}, Frames: {}, Frame Rate: {:.3f}\nCurrent Timeline from {} to {}\n\n",
-		main.hostName, main.hostApiVersion, clipW, clipH, frameRange[1] - frameRange[0], frameRate, timelineStart, timelineEnd
+		main.hostName, main.hostApiVersion, mClipW, mClipH, frameRange[1] - frameRange[0], frameRate, timelineStart, timelineEnd
 	);
 	return context;
 }

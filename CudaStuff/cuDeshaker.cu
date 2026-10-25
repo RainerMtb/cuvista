@@ -116,7 +116,7 @@ void writeDeviceDataToImage(const float* devData, int h, int w, int stride, cons
 //write image from device to disk for debugging
 void writeDeviceDataToImage(const float4* devData, int h, int w, int stride, const std::string& path) {
 	cudaDeviceSynchronize();
-	im::ImageVuyxFloat image(h, w);
+	im::ImageFloat4 image(h, w);
 	handleStatus(cudaMemcpy2D(image.data(), image.strideInBytes(), devData, stride * 4 * sizeof(float), w * 4 * sizeof(float), h, cudaMemcpyDeviceToHost), "error copy");
 	image.saveBmpPlanes(path);
 }
@@ -144,7 +144,7 @@ bool CudaExecutor::checkKernelParameters() const {
 
 //write string into image given by device pointer
 void CudaExecutor::writeText(const std::string& text, int x0, int y0, float4* deviceData, int devicePitch) {
-	ImageVuyxFloat im(mData.h, mData.w);
+	ImageFloat4 im(mData.h, mData.w);
 
 	//copy to host memory
 	cudaMemcpy2D(im.data(), im.strideInBytes(), deviceData, devicePitch, sizeof(float) * mData.w * 4, mData.h, cudaMemcpyDefault);
