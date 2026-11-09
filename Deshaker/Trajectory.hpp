@@ -78,6 +78,8 @@ public:
 class Trajectory {
 
 private:
+	AffineTransform defaultTransform;
+
 	//holds all trajectory items, grows with each frame
 	std::vector<TrajectoryItem> mTrajectory;
 	//temporary mats
@@ -92,7 +94,11 @@ private:
 	//accumulated zoom value for the previous frame
 	double mCurrentZoom = 1.0;
 
+	//cast and clamp value
 	int64_t clamp(int64_t val, int64_t lo, int64_t hi);
+
+	//get computed transform
+	const AffineTransform& getTransform(int h, int w, TrajectoryItem& ti, double zoom, int64_t frameIndex);
 
 public:
 	//compute zoom value to fill the frame
@@ -108,15 +114,13 @@ public:
 
 	//compute smoothed transform for frame
 	void computeSmoothTransform(const MainData& data, int64_t frameIndex);
+	void computeSmoothTransform(int h, int w, int radius, double sigma, int64_t frameIndex);
 
 	//compute smoothed zoom for frame
 	void computeSmoothZoom(const MainData& data, int64_t frameIndex);
 
 	//get computed transform
-	const AffineTransform& getTransform(int h, int w, TrajectoryItem& ti, double zoom, int64_t frameIndex);
-
-	//get computed transform
-	const AffineTransform& getTransform(const MainData& data, int64_t frameIndex, double zoom);
+	const AffineTransform& getTransform(int h, int w, int64_t frameIndex, double zoom);
 
 	//get computed transform
 	const AffineTransform& getTransform(const MainData& data, int64_t frameIndex);

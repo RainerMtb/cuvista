@@ -77,8 +77,6 @@ namespace im {
 		ImageFloat4();
 
 		constexpr ImageType imageType() const override { return ImageType::VUYX; }
-
-		void setPixel(int r, int c, Float4 pixel);
 	};
 
 

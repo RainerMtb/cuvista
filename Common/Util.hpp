@@ -19,12 +19,12 @@
 #pragma once
 
 #include <cstring>
-#include <chrono>
 #include <string>
 #include <span>
 #include <vector>
 #include <cassert>
 
+#include "DebugLogger.hpp"
 #include "ImageInterface.hpp"
 
 //misc stuff
@@ -52,44 +52,6 @@ namespace util {
 
         ~ConsoleTimer();
     };
-
-
-    enum class DebugLoggerType {
-        NONE,
-        CONSOLE,
-        STRING,
-        TCP,
-        FILE,
-    };
-
-
-    //logging misc messages
-    struct DebugLogger {
-        virtual ~DebugLogger() = default;
-
-        std::chrono::time_point<std::chrono::system_clock> start = std::chrono::system_clock::now();
-        std::mutex mutex;
-
-        static void open(const std::string& logger);
-
-        virtual void log(const std::string& msg) = 0;
-        virtual std::string str() = 0;
-        virtual DebugLoggerType type() = 0;
-
-        std::string time() const;
-
-        template <class... Args> void format(std::format_string<Args...> fmt, Args&&... args) {
-            log(std::format(fmt, std::forward<Args>(args)...));
-        }
-    };
-
-    struct DebugLoggerNull : public util::DebugLogger {
-        void log(const std::string& msg) override;
-        std::string str() override;
-        DebugLoggerType type() override;
-    };
-
-    inline std::shared_ptr<DebugLogger> debugLoggerPtr = std::make_shared<DebugLoggerNull>();
 
 
     //output sent to this ostream will be suppressed
@@ -249,6 +211,3 @@ namespace util {
         return result;
     }
 }
-
-//forward declaration for debugLogger();
-util::DebugLogger& debugLogger();

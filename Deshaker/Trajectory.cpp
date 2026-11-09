@@ -158,11 +158,11 @@ int64_t Trajectory::clamp(int64_t val, int64_t lo, int64_t hi) {
 }
 
 //compute average movements over current window but do not set zoom
-void Trajectory::computeSmoothTransform(const MainData& data, int64_t frameIndex) {
-	double sig = data.radius * data.cSigmaParam;
+void Trajectory::computeSmoothTransform(int h, int w, int radius, double sigma, int64_t frameIndex) {
+	double sig = radius * sigma;
 	double sumWeight = 0.0;
 	tempAvg.set(0.0, 0.0, 0.0);
-	for (int64_t i = -data.radius; i <= data.radius; i++) {
+	for (int64_t i = -radius; i <= radius; i++) {
 		double w = std::exp(-0.5 * i * i / (sig * sig));
 		int64_t idx = clamp(frameIndex + i, 0, mTrajectory.size() - 1);
 		tempSum.set(mTrajectory[idx].sum);
@@ -189,9 +189,13 @@ void Trajectory::computeSmoothTransform(const MainData& data, int64_t frameIndex
 	ti.smoothed += delta;
 
 	//calculate zoom to fill frame
-	ti.zoomRequired = calcRequiredZoom(ti.smoothed.u, ti.smoothed.v, ti.smoothed.a, data.w, data.h);
+	ti.zoomRequired = calcRequiredZoom(ti.smoothed.u, ti.smoothed.v, ti.smoothed.a, w, h);
 
 	ti.isComputed = true;
+}
+
+void Trajectory::computeSmoothTransform(const MainData& data, int64_t frameIndex) {
+	computeSmoothTransform(data.h, data.w, data.radius, data.cSigmaParam, frameIndex);
 }
 
 //smooth dynamic zooming, but can be limited to effective static zoom
@@ -221,9 +225,15 @@ const AffineTransform& Trajectory::getTransform(int h, int w, TrajectoryItem& ti
 }
 
 //build AffineTransform from trajectory
-const AffineTransform& Trajectory::getTransform(const MainData& data, int64_t frameIndex, double zoom) {
-	TrajectoryItem& ti = mTrajectory[frameIndex];
-	return getTransform(data.h, data.w, ti, zoom, frameIndex);
+const AffineTransform& Trajectory::getTransform(int h, int w, int64_t frameIndex, double zoom) {
+	if (frameIndex >= 0 && frameIndex < mTrajectory.size()) {
+		TrajectoryItem& ti = mTrajectory[frameIndex];
+		return getTransform(h, w, ti, zoom, frameIndex);
+
+	} else {
+		defaultTransform.frameIndex = -frameIndex - 1;
+		return defaultTransform;
+	}
 }
 
 //build AffineTransform from trajectory
@@ -246,7 +256,7 @@ void Trajectory::readTransforms(std::map<int64_t, TransformValues> transformsMap
 double Trajectory::calcRequiredZoom(double dx, double dy, double rot, double w, double h) {
 	double w2 = w / 2.0;
 	double h2 = h / 2.0;
-	Affine2D trf = Affine2D::setTransforms(1.0, -rot, dx, dy);
+	Affine2D trf = Affine2D::fromTransforms(1.0, -rot, dx, dy);
 	std::vector<Point> corners = { {w2, h2}, {-w2, h2}, {-w2, -h2}, {w2, -h2}, {w2, h2} };
 	std::vector<Point> transformedCorners(5);
 	for (int i = 0; i < 5; i++) transformedCorners[i] = trf.transform(corners[i]);

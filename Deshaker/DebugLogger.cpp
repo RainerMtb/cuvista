@@ -19,10 +19,14 @@
 #include <iostream>
 #include <regex>
 #include <chrono>
+
+#include "DebugLogger.hpp"
 #include "SystemStuff.hpp"
 #include "AVException.hpp"
 
 using namespace util;
+
+std::mutex mutex;
 
 void DebugLoggerConsole::log(const std::string& msg) {
 	std::lock_guard<std::mutex> lock(mutex);
@@ -59,23 +63,32 @@ std::string DebugLoggerFile::str() {
 
 DebugLoggerType DebugLoggerFile::type() { return DebugLoggerType::FILE; }
 
-void DebugLogger::open(const std::string& logger) {
+//---------------------------------------------------------------
+
+std::shared_ptr<DebugLogger> DebugLogger::create(const std::string& logger) {
 	std::regex patternTcp("^tcp://(.+):(\\d+)$");
+	std::shared_ptr<DebugLogger> out;
 
 	if (logger.starts_with("file://")) {
-		debugLoggerPtr = std::make_shared<DebugLoggerFile>(logger.substr(7));
+		out = std::make_shared<DebugLoggerFile>(logger.substr(7));
 
 	} else if (std::smatch matcher; std::regex_match(logger, matcher, patternTcp)) {
-		debugLoggerPtr = std::make_shared<DebugLoggerTcp>(matcher[1].str(), std::stoi(matcher[2]));
+		out = std::make_shared<DebugLoggerTcp>(matcher[1].str(), std::stoi(matcher[2]));
 
 	} else if (logger == "console://") {
-		debugLoggerPtr = std::make_shared<DebugLoggerConsole>();
+		out = std::make_shared<DebugLoggerConsole>();
 
 	} else {
+		out = std::make_shared<DebugLoggerNull>();
 		throw AVException("invalid log parameter '" + logger + "'");
 	}
 
-	debugLoggerPtr->format("--- starting log {} ---", std::chrono::current_zone()->to_local(std::chrono::system_clock::now()));
+	out->format(">>> starting log {} on thread {} <<<", std::chrono::current_zone()->to_local(std::chrono::system_clock::now()), threadId());
+	return out;
+}
+
+void DebugLogger::open(const std::string& logger) {
+	debugLoggerPtr = create(logger);
 }
 
 //---------------- system specific ---------------------------
@@ -86,8 +99,9 @@ void DebugLogger::open(const std::string& logger) {
 
 SOCKET sock = INVALID_SOCKET;
 
-//send debug messages over tcp on windows
+//open tcp logger
 DebugLoggerTcp::DebugLoggerTcp(const std::string& ip, int port) {
+	std::lock_guard<std::mutex> lock(mutex);
 	WSADATA wsaData = {};
 	int retval = WSAStartup(MAKEWORD(2, 2), &wsaData);
 	if (retval < 0) return;
@@ -100,13 +114,12 @@ DebugLoggerTcp::DebugLoggerTcp(const std::string& ip, int port) {
 	mIsConnected = connect(sock, (SOCKADDR*) &servAddr, sizeof(servAddr));
 }
 
+//send debug messages over tcp on windows
 void DebugLoggerTcp::log(const std::string& msg) {
 	std::lock_guard<std::mutex> lock(mutex);
 	if (mIsConnected == 0) {
-		std::string t = time();
-		send(sock, t.c_str(), t.size(), 0);
-		send(sock, msg.c_str(), msg.size(), 0);
-		send(sock, "\n", 1, 0);
+		std::string str = time() + msg + "\n";
+		int result = send(sock, str.c_str(), str.size(), 0);
 	}
 }
 
@@ -119,6 +132,7 @@ DebugLoggerType DebugLoggerTcp::type() {
 }
 
 DebugLoggerTcp::~DebugLoggerTcp() {
+	std::lock_guard<std::mutex> lock(mutex);
 	closesocket(sock);
 	WSACleanup();
 }
@@ -134,6 +148,7 @@ extern "C" {
 int sock = -1;
 
 DebugLoggerTcp::DebugLoggerTcp(const std::string& ip, int port) {
+	std::lock_guard<std::mutex> lock(mutex);
 	sock = socket(AF_INET, SOCK_STREAM, 0);
 	sockaddr_in servAddr = {};
 	servAddr.sin_family = AF_INET;
@@ -145,10 +160,8 @@ DebugLoggerTcp::DebugLoggerTcp(const std::string& ip, int port) {
 void DebugLoggerTcp::log(const std::string& msg) {
 	std::lock_guard<std::mutex> lock(mutex);
 	if (mIsConnected == 0) {
-		std::string t = time();
-		send(sock, t.c_str(), t.size(), 0);
-		send(sock, msg.c_str(), msg.size(), 0);
-		send(sock, "\n", 1, 0);
+		std::string str = time() + msg + "\n";
+		int result = send(sock, str.c_str(), str.size(), 0);
 	}
 }
 
@@ -161,6 +174,7 @@ DebugLoggerType DebugLoggerTcp::type() {
 }
 
 DebugLoggerTcp::~DebugLoggerTcp() {
+	std::lock_guard<std::mutex> lock(mutex);
 	shutdown(sock, SHUT_RDWR);
 }
 

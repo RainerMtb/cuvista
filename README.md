@@ -136,13 +136,13 @@ export CMAKE_PREFIX_PATH=~/Qt/6.12.0/gcc_64:/usr/local/cuda
 cmake .. --fresh
 cmake --build . --parallel
 ```
-Upon successfull completion you will find the executables
+Upon successfull completion you will find the files
 ```
 cuvistaCli/cuvista
 cuvistaGui/cuvistaGui
 cuvistaFFmpeg/libcuvistaFFmpeg.so
 ```
-The executables need to dynamically load the library, in order make the operating system find the file you may use
+The executables need to dynamically load the ffmpeg library, show the operating system where to find the file via
 ```
 export LD_LIBRARY_PATH=/path/to/cuvistaFFmpeg
 ```
@@ -159,7 +159,7 @@ Finally run ```cuvistaCli/cuvista -info``` to check your setup
 - Windows 11
 - Ubuntu 26.04
 - Visual Studio 2026
-- Nvidia Cuda 13.4.2
+- Nvidia Cuda 13.5
 - Nvidia Video Codec SDK 13.1.15
 - FFmpeg 8.1.2
 - Qt 6.12.0

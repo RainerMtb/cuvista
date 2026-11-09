@@ -25,10 +25,36 @@ extern "C" {
 #include "ofxMessage.h"
 }
 
+#include "Mat.hpp"
 #include "ImageClasses.hpp"
 #include <source_location>
+#include <map>
 
 namespace ofx {
+
+	inline std::map<int, std::string> ofxStatsMap = {
+		{ 0,  "kOfxStatOK" },
+		{ 1,  "kOfxStatFailed" },
+		{ 2,  "kOfxStatErrFatal" },
+		{ 3,  "kOfxStatErrUnknown" },
+		{ 4,  "kOfxStatErrMissingHostFeature" },
+		{ 5,  "kOfxStatErrUnsupported" },
+		{ 6,  "kOfxStatErrExists" },
+		{ 7,  "kOfxStatErrFormat" },
+		{ 8,  "kOfxStatErrMemory" },
+		{ 9,  "kOfxStatErrBadHandle" },
+		{ 10, "kOfxStatErrBadIndex" },
+		{ 11, "kOfxStatErrValue" },
+		{ 12, "kOfxStatReplyYes" },
+		{ 13, "kOfxStatReplyNo" },
+		{ 14, "kOfxStatReplyDefault" },
+		{ 15, "kOfxStatUnlicensed" },
+	};
+
+	enum class StatusHandling {
+		EXCEPTION,
+		DEBUG,
+	};
 
 	class OfxImageFloat : public im::ImageBase<float> {
 
@@ -46,6 +72,15 @@ namespace ofx {
 		void copyTo(int y, int x, int h, int w, ImageBase<float>& dest, int destY, int destX) const override;
 		void copyTo(ImageBase<float>& dest, int destY, int destX) const override;
 		void copyTo(ImageBase<float>& dest) const override;
+	};
+
+
+	class OfxImageFloat4 : public im::ImageFloat4 {
+
+	public:
+		OfxImageFloat4(int h, int w, int stride, float* data);
+
+		constexpr im::ImageType imageType() const override { return im::ImageType::RGBA; }
 	};
 
 
@@ -73,7 +108,22 @@ namespace ofx {
 	};
 
 
-	void handleStatus(OfxStatus status, const std::string& message = "", std::source_location location = std::source_location::current());
+	class OfxMatf4 : public StridedMat<Float4> {
+
+	private:
+		OfxImageMemoryHandle handle;
+
+		OfxMatf4(Float4* ptr, size_t rows, size_t cols, size_t strideInBytes, OfxImageMemoryHandle handle);
+
+	public:
+		OfxMatf4();
+		~OfxMatf4();
+
+		static OfxMatf4 allocate(size_t rows, size_t cols, size_t strideInBytes);
+	};
+
+
+	void handleStatus(OfxStatus status, StatusHandling handling = StatusHandling::DEBUG, const std::string& message = "", std::source_location location = std::source_location::current());
 
 	OfxImageFloat loadBannerElement();
 	OfxImageFloat loadBannerInstance(int targetHeight, int targetWidth, const OfxImageFloat& element);

@@ -256,13 +256,6 @@ namespace im {
 		ImageFloat4(0, 0)
 	{}
 
-	void ImageFloat4::setPixel(int r, int c, Float4 pixel) {
-		at(0, r, c) = pixel.f0;
-		at(1, r, c) = pixel.f1;
-		at(2, r, c) = pixel.f2;
-		at(3, r, c) = pixel.f3;
-	}
-
 
 	//-----------------------------------------------------------------------
 

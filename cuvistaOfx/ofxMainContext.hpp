@@ -42,26 +42,22 @@ namespace ofx {
 		bool operator < (const ImageSize & other) const;
 	};
 
-	struct MainContext {
+	class MainContext {
 
-		std::map<int, std::string> ofxStatsMap = {
-			{0,  "kOfxStatOK"},
-			{1,  "kOfxStatFailed"},
-			{2,  "kOfxStatErrFatal"},
-			{3,  "kOfxStatErrUnknown"},
-			{4,  "kOfxStatErrMissingHostFeature"},
-			{5,  "kOfxStatErrUnsupported"},
-			{6,  "kOfxStatErrExists"},
-			{7,  "kOfxStatErrFormat"},
-			{8,  "kOfxStatErrMemory"},
-			{9,  "kOfxStatErrBadHandle"},
-			{10, "kOfxStatErrBadIndex"},
-			{11, "kOfxStatErrValue"},
-			{12, "kOfxStatReplyYes"},
-			{13, "kOfxStatReplyNo"},
-			{14, "kOfxStatReplyDefault"},
-			{15, "kOfxStatUnlicensed"},
+	private:
+		bool guiLoadLibrary(OfxGuiContext& guiContext);
+		void guiFreeLibrary(OfxGuiContext& guiContext);
+		void setupParameters(OfxParamSetHandle paramSet);
+
+	public:
+		std::vector<Float4> filterKernel4 = {
+				{ 0.0f,  0.0f,  0.0625f, 0.0f },
+				{ 0.25f, 0.25f, 0.25f,   0.0f },
+				{ 0.5f,  0.5f,  0.375f,  0.0f },
+				{ 0.25f, 0.25f, 0.25f,   0.0f },
+				{ 0.0f,  0.0f,  0.0625f, 0.0f }
 		};
+		Quartet unsharp4 = { 0.4f, 0.4f, 0.4f, 0.4f };
 
 		std::mutex bannerMutex;
 		std::map<ImageSize, OfxImageFloat> bannerMap;
@@ -87,18 +83,20 @@ namespace ofx {
 		MainData mData;
 		ThreadPool mPool = ThreadPool(std::thread::hardware_concurrency() / 2);
 
-		bool guiLoadLibrary(OfxGuiContext& guiContext);
-		void guiFreeLibrary(OfxGuiContext& guiContext);
-		void setupParameters(OfxParamSetHandle paramSet);
-
-		std::string getString(OfxPropertySetHandle handle, const char* id, int index = 0, std::source_location location = std::source_location::current());
-		double getDouble(OfxPropertySetHandle handle, const char* id, int index = 0, std::source_location location = std::source_location::current());
-		int getInt(OfxPropertySetHandle handle, const char* id, int index = 0, std::source_location location = std::source_location::current());
+		std::string getString(OfxPropertySetHandle handle, const char* id, 
+			int index = 0, StatusHandling handling = StatusHandling::DEBUG, std::source_location location = std::source_location::current());
+		double getDouble(OfxPropertySetHandle handle, const char* id, 
+			int index = 0, StatusHandling handling = StatusHandling::DEBUG, std::source_location location = std::source_location::current());
+		int getInt(OfxPropertySetHandle handle, const char* id, 
+			int index = 0, StatusHandling handling = StatusHandling::DEBUG, std::source_location location = std::source_location::current());
 
 		OfxStatus actionLoad(OfxImageEffectHandle effect);
 		OfxStatus actionDescribe(OfxImageEffectHandle effect);
 		OfxStatus actionDescribeInContext(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs);
 		OfxStatus actionCreateInstance(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs);
+		OfxStatus actionBeginSequenceRender(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs);
+		OfxStatus actionRender(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs);
+		OfxStatus actionEndSequenceRender(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs);
 		OfxStatus actionUnload();
 	};
 }

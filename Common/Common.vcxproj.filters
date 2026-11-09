@@ -31,6 +31,7 @@
     <ClInclude Include="ImageBase.hpp" />
     <ClInclude Include="BaseData.hpp" />
     <ClInclude Include="ImagePixel.hpp" />
+    <ClInclude Include="DebugLogger.hpp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="CMakeLists.txt" />

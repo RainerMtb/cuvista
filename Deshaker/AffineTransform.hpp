@@ -31,18 +31,14 @@ protected:
 	Matd A = Matd::zeros(6, 6);
 	Matd b = Matd::zeros(6, 1);
 
-	AffineTransform(int64_t frameIndex, double m00, double m01, double m02, double m10, double m11, double m12) :
-		Affine2D(m00, m01, m02, m10, m11, m12),
-		frameIndex { frameIndex } {}
-
-	AffineTransform(double m00, double m01, double m02, double m10, double m11, double m12) :
-		AffineTransform(-1, m00, m01, m02, m10, m11, m12) {}
+	AffineTransform(int64_t frameIndex, double m00, double m01, double m02, double m10, double m11, double m12);
+	AffineTransform(double m00, double m01, double m02, double m10, double m11, double m12);
 
 public:
 	int64_t frameIndex;
 
-	AffineTransform() :
-		AffineTransform(0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0) {}
+	AffineTransform(double scale, double rot, double dx, double dy);
+	AffineTransform();
 
 	//compute parameters from gives points
 	const AffineTransform& computeAffineDirect(const PointResult& p1, const PointResult& p2, const PointResult& p3);

@@ -107,6 +107,15 @@ namespace ofx {
 
 	//----------------------------------------------------------------------------
 
+	OfxImageFloat4::OfxImageFloat4(int h, int w, int stride, float* data) {
+		storePtr = std::make_shared<im::ImageStore<float>>(h, w, stride, 4, h * stride, im::YAxisDir::UP, std::vector<int>{ 0, 1, 2, 3 }, 1.0f, data);
+		typePtr = std::make_shared<im::ImageTypePacked<float>>(storePtr);
+		colorPtr = std::make_shared<im::ImageColorRgb<float>>(typePtr);
+	}
+
+
+	//----------------------------------------------------------------------------
+
 	OfxImageByte::OfxImageByte(int h, int w, int stride, uint8_t* data) {
 		storePtr = std::make_shared<im::ImageStore<uint8_t>>(h, w, stride, 4, h * stride, im::YAxisDir::UP, std::vector<int>{ 0, 1, 2, 3 }, 255, data);
 		typePtr = std::make_shared<im::ImageTypePacked<uint8_t>>(storePtr);
@@ -140,13 +149,19 @@ namespace ofx {
 
 	//----------------------------------------------------------------------------
 
-	void handleStatus(OfxStatus status, const std::string& message, std::source_location location) {
+	void handleStatus(OfxStatus status, StatusHandling handling, const std::string& message, std::source_location location) {
 		if (status != kOfxStatOK) {
 			std::string str = std::format(
-				"error: {}, source: {}({}:{}) {}", main.ofxStatsMap.at(status), location.file_name(), location.line(), location.column(), message
+				"error: {}, source: {}({}:{}) {}", 
+				ofxStatsMap.at(status), location.file_name(), location.line(), location.column(), message
 			);
 
-			throw OfxException(str);
+			if (handling == StatusHandling::EXCEPTION) {
+				throw OfxException(str);
+
+			} else if (handling == StatusHandling::DEBUG) {
+				debugLogger().log(str);
+			}
 		}
 	}
 
@@ -215,6 +230,41 @@ namespace ofx {
 
 		banner.setColor(3, 1.0f);
 		return banner;
+	}
+
+
+	//--------------------------- Mat in ofx memory ---------------
+
+	OfxMatf4::OfxMatf4(Float4* ptr, size_t rows, size_t cols, size_t strideInBytes, OfxImageMemoryHandle handle) :
+		StridedMat<Float4>(ptr, rows, cols, strideInBytes),
+		handle { handle }
+	{}
+
+	OfxMatf4::OfxMatf4() :
+		OfxMatf4(nullptr, 0, 0, 0, nullptr)
+	{}
+
+	OfxMatf4::~OfxMatf4() {
+		if (handle) {
+			handleStatus(main.imageEffectSuite->imageMemoryUnlock(handle));
+			handleStatus(main.imageEffectSuite->imageMemoryFree(handle));
+		}
+	}
+
+	OfxMatf4 OfxMatf4::allocate(size_t rows, size_t cols, size_t strideInBytes) {
+		OfxImageMemoryHandle handle;
+		handleStatus(main.imageEffectSuite->imageMemoryAlloc(nullptr, rows * strideInBytes, &handle));
+
+		void* ptr;
+		handleStatus(main.imageEffectSuite->imageMemoryLock(handle, &ptr));
+
+		if (handle && ptr) {
+			Float4* data = reinterpret_cast<Float4*>(ptr);
+			return OfxMatf4(data, rows, cols, strideInBytes, handle);
+
+		} else {
+			return OfxMatf4();
+		}
 	}
 
 }

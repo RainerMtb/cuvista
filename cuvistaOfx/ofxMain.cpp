@@ -27,17 +27,22 @@
 #define LIBRARY_EXPORT extern "C"
 #endif
 
+
 namespace ofx {
 
 	OfxPlugin plugin = {};
 
 	void openLogger() {
-		const size_t siz = 512;
-		char buf[siz];
-		size_t len = 0;
-		getenv_s(&len, buf, siz, "CUVISTA_LOG");
-		if (len > 0 && buf) {
-			debugLogger().open(buf);
+		if (util::debugLoggerPtr->type() == DebugLoggerType::NONE) {
+			const size_t siz = 512;
+			char strbuf[siz];
+			size_t len = 0;
+			getenv_s(&len, strbuf, siz, "CUVISTA_LOG");
+			if (strbuf && len > 0) {
+				try {
+					util::debugLoggerPtr = DebugLogger::create(strbuf);
+				} catch (...) {}
+			}
 		}
 	}
 
@@ -47,6 +52,8 @@ namespace ofx {
 
 	//mandatory OpenFX library function
 	LIBRARY_EXPORT OfxStatus OfxSetHost(const OfxHost* host) {
+		openLogger();
+		debugLogger().format("set host on thread {}", threadId());
 		main.host = host;
 		return kOfxStatOK;
 	}
@@ -81,7 +88,7 @@ namespace ofx {
 	//host function callback
 	void setHostFcn(OfxHost* host) {
 		openLogger();
-		debugLogger().format("set host on thread {}", threadId());
+		debugLogger().format("set host callback on thread {}", threadId());
 		main.host = host;
 		main.pluginState = PluginState::STARTED;
 	}
@@ -97,6 +104,7 @@ namespace ofx {
 
 	//main function called by host
 	OfxStatus mainEntryFcn(const char* action, const void* handle, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs) {
+		//std::ofstream file("f:/log.txt", std::ios::app); file << "main entry " << threadId() << " " << action << std::endl; file.close();
 		//debugLogger().format("-- action {} --", action);
 		OfxImageEffectHandle effect = (OfxImageEffectHandle) handle;
 		std::string actionString = action;
@@ -131,14 +139,13 @@ namespace ofx {
 			return kOfxStatReplyDefault;
 
 		} else if (actionString == kOfxImageEffectActionBeginSequenceRender) {
-			return kOfxStatReplyDefault;
+			return main.actionBeginSequenceRender(effect, inArgs, outArgs);
 
 		} else if (actionString == kOfxImageEffectActionRender) {
-			PluginContext* ctx = getPluginContext(effect);
-			return ctx->render(effect, inArgs, outArgs);
+			return main.actionRender(effect, inArgs, outArgs);
 
 		} else if (actionString == kOfxImageEffectActionEndSequenceRender) {
-			return kOfxStatReplyDefault;
+			return main.actionEndSequenceRender(effect, inArgs, outArgs);
 
 		} else if (actionString == kOfxActionBeginInstanceChanged) {
 			return kOfxStatReplyDefault;
@@ -177,3 +184,24 @@ namespace ofx {
 		}
 	}
 }
+
+/*
+#include <Windows.h>
+
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved) {
+	std::ofstream file("f:/log.txt", std::ios::app);
+	switch (reason) {
+	case DLL_PROCESS_ATTACH:
+		file << "attach " << util::threadId() << std::endl; file.close();
+		break;
+	case DLL_THREAD_ATTACH: break;
+	case DLL_THREAD_DETACH: break;
+	case DLL_PROCESS_DETACH:
+		util::debugLoggerPtr.reset();
+		ofx::logger.reset();
+		file << "detach " << util::threadId() << std::endl; file.close();
+		break;
+	}
+	return TRUE;
+}
+*/

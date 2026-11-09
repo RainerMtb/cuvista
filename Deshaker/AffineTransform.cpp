@@ -20,6 +20,28 @@
 #include "AvxWrapper.hpp"
 #include "Avx2Wrapper.hpp"
 
+AffineTransform::AffineTransform(int64_t frameIndex, double m00, double m01, double m02, double m10, double m11, double m12) :
+	Affine2D(m00, m01, m02, m10, m11, m12),
+	frameIndex { frameIndex } 
+{}
+
+AffineTransform::AffineTransform(double m00, double m01, double m02, double m10, double m11, double m12) :
+	AffineTransform(-1, m00, m01, m02, m10, m11, m12) 
+{}
+
+AffineTransform::AffineTransform(double scale, double rot, double dx, double dy) :
+	Affine2D(),
+	frameIndex { -1 }
+{
+	addRotation(rot);
+	addTranslation(dx, dy);
+	addZoom(scale);
+}
+
+AffineTransform::AffineTransform() :
+	AffineTransform(0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0)
+{}
+
 void AffineSolver::setSolver(std::shared_ptr<AffineSolverBase> solver) {
 	this->solver = solver;
 }

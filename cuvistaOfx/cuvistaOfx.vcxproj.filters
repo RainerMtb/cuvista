@@ -12,7 +12,6 @@
     <ClInclude Include="ofxUtil.hpp" />
     <ClInclude Include="ofxGuiInterface.hpp" />
     <ClInclude Include="ofxBanner.hpp" />
-    <ClInclude Include="MainContext.hpp" />
     <ClInclude Include="ofxMainContext.hpp" />
   </ItemGroup>
 </Project>

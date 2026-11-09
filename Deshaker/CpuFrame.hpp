@@ -30,6 +30,17 @@ using Matf4 = Mat<Float4>;
 class CpuFrame : public FrameExecutor {
 
 public:
+	struct TransformContext {
+		Matf4& input;
+		ImageFloat4& output;
+		Matf4& background;
+		Matf4& buffer1;
+		Matf4& buffer2;
+		Matf4& buffer3;
+		std::span<Float4> kernel;
+		Quartet unsharp4;
+	};
+
 	CpuFrame(MainData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool);
 
 	void init() override;
@@ -45,6 +56,8 @@ public:
 	Matf getTransformedOutput() const override;
 	Matf getPyramid(int64_t frameIndex) const override;
 	void getInput(int64_t frameIndex, Image8& image) const override;
+
+	static void transform(AffineDataFloat trf, int h, int w, TransformContext trc, ThreadPoolBase& pool);
 
 private:
 	std::vector<float> filterKernelY = { 0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f };

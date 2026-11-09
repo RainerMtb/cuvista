@@ -48,7 +48,7 @@ Affine2D Affine2D::fromParam(double scale, double rot, double dx, double dy) {
 }
 
 //set new transform, one parameter after the other
-Affine2D Affine2D::setTransforms(double scale, double rot, double dx, double dy) {
+Affine2D Affine2D::fromTransforms(double scale, double rot, double dx, double dy) {
 	return Affine2D().addTranslation(dx, dy).addRotation(rot).addZoom(scale);
 }
 

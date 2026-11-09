@@ -308,6 +308,47 @@ void CpuFrame::computeTerminate(int64_t frameIndex, std::span<PointResult> resul
 	mPool.workAndWait(func, 0, mData.iyCount);
 }
 
+void CpuFrame::transform(AffineDataFloat trf, int h, int w, TransformContext trc, ThreadPoolBase& pool) {
+	//apply transform
+	auto funcWarpBack = [&] (size_t r) {
+		for (size_t c = 0; c < w; c++) {
+			float x0 = float(c);
+			float y0 = float(r);
+			float x = std::fmaf(x0, trf.m00, std::fmaf(y0, trf.m01, trf.m02));
+			float y = std::fmaf(x0, trf.m10, std::fmaf(y0, trf.m11, trf.m12));
+			auto result = trc.input.interp2(x, y);
+			if (result.has_value()) {
+				trc.buffer1.at(r, c) = result.value();
+
+			} else {
+				trc.buffer1.at(r, c) = trc.background.at(r, c);
+			}
+			//if (z == 0 && r == 228 && c == 1082) std::printf("\ncpu %16.12f\n", y);
+		}
+	};
+	//forward to thread pool for iteration
+	pool.addAndWait(funcWarpBack, 0, h);
+
+	//unsharp masking
+	trc.buffer1.filter1D(trc.kernel, Direction::HORIZONTAL, trc.buffer2, pool);
+	trc.buffer2.filter1D(trc.kernel, Direction::VERTICAL, trc.buffer3, pool);
+
+	//write output
+	auto funcOutput = [&] (size_t r) {
+		float* out = trc.output.addr(0, r, 0);
+		for (size_t c = 0; c < w; c++) {
+			Float4 pixel = trc.buffer1.at(r, c) + (trc.buffer1.at(r, c) - trc.buffer3.at(r, c)) * trc.unsharp4;
+			*out++ = std::clamp(pixel.f0, 0.0f, 1.0f);
+			*out++ = std::clamp(pixel.f1, 0.0f, 1.0f);
+			*out++ = std::clamp(pixel.f2, 0.0f, 1.0f);
+			*out++ = std::clamp(pixel.f3, 0.0f, 1.0f);
+			//if (z==0 && r==1049 && c==842) std::printf("cpu %.14f %d\n", val * 255, mOutput.at(z, r, c));
+		}
+	};
+	//forward to thread pool for iteration
+	pool.addAndWait(funcOutput, 0, h);
+}
+
 void CpuFrame::outputData(int64_t frameIndex, AffineDataFloat trf) {
 	//util::ConsoleTimer ic("cpu output data");
 	size_t yuvidx = frameIndex % mInput.size();
@@ -318,37 +359,9 @@ void CpuFrame::outputData(int64_t frameIndex, AffineDataFloat trf) {
 	};
 	mFilterBuffer4.setValues(funcConvert, mPool);
 	Matf4& bgframe = (mData.bgmode == BackgroundMode::COLOR) ? mBackground : mPrevOut;
-
-	//apply transform
-	auto funcWarpBack = [&] (size_t r) {
-		for (size_t c = 0; c < mData.w; c++) {
-			float x0 = float(c);
-			float y0 = float(r);
-			float x = std::fmaf(x0, trf.m00, std::fmaf(y0, trf.m01, trf.m02));
-			float y = std::fmaf(x0, trf.m10, std::fmaf(y0, trf.m11, trf.m12));
-			Float4 bg = bgframe.at(r, c);
-			Float4 result = mFilterBuffer4.interp2(x, y).value_or(bg);
-			//if (z == 0 && r == 228 && c == 1082) std::printf("\ncpu %16.12f\n", y);
-			mBuffer4.at(r, c) = result;
-		}
-	};
-	//forward to thread pool for iteration
-	mPool.addAndWait(funcWarpBack, 0, mData.h);
-
-	//unsharp masking
-	mBuffer4.filter1D(filterKernel4, Direction::HORIZONTAL, mFilterBuffer4, mPool);
-	mFilterBuffer4.filter1D(filterKernel4, Direction::VERTICAL, mFilterResult4, mPool);
-
-	//write output
-	auto funcOutput = [&] (size_t r) {
-		for (size_t c = 0; c < mData.w; c++) {
-			Float4 pixel = mBuffer4.at(r, c) + (mBuffer4.at(r, c) - mFilterResult4.at(r, c)) * mData.unsharp4;
-			mOutput.setPixel(r, c, pixel.clamp(0.0f, 1.0f));
-			//if (z==0 && r==1049 && c==842) std::printf("cpu %.14f %d\n", val * 255, mOutput.at(z, r, c));
-		}
-	};
-	//forward to thread pool for iteration
-	mPool.addAndWait(funcOutput, 0, mData.h);
+	
+	TransformContext trc = { mFilterBuffer4, mOutput, bgframe, mBuffer4, mFilterBuffer4, mFilterResult4, filterKernel4, mData.unsharp4 };
+	transform(trf, mData.h, mData.w, trc, mPool);
 
 	std::copy_n(mBuffer4.data(), mBuffer4.numel(), mPrevOut.data());
 	mOutput.index = frameIndex;

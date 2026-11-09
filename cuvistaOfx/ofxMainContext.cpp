@@ -52,6 +52,7 @@ void MainContext::guiFreeLibrary(OfxGuiContext& guiContext) {
 	guiContext.gui.reset();
 	FreeLibrary(guiLib);
 	debugLogger().log("gui unloaded");
+	guiContext.debugLogger.reset();
 }
 
 #endif
@@ -60,21 +61,21 @@ bool ImageSize::operator < (const ImageSize& other) const {
 	return std::tie(h, w) < std::tie(other.h, other.w);
 }
 
-std::string MainContext::getString(OfxPropertySetHandle handle, const char* id, int index, std::source_location location) {
+std::string MainContext::getString(OfxPropertySetHandle handle, const char* id, int index, StatusHandling handling, std::source_location location) {
 	char* cstr;
-	handleStatus(propertySuite->propGetString(handle, id, index, &cstr), "", location);
+	handleStatus(propertySuite->propGetString(handle, id, index, &cstr), handling, "", location);
 	return cstr;
 }
 
-double MainContext::getDouble(OfxPropertySetHandle handle, const char* id, int index, std::source_location location) {
+double MainContext::getDouble(OfxPropertySetHandle handle, const char* id, int index, StatusHandling handling, std::source_location location) {
 	double d;
-	handleStatus(propertySuite->propGetDouble(handle, id, index, &d), "", location);
+	handleStatus(propertySuite->propGetDouble(handle, id, index, &d), handling, "", location);
 	return d;
 }
 
-int MainContext::getInt(OfxPropertySetHandle handle, const char* id, int index, std::source_location location) {
+int MainContext::getInt(OfxPropertySetHandle handle, const char* id, int index, StatusHandling handling, std::source_location location) {
 	int i;
-	handleStatus(propertySuite->propGetInt(handle, id, index, &i), "", location);
+	handleStatus(propertySuite->propGetInt(handle, id, index, &i), handling, "", location);
 	return i;
 }
 
@@ -98,12 +99,12 @@ OfxStatus MainContext::actionLoad(OfxImageEffectHandle effect) {
 		try {
 			hostName = getString(host->host, kOfxPropName);
 			int dim = 0;
-			handleStatus(propertySuite->propGetDimension(host->host, kOfxPropAPIVersion, &dim));
+			handleStatus(propertySuite->propGetDimension(host->host, kOfxPropAPIVersion, &dim), StatusHandling::EXCEPTION);
 			hostApiVersionNumbers.resize(dim);
-			hostApiVersionNumbers[0] = getInt(host->host, kOfxPropAPIVersion, 0);
+			hostApiVersionNumbers[0] = getInt(host->host, kOfxPropAPIVersion, 0, StatusHandling::EXCEPTION);
 			hostApiVersion = std::to_string(hostApiVersionNumbers[0]);
 			for (int i = 1; i < dim; i++) {
-				hostApiVersionNumbers[i] = getInt(host->host, kOfxPropAPIVersion, i);
+				hostApiVersionNumbers[i] = getInt(host->host, kOfxPropAPIVersion, i, StatusHandling::EXCEPTION);
 				hostApiVersion += ".";
 				hostApiVersion += std::to_string(hostApiVersionNumbers[i]);
 			}
@@ -146,7 +147,7 @@ OfxStatus MainContext::actionDescribe(OfxImageEffectHandle effect) {
 		}
 
 		OfxPropertySetHandle effectProps;
-		handleStatus(imageEffectSuite->getPropertySet(effect, &effectProps));
+		handleStatus(imageEffectSuite->getPropertySet(effect, &effectProps), StatusHandling::EXCEPTION);
 
 		guiContext.pluginPath = std::filesystem::path(getString(effectProps, kOfxPluginPropFilePath)) / "Contents" / "Resources";
 		guiContext.debugLogger = debugLoggerPtr;
@@ -155,21 +156,21 @@ OfxStatus MainContext::actionDescribe(OfxImageEffectHandle effect) {
 			throw OfxException("cannot load gui");
 		}
 
-		handleStatus(imageEffectSuite->getPropertySet(effect, &effectProps));
-		handleStatus(propertySuite->propSetString(effectProps, kOfxPropLabel, 0, "Cuvista"));
-		handleStatus(propertySuite->propSetString(effectProps, kOfxImageEffectPluginPropGrouping, 0, "Cuvista - Cuda Video Stabilizer"));
+		handleStatus(imageEffectSuite->getPropertySet(effect, &effectProps), StatusHandling::EXCEPTION);
+		handleStatus(propertySuite->propSetString(effectProps, kOfxPropLabel, 0, "Cuvista"), StatusHandling::EXCEPTION);
+		handleStatus(propertySuite->propSetString(effectProps, kOfxImageEffectPluginPropGrouping, 0, "Cuvista - Cuda Video Stabilizer"), StatusHandling::EXCEPTION);
 
-		handleStatus(propertySuite->propSetString(effectProps, kOfxImageEffectPropSupportedContexts, 0, kOfxImageEffectContextFilter));
+		handleStatus(propertySuite->propSetString(effectProps, kOfxImageEffectPropSupportedContexts, 0, kOfxImageEffectContextFilter), StatusHandling::EXCEPTION);
 		//setting pixel depths seems to be ignored by host anyway, always sends float?????
-		handleStatus(propertySuite->propSetString(effectProps, kOfxImageEffectPropSupportedPixelDepths, 0, kOfxBitDepthByte));
-		handleStatus(propertySuite->propSetString(effectProps, kOfxImageEffectPropSupportedPixelDepths, 1, kOfxBitDepthShort));
-		handleStatus(propertySuite->propSetString(effectProps, kOfxImageEffectPropSupportedPixelDepths, 2, kOfxBitDepthFloat)); //values can be outside [0..1]
+		handleStatus(propertySuite->propSetString(effectProps, kOfxImageEffectPropSupportedPixelDepths, 0, kOfxBitDepthByte), StatusHandling::EXCEPTION);
+		handleStatus(propertySuite->propSetString(effectProps, kOfxImageEffectPropSupportedPixelDepths, 1, kOfxBitDepthShort), StatusHandling::EXCEPTION);
+		handleStatus(propertySuite->propSetString(effectProps, kOfxImageEffectPropSupportedPixelDepths, 2, kOfxBitDepthFloat), StatusHandling::EXCEPTION); //values can be outside [0..1]
 
-		handleStatus(propertySuite->propSetString(effectProps, kOfxImageEffectPropSupportedComponents, 0, kOfxImageComponentRGBA));
+		handleStatus(propertySuite->propSetString(effectProps, kOfxImageEffectPropSupportedComponents, 0, kOfxImageComponentRGBA), StatusHandling::EXCEPTION);
 
-		handleStatus(propertySuite->propSetInt(effectProps, kOfxImageEffectPropTemporalClipAccess, 0, 1));
-		handleStatus(propertySuite->propSetString(effectProps, kOfxImageEffectPluginRenderThreadSafety, 0, kOfxImageEffectRenderInstanceSafe));
-		handleStatus(propertySuite->propSetInt(effectProps, kOfxImageEffectPluginPropHostFrameThreading, 0, 0)); //work on one complete frame
+		handleStatus(propertySuite->propSetInt(effectProps, kOfxImageEffectPropTemporalClipAccess, 0, 1), StatusHandling::EXCEPTION);
+		handleStatus(propertySuite->propSetString(effectProps, kOfxImageEffectPluginRenderThreadSafety, 0, kOfxImageEffectRenderInstanceSafe), StatusHandling::EXCEPTION);
+		handleStatus(propertySuite->propSetInt(effectProps, kOfxImageEffectPluginPropHostFrameThreading, 0, 0), StatusHandling::EXCEPTION); //work on one complete frame
 
 		pluginState = PluginState::DESCRIBED;
 		status = kOfxStatOK;
@@ -199,17 +200,15 @@ OfxStatus MainContext::actionDescribeInContext(OfxImageEffectHandle effect, OfxP
 
 		OfxPropertySetHandle props;
 		// define the mandated single source clip
-		handleStatus(imageEffectSuite->clipDefine(effect, kOfxImageEffectSimpleSourceClipName, &props));
+		handleStatus(imageEffectSuite->clipDefine(effect, kOfxImageEffectSimpleSourceClipName, &props), StatusHandling::EXCEPTION);
 		// set the component types we can handle for input
-		handleStatus(propertySuite->propSetString(props, kOfxImageEffectPropSupportedComponents, 0, kOfxImageComponentRGBA));
-		//propertySuite->propSetString(props, kOfxImageEffectPropSupportedComponents, 1, kOfxImageComponentAlpha);
-		//propertySuite->propSetString(props, kOfxImageEffectPropSupportedComponents, 2, kOfxImageComponentRGB);
+		handleStatus(propertySuite->propSetString(props, kOfxImageEffectPropSupportedComponents, 0, kOfxImageComponentRGBA), StatusHandling::EXCEPTION);
 		// request temporal access
-		handleStatus(propertySuite->propSetInt(props, kOfxImageEffectPropTemporalClipAccess, 0, 1));
+		handleStatus(propertySuite->propSetInt(props, kOfxImageEffectPropTemporalClipAccess, 0, 1), StatusHandling::EXCEPTION);
 
-		handleStatus(imageEffectSuite->clipDefine(effect, kOfxImageEffectOutputClipName, &props));
+		handleStatus(imageEffectSuite->clipDefine(effect, kOfxImageEffectOutputClipName, &props), StatusHandling::EXCEPTION);
 		// set the component types we can handle for output
-		handleStatus(propertySuite->propSetString(props, kOfxImageEffectPropSupportedComponents, 0, kOfxImageComponentRGBA));
+		handleStatus(propertySuite->propSetString(props, kOfxImageEffectPropSupportedComponents, 0, kOfxImageComponentRGBA), StatusHandling::EXCEPTION);
 		//propertySuite->propSetString(props, kOfxImageEffectPropSupportedComponents, 1, kOfxImageComponentAlpha);
 		//propertySuite->propSetString(props, kOfxImageEffectPropSupportedComponents, 2, kOfxImageComponentRGB);
 
@@ -219,7 +218,7 @@ OfxStatus MainContext::actionDescribeInContext(OfxImageEffectHandle effect, OfxP
 
 		//setup parameters
 		OfxParamSetHandle paramSet;
-		handleStatus(imageEffectSuite->getParamSet(effect, &paramSet));
+		handleStatus(imageEffectSuite->getParamSet(effect, &paramSet), StatusHandling::EXCEPTION);
 		setupParameters(paramSet);
 
 		//load banner image
@@ -243,22 +242,22 @@ OfxStatus MainContext::actionCreateInstance(OfxImageEffectHandle effect, OfxProp
 	OfxStatus status;
 	try {
 		OfxPropertySetHandle effectProps;
-		handleStatus(imageEffectSuite->getPropertySet(effect, &effectProps));
+		handleStatus(imageEffectSuite->getPropertySet(effect, &effectProps), StatusHandling::EXCEPTION);
 
 		PluginContext* ctx = new PluginContext();
 		OfxPropertySetHandle clipProperties;
-		handleStatus(imageEffectSuite->clipGetHandle(effect, kOfxImageEffectSimpleSourceClipName, &ctx->srcClip, &clipProperties));
-		handleStatus(imageEffectSuite->clipGetHandle(effect, kOfxImageEffectOutputClipName, &ctx->destClip, &clipProperties));
+		handleStatus(imageEffectSuite->clipGetHandle(effect, kOfxImageEffectSimpleSourceClipName, &ctx->mSrcClip, &clipProperties), StatusHandling::EXCEPTION);
+		handleStatus(imageEffectSuite->clipGetHandle(effect, kOfxImageEffectOutputClipName, &ctx->mDestClip, &clipProperties), StatusHandling::EXCEPTION);
 
 		//shortcut to parameters
 		OfxParamSetHandle paramSet;
-		handleStatus(imageEffectSuite->getParamSet(effect, &paramSet));
-		handleStatus(parameterSuite->paramGetHandle(paramSet, "radius", &ctx->paramRadius, 0));
-		handleStatus(parameterSuite->paramGetHandle(paramSet, "zoom", &ctx->paramZoomMin, 0));
+		handleStatus(imageEffectSuite->getParamSet(effect, &paramSet), StatusHandling::EXCEPTION);
+		handleStatus(parameterSuite->paramGetHandle(paramSet, "radius", &ctx->mParamRadius, 0), StatusHandling::EXCEPTION);
+		handleStatus(parameterSuite->paramGetHandle(paramSet, "zoom", &ctx->mParamZoom, 0), StatusHandling::EXCEPTION);
 
 		//store context
-		handleStatus(propertySuite->propSetPointer(effectProps, kOfxPropInstanceData, 0, ctx));
-		ctx->pluginIndex = pluginIndex;
+		handleStatus(propertySuite->propSetPointer(effectProps, kOfxPropInstanceData, 0, ctx), StatusHandling::EXCEPTION);
+		ctx->mPluginIndex = pluginIndex;
 		pluginIndex++;
 		pluginContextList.push_back(ctx);
 
@@ -272,6 +271,25 @@ OfxStatus MainContext::actionCreateInstance(OfxImageEffectHandle effect, OfxProp
 		status = kOfxStatFailed;
 	}
 	return status;
+}
+
+
+OfxStatus MainContext::actionBeginSequenceRender(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs) {
+	PluginContext* ctx = getPluginContext(effect);
+	return ctx->renderBegin(effect, inArgs, outArgs);
+}
+
+
+//render
+OfxStatus MainContext::actionRender(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs) {
+	PluginContext* ctx = getPluginContext(effect);
+	return ctx->render(effect, inArgs, outArgs);
+}
+
+
+OfxStatus MainContext::actionEndSequenceRender(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs) {
+	PluginContext* ctx = getPluginContext(effect);
+	return ctx->renderEnd(effect, inArgs, outArgs);
 }
 
 
@@ -343,7 +361,7 @@ void MainContext::setupParameters(OfxParamSetHandle paramSet) {
 	handleStatus(propertySuite->propSetString(paramProps, kOfxPropLabel, 0, "Image Zoom"));
 	handleStatus(propertySuite->propSetString(paramProps, kOfxParamPropDoubleType, 0, kOfxParamDoubleTypeScale));
 	handleStatus(propertySuite->propSetInt(paramProps, kOfxParamPropDigits, 0, 2));
-	handleStatus(propertySuite->propSetDouble(paramProps, kOfxParamPropDefault, 0, defaultParam.zoomMin));
+	handleStatus(propertySuite->propSetDouble(paramProps, kOfxParamPropDefault, 0, 0.95));
 	handleStatus(propertySuite->propSetDouble(paramProps, kOfxParamPropMin, 0, defaultParam.zoomMinRange));
 	handleStatus(propertySuite->propSetDouble(paramProps, kOfxParamPropMax, 0, defaultParam.zoomMaxRange));
 	handleStatus(propertySuite->propSetInt(paramProps, kOfxParamPropAnimates, 0, true));

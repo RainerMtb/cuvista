@@ -134,7 +134,7 @@ public:
 	bool dummyFrame = false;
 	ProgressType progressType = ProgressType::MULTILINE;
 
-	//parameters for computation of trajectory, at least 0.33, greater -> more stable camera
+	//parameters for computation of trajectory, stable camera
 	double cSigmaParam = 1.25;
 
 	int64_t maxFrames = std::numeric_limits<int64_t>::max();

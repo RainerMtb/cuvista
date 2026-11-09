@@ -435,7 +435,7 @@ LoopResult MovieFrameConsecutive::runLoop(ProgressBase& progress, UserInput& inp
 				currentPass++;
 				progress.updateStatus("Generating Output...");
 				inputState = InputState::NONE;
-				//compute smooth transforms
+				//compute transforms
 				for (int64_t idx = 0; idx < mTrajectory.size(); idx++) mTrajectory.computeSmoothTransform(mData, idx);
 				for (int64_t idx = 0; idx < mTrajectory.size(); idx++) mTrajectory.computeSmoothZoom(mData, idx);
 				//std::cout << mTrajectory << std::endl;

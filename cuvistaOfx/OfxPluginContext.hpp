@@ -42,30 +42,33 @@ namespace ofx {
 	private:
 		std::string contextInfo(OfxImageEffectHandle effect);
 
-		std::string getString(OfxPropertySetHandle handle, const char* id, int index = 0);
-		double getDouble(OfxPropertySetHandle handle, const char* id, int index = 0);
-		int getInt(OfxPropertySetHandle handle, const char* id, int index = 0);
-
 	public:
-		int mClipH;
-		int mClipW;
+		int64_t mTimelineStart;
+		int64_t mTimelineEnd;
 		Trajectory mTrajectory;
 		bool mDirtyFlag = true;
 		OfxImageFloat mBanner;
 
-		int pluginIndex = 0;
-		OfxImageClipHandle srcClip = nullptr;
-		OfxImageClipHandle destClip = nullptr;
+		int mPluginIndex = 0;
+		int mClipHeight;
+		int mClipWidth;
+		OfxImageClipHandle mSrcClip = nullptr;
+		OfxImageClipHandle mDestClip = nullptr;
 
-		OfxParamHandle paramRadius = nullptr;
-		OfxParamHandle paramZoomMin = nullptr;
-		OfxParamHandle paramZoomDynamic = nullptr;
-		OfxParamHandle paramZoomMax = nullptr;
+		OfxParamHandle mParamRadius = nullptr;
+		OfxParamHandle mParamZoom = nullptr;
+
+		OfxMatf4 mBackground;
 
 		OfxImageFloat getBanner(int h, int w);
+
 		OfxStatus getClipPreferences(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs);
-		OfxStatus render(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs);
 		OfxStatus stabilize(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs);
+
+		OfxStatus renderBegin(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs);
+		OfxStatus render(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs);
+		OfxStatus renderEnd(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs);
+
 		void showInfo(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs);
 	};
 }

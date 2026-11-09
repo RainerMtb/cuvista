@@ -775,7 +775,18 @@ public:
 
 	//fill mat with consant value
 	Mat<T>& setValues(T value) {
-		return setValues([value] (size_t r, size_t c) { return value; });
+		if (rows() > 0) {
+			T* ptr = addr(0, 0);
+			for (size_t c = 0; c < cols(); c++) {
+				*ptr++ = value;
+			}
+
+			const T* srcPtr = addr(0, 0);
+			for (size_t r = 1; r < rows(); r++) {
+				std::copy_n(srcPtr, cols(), addr(r, 0));
+			}
+		}
+		return *this;
 	}
 
 	//set each value according to function
@@ -1121,7 +1132,7 @@ template <class T> std::ostream& MatRow<T>::print(std::ostream& out) const {
 
 template <class T> class StridedMat : public Mat<T> {
 
-private:
+protected:
 	size_t strideInBytes;
 
 	StridedMat(T* array, size_t rows, size_t cols, size_t strideInBytes) :
