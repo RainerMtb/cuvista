@@ -64,7 +64,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)Common;$(SolutionDir)Deshaker;$(SolutionDir)Matrix;$(SolutionDir)CudaStuff;$(SolutionDir)include;$(SolutionDir)cpu_features\include;$(SolutionDir)openfx\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Common;$(SolutionDir)Matrix;$(SolutionDir)Avx512;$(SolutionDir)Deshaker;$(SolutionDir)CudaStuff;$(SolutionDir)include;$(SolutionDir)cpu_features\include;$(SolutionDir)openfx\include</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
@@ -93,7 +93,7 @@ copy $(OutputPath)cuvistaOfx.dll $(OFX_PLUGIN_PATH)\cuvista.ofx.bundle\Contents\
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)Common;$(SolutionDir)Deshaker;$(SolutionDir)Matrix;$(SolutionDir)CudaStuff;$(SolutionDir)include;$(SolutionDir)cpu_features\include;$(SolutionDir)openfx\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Common;$(SolutionDir)Matrix;$(SolutionDir)Avx512;$(SolutionDir)Deshaker;$(SolutionDir)CudaStuff;$(SolutionDir)include;$(SolutionDir)cpu_features\include;$(SolutionDir)openfx\include</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>

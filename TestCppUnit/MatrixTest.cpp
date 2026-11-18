@@ -204,12 +204,12 @@ public:
 		Matd a = Matd::hilb(5);
 		double tol = 1e-15;
 
-		Assert::AreEqual(7.0 / 12.0, a.interp2(0.5, 0.5).value(), tol);
-		Assert::AreEqual(49.0 / 240.0, a.interp2(1.5, 2.5).value(), tol);
-		Assert::AreEqual(1.0, a.interp2(0.0, 0.0).value(), tol);
-		Assert::AreEqual(1.0 / 9.0, a.interp2(4.0, 4.0).value(), tol);
-		Assert::AreEqual(95.0 / 100.0, a.interp2(0.1, 0.0).value(), tol);
-		Assert::AreEqual(95.0 / 100.0, a.interp2(0.0, 0.1).value(), tol);
+		Assert::AreEqual(7.0 / 12.0, a.interpBilinear(0.5, 0.5).value(), tol);
+		Assert::AreEqual(49.0 / 240.0, a.interpBilinear(1.5, 2.5).value(), tol);
+		Assert::AreEqual(1.0, a.interpBilinear(0.0, 0.0).value(), tol);
+		Assert::AreEqual(1.0 / 9.0, a.interpBilinear(4.0, 4.0).value(), tol);
+		Assert::AreEqual(95.0 / 100.0, a.interpBilinear(0.1, 0.0).value(), tol);
+		Assert::AreEqual(95.0 / 100.0, a.interpBilinear(0.0, 0.1).value(), tol);
 	}
 
 	TEST_METHOD(iterate) {

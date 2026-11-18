@@ -121,19 +121,12 @@ namespace ofx {
 		} else if (actionString == kOfxActionCreateInstance) {
 			return main.actionCreateInstance(effect, inArgs, outArgs);
 
-		} else if (actionString == kOfxActionEndInstanceChanged) { 
-			return kOfxStatReplyDefault;
-
 		} else if (actionString == kOfxImageEffectActionGetClipPreferences) {
 			PluginContext* ctx = getPluginContext(effect);
 			return ctx->getClipPreferences(effect, inArgs, outArgs);
 
 		} else if (actionString == kOfxImageEffectActionGetFramesNeeded) { 
-			double time = main.getDouble(inArgs, kOfxPropTime);
-			main.propertySuite->propSetDouble(outArgs, kOfxImageEffectPropFrameRange, 0, time);
-			main.propertySuite->propSetDouble(outArgs, kOfxImageEffectPropFrameRange, 1, time);
-			//debugLogger().format("frames needed {}:{}", time, time);
-			return kOfxStatOK;
+			return main.actionFramesNeeded(effect, inArgs, outArgs);
 
 		} else if (actionString == kOfxImageEffectActionGetRegionsOfInterest) {
 			return kOfxStatReplyDefault;
@@ -151,20 +144,9 @@ namespace ofx {
 			return kOfxStatReplyDefault;
 
 		} else if (actionString == kOfxActionInstanceChanged) {
-			debugLogger().format("-- action InstanceChanged on thread {}", threadId());
-			std::string name = main.getString(inArgs, kOfxPropName);
-			std::string reason = main.getString(inArgs, kOfxPropChangeReason);
+			return main.actionInstanceChanged(effect, inArgs, outArgs);
 
-			//handle button clicks
-			if (name == "stabilize" && reason == kOfxChangeUserEdited) {
-				PluginContext* ctx = getPluginContext(effect);
-				return ctx->stabilize(effect, inArgs, outArgs);
-
-			} else if (name == "info" && reason == kOfxChangeUserEdited) {
-				PluginContext* ctx = getPluginContext(effect);
-				ctx->showInfo(effect, inArgs, outArgs);
-				return kOfxStatOK;
-			}
+		} else if (actionString == kOfxActionEndInstanceChanged) {
 			return kOfxStatReplyDefault;
 
 		} else if (actionString == kOfxActionDestroyInstance) {

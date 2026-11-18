@@ -21,57 +21,30 @@
 #include "Mat.hpp"
 
 //specialization of mat for use with avx
-template <class T> class AvxMat : protected Mat<T> {
+template <class T> class AvxMat : public Mat<T> {
+
 public:
 	int64_t frameIndex = -1;
 
-	AvxMat() : Mat<T>() {}
-	AvxMat(int h, int w) : Mat<T>(h, w) {}
-	AvxMat(int h, int w, T value) : Mat<T>(h, w, value) {}
+	AvxMat() : 
+		Mat<T>() 
+	{}
 
-	int w() const { return int(Mat<T>::w); }
-	int h() const { return int(Mat<T>::h); }
+	AvxMat(int h, int w) :
+		Mat<T>(h, w)
+	{}
 
-	T& at(int row, int col) { return Mat<T>::at(row, col); }
-	const T& at(int row, int col) const { return Mat<T>::at(row, col); }
-
-	T* addr(size_t row, size_t col) { return Mat<T>::addr(row, col); }
-	const T* addr(size_t row, size_t col) const { return Mat<T>::addr(row, col); }
-
-	T* data() { return Mat<T>::data(); }
-	const T* data() const { return Mat<T>::data(); }
-
-	T* row(int r) { return addr(r, 0); }
-	const T* row(int r) const { return addr(r, 0); }
-
-	void fill(T value) { 
-		std::fill(this->array, this->array + this->numel(), value); 
-	}
-
-	void saveAsBinary(const std::string& filename) const { 
-		Mat<T>::fromArray(h(), w(), this->array, false).saveAsBinary(filename); 
-	}
-
-	void saveAsBMP(const std::string& filename) const {
-		im::ImageY<T>(h(), w(), w(), 1.0f, this->array).saveBmpPlanes(filename);
-	}
-
-	void copyTo(AvxMat<T>& dest) const {
-		std::copy_n(data(), w() * h(), dest.data());
-	}
-
-	Mat<T> matCopy() const { 
-		return Mat<T>::fromRowData(h(), w(), w(), this->array); 
-	}
-
-	Mat<T> matShare() const { 
-		return Mat<T>::fromArray(h(), w(), this->array, false); 
+	AvxMat(int h, int w, T value) : 
+		Mat<T>(h, w) 
+	{
+		this->setValues(value);
 	}
 
 	void toConsole(int digits = 5) const {
-		matShare().toConsole("avx", digits);
+		Mat<T>::toConsole("avx", digits);
 	}
 };
 
 using AvxMatf = AvxMat<float>;
+using AvxMatf4 = AvxMat<Float4>;
 using AvxMatd = AvxMat<double>;

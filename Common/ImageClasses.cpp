@@ -236,6 +236,12 @@ namespace im {
 
 	//-----------------------------------------------------------------------
 
+	ImageFloat4::ImageFloat4(int h, int w, int stride, Float4* data) {
+		storePtr = std::make_shared<ImageStore<float>>(h, w, stride, 4, h * stride, YAxisDir::DOWN, std::vector<int>{ 2, 1, 0, 3 }, 1.0f, reinterpret_cast<float*>(data));
+		typePtr = std::make_shared<ImageTypePacked<float>>(storePtr);
+		colorPtr = std::make_shared<ImageColorYuv<float>>(typePtr);
+	}
+
 	ImageFloat4::ImageFloat4(int h, int w, int stride, float* data) {
 		storePtr = std::make_shared<ImageStore<float>>(h, w, stride, 4, h * stride, YAxisDir::DOWN, std::vector<int>{ 2, 1, 0, 3 }, 1.0f, data);
 		typePtr = std::make_shared<ImageTypePacked<float>>(storePtr);
@@ -486,6 +492,13 @@ namespace im {
 		ImageBGRA(0, 0)
 	{}
 
+	ImageBGRA ImageBGRA::readBmpFile(const std::string& filename) {
+		ImageBgr bgr = ImageBgr::readBmpFile(filename);
+		ImageBGRA out(bgr.h(), bgr.w());
+		bgr.convertTo(out);
+		return out;
+	}
+
 	void ImageBGRA::saveBmpColor(const std::string& filename) const {
 		std::ofstream os(filename, std::ios::binary);
 		BmpColorHeader(w(), h()).writeHeader(os);
@@ -526,6 +539,41 @@ namespace im {
 
 	ImageRGBA::ImageRGBA() :
 		ImageRGBA(0, 0)
+	{}
+
+	ImageRGBA ImageRGBA::readBmpFile(const std::string& filename) {
+		ImageBgr bgr = ImageBgr::readBmpFile(filename);
+		ImageRGBA out(bgr.h(), bgr.w());
+		bgr.convertTo(out);
+		return out;
+	}
+
+	//-----------------------------------------------------------------------
+
+	ImageRGBAf4::ImageRGBAf4(int h, int w, int stride, Float4* data) {
+		storePtr = std::make_shared<ImageStore<float>>(h, w, stride, 4, h * stride, YAxisDir::DOWN, std::vector<int>{ 0, 1, 2, 3 }, 1.0f, reinterpret_cast<float*>(data));
+		typePtr = std::make_shared<ImageTypePacked<float>>(storePtr);
+		colorPtr = std::make_shared<ImageColorRgb<float>>(typePtr);
+	}
+
+	ImageRGBAf4::ImageRGBAf4(int h, int w, int stride, float* data) {
+		storePtr = std::make_shared<ImageStore<float>>(h, w * 4, stride, 4, h * stride, YAxisDir::DOWN, std::vector<int>{ 0, 1, 2, 3 }, 1.0f, data);
+		typePtr = std::make_shared<ImageTypePacked<float>>(storePtr);
+		colorPtr = std::make_shared<ImageColorRgb<float>>(typePtr);
+	}
+
+	ImageRGBAf4::ImageRGBAf4(int h, int w, int stride) {
+		storePtr = std::make_shared<ImageStore<float>>(h, w, stride, 4, h * stride, YAxisDir::DOWN, std::vector<int>{ 0, 1, 2, 3 }, 1.0f);
+		typePtr = std::make_shared<ImageTypePacked<float>>(storePtr);
+		colorPtr = std::make_shared<ImageColorRgb<float>>(typePtr);
+	}
+
+	ImageRGBAf4::ImageRGBAf4(int h, int w) :
+		ImageRGBAf4(h, w, util::alignValue(w * 4, 32))
+	{}
+
+	ImageRGBAf4::ImageRGBAf4() :
+		ImageRGBAf4(0, 0)
 	{}
 
 }

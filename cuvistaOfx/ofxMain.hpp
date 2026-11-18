@@ -28,9 +28,21 @@ namespace ofx {
 	class ProgressContext;
 	class PluginContext;
 
+	struct ParamNames {
+		const char* device = "device";
+		const char* mode = "mode";
+		const char* radius = "radius";
+		const char* dbscan = "dbscan";
+		const char* zoom = "zoom";
+		const char* stabilize = "stabilize";
+		const char* info = "info";
+		const char* flag = "flag";
+	};
+	inline ParamNames paramNames;
+
 	inline std::list<PluginContext*> pluginContextList;
+	inline MainContext main;
+
 	PluginContext* getPluginContext(OfxImageEffectHandle effect);
 	void openLogger();
-
-	inline MainContext main;
 }

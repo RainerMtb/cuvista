@@ -88,12 +88,16 @@ Float4 operator / (float f, const Float4& a) {
 	return { a.f0 / f, a.f1 / f, a.f2 / f, a.f3 / f };
 }
 
-Float4 std::fma(const Float4& x, const Float4& y, const Float4& z) {
-	return { std::fma(x.f0, y.f0, z.f0), std::fma(x.f1, y.f1, z.f1), std::fma(x.f2, y.f2, z.f2), 1.0f };
+Float4 std::fma(const Float4& x, const Float4& y, const Float4& z) noexcept {
+	return { std::fma(x.f0, y.f0, z.f0), std::fma(x.f1, y.f1, z.f1), std::fma(x.f2, y.f2, z.f2), std::fma(x.f3, y.f3, z.f3) };
 }
 
-Float4 Float4::clamp(float lo, float hi) const {
+Float4 Float4::clamp(float lo, float hi) const noexcept {
 	return { std::clamp(f0, lo, hi), std::clamp(f1, lo, hi), std::clamp(f2, lo, hi), std::clamp(f3, lo, hi) };
+}
+
+Float4 std::clamp(Float4 in, float lo, float hi) noexcept {
+	return { std::clamp(in.f0, lo, hi), std::clamp(in.f1, lo, hi), std::clamp(in.f2, lo, hi), std::clamp(in.f3, lo, hi) };
 }
 
 //------------------- Double4 ------------------
@@ -133,10 +137,14 @@ Double4 operator / (float f, const Double4& a) {
 	return { a.d0 / f, a.d1 / f, a.d2 / f, a.d3 / f };
 }
 
-Double4 std::fma(const Double4& x, const Double4& y, const Double4& z) {
-	return { std::fma(x.d0, y.d0, z.d0), std::fma(x.d1, y.d1, z.d1), std::fma(x.d2, y.d2, z.d2), 1.0f };
+Double4 std::fma(const Double4& x, const Double4& y, const Double4& z) noexcept {
+	return { std::fma(x.d0, y.d0, z.d0), std::fma(x.d1, y.d1, z.d1), std::fma(x.d2, y.d2, z.d2), std::fma(x.d3, y.d3, z.d3) };
 }
 
-Double4 Double4::clamp(double lo, double hi) const {
+Double4 Double4::clamp(double lo, double hi) const noexcept {
 	return { std::clamp(d0, lo, hi), std::clamp(d1, lo, hi), std::clamp(d2, lo, hi), std::clamp(d3, lo, hi) };
+}
+
+Double4 std::clamp(Double4 in, double lo, double hi) noexcept {
+	return { std::clamp(in.d0, lo, hi), std::clamp(in.d1, lo, hi), std::clamp(in.d2, lo, hi), std::clamp(in.d3, lo, hi) };
 }

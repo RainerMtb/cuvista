@@ -25,20 +25,20 @@
 
 namespace ofx {
 
-	OfxImageFloat::OfxImageFloat(int h, int w, int stride, float* data) {
-		storePtr = std::make_shared<im::ImageStore<float>>(h, w, stride, 4, h * stride, im::YAxisDir::UP, std::vector<int>{ 0, 1, 2, 3 }, 1.0f, data);
+	OfxImageFloat::OfxImageFloat(int h, int w, int stride, float* data, im::YAxisDir yDir) {
+		storePtr = std::make_shared<im::ImageStore<float>>(h, w, stride, 4, h * stride, yDir, std::vector<int>{ 0, 1, 2, 3 }, 1.0f, data);
 		typePtr = std::make_shared<im::ImageTypePacked<float>>(storePtr);
 		colorPtr = std::make_shared<im::ImageColorRgb<float>>(typePtr);
 	}
 
-	OfxImageFloat::OfxImageFloat(int h, int w, int stride) {
-		storePtr = std::make_shared<im::ImageStore<float>>(h, w, stride, 4, h * stride, im::YAxisDir::UP, std::vector<int>{ 0, 1, 2, 3 }, 1.0f);
+	OfxImageFloat::OfxImageFloat(int h, int w, int stride, im::YAxisDir yDir) {
+		storePtr = std::make_shared<im::ImageStore<float>>(h, w, stride, 4, h * stride, yDir, std::vector<int>{ 0, 1, 2, 3 }, 1.0f);
 		typePtr = std::make_shared<im::ImageTypePacked<float>>(storePtr);
 		colorPtr = std::make_shared<im::ImageColorRgb<float>>(typePtr);
 	}
 
-	OfxImageFloat::OfxImageFloat(int h, int w) :
-		OfxImageFloat(h, w, w * 4)
+	OfxImageFloat::OfxImageFloat(int h, int w, im::YAxisDir yDir) :
+		OfxImageFloat(h, w, w * 4, yDir)
 	{}
 
 	OfxImageFloat::OfxImageFloat() :
@@ -76,7 +76,7 @@ namespace ofx {
 				destPtr[0] = destPtr[0] * (1.0f - alpha) + srcPtr[0] * alpha;
 				destPtr[1] = destPtr[1] * (1.0f - alpha) + srcPtr[1] * alpha;
 				destPtr[2] = destPtr[2] * (1.0f - alpha) + srcPtr[2] * alpha;
-				destPtr[3] = 255;
+				destPtr[3] = destPtr[3] * (1.0f - alpha) + alpha;
 				destPtr += 4;
 				srcPtr += 4;
 			}
@@ -107,8 +107,8 @@ namespace ofx {
 
 	//----------------------------------------------------------------------------
 
-	OfxImageFloat4::OfxImageFloat4(int h, int w, int stride, float* data) {
-		storePtr = std::make_shared<im::ImageStore<float>>(h, w, stride, 4, h * stride, im::YAxisDir::UP, std::vector<int>{ 0, 1, 2, 3 }, 1.0f, data);
+	OfxImageFloat4::OfxImageFloat4(int h, int w, int stride, float* data, im::YAxisDir yDir) {
+		storePtr = std::make_shared<im::ImageStore<float>>(h, w, stride, 4, h * stride, yDir, std::vector<int>{ 0, 1, 2, 3 }, 1.0f, data);
 		typePtr = std::make_shared<im::ImageTypePacked<float>>(storePtr);
 		colorPtr = std::make_shared<im::ImageColorRgb<float>>(typePtr);
 	}
@@ -235,9 +235,45 @@ namespace ofx {
 
 	//--------------------------- Mat in ofx memory ---------------
 
+	OfxMatf::OfxMatf(float* ptr, size_t rows, size_t cols, size_t strideInBytes, OfxImageMemoryHandle handle) :
+		StridedMat<float>(ptr, rows, cols, strideInBytes),
+		mHandle { handle }
+	{}
+
+	OfxMatf::OfxMatf() :
+		OfxMatf(nullptr, 0, 0, 0, nullptr)
+	{}
+
+	OfxMatf::~OfxMatf() {
+		if (mHandle) {
+			handleStatus(main.imageEffectSuite->imageMemoryUnlock(mHandle));
+			handleStatus(main.imageEffectSuite->imageMemoryFree(mHandle));
+		}
+	}
+
+	OfxMatf OfxMatf::allocate(size_t rows, size_t cols) {
+		OfxImageMemoryHandle handle;
+		handleStatus(main.imageEffectSuite->imageMemoryAlloc(nullptr, rows * cols * sizeof(float), &handle));
+
+		void* ptr;
+		handleStatus(main.imageEffectSuite->imageMemoryLock(handle, &ptr));
+
+		if (handle && ptr) {
+			float* data = reinterpret_cast<float*>(ptr);
+			return OfxMatf(data, rows, cols, cols * sizeof(float), handle);
+
+		} else {
+			debugLogger().log("cannot allocate mat");
+			return OfxMatf();
+		}
+	}
+
+
+	//------------------------------------------------------------------------------------
+
 	OfxMatf4::OfxMatf4(Float4* ptr, size_t rows, size_t cols, size_t strideInBytes, OfxImageMemoryHandle handle) :
 		StridedMat<Float4>(ptr, rows, cols, strideInBytes),
-		handle { handle }
+		mHandle { handle }
 	{}
 
 	OfxMatf4::OfxMatf4() :
@@ -245,13 +281,14 @@ namespace ofx {
 	{}
 
 	OfxMatf4::~OfxMatf4() {
-		if (handle) {
-			handleStatus(main.imageEffectSuite->imageMemoryUnlock(handle));
-			handleStatus(main.imageEffectSuite->imageMemoryFree(handle));
+		if (mHandle) {
+			handleStatus(main.imageEffectSuite->imageMemoryUnlock(mHandle));
+			handleStatus(main.imageEffectSuite->imageMemoryFree(mHandle));
 		}
 	}
 
 	OfxMatf4 OfxMatf4::allocate(size_t rows, size_t cols, size_t strideInBytes) {
+		assert(strideInBytes >= cols * sizeof(Float4) && "invalid stride");
 		OfxImageMemoryHandle handle;
 		handleStatus(main.imageEffectSuite->imageMemoryAlloc(nullptr, rows * strideInBytes, &handle));
 
@@ -263,8 +300,8 @@ namespace ofx {
 			return OfxMatf4(data, rows, cols, strideInBytes, handle);
 
 		} else {
+			debugLogger().log("cannot allocate mat");
 			return OfxMatf4();
 		}
 	}
-
 }

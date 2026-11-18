@@ -23,15 +23,28 @@
 #include "FrameExecutor.hpp"
 
 
- //---------------------------------------------------------------------
- //---------- AVX FRAME ------------------------------------------------
- //---------------------------------------------------------------------
+//---------------------------------------------------------------------
+//---------- AVX FRAME ------------------------------------------------
+//---------------------------------------------------------------------
 
+using Matf4 = Mat<Float4>;
 
 class AvxFrame : public FrameExecutor {
 
 public:
+	struct TransformContext {
+		const Matf& input;
+		Matf& output;
+		Matf& buffer1;
+		Matf& buffer2;
+		Matf& buffer3;
+		const std::span<Float4> kernel;
+		Float4 unsharp4;
+	};
+
 	AvxFrame(CoreData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool);
+
+	static void transform(AffineDataFloat trf, int h, int w, TransformContext trc, ThreadPoolBase& pool, bool isPreview = false, std::function<bool()> isAbort = [] { return false; });
 
 	void init() override;
 	Image8& inputDestination(int64_t frameIndex) override;
@@ -55,15 +68,13 @@ private:
 	AvxMatf mBackground, mFilterBuffer4, mFilterResult4, mWarped, mOutput;
 	std::vector<int> luma;
 
-	using uchar = unsigned char;
-
 	std::vector<std::vector<V16f>> mFilterKernels = {
 		{ 0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f },
 		{ 0.0f,    0.25f, 0.5f,   0.25f, 0.0f    },
 		{ 0.0f,    0.25f, 0.5f,   0.25f, 0.0f    }
 	};
 
-	std::vector<V16f> mFilterKernels4 = {
+	std::vector<Float4> mFilterKernels4 = {
 		{ 0.0f,  0.0f , 0.0625f, 0.0f },
 		{ 0.25f, 0.25f, 0.25f,   0.0f },
 		{ 0.5f,  0.5f , 0.375f,  0.0f },
@@ -75,15 +86,16 @@ private:
 	std::vector<float> mFactorU = { 0.0f, -0.392f, 2.017f, 0.0f };
 	std::vector<float> mFactorV = { 1.596f, -0.813f, 0.0f, 0.0f };
 
+	static void warpBack4(const AffineDataFloat& trf, const Matf& input, int h, int w, Matf& dest, ThreadPoolBase& pool);
+	static void filter4(const Matf& src, int h, int w, Matf& dest, std::span<V16f> kernel, ThreadPoolBase& pool);
+	static void unsharp4(const Matf& warped, int h, int w, Matf& gauss, Matf& out, Float4 unsharp4, ThreadPoolBase& pool);
+
 	void yuvToFloat4(const ImageYuv& yuv, AvxMatf& dest);
 	void downsample(const float* srcptr, int h, int w, int stride, float* destptr, int destStride);
 	void createPyramidLevels(AvxMatf& pyramid);
 	void filter1(const AvxMatf& src, int h, int w, AvxMatf& dest, std::span<V16f> ks);
-	void filter4(const AvxMatf& src, int h, int w, AvxMatf& dest);
 
 	void warpBack1(const AffineDataFloat& trf, const AvxMatf& input, AvxMatf& dest);
-	void warpBack4(const AffineDataFloat& trf, const AvxMatf& input, AvxMatf& dest);
-	void unsharp4(const AvxMatf& warped, AvxMatf& gauss, AvxMatf& out);
 
 	V16f interpolate(V16f f00, V16f f10, V16f f01, V16f f11, V16f dx, V16f dy);
 	V16f interpolate(V16f f00, V16f f10, V16f f01, V16f f11, V16f dx, V16f dy, V16f dx1, V16f dy1);

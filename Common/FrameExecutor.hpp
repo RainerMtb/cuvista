@@ -31,6 +31,7 @@ class AffineTransform;
 
 using namespace im;
 
+
 class FrameExecutor {
 
 public:

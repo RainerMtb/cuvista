@@ -59,9 +59,9 @@ namespace ofx {
 	class OfxImageFloat : public im::ImageBase<float> {
 
 	public:
-		OfxImageFloat(int h, int w, int stride, float* data);
-		OfxImageFloat(int h, int w, int stride);
-		OfxImageFloat(int h, int w);
+		OfxImageFloat(int h, int w, int stride, float* data, im::YAxisDir yDir = im::YAxisDir::UP);
+		OfxImageFloat(int h, int w, int stride, im::YAxisDir yDir = im::YAxisDir::UP);
+		OfxImageFloat(int h, int w, im::YAxisDir yDir = im::YAxisDir::UP);
 		OfxImageFloat();
 
 		constexpr im::ImageType imageType() const override { return im::ImageType::RGBA; }
@@ -78,7 +78,7 @@ namespace ofx {
 	class OfxImageFloat4 : public im::ImageFloat4 {
 
 	public:
-		OfxImageFloat4(int h, int w, int stride, float* data);
+		OfxImageFloat4(int h, int w, int stride, float* data, im::YAxisDir yDir = im::YAxisDir::UP);
 
 		constexpr im::ImageType imageType() const override { return im::ImageType::RGBA; }
 	};
@@ -108,14 +108,33 @@ namespace ofx {
 	};
 
 
+	class OfxMatf : public StridedMat<float> {
+
+	private:
+		OfxImageMemoryHandle mHandle;
+
+		OfxMatf(float* ptr, size_t rows, size_t cols, size_t strideInBytes, OfxImageMemoryHandle handle);
+
+	public:
+		OfxMatf(const OfxMatf& other) = delete;
+		OfxMatf(OfxMatf&& other) noexcept = delete;
+		OfxMatf();
+		~OfxMatf();
+
+		static OfxMatf allocate(size_t rows, size_t cols);
+	};
+
+
 	class OfxMatf4 : public StridedMat<Float4> {
 
 	private:
-		OfxImageMemoryHandle handle;
+		OfxImageMemoryHandle mHandle;
 
 		OfxMatf4(Float4* ptr, size_t rows, size_t cols, size_t strideInBytes, OfxImageMemoryHandle handle);
 
 	public:
+		OfxMatf4(const OfxMatf4& other) = delete;
+		OfxMatf4(OfxMatf4&& other) noexcept = delete;
 		OfxMatf4();
 		~OfxMatf4();
 

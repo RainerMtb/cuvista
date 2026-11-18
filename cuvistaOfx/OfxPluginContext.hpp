@@ -43,22 +43,23 @@ namespace ofx {
 		std::string contextInfo(OfxImageEffectHandle effect);
 
 	public:
-		int64_t mTimelineStart;
-		int64_t mTimelineEnd;
+		int64_t mTimelineStart = -1;
+		int64_t mTimelineEnd = -1;
 		Trajectory mTrajectory;
 		bool mDirtyFlag = true;
 		OfxImageFloat mBanner;
+		Float4 mTransparentPixel = { 0.0f, 0.0f, 0.0f, 0.0f };
 
 		int mPluginIndex = 0;
-		int mClipHeight;
-		int mClipWidth;
+		int mClipHeight = 0;
+		int mClipWidth = 0;
 		OfxImageClipHandle mSrcClip = nullptr;
 		OfxImageClipHandle mDestClip = nullptr;
 
 		OfxParamHandle mParamRadius = nullptr;
 		OfxParamHandle mParamZoom = nullptr;
-
-		OfxMatf4 mBackground;
+		OfxParamHandle mParamFlag = nullptr;
+		OfxParamHandle mParamDevice = nullptr;
 
 		OfxImageFloat getBanner(int h, int w);
 
@@ -70,5 +71,8 @@ namespace ofx {
 		OfxStatus renderEnd(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs);
 
 		void showInfo(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs);
+
+		void setFlagValue();
+		void setDeviceIndex(int index);
 	};
 }

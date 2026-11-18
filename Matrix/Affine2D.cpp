@@ -93,6 +93,12 @@ Affine2D& Affine2D::addZoom(double zoom) {
 	return *this;
 }
 
+Affine2D& Affine2D::addZoom(double zoomX, double zoomY) {
+	Matd mat = Matd::fromRowData(3, 3, { 1 / zoomX, 0, 0, 0, 1 / zoomY, 0, 0, 0, 1 });
+	setValues(this->times(mat));
+	return *this;
+}
+
 Point Affine2D::transform(size_t x0, size_t y0) const {
 	return transform((double) x0, (double) y0);
 }

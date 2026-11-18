@@ -33,9 +33,9 @@ public:
 	V16f();
 	V16f(__m512 a);
 
-	V16f(float v0, float v1, float v2, float v3, float v4, float v5, float v6, float v7,
-		float v8, float v9, float v10, float v11, float v12, float v13, float v14, float v15);
+	V16f(float v0, float v1, float v2, float v3, float v4, float v5, float v6, float v7, float v8, float v9, float v10, float v11, float v12, float v13, float v14, float v15);
 	V16f(float a, float b, float c, float d);
+	V16f(Float4 f4);
 	V16f(float a, float b);
 	V16f(float a);
 

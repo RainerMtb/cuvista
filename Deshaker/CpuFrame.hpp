@@ -19,26 +19,26 @@
 #pragma once
 
 #include "FrameExecutor.hpp"
-#include "Affine2D.hpp"
+#include "Mat.hpp"
 
 //---------------------------------------------------------------------
 //---------- CPU FRAME ------------------------------------------------
 //---------------------------------------------------------------------
 
+using Matf = Mat<float>;
 using Matf4 = Mat<Float4>;
 
 class CpuFrame : public FrameExecutor {
 
 public:
 	struct TransformContext {
-		Matf4& input;
-		ImageFloat4& output;
-		Matf4& background;
+		const Matf4& input;
+		Matf4& output;
 		Matf4& buffer1;
 		Matf4& buffer2;
 		Matf4& buffer3;
-		std::span<Float4> kernel;
-		Quartet unsharp4;
+		const std::span<Float4> kernel;
+		Float4 unsharp4;
 	};
 
 	CpuFrame(MainData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool);
@@ -57,7 +57,7 @@ public:
 	Matf getPyramid(int64_t frameIndex) const override;
 	void getInput(int64_t frameIndex, Image8& image) const override;
 
-	static void transform(AffineDataFloat trf, int h, int w, TransformContext trc, ThreadPoolBase& pool);
+	static void transform(AffineDataFloat trf, int h, int w, TransformContext trc, ThreadPoolBase& pool, bool isPreview = false, std::function<bool()> isAbort = [] { return false; });
 
 private:
 	std::vector<float> filterKernelY = { 0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f };

@@ -51,13 +51,13 @@ namespace ofx {
 
 	public:
 		std::vector<Float4> filterKernel4 = {
-				{ 0.0f,  0.0f,  0.0625f, 0.0f },
-				{ 0.25f, 0.25f, 0.25f,   0.0f },
-				{ 0.5f,  0.5f,  0.375f,  0.0f },
-				{ 0.25f, 0.25f, 0.25f,   0.0f },
-				{ 0.0f,  0.0f,  0.0625f, 0.0f }
+			{ 0.0625f,  0.0625f,  0.0625f, 0.0f  },
+			{ 0.25f,    0.25f,    0.25f,   0.25f },
+			{ 0.375f,   0.375f,   0.375f,  0.5f  },
+			{ 0.25f,    0.25f,    0.25f,   0.25f },
+			{ 0.0625f,  0.0625f,  0.0625f, 0.0f  }
 		};
-		Quartet unsharp4 = { 0.4f, 0.4f, 0.4f, 0.4f };
+		Quartet unsharp4 = { 0.4f, 0.4f, 0.4f, 0.3f };
 
 		std::mutex bannerMutex;
 		std::map<ImageSize, OfxImageFloat> bannerMap;
@@ -94,6 +94,8 @@ namespace ofx {
 		OfxStatus actionDescribe(OfxImageEffectHandle effect);
 		OfxStatus actionDescribeInContext(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs);
 		OfxStatus actionCreateInstance(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs);
+		OfxStatus actionFramesNeeded(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs);
+		OfxStatus actionInstanceChanged(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs);
 		OfxStatus actionBeginSequenceRender(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs);
 		OfxStatus actionRender(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs);
 		OfxStatus actionEndSequenceRender(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs);

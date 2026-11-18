@@ -169,7 +169,7 @@ OfxStatus MainContext::actionDescribe(OfxImageEffectHandle effect) {
 		handleStatus(propertySuite->propSetString(effectProps, kOfxImageEffectPropSupportedComponents, 0, kOfxImageComponentRGBA), StatusHandling::EXCEPTION);
 
 		handleStatus(propertySuite->propSetInt(effectProps, kOfxImageEffectPropTemporalClipAccess, 0, 1), StatusHandling::EXCEPTION);
-		handleStatus(propertySuite->propSetString(effectProps, kOfxImageEffectPluginRenderThreadSafety, 0, kOfxImageEffectRenderInstanceSafe), StatusHandling::EXCEPTION);
+		handleStatus(propertySuite->propSetString(effectProps, kOfxImageEffectPluginRenderThreadSafety, 0, kOfxImageEffectRenderFullySafe), StatusHandling::EXCEPTION);
 		handleStatus(propertySuite->propSetInt(effectProps, kOfxImageEffectPluginPropHostFrameThreading, 0, 0), StatusHandling::EXCEPTION); //work on one complete frame
 
 		pluginState = PluginState::DESCRIBED;
@@ -252,8 +252,10 @@ OfxStatus MainContext::actionCreateInstance(OfxImageEffectHandle effect, OfxProp
 		//shortcut to parameters
 		OfxParamSetHandle paramSet;
 		handleStatus(imageEffectSuite->getParamSet(effect, &paramSet), StatusHandling::EXCEPTION);
-		handleStatus(parameterSuite->paramGetHandle(paramSet, "radius", &ctx->mParamRadius, 0), StatusHandling::EXCEPTION);
-		handleStatus(parameterSuite->paramGetHandle(paramSet, "zoom", &ctx->mParamZoom, 0), StatusHandling::EXCEPTION);
+		handleStatus(parameterSuite->paramGetHandle(paramSet, paramNames.radius, &ctx->mParamRadius, 0), StatusHandling::EXCEPTION);
+		handleStatus(parameterSuite->paramGetHandle(paramSet, paramNames.zoom, &ctx->mParamZoom, 0), StatusHandling::EXCEPTION);
+		handleStatus(parameterSuite->paramGetHandle(paramSet, paramNames.flag, &ctx->mParamFlag, 0), StatusHandling::EXCEPTION);
+		handleStatus(parameterSuite->paramGetHandle(paramSet, paramNames.device, &ctx->mParamDevice, 0), StatusHandling::EXCEPTION);
 
 		//store context
 		handleStatus(propertySuite->propSetPointer(effectProps, kOfxPropInstanceData, 0, ctx), StatusHandling::EXCEPTION);
@@ -271,6 +273,49 @@ OfxStatus MainContext::actionCreateInstance(OfxImageEffectHandle effect, OfxProp
 		status = kOfxStatFailed;
 	}
 	return status;
+}
+
+
+OfxStatus MainContext::actionFramesNeeded(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs) {
+	double time = main.getDouble(inArgs, kOfxPropTime);
+	main.propertySuite->propSetDouble(outArgs, kOfxImageEffectPropFrameRange, 0, time);
+	main.propertySuite->propSetDouble(outArgs, kOfxImageEffectPropFrameRange, 1, time);
+	//debugLogger().format("frames needed {}:{}", time, time);
+	return kOfxStatOK;
+}
+
+
+OfxStatus MainContext::actionInstanceChanged(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs) {
+	std::string name = main.getString(inArgs, kOfxPropName);
+	std::string reason = main.getString(inArgs, kOfxPropChangeReason);
+	debugLogger().format("-- action InstanceChanged reason={} on thread {}", reason, threadId());
+
+	//handle button clicks
+	if (reason == kOfxChangeUserEdited) {
+		PluginContext* ctx = getPluginContext(effect);
+		if (name == paramNames.stabilize) {
+			return ctx->stabilize(effect, inArgs, outArgs);
+
+		} else if (name == paramNames.info) {
+			ctx->showInfo(effect, inArgs, outArgs);
+			return kOfxStatOK;
+
+		} else if (name == paramNames.device) {
+			//get selected device index
+			int index;
+			handleStatus(main.parameterSuite->paramGetValue(ctx->mParamDevice, &index));
+
+			//set selected device to all instances
+			for (PluginContext* pc : pluginContextList) {
+				pc->setDeviceIndex(index);
+			}
+
+		} else if (name == paramNames.radius || name == paramNames.mode || name == paramNames.dbscan) {
+			ctx->mDirtyFlag = true;
+			return kOfxStatOK;
+		}
+	}
+	return kOfxStatReplyDefault;
 }
 
 
@@ -311,7 +356,7 @@ void MainContext::setupParameters(OfxParamSetHandle paramSet) {
 	OfxPropertySetHandle paramProps;
 
 	//device selector
-	handleStatus(parameterSuite->paramDefine(paramSet, kOfxParamTypeChoice, "device", &paramProps));
+	handleStatus(parameterSuite->paramDefine(paramSet, kOfxParamTypeChoice, paramNames.device, &paramProps));
 	handleStatus(propertySuite->propSetString(paramProps, kOfxPropLabel, 0, "Stabilization Device"));
 	int deviceCount = (int) mData.deviceList.size();
 	for (int i = 0; i < deviceCount; i++) {
@@ -326,17 +371,19 @@ void MainContext::setupParameters(OfxParamSetHandle paramSet) {
 	//propertySuite->propSetString(paramProps, kOfxPropLabel, 0, "Stabilization Parameters");
 
 	//mode selector
-	handleStatus(parameterSuite->paramDefine(paramSet, kOfxParamTypeChoice, "mode", &paramProps));
+	handleStatus(parameterSuite->paramDefine(paramSet, kOfxParamTypeChoice, paramNames.mode, &paramProps));
 	handleStatus(propertySuite->propSetString(paramProps, kOfxPropLabel, 0, "Stabilization Mode"));
 	handleStatus(propertySuite->propSetString(paramProps, kOfxParamPropChoiceOption, 0, "Single Pass Mode"));
 	handleStatus(propertySuite->propSetString(paramProps, kOfxParamPropChoiceOption, 1, "Multi Pass - Anaylze 2x"));
 	handleStatus(propertySuite->propSetString(paramProps, kOfxParamPropChoiceOption, 2, "Multi Pass - Anaylze 3x"));
 	handleStatus(propertySuite->propSetString(paramProps, kOfxParamPropChoiceOption, 3, "Multi Pass - Anaylze 4x"));
 	handleStatus(propertySuite->propSetInt(paramProps, kOfxParamPropAnimates, 0, false));
+	handleStatus(propertySuite->propSetInt(paramProps, kOfxParamPropCanUndo, 0, false));
+	handleStatus(propertySuite->propSetInt(paramProps, kOfxParamPropPersistant, 0, false));
 	//propertySuite->propSetString(paramProps, kOfxParamPropParent, 0, paramGroup);
 
 	//temporal radius
-	handleStatus(parameterSuite->paramDefine(paramSet, kOfxParamTypeDouble, "radius", &paramProps));
+	handleStatus(parameterSuite->paramDefine(paramSet, kOfxParamTypeDouble, paramNames.radius, &paramProps));
 	handleStatus(propertySuite->propSetString(paramProps, kOfxPropLabel, 0, "Temporal Radius"));
 	handleStatus(propertySuite->propSetInt(paramProps, kOfxParamPropDigits, 0, 2));
 	handleStatus(propertySuite->propSetString(paramProps, kOfxParamPropDoubleType, 0, kOfxParamDoubleTypeX));
@@ -348,7 +395,7 @@ void MainContext::setupParameters(OfxParamSetHandle paramSet) {
 	//propertySuite->propSetString(paramProps, kOfxParamPropParent, 0, paramGroup);
 
 	//use dbscan
-	handleStatus(parameterSuite->paramDefine(paramSet, kOfxParamTypeBoolean, "dbscan", &paramProps));
+	handleStatus(parameterSuite->paramDefine(paramSet, kOfxParamTypeBoolean, paramNames.dbscan, &paramProps));
 	handleStatus(propertySuite->propSetString(paramProps, kOfxPropLabel, 0, "Enable Dbscan"));
 	handleStatus(propertySuite->propSetInt(paramProps, kOfxParamPropAnimates, 0, false));
 	handleStatus(propertySuite->propSetInt(paramProps, kOfxParamPropDefault, 0, true));
@@ -357,21 +404,21 @@ void MainContext::setupParameters(OfxParamSetHandle paramSet) {
 	//group end ----------------------------------------------------
 
 	//zoom
-	handleStatus(parameterSuite->paramDefine(paramSet, kOfxParamTypeDouble, "zoom", &paramProps));
+	handleStatus(parameterSuite->paramDefine(paramSet, kOfxParamTypeDouble, paramNames.zoom, &paramProps));
 	handleStatus(propertySuite->propSetString(paramProps, kOfxPropLabel, 0, "Image Zoom"));
 	handleStatus(propertySuite->propSetString(paramProps, kOfxParamPropDoubleType, 0, kOfxParamDoubleTypeScale));
 	handleStatus(propertySuite->propSetInt(paramProps, kOfxParamPropDigits, 0, 2));
-	handleStatus(propertySuite->propSetDouble(paramProps, kOfxParamPropDefault, 0, 0.95));
+	handleStatus(propertySuite->propSetDouble(paramProps, kOfxParamPropDefault, 0, defaultParam.zoomMin));
 	handleStatus(propertySuite->propSetDouble(paramProps, kOfxParamPropMin, 0, defaultParam.zoomMinRange));
 	handleStatus(propertySuite->propSetDouble(paramProps, kOfxParamPropMax, 0, defaultParam.zoomMaxRange));
 	handleStatus(propertySuite->propSetInt(paramProps, kOfxParamPropAnimates, 0, true));
 
 	//button stabilize
-	handleStatus(parameterSuite->paramDefine(paramSet, kOfxParamTypePushButton, "stabilize", &paramProps));
+	handleStatus(parameterSuite->paramDefine(paramSet, kOfxParamTypePushButton, paramNames.stabilize, &paramProps));
 	handleStatus(propertySuite->propSetString(paramProps, kOfxPropLabel, 0, "   Stabilize   "));
 
 	//button about
-	handleStatus(parameterSuite->paramDefine(paramSet, kOfxParamTypePushButton, "info", &paramProps));
+	handleStatus(parameterSuite->paramDefine(paramSet, kOfxParamTypePushButton, paramNames.info, &paramProps));
 	handleStatus(propertySuite->propSetString(paramProps, kOfxPropLabel, 0, "   About   "));
 
 	//parameterSuite->paramDefine(paramSet, kOfxParamTypeDouble, "zoomMin", &paramProps);
@@ -387,4 +434,11 @@ void MainContext::setupParameters(OfxParamSetHandle paramSet) {
 	//propertySuite->propSetDouble(paramProps, kOfxParamPropDefault, 0, defaultParam.zoomMax);
 	//propertySuite->propSetDouble(paramProps, kOfxParamPropMaxn, 0, defaultParam.zoomMaxRange);
 	//propertySuite->propSetInt(paramProps, kOfxParamPropAnimates, 0, false);
+
+	//hidden property to set stabilization
+	handleStatus(parameterSuite->paramDefine(paramSet, kOfxParamTypeInteger, paramNames.flag, &paramProps));
+	handleStatus(propertySuite->propSetInt(paramProps, kOfxParamPropAnimates, 0, false));
+	handleStatus(propertySuite->propSetInt(paramProps, kOfxParamPropCanUndo, 0, false));
+	handleStatus(propertySuite->propSetInt(paramProps, kOfxParamPropPersistant, 0, true));
+	handleStatus(propertySuite->propSetInt(paramProps, kOfxParamPropSecret, 0, true));
 }

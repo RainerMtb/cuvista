@@ -18,7 +18,7 @@
 
 #include "CpuFrame.hpp"
 #include "MovieFrame.hpp"
-#include "Mat.hpp"
+#include "BaseData.hpp"
 
 //constructor
 CpuFrame::CpuFrame(MainData& data, DeviceInfoBase& deviceInfo, MovieFrame& frame, ThreadPoolBase& pool) :
@@ -74,7 +74,7 @@ void CpuFrame::inputData(int64_t frameIndex) {
 void CpuFrame::createPyramidLevels(CpuPyramid& pyr) {
 	//create pyramid levels below by downsampling level above
 	for (size_t z = 0; z < mData.zMax; z++) {
-		auto func = [&] (size_t r, size_t c) { return pyr.mY[z].interp2(c * 2, r * 2, 0.5f, 0.5f); };
+		auto func = [&] (size_t r, size_t c) { return pyr.mY[z].interpBilinear(c * 2, r * 2, 0.5f, 0.5f); };
 		Matf& dest = pyr.mY[z + 1];
 		dest.setArea(func, mPool);
 		//if (z == 0) std::printf("cpu %.14f\n", dest.at(100, 100));
@@ -111,7 +111,7 @@ void CpuFrame::createPyramid(int64_t frameIndex, std::span<int> hist, AffineData
 			float y0 = float(r);
 			float x = std::fma(x0, trf.m00, std::fma(y0, trf.m01, trf.m02));
 			float y = std::fma(x0, trf.m10, std::fma(y0, trf.m11, trf.m12));
-			return mFilterBuffer1.interp2(x, y).value_or(0.0f);
+			return mFilterBuffer1.interpBilinear(x, y).value_or(0.0f);
 		};
 		y0.setValues(funcTrf, mPool);
 
@@ -238,7 +238,7 @@ void CpuFrame::computeTerminate(int64_t frameIndex, std::span<PointResult> resul
 							double y = (double) (r) - ir;
 							double ix = xm + x * wp.at(0, 0) + y * wp.at(1, 0) + wp.at(0, 2);
 							double iy = ym + x * wp.at(0, 1) + y * wp.at(1, 1) + wp.at(1, 2);
-							return pyr0.mY[z].interp2<double, double>(ix, iy).value_or(mData.dnan);
+							return pyr0.mY[z].interpBilinear<double, double>(ix, iy).value_or(mData.dnan);
 						});
 
 						delta.setValues([&] (size_t r, size_t c) {
@@ -308,7 +308,7 @@ void CpuFrame::computeTerminate(int64_t frameIndex, std::span<PointResult> resul
 	mPool.workAndWait(func, 0, mData.iyCount);
 }
 
-void CpuFrame::transform(AffineDataFloat trf, int h, int w, TransformContext trc, ThreadPoolBase& pool) {
+void CpuFrame::transform(AffineDataFloat trf, int h, int w, TransformContext trc, ThreadPoolBase& pool, bool isPreview, std::function<bool()> isAbort) {
 	//apply transform
 	auto funcWarpBack = [&] (size_t r) {
 		for (size_t c = 0; c < w; c++) {
@@ -316,12 +316,9 @@ void CpuFrame::transform(AffineDataFloat trf, int h, int w, TransformContext trc
 			float y0 = float(r);
 			float x = std::fmaf(x0, trf.m00, std::fmaf(y0, trf.m01, trf.m02));
 			float y = std::fmaf(x0, trf.m10, std::fmaf(y0, trf.m11, trf.m12));
-			auto result = trc.input.interp2(x, y);
+			auto result = trc.input.interpBilinear(x, y);
 			if (result.has_value()) {
 				trc.buffer1.at(r, c) = result.value();
-
-			} else {
-				trc.buffer1.at(r, c) = trc.background.at(r, c);
 			}
 			//if (z == 0 && r == 228 && c == 1082) std::printf("\ncpu %16.12f\n", y);
 		}
@@ -329,19 +326,30 @@ void CpuFrame::transform(AffineDataFloat trf, int h, int w, TransformContext trc
 	//forward to thread pool for iteration
 	pool.addAndWait(funcWarpBack, 0, h);
 
+	if (isPreview) {
+		trc.buffer1.copyTo(trc.output);
+		return;
+	}
+
 	//unsharp masking
+	if (isAbort()) {
+		return;
+	}
 	trc.buffer1.filter1D(trc.kernel, Direction::HORIZONTAL, trc.buffer2, pool);
+	if (isAbort()) {
+		return;
+	}
 	trc.buffer2.filter1D(trc.kernel, Direction::VERTICAL, trc.buffer3, pool);
+	if (isAbort()) {
+		return;
+	}
 
 	//write output
 	auto funcOutput = [&] (size_t r) {
-		float* out = trc.output.addr(0, r, 0);
+		Float4* out = trc.output.addr(r, 0);
 		for (size_t c = 0; c < w; c++) {
 			Float4 pixel = trc.buffer1.at(r, c) + (trc.buffer1.at(r, c) - trc.buffer3.at(r, c)) * trc.unsharp4;
-			*out++ = std::clamp(pixel.f0, 0.0f, 1.0f);
-			*out++ = std::clamp(pixel.f1, 0.0f, 1.0f);
-			*out++ = std::clamp(pixel.f2, 0.0f, 1.0f);
-			*out++ = std::clamp(pixel.f3, 0.0f, 1.0f);
+			*out++ = std::clamp(pixel, 0.0f, 1.0f);
 			//if (z==0 && r==1049 && c==842) std::printf("cpu %.14f %d\n", val * 255, mOutput.at(z, r, c));
 		}
 	};
@@ -359,11 +367,13 @@ void CpuFrame::outputData(int64_t frameIndex, AffineDataFloat trf) {
 	};
 	mFilterBuffer4.setValues(funcConvert, mPool);
 	Matf4& bgframe = (mData.bgmode == BackgroundMode::COLOR) ? mBackground : mPrevOut;
+	bgframe.copyTo(mBuffer4);
 	
-	TransformContext trc = { mFilterBuffer4, mOutput, bgframe, mBuffer4, mFilterBuffer4, mFilterResult4, filterKernel4, mData.unsharp4 };
+	StridedMat<Float4> outputMat = StridedMat<Float4>::fromData(mOutput.data(), mOutput.rows(), mOutput.cols(), mOutput.strideInBytes());
+	TransformContext trc = { mFilterBuffer4, outputMat, mBuffer4, mFilterBuffer4, mFilterResult4, filterKernel4, mData.unsharp4 };
 	transform(trf, mData.h, mData.w, trc, mPool);
 
-	std::copy_n(mBuffer4.data(), mBuffer4.numel(), mPrevOut.data());
+	mBuffer4.copyTo(mPrevOut);
 	mOutput.index = frameIndex;
 }
 

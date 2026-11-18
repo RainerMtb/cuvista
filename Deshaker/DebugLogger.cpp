@@ -106,9 +106,9 @@ DebugLoggerTcp::DebugLoggerTcp(const std::string& ip, int port) {
 	int retval = WSAStartup(MAKEWORD(2, 2), &wsaData);
 	if (retval < 0) return;
 
-	sock = socket(PF_INET, SOCK_STREAM, 0);
+	sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	sockaddr_in servAddr = {};
-	servAddr.sin_family = PF_INET;
+	servAddr.sin_family = AF_INET;
 	inet_pton(AF_INET, ip.c_str(), &servAddr.sin_addr.s_addr);
 	servAddr.sin_port = htons(port);
 	mIsConnected = connect(sock, (SOCKADDR*) &servAddr, sizeof(servAddr));

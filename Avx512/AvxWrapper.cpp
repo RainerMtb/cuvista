@@ -28,13 +28,14 @@ V16f::V16f(float a) : a { _mm512_set1_ps(a) } {}
 
 V16f::V16f(__m512 a) : a { a } {}
 
-V16f::V16f(float v0, float v1, float v2, float v3, float v4, float v5, float v6, float v7,
-	float v8, float v9, float v10, float v11, float v12, float v13, float v14, float v15) :
+V16f::V16f(float v0, float v1, float v2, float v3, float v4, float v5, float v6, float v7, float v8, float v9, float v10, float v11, float v12, float v13, float v14, float v15) :
 	a { _mm512_setr_ps(v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15) } {}
 
 V16f::V16f(float a, float b) : V16f(a, b, a, b, a, b, a, b, a, b, a, b, a, b, a, b) {}
 
 V16f::V16f(float a, float b, float c, float d) : V16f(a, b, c, d, a, b, c, d, a, b, c, d, a, b, c, d) {}
+
+V16f::V16f(Float4 f4) : a { _mm512_broadcast_f32x4(_mm_loadu_ps(&f4.f0)) } {}
 
 V16f::V16f(const float* data) : a { _mm512_loadu_ps(data) } {}
 

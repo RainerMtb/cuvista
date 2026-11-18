@@ -14,11 +14,9 @@
     <ClInclude Include="Affine2D.hpp" />
     <ClInclude Include="AffineSolverDirect.hpp" />
     <ClInclude Include="CholeskyDecompositor.hpp" />
-    <ClInclude Include="CoreMat.hpp" />
     <ClInclude Include="Decompositor.hpp" />
     <ClInclude Include="LUDecompositor.hpp" />
     <ClInclude Include="Mat.hpp" />
-    <ClInclude Include="MatIterator.hpp" />
     <ClInclude Include="MatInverter.hpp" />
     <ClInclude Include="OutputLine.hpp" />
     <ClInclude Include="QRDecompositor.hpp" />

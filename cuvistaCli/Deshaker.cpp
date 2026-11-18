@@ -146,12 +146,12 @@ DeshakerResult deshake(std::vector<std::string> argsInput, std::ostream* console
 	 	return { 1 };
 
 	 } catch (const AVException& e) {
-	 	printError(std::cerr, e.what());
+	 	printError(std::cerr, std::string("error: ") + e.what());
 	 	errorLogger().printErrors(std::cerr, data.showVerbose);
 	 	return { 2 };
 
 	 } catch (const std::invalid_argument& e) {
-	 	printError(std::cerr, std::string("invalid value: ") + e.what());
+	 	printError(std::cerr, std::string("error: invalid value: ") + e.what());
 	 	errorLogger().printErrors(std::cerr, data.showVerbose);
 	 	return { 3 };
 

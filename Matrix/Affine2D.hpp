@@ -68,6 +68,7 @@ public:
 	Affine2D& addRotationDegrees(double angleRad);
 
 	Affine2D& addZoom(double zoom);
+	Affine2D& addZoom(double zoomX, double zoomY);
 
 	//transform point x0, y0
 	Point transform(size_t x0, size_t y0) const;

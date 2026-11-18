@@ -71,6 +71,7 @@ namespace im {
 	class ImageFloat4 : public ImageBase<float> {
 
 	public:
+		ImageFloat4(int h, int w, int stride, Float4* data);
 		ImageFloat4(int h, int w, int stride, float* data);
 		ImageFloat4(int h, int w, int stride);
 		ImageFloat4(int h, int w);
@@ -182,6 +183,8 @@ namespace im {
 		ImageBGRA(int h, int w);
 		ImageBGRA();
 
+		static ImageBGRA readBmpFile(const std::string& filename);
+
 		constexpr ImageType imageType() const override { return ImageType::BGRA; }
 
 		virtual void saveBmpColor(const std::string& filename) const override;
@@ -195,6 +198,21 @@ namespace im {
 		ImageRGBA(int h, int w, int stride);
 		ImageRGBA(int h, int w);
 		ImageRGBA();
+
+		static ImageRGBA readBmpFile(const std::string& filename);
+
+		constexpr ImageType imageType() const override { return ImageType::RGBA; }
+	};
+
+
+	class ImageRGBAf4 : public ImageBase<float> {
+
+	public:
+		ImageRGBAf4(int h, int w, int stride, Float4* data);
+		ImageRGBAf4(int h, int w, int stride, float* data);
+		ImageRGBAf4(int h, int w, int stride);
+		ImageRGBAf4(int h, int w);
+		ImageRGBAf4();
 
 		constexpr ImageType imageType() const override { return ImageType::RGBA; }
 	};

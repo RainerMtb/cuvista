@@ -23,6 +23,7 @@
 #include "util.hpp"
 #include "ErrorLogger.hpp"
 #include "CpuFrame.hpp"
+#include "AvxFrame.hpp"
 
 using namespace ofx;
 
@@ -65,6 +66,7 @@ OfxStatus PluginContext::stabilize(OfxImageEffectHandle effect, OfxPropertySetHa
 
 	if (gui->checkNewWindow()) {
 		debugLogger().format("stabilize start on thread {}", threadId());
+		mDirtyFlag = true;
 		OfxPropertySetHandle clipProperties;
 		status = main.imageEffectSuite->clipGetPropertySet(mSrcClip, &clipProperties);
 
@@ -145,6 +147,11 @@ OfxStatus PluginContext::stabilize(OfxImageEffectHandle effect, OfxPropertySetHa
 			mDirtyFlag = false;
 			mTimelineStart = (int64_t) timelineStart;
 			mTimelineEnd = (int64_t) timelineEnd;
+
+			//set flag parameter for all instances, otherwise preview clip will not render, and we cannot tell which instance is which
+			for (PluginContext* pc : pluginContextList) {
+				pc->setFlagValue();
+			}
 		}
 	}
 	return status;
@@ -153,17 +160,12 @@ OfxStatus PluginContext::stabilize(OfxImageEffectHandle effect, OfxPropertySetHa
 
 //setup buffers for rendering
 OfxStatus PluginContext::renderBegin(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs) {
-	//set background matrix
-	mBackground = OfxMatf4::allocate(mClipHeight, mClipWidth, mClipWidth * 4 * sizeof(float));
-	mBackground.setValues(Float4(0, 0, 0, 255));
 	return kOfxStatOK;
 }
 
 
 //clear buffers after for rendering
 OfxStatus PluginContext::renderEnd(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs) {
-	//clear memory, reset to empty matrix
-	mBackground = OfxMatf4();
 	return kOfxStatOK;
 }
 
@@ -178,7 +180,6 @@ OfxStatus PluginContext::render(OfxImageEffectHandle effect, OfxPropertySetHandl
 	double renderScale[2];
 	handleStatus(main.propertySuite->propGetDoubleN(inArgs, kOfxImageEffectPropRenderScale, 2, renderScale));
 	
-
 	OfxPropertySetHandle srcImg = nullptr;
 	status = main.imageEffectSuite->clipGetImage(mSrcClip, time, NULL, &srcImg);
 	if (status != kOfxStatOK) {
@@ -203,11 +204,6 @@ OfxStatus PluginContext::render(OfxImageEffectHandle effect, OfxPropertySetHandl
 	int srcW = srcBounds.x2 - srcBounds.x1;
 	float* srcData = reinterpret_cast<float*>(srcPtr);
 
-	OfxRectD rectStart;
-	main.imageEffectSuite->clipGetRegionOfDefinition(mSrcClip, 0, &rectStart);
-	int clipW = (int) (rectStart.x2 - rectStart.x1);
-	int clipH = (int) (rectStart.y2 - rectStart.y1);
-
 	OfxRectI destBounds;
 	void* destPtr = nullptr;
 	int destRowBytes = main.getInt(destImg, kOfxImagePropRowBytes);
@@ -215,20 +211,45 @@ OfxStatus PluginContext::render(OfxImageEffectHandle effect, OfxPropertySetHandl
 	main.propertySuite->propGetPointer(destImg, kOfxImagePropData, 0, &destPtr);
 	int destH = destBounds.y2 - destBounds.y1;
 	int destW = destBounds.x2 - destBounds.x1;
+	float* destData = reinterpret_cast<float*>(destPtr);
+
+	OfxRectD rectStart;
+	main.imageEffectSuite->clipGetRegionOfDefinition(mSrcClip, 0, &rectStart);
+	int clipW = (int) (rectStart.x2 - rectStart.x1);
+	int clipH = (int) (rectStart.y2 - rectStart.y1);
+
+	//render status from host
+	int isPreview = 0;
+	int value1;
+	OfxStatus s1 = main.propertySuite->propGetInt(inArgs, kOfxImageEffectPropRenderQualityDraft, 0, &value1);
+	if (s1 == kOfxStatOK) isPreview &= value1;
+
+	int value2;
+	OfxStatus s2 = main.propertySuite->propGetInt(inArgs, kOfxImageEffectPropThumbnailRender, 0, &value2);
+	if (s2 == kOfxStatOK) isPreview &= value2;
+
+	if (renderScale[0] < 0.6 || renderScale[1] < 0.6) {
+		isPreview = 1;
+	}
 
 	debugLogger().format(
-		"render context={} clip={}:{} frame={} src={}:{} dest={}:{}, renderScale={:.3f}:{:.3f}, thread={}", 
-		mPluginIndex, clipW, clipH, time, srcW, srcH, destW, destH, renderScale[0], renderScale[1], threadId()
+		"render context={} dirty={} clip={}:{} frame={} src={}:{} dest={}:{}, renderScale={:.3f}:{:.3f}, preview={}, thread={}", 
+		mPluginIndex, mDirtyFlag, clipW, clipH, time, srcW, srcH, destW, destH, renderScale[0], renderScale[1], isPreview, threadId()
 	);
 
 	// write destination image
+	auto funcAbort = [&] { 
+		int abort = main.imageEffectSuite->abort(effect);
+		if (abort) debugLogger().log("render abort");
+		return abort;
+	};
+
 	if (srcW == destW && srcH == destH) {
 		if (mDirtyFlag) {
 			//copy input frame and inset banner
 			OfxImageFloat srcImage(srcH, srcW, srcRowBytes / sizeof(float), srcData);
 
 			//create destination image
-			float* destData = reinterpret_cast<float*>(destPtr);
 			OfxImageFloat destImage(destH, destW, destRowBytes / sizeof(float), destData);
 
 			//get banner
@@ -237,38 +258,55 @@ OfxStatus PluginContext::render(OfxImageEffectHandle effect, OfxPropertySetHandl
 			int bannerY = (srcH - mBanner.h()) / 2;
 
 			//copy input to output
-			if (main.imageEffectSuite->abort(effect) == false) {
+			if (funcAbort() == false) {
 				srcImage.copyTo(destImage);
 			}
 
 			//insert banner
-			if (main.imageEffectSuite->abort(effect) == false) {
+			if (funcAbort() == false) {
 				mBanner.copyTo(0, bannerOffset, mBanner.h(), srcW, destImage, bannerY, 0, 0.6f);
 			}
 
 		} else {
 			//produce output frame
+
+			//zoom for this frame
 			double zoom;
 			handleStatus(main.parameterSuite->paramGetValueAtTime(mParamZoom, time, &zoom));
 
+			//transform
 			int64_t frameIndex = int64_t(time) - mTimelineStart;
-			double dx = -40 * renderScale[0];
-			double dy = -100 * renderScale[1];
+			double dx = 20 * renderScale[0];
+			double dy = -50 * renderScale[1];
 			AffineTransform trf(1.05, -0.2, dx, dy);
 
-			//source and destination frames
-			Float4* srcData = reinterpret_cast<Float4*>(srcPtr);
-			Matf4 srcImage = StridedMat<Float4>::fromData(srcData, srcH, srcW, srcRowBytes);
-			float* destData = reinterpret_cast<float*>(destPtr);
-			ImageFloat4 destImage(destH, destW, destRowBytes / sizeof(float), destData);
-
-			//allocate buffer memory
-			OfxMatf4 buffer1 = OfxMatf4::allocate(srcH, srcW, srcRowBytes);
-			OfxMatf4 buffer2 = OfxMatf4::allocate(srcH, srcW, srcRowBytes);
-
 			//transform context
-			CpuFrame::TransformContext trc = { srcImage, destImage, mBackground, buffer1, buffer2, buffer1, main.filterKernel4, main.unsharp4 };
-			CpuFrame::transform(trf, srcH, srcW, trc, main.mPool);
+			if (main.mData.hasAvx512() && srcRowBytes % 64 == 0 && destRowBytes % 64 == 0) {
+				//source and destination frames
+				StridedMat<float> srcImage = StridedMat<float>::fromData(srcPtr, srcH, srcW * 4, srcRowBytes);
+				StridedMat<float> destImage = StridedMat<float>::fromData(destPtr, destH, destW * 4, destRowBytes);
+
+				//allocate buffer memory
+				OfxMatf buffer1 = OfxMatf::allocate(srcH, util::alignValue(srcW * 4, 16));
+				OfxMatf buffer2 = OfxMatf::allocate(srcW, util::alignValue(srcH * 4, 16)); //transposed buffer
+				OfxMatf buffer3 = OfxMatf::allocate(srcH, util::alignValue(srcW * 4, 16));
+				
+				AvxFrame::TransformContext trc = { srcImage, destImage, buffer1, buffer2, buffer3, main.filterKernel4, main.unsharp4 };
+				AvxFrame::transform(trf, srcH, srcW, trc, main.mPool, isPreview, funcAbort);
+
+			} else {
+				//source and destination frames
+				StridedMat<Float4> srcImage = StridedMat<Float4>::fromData(srcPtr, srcH, srcW, srcRowBytes);
+				StridedMat<Float4> destImage = StridedMat<Float4>::fromData(destPtr, destH, destW, destRowBytes);
+
+				//allocate buffer memory
+				OfxMatf4 buffer1 = OfxMatf4::allocate(srcH, srcW, srcRowBytes);
+				OfxMatf4 buffer2 = OfxMatf4::allocate(srcH, srcW, srcRowBytes);
+				OfxMatf4 buffer3 = OfxMatf4::allocate(srcH, srcW, srcRowBytes);
+
+				CpuFrame::TransformContext trc = { srcImage, destImage, buffer1, buffer2, buffer3, main.filterKernel4, main.unsharp4 };
+				CpuFrame::transform(trf, srcH, srcW, trc, main.mPool, isPreview, funcAbort);
+			}
 		}
 
 	} else {
@@ -293,10 +331,11 @@ std::string PluginContext::contextInfo(OfxImageEffectHandle effect) {
 	status = main.propertySuite->propGetDoubleN(clipProperties, kOfxImageEffectPropFrameRange, 2, frameRange);
 	double frameRate = main.getDouble(clipProperties, kOfxImageEffectPropFrameRate);
 	status = main.timelineSuite->getTimeBounds(effect, &timelineStart, &timelineEnd);
+	double par = main.getDouble(clipProperties, kOfxImagePropPixelAspectRatio);
 
 	std::string context = std::format(
-		"Plugin Host:\n{}, Api Version {}\n\nCurrent Clip:\nFrame Size: {} x {}, Frames: {}, Frame Rate: {:.3f}\nCurrent Timeline from {} to {}\n\n",
-		main.hostName, main.hostApiVersion, mClipWidth, mClipHeight, frameRange[1] - frameRange[0], frameRate, timelineStart, timelineEnd
+		"Plugin Host:\n{}, Api Version {}\n\nCurrent Clip:\nFrame Size: {} x {}, frames: {}, fps: {:.3f}, par: {:.3f}\nCurrent Timeline from {} to {}\n\n",
+		main.hostName, main.hostApiVersion, mClipWidth, mClipHeight, frameRange[1] - frameRange[0], frameRate, par, timelineStart, timelineEnd
 	);
 	return context;
 }
@@ -313,6 +352,18 @@ void PluginContext::showInfo(OfxImageEffectHandle effect, OfxPropertySetHandle i
 		gui->shutdown();
 		debugLogger().log("info done");
 	}
+}
+
+
+void PluginContext::setFlagValue() {
+	int flagValue;
+	handleStatus(main.parameterSuite->paramGetValue(mParamFlag, &flagValue));
+	handleStatus(main.parameterSuite->paramSetValue(mParamFlag, flagValue + 1));
+}
+
+
+void PluginContext::setDeviceIndex(int index) {
+	handleStatus(main.parameterSuite->paramSetValue(mParamDevice, index));
 }
 
 

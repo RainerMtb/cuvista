@@ -58,7 +58,7 @@ struct Float4 {
 	friend Float4 operator / (const Float4& a, const Float4& b);
 	friend Float4 operator / (float f, const Float4& a);
 
-	Float4 clamp(float lo, float hi) const;
+	Float4 clamp(float lo, float hi) const noexcept;
 };
 
 struct Double4 {
@@ -76,12 +76,14 @@ struct Double4 {
 	friend Double4 operator / (const Double4& a, const Double4& b);
 	friend Double4 operator / (float f, const Double4& a);
 
-	Double4 clamp(double lo, double hi) const;
+	Double4 clamp(double lo, double hi) const noexcept;
 };
 
 namespace std {
 
-	Float4 fma(const Float4& x, const Float4& y, const Float4& z);
+	Float4 fma(const Float4& x, const Float4& y, const Float4& z) noexcept;
+	Float4 clamp(Float4 in, float lo, float hi) noexcept;
 
-	Double4 fma(const Double4& x, const Double4& y, const Double4& z);
+	Double4 fma(const Double4& x, const Double4& y, const Double4& z) noexcept;
+	Double4 clamp(Double4 in, double lo, double hi) noexcept;
 }
